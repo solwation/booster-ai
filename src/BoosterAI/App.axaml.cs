@@ -52,6 +52,7 @@ public partial class App : Application
             desktop.ShutdownMode = ShutdownMode.OnMainWindowClose;
             var vm = new MainViewModel(_config);
             desktop.MainWindow = new MainWindow(vm);
+            vm.Update.Start();
         }
         base.OnFrameworkInitializationCompleted();
     }

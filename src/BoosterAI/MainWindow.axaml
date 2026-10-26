@@ -14,7 +14,7 @@
     one column layout (stripe 4 · gap 14 · check 36 · name * · status 165 · llm 132 · model 195 · orkester 110 · once 130)
     inside the same padding, so labels sit exactly over their fields.
   -->
-  <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="28,22,28,20">
+  <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" Margin="28,22,28,20">
 
     <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,20">
       <Image Grid.Column="0" Source="avares://BoosterAI/Assets/boosterai.png" Width="40" Height="40"
@@ -33,7 +33,25 @@
       </Button>
     </Grid>
 
-    <Grid Grid.Row="1" ColumnDefinitions="4,14,36,*,165,132,195,110,130" Margin="0,0,0,6" IsVisible="{Binding HasTabs}">
+    <!-- Update prompt: a quiet bar, only while a newer release is offered (see UpdateViewModel). -->
+    <Border Grid.Row="1" Classes="update" IsVisible="{Binding Update.IsVisible}" Margin="0,0,0,14">
+      <Grid ColumnDefinitions="Auto,*,Auto">
+        <Path Grid.Column="0" Data="{StaticResource DownloadIcon}" Width="14" Height="14" Stretch="Uniform" StrokeThickness="1.5"
+              StrokeLineCap="Round" StrokeJoin="Round" Stroke="{DynamicResource LinkBrush}" VerticalAlignment="Center" Margin="0,0,10,0" />
+        <TextBlock Grid.Column="1" Text="{Binding Update.Text}" TextWrapping="Wrap" VerticalAlignment="Center" FontSize="13.5"
+                   Classes.failed="{Binding Update.Failed}" />
+        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" Margin="16,0,0,0" VerticalAlignment="Center">
+          <Button Classes="accent" Content="{local:T update.install}" Click="OnUpdateInstall" IsVisible="{Binding Update.ShowInstall}"
+                  ToolTip.Tip="{Binding Update.InstallTip}" Padding="14,6" />
+          <Button Classes="accent" Content="{local:T update.page}" Click="OnUpdatePage" IsVisible="{Binding Update.ShowPage}"
+                  ToolTip.Tip="{Binding Update.PageUrl}" Padding="14,6" />
+          <Button Content="{local:T update.later}" Click="OnUpdateLater" IsVisible="{Binding Update.ShowDismiss}" Padding="14,6" />
+          <Button Content="{local:T update.skip}" Click="OnUpdateSkip" IsVisible="{Binding Update.ShowDismiss}" Padding="14,6" />
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <Grid Grid.Row="2" ColumnDefinitions="4,14,36,*,165,132,195,110,130" Margin="0,0,0,6" IsVisible="{Binding HasTabs}">
       <TextBlock Grid.Column="2" Classes="colhead" Text="{local:T col.with}" />
       <TextBlock Grid.Column="3" Classes="colhead" Text="{local:T col.project}" />
       <TextBlock Grid.Column="4" Classes="colhead" Text="{local:T col.status}" />
@@ -43,7 +61,7 @@
       <TextBlock Grid.Column="8" Classes="colhead" Text="{local:T col.once}" Margin="16,0,0,0" />
     </Grid>
 
-    <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Disabled">
+    <ScrollViewer Grid.Row="3" HorizontalScrollBarVisibility="Disabled">
       <Panel>
         <ItemsControl ItemsSource="{Binding Tabs}">
           <ItemsControl.ItemTemplate>
@@ -120,7 +138,7 @@
       </Panel>
     </ScrollViewer>
 
-    <Grid Grid.Row="3" ColumnDefinitions="*,Auto" Margin="0,16,0,0">
+    <Grid Grid.Row="4" ColumnDefinitions="*,Auto" Margin="0,16,0,0">
       <TextBlock Grid.Column="0" Text="{Binding Status}" TextWrapping="Wrap" VerticalAlignment="Center"
                  Margin="0,0,20,0" Classes.muted="{Binding !StatusIsError}"
                  Foreground="{Binding StatusIsError, Converter={x:Static local:Converters.ErrorBrush}}" />

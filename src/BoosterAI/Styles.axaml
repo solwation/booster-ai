@@ -99,6 +99,19 @@
     <Setter Property="Opacity" Value="1" />
   </Style>
 
+  <!-- The update prompt: a soft outlined bar, not a dialog. -->
+  <Style Selector="Border.update">
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColor}" />
+    <Setter Property="Background" Value="{DynamicResource RowHoverBrush}" />
+    <Setter Property="Padding" Value="14,8" />
+  </Style>
+
+  <Style Selector="Border.update TextBlock.failed">
+    <Setter Property="Foreground" Value="#E5484D" />
+  </Style>
+
   <!-- Tab colour stripe; a button in settings, where it cycles the colour. -->
   <Style Selector="Button.stripe">
     <Setter Property="Template">

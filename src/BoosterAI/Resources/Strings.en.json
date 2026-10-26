@@ -107,5 +107,21 @@
   "settings.closeAfterLaunch": "Close after Start",
   "settings.closeAfterLaunch.tip": "Close BoosterAI after Start instead of watching the tabs from the tray",
   "settings.notifications": "Notifications",
-  "settings.notifications.tip": "Notify when a tab closes, does not start or its CLI fails"
+  "settings.notifications.tip": "Notify when a tab closes, does not start or its CLI fails",
+  "settings.updates": "Check for updates",
+  "settings.updates.tip": "Ask GitHub at start and once a day whether a newer version exists (now {0})",
+  "update.available": "Version {0} is available.",
+  "update.manual": "Version {0} is available – this copy cannot update itself.",
+  "update.install": "Update",
+  "update.install.tip": "Downloads {0}, checks it against SHA256SUMS and restarts BoosterAI. Open tabs keep running but are no longer watched.",
+  "update.page": "Open the releases page",
+  "update.later": "Later",
+  "update.skip": "Skip this version",
+  "update.downloading": "Downloading version {0} …",
+  "update.restarting": "Restarting with version {0} …",
+  "update.failed": "The update failed: {0}",
+  "update.error.noSums": "{0} is missing from SHA256SUMS",
+  "update.error.checksum": "the checksum of {0} does not match",
+  "update.error.noExe": "{0} is missing from {1}",
+  "update.error.helper": "could not start {0}"
 }

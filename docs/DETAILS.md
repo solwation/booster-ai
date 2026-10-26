@@ -50,6 +50,18 @@ It means: one task that ends. You cannot answer or steer during the run, and too
 
 It does not save tokens by itself: every turn sends the same context in both modes. In a test on #20 (claude haiku, a 34-line project) two identical one-shot runs differed more from each other than any mode difference could explain. Background tasks (`sleep` polls) kept the claude, codex and agy runs alive until they finished in a 20-second test; a long multi-hour queue run is not verified.
 
+## Updates
+
+With **Check for updates** on (the default, `"CheckForUpdates": true` in `config.json`), BoosterAI asks `https://api.github.com/repos/solwation/booster-ai/releases/latest` in the background at start and then at most once a day (the last successful check is saved as `"LastUpdateCheck"`). Pre-releases and drafts are ignored, and the release tag is compared semantically with the app's own version (release builds get it from the tag, `-p:Version=${tag#v}`). A network error or an unexpected answer shows nothing; the next start or the next hourly tick tries again.
+
+When a newer release exists, a bar above the projects says *Version X is available* with three choices:
+
+- **Update** downloads the archive for this platform (`BoosterAI-<version>-win-x64.zip` or `-linux-x64.tar.gz`) and `SHA256SUMS` from the release, refuses the archive unless its SHA-256 matches, and extracts only the executable, next to the installed one as `BoosterAI(.exe).new`. A small helper script then takes over and BoosterAI exits. On Windows it is a hidden PowerShell script (`%TEMP%\BoosterAI-update-<version>\update.ps1`, no window); it waits for BoosterAI to exit, moves the old exe aside, moves the new one in (and puts the old one back if that fails) and starts BoosterAI again. On Linux a detached bash script waits the same way and renames the new binary over the old one. The helper writes `updated` or `failed: …` to `update.log` next to `config.json`. Tabs already open keep running, but the new instance does not watch them; clicking *Update* is the confirmation.
+- **Later** hides the bar until the next check.
+- **Skip this version** saves it as `"SkippedVersion"` and does not offer it again; a later release is offered as usual.
+
+Only a copy in the location the installers use updates itself: `%LOCALAPPDATA%\Programs\BoosterAI\BoosterAI.exe` on Windows, `~/.local/bin/BoosterAI` on Linux. Anything else (a development build, `dotnet run`, another folder, a non-x64 machine) shows the bar with **Open the releases page** instead, as does a failed update. The Linux self-update replaces only the binary; the menu entry and icons from `install-linux.sh` stay as they are. The checksum comes from the same release as the archive, so it protects against corrupt or truncated downloads, not against a compromised GitHub release.
+
 ## Watching the tabs
 
 After **Start**, BoosterAI stays running and shows a status per tab: *Starting…*, *Running*, *CLI exited (code)*, *CLI not found*, *Did not start*, *Tab closed* or *Lost*. The window minimizes to the taskbar, so the status is one click away. Closing the window quits BoosterAI. On Windows there is also a tray icon (Windows may tuck it behind the ^ arrow) whose menu shows the window or quits. Linux gets no tray icon, because many desktops (plain GNOME, for example) have no tray. A tab that has closed or whose CLI has exited gets a restart button. The button opens the tab again with the same AI, model and orchestra choice, in the same Windows Terminal window.

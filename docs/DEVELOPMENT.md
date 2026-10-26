@@ -24,7 +24,9 @@ To add a string: add the same key to both `src/BoosterAI/Resources/Strings.sv.js
 
 ## Screenshots
 
-`BoosterAI --screenshot <file.png> [--window main|settings|install] [--theme light|dark] --config <neutral.json>` renders a window headless: nothing is shown and focus does not change. The title bar is not rendered. Use a config with invented project names, never personal ones; `Language` in it picks Swedish or English. The sample status column shows automatically. `docs/screenshot.png` and `docs/settings.png` in the README are made this way.
+`BoosterAI --screenshot <file.png> [--window main|settings|install] [--theme light|dark] --config <neutral.json>` renders a window headless: nothing is shown and focus does not change. The title bar is not rendered. Use a config with invented project names, never personal ones; `Language` in it picks Swedish or English. The sample status column shows automatically. `docs/screenshot.png` and `docs/settings.png` in the README are made this way. `--fake-update 0.3.0` adds the update bar as an installed copy shows it, `--fake-update manual:0.3.0` as a copy that can only link to the releases page (screenshots only, no network).
+
+The update tests (`tests/BoosterAI.Tests/UpdateTests.cs`) run the real bash helper (Linux) or PowerShell helper (Windows) against a fake install in the temp folder. `BOOSTERAI_UPDATE_E2E=<scratch dir> dotnet test tests/BoosterAI.Tests --filter EndToEndLinuxUpdateFromGitHub` also downloads the latest Linux release (~40 MB), verifies it, swaps it into `<scratch dir>/fake-install` and runs its `--dry-run`; `~/.local/bin` is never touched.
 
 ## Icon
 

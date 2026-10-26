@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using Avalonia.Media;
 using Avalonia.Threading;
 
@@ -207,6 +208,7 @@ public sealed class MainViewModel : Observable
         _cfg = cfg;
         Tabs = new ObservableCollection<TabViewModel>(cfg.Tabs.Select((t, i) => new TabViewModel(t, this, i)));
         Tabs.CollectionChanged += (_, _) => TabsChanged();
+        Update = new UpdateViewModel(cfg, Save);
         _ = InitAsync();
     }
 
@@ -253,6 +255,23 @@ public sealed class MainViewModel : Observable
 
     public bool CloseAfterLaunch { get => _cfg.CloseAfterLaunch; set { _cfg.CloseAfterLaunch = value; Raise(); } }
     public bool Notifications { get => _cfg.Notifications; set { _cfg.Notifications = value; Raise(); } }
+
+    /// <summary>The update prompt in the main window.</summary>
+    public UpdateViewModel Update { get; }
+
+    public bool CheckForUpdates
+    {
+        get => _cfg.CheckForUpdates;
+        set
+        {
+            if (_cfg.CheckForUpdates == value) return;
+            _cfg.CheckForUpdates = value;
+            Raise();
+            Update.SettingChanged();
+        }
+    }
+
+    public string CheckForUpdatesTip => Loc.Format("settings.updates.tip", UpdateLogic.Current);
 
     public LanguageChoice SelectedLanguage
     {
@@ -491,4 +510,160 @@ public sealed record ThemeChoice(string Id)
 public sealed record ZoomChoice(int Percent)
 {
     public string Label => Percent == 0 ? Loc.Get("zoom.default") : Loc.Format("zoom.percent", Percent);
+}
+
+/// <summary>
+/// The discreet "Version X finns" bar in the main window: a background check at start and then at most
+/// once a day, and the verified self-update (only for a copy in the tools/install-* location).
+/// </summary>
+public sealed class UpdateViewModel : Observable
+{
+    private readonly AppConfig _cfg;
+    private readonly Action _save;
+    private readonly bool _windows = OperatingSystem.IsWindows();
+    private UpdateClient? _client;
+    private DispatcherTimer? _timer;
+    private ReleaseInfo? _release;
+    private ReleaseAsset? _asset;
+    private bool _visible, _busy, _checking, _canInstall, _failed;
+    private string _text = "";
+
+    public UpdateViewModel(AppConfig cfg, Action save)
+    {
+        _cfg = cfg;
+        _save = save;
+    }
+
+    public bool IsVisible { get => _visible; private set => Set(ref _visible, value); }
+    public string Text { get => _text; private set => Set(ref _text, value); }
+    public bool IsBusy { get => _busy; private set { if (Set(ref _busy, value)) RaiseButtons(); } }
+    /// <summary>Whether this copy can replace itself; otherwise the bar links to the releases page.</summary>
+    public bool CanInstall { get => _canInstall; private set { if (Set(ref _canInstall, value)) RaiseButtons(); } }
+    public bool Failed { get => _failed; private set { if (Set(ref _failed, value)) RaiseButtons(); } }
+    public bool ShowInstall => CanInstall && !IsBusy && !Failed;
+    public bool ShowPage => (!CanInstall || Failed) && !IsBusy;
+    public bool ShowDismiss => !IsBusy;
+    public string PageUrl => _release?.PageUrl ?? UpdateLogic.ReleasesPage;
+    public string InstallTip => Loc.Format("update.install.tip", _release?.Version.ToString() ?? "");
+
+    private void RaiseButtons()
+    {
+        Raise(nameof(ShowInstall));
+        Raise(nameof(ShowPage));
+        Raise(nameof(ShowDismiss));
+    }
+
+    private string InstalledPath => UpdateLogic.InstallPath(_windows,
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+
+    private bool IsInstalledCopy => UpdateLogic.IsInstalledCopy(Environment.ProcessPath, _windows,
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+
+    /// <summary>Called once the main window exists: tidies a previous update, checks now and then hourly whether a day has passed.</summary>
+    public void Start()
+    {
+        if (IsInstalledCopy)
+            foreach (var leftover in new[] { InstalledPath + ".new", InstalledPath + ".new.part", InstalledPath + ".old" })
+                try { File.Delete(leftover); } catch (Exception) { /* still locked; the next start tries again */ }
+        if (_cfg.CheckForUpdates) _ = CheckAsync();
+        _timer = new DispatcherTimer(TimeSpan.FromHours(1), DispatcherPriority.Background, (_, _) =>
+        {
+            if (_cfg.CheckForUpdates && UpdateLogic.IsDue(_cfg.LastUpdateCheck, DateTime.UtcNow)) _ = CheckAsync();
+        });
+        _timer.Start();
+    }
+
+    /// <summary>The setting was toggled: turning it on checks if a day has passed; turning it off hides the bar.</summary>
+    public void SettingChanged()
+    {
+        if (!_cfg.CheckForUpdates) { if (!IsBusy) IsVisible = false; return; }
+        if (_timer is not null && UpdateLogic.IsDue(_cfg.LastUpdateCheck, DateTime.UtcNow)) _ = CheckAsync();
+    }
+
+    private async Task CheckAsync()
+    {
+        if (_checking || IsBusy || IsVisible) return;
+        _checking = true;
+        try
+        {
+            _client ??= new UpdateClient(UpdateClient.CreateHttp());
+            var client = _client;
+            var latest = await Task.Run(() => client.LatestAsync());
+            // A failed request is retried at the next start or hourly tick, not counted as a check.
+            if (latest is null) return;
+            _cfg.LastUpdateCheck = DateTime.UtcNow;
+            _save();
+            if (_cfg.CheckForUpdates && UpdateLogic.ShouldOffer(latest, UpdateLogic.Current, _cfg.SkippedVersion))
+                Offer(latest, IsInstalledCopy);
+        }
+        catch (Exception) { /* silent: the check never interrupts */ }
+        finally { _checking = false; }
+    }
+
+    private void Offer(ReleaseInfo release, bool installedCopy)
+    {
+        _release = release;
+        _asset = UpdateLogic.SelectAsset(release.Assets, release.Version, UpdateLogic.RuntimeId(_windows, RuntimeInformation.OSArchitecture));
+        CanInstall = installedCopy && _asset is not null;
+        Failed = false;
+        Text = Loc.Format(CanInstall ? "update.available" : "update.manual", release.Version);
+        Raise(nameof(PageUrl));
+        Raise(nameof(InstallTip));
+        IsVisible = true;
+    }
+
+    /// <summary>For --screenshot --fake-update 0.3.0: shows the bar as an installed copy would, without any network;
+    /// "manual:0.3.0" shows it as a copy that cannot update itself (releases link).</summary>
+    public void ShowFake(string version)
+    {
+        var manual = version.StartsWith("manual:", StringComparison.Ordinal);
+        if (manual) version = version["manual:".Length..];
+        var v = AppVersion.Parse(version) ?? new AppVersion(9, 9, 9, "");
+        var rid = UpdateLogic.RuntimeId(_windows, RuntimeInformation.OSArchitecture) ?? "linux-x64";
+        var name = $"BoosterAI-{v}-{rid}{(rid.StartsWith("win-") ? ".zip" : ".tar.gz")}";
+        Offer(new ReleaseInfo("v" + v, v, false, UpdateLogic.ReleasesPage, [new(name, ""), new(UpdateLogic.SumsName, "")]), installedCopy: !manual);
+    }
+
+    /// <summary>"Senare": hidden until the next check.</summary>
+    public void Later() { if (!IsBusy) IsVisible = false; }
+
+    /// <summary>"Hoppa över den här versionen": saved, never offered again (a newer one still is).</summary>
+    public void Skip()
+    {
+        if (IsBusy || _release is null) return;
+        _cfg.SkippedVersion = _release.Version.ToString();
+        _save();
+        IsVisible = false;
+    }
+
+    /// <summary>Downloads, verifies and stages the new version, then starts the helper; true when the app should now exit.</summary>
+    public async Task<bool> InstallAsync()
+    {
+        if (IsBusy || !CanInstall || _release is not { } release || _asset is not { } asset || !IsInstalledCopy) return false;
+        IsBusy = true;
+        Failed = false;
+        Text = Loc.Format("update.downloading", release.Version);
+        try
+        {
+            var target = InstalledPath;
+            var staged = target + ".new";
+            var work = Path.Combine(Path.GetTempPath(), "BoosterAI-update-" + release.Version);
+            var log = Path.Combine(Path.GetDirectoryName(ConfigStore.PathOnDisk)!, "update.log");
+            _client ??= new UpdateClient(UpdateClient.CreateHttp());
+            var client = _client;
+            await Task.Run(() => client.StageAsync(release, asset, _windows, work, staged));
+            UpdateClient.LaunchHelper(_windows, Environment.ProcessId, target, staged, work, log);
+            Text = Loc.Format("update.restarting", release.Version);
+            return true;
+        }
+        catch (Exception e)
+        {
+            Text = Loc.Format("update.failed", e is UpdateException ? e.Message : e.GetType().Name + ": " + e.Message);
+            Failed = true;
+            IsBusy = false;
+            return false;
+        }
+    }
 }

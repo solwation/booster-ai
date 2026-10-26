@@ -6,11 +6,11 @@ using Avalonia.Threading;
 namespace BoosterAI;
 
 /// <summary>
-/// <c>--screenshot file.png [--window main|settings|install] [--theme light|dark] [--config file.json]</c>:
+/// <c>--screenshot file.png [--window main|settings|install] [--theme light|dark] [--config file.json] [--fake-update [manual:]0.3.0]</c>:
 /// renders a window with Avalonia's headless Skia platform. Nothing is shown on the desktop and no
 /// focus changes. The window frame (title bar) is not drawn; only the client area.
 /// </summary>
-internal sealed record ScreenshotOptions(string File, string Window);
+internal sealed record ScreenshotOptions(string File, string Window, string? FakeUpdate);
 
 internal static class Screenshot
 {
@@ -22,7 +22,7 @@ internal static class Screenshot
         if (file is null) return null;
         if (Value(args, "--config") is { } cfg) ConfigStore.UseFile(cfg);
         Active = true;
-        return new ScreenshotOptions(file, Value(args, "--window") ?? "main");
+        return new ScreenshotOptions(file, Value(args, "--window") ?? "main", Value(args, "--fake-update"));
     }
 
     private static string? Value(string[] args, string name)
@@ -41,6 +41,9 @@ internal static class Screenshot
         // Sample tab statuses, as before (the real window shows the real ones).
         var vm = new MainViewModel(app.Config);
         vm.ShowSampleStatus();
+        // --fake-update 0.3.0 shows the update prompt as an installed copy would see it, manual:0.3.0 as a copy
+        // that cannot update itself (no network, screenshots only).
+        if (o.FakeUpdate is { } fake) vm.Update.ShowFake(fake);
         Window window = o.Window switch
         {
             "main" => new MainWindow(vm),

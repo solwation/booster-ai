@@ -49,6 +49,24 @@ public partial class MainWindow : Window
         }
     }
 
+    private async void OnUpdateInstall(object? sender, RoutedEventArgs e)
+    {
+        // The prompt is the confirmation: open tabs keep running but are no longer watched.
+        if (await _vm.Update.InstallAsync()
+            && Application.Current?.ApplicationLifetime is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime life)
+            life.Shutdown();
+    }
+
+    private async void OnUpdatePage(object? sender, RoutedEventArgs e)
+    {
+        try { if (TopLevel.GetTopLevel(this)?.Launcher is { } l) await l.LaunchUriAsync(new Uri(_vm.Update.PageUrl)); }
+        catch (Exception ex) { _vm.ShowStatus(Loc.Format("status.openFailed", ex.Message), error: true); }
+    }
+
+    private void OnUpdateLater(object? sender, RoutedEventArgs e) => _vm.Update.Later();
+
+    private void OnUpdateSkip(object? sender, RoutedEventArgs e) => _vm.Update.Skip();
+
     private void OnRestart(object? sender, RoutedEventArgs e)
     {
         if ((sender as Control)?.DataContext is TabViewModel tab) _vm.Restart(tab);
