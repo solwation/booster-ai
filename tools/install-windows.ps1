@@ -1,10 +1,19 @@
-# Installs BoosterAI.exe (next to this script in a release download, else dist\win-x64\) for the current user (no admin needed):
+﻿# Installs BoosterAI.exe (next to this script in a release download, else dist\win-x64\) for the current user (no admin needed):
 # %LOCALAPPDATA%\Programs\BoosterAI plus Start menu and desktop shortcuts.
 #   powershell -ExecutionPolicy Bypass -File tools\install-windows.ps1
 $ErrorActionPreference = 'Stop'
 $src = Join-Path $PSScriptRoot 'BoosterAI.exe'
 if (-not (Test-Path $src)) { $src = Join-Path $PSScriptRoot '..\dist\win-x64\BoosterAI.exe' }
 if (-not (Test-Path $src)) { throw "Bygg först: tools/publish.sh win-x64 (saknar $src)" }
+# In a checkout, refuse a dist build older than the sources: installing it would silently ship the previous version.
+$srcDir = Join-Path $PSScriptRoot '..\src\BoosterAI'
+if (Test-Path -LiteralPath $srcDir) {
+  $newest = Get-ChildItem -LiteralPath $srcDir -Recurse -File |
+    Where-Object { $_.FullName -notmatch '\\(bin|obj)\\' } | Sort-Object LastWriteTime | Select-Object -Last 1
+  if ($newest -and $newest.LastWriteTime -gt (Get-Item -LiteralPath $src).LastWriteTime) {
+    throw "dist-bygget är äldre än $($newest.Name); kör tools/publish.sh win-x64 först."
+  }
+}
 
 # Remove the pre-rename install (BoosterStart): stop it, delete its folder and shortcuts. Literal paths only.
 $oldDir = Join-Path $env:LOCALAPPDATA 'Programs\BoosterStart'
