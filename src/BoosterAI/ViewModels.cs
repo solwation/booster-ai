@@ -338,6 +338,24 @@ public sealed class MainViewModel : Observable
         CheckOrkester(tab);
     }
 
+    /// <summary>Local paths of the projects already added, for leaving them out of "Hitta projekt".</summary>
+    public IEnumerable<string> ProjectPaths =>
+        Tabs.Select(t => PathMapping.ToLocalPath(t.Directory, _cfg.WslDistro, _wslHome)).OfType<string>();
+
+    /// <summary>Adds the folders picked in "Hitta projekt" as tabs named after their folder.</summary>
+    public void Import(IReadOnlyList<FoundProject> projects)
+    {
+        // The blank row Settings adds for a first project is replaced, not kept next to the imports.
+        if (Tabs is [{ } only] && only.Directory.Trim() is "" or "~" && Loc.IsDefaultTabName(only.Name)) Tabs.Clear();
+        foreach (var p in projects)
+        {
+            var tab = new TabViewModel(new TabConfig { Name = p.Name, Directory = PathMapping.ToTabPath(p.Path), ColorIndex = Tabs.Count }, this, Tabs.Count);
+            Tabs.Add(tab);
+            CheckOrkester(tab);
+        }
+        if (projects.Count > 0) ShowStatus(Loc.Format(projects.Count == 1 ? "status.imported.one" : "status.imported.many", projects.Count), error: false);
+    }
+
     /// <summary>Resolves the WSL home (for ~ paths on Windows), then checks every tab.</summary>
     private async Task InitAsync()
     {
@@ -766,5 +784,101 @@ public sealed class UpdateViewModel : Observable
             IsBusy = false;
             return false;
         }
+    }
+}
+
+/// <summary>One folder in the "Hitta projekt" list.</summary>
+public sealed class ImportItem(FoundProject project, Action changed) : Observable
+{
+    private bool _selected = true;
+
+    public FoundProject Project { get; } = project;
+    public string Name => Project.Name;
+    public string Path => Project.Path;
+    public string Kind => Project switch { { Git: true, Ai: true } => "git · AI", { Git: true } => "git", _ => "AI" };
+    public bool Selected { get => _selected; set { if (Set(ref _selected, value)) changed(); } }
+}
+
+/// <summary>The "Hitta projekt" dialog: scans a folder in the background and lists the projects not added yet.</summary>
+public sealed class ImportViewModel : Observable
+{
+    private readonly HashSet<string> _existing;
+    private CancellationTokenSource? _scan;
+    private string _root = "", _message = "";
+    private bool _scanning;
+
+    /// <param name="existing">Local paths of the projects already added; they are left out of the list.</param>
+    public ImportViewModel(IEnumerable<string> existing) =>
+        _existing = [.. existing.Select(ProjectScanner.Key)];
+
+    public ObservableCollection<ImportItem> Items { get; } = [];
+    public string Root { get => _root; private set { if (Set(ref _root, value)) Raise(nameof(Hint)); } }
+    public string Hint => Loc.Format("import.hint", Root);
+    public string Message { get => _message; private set => Set(ref _message, value); }
+    public bool IsScanning { get => _scanning; private set => Set(ref _scanning, value); }
+    public bool HasItems => Items.Count > 0;
+    public int SelectedCount => Items.Count(i => i.Selected);
+    public bool CanImport => SelectedCount > 0;
+    public string ImportLabel => SelectedCount switch { 0 => Loc.Get("import.none"), 1 => Loc.Get("import.one"), var n => Loc.Format("import.many", n) };
+    public IReadOnlyList<FoundProject> Selected => [.. Items.Where(i => i.Selected).Select(i => i.Project)];
+
+    /// <summary>The header check box: on when every row is ticked, mixed when some are; setting it ticks or clears all.</summary>
+    public bool? AllSelected
+    {
+        get => Items.All(i => i.Selected) ? Items.Count > 0 : Items.Any(i => i.Selected) ? null : false;
+        set { foreach (var i in Items) i.Selected = value ?? true; }
+    }
+
+    private void SelectionChanged()
+    {
+        Raise(nameof(SelectedCount));
+        Raise(nameof(CanImport));
+        Raise(nameof(ImportLabel));
+        Raise(nameof(AllSelected));
+    }
+
+    public async Task ScanAsync(string root)
+    {
+        _scan?.Cancel();
+        var cancel = (_scan = new CancellationTokenSource()).Token;
+        Root = root;
+        Show([]);
+        IsScanning = true;
+        Message = Loc.Format("import.scanning", root);
+        try
+        {
+            var found = await Task.Run(() => ProjectScanner.Scan(root, cancel: cancel), cancel);
+            if (cancel.IsCancellationRequested) return;
+            var fresh = found.Where(f => !_existing.Contains(ProjectScanner.Key(f.Path))).ToList();
+            Show(fresh);
+            Message = Loc.Format(found.Count == 0 ? "import.nothing" : "import.allAdded", root);
+        }
+        catch (OperationCanceledException) { /* a newer scan replaced this one */ }
+        catch (Exception e) { Message = Loc.Format("import.failed", e.Message); }
+        finally { if (!cancel.IsCancellationRequested) IsScanning = false; }
+    }
+
+    public void Cancel() => _scan?.Cancel();
+
+    /// <summary>For --screenshot --window import: a fixed list, no file system access.</summary>
+    public void ShowSample(string root)
+    {
+        Root = root;
+        var sep = System.IO.Path.DirectorySeparatorChar;
+        Show([
+            new(root + sep + "webshop", "webshop", Git: true, Ai: true),
+            new(root + sep + "recipes", "recipes", Git: true, Ai: false),
+            new(root + sep + "notes" + sep + "research", "research", Git: false, Ai: true),
+            new(root + sep + "work" + sep + "intranet", "intranet", Git: true, Ai: false),
+        ]);
+        Items[3].Selected = false;
+    }
+
+    private void Show(IReadOnlyList<FoundProject> projects)
+    {
+        Items.Clear();
+        foreach (var p in projects) Items.Add(new ImportItem(p, SelectionChanged));
+        Raise(nameof(HasItems));
+        SelectionChanged();
     }
 }

@@ -25,6 +25,8 @@ public partial class MainWindow : Window
         await new SettingsWindow(_vm).ShowDialog(this);
     }
 
+    private async void OnFindProjects(object? sender, RoutedEventArgs e) => await ImportProjectsWindow.FindProjects(this, _vm);
+
     private async void OnInstallOrkester(object? sender, RoutedEventArgs e)
     {
         if ((sender as Control)?.DataContext is not TabViewModel tab) return;

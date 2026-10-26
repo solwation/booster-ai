@@ -148,7 +148,10 @@
                     Spacing="12" Margin="0,40">
           <TextBlock Classes="muted" Text="{local:T empty.text}"
                      HorizontalAlignment="Center" />
-          <Button Content="{local:T empty.add}" Click="OnSettings" HorizontalAlignment="Center" Classes="accent" />
+          <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
+            <Button Content="{local:T import.button}" Click="OnFindProjects" Classes="accent" ToolTip.Tip="{local:T import.button.tip}" />
+            <Button Content="{local:T empty.add}" Click="OnSettings" />
+          </StackPanel>
         </StackPanel>
       </Panel>
     </ScrollViewer>

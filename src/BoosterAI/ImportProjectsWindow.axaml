@@ -1,0 +1,68 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="using:BoosterAI"
+        x:Class="BoosterAI.ImportProjectsWindow"
+        x:DataType="local:ImportViewModel"
+        Title="{local:T import.title}"
+        Icon="avares://BoosterAI/Assets/boosterai.ico"
+        Width="720" Height="560" MinWidth="520" MinHeight="320"
+        WindowStartupLocation="CenterOwner">
+
+  <!-- Columns: check 36 · name/path * · kind 90. -->
+  <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="28,22,28,20">
+
+    <StackPanel Grid.Row="0" Spacing="2" Margin="0,0,0,16">
+      <TextBlock Classes="title" Text="{local:T import.heading}" />
+      <TextBlock Classes="muted" Text="{Binding Hint}" TextWrapping="Wrap" />
+    </StackPanel>
+
+    <Grid Grid.Row="1" ColumnDefinitions="36,*,90" Margin="14,0,14,6" IsVisible="{Binding HasItems}">
+      <CheckBox Grid.Column="0" IsChecked="{Binding AllSelected}" MinWidth="0" VerticalAlignment="Center"
+                ToolTip.Tip="{local:T import.all}" AutomationProperties.Name="{local:T import.all}" />
+      <TextBlock Grid.Column="1" Classes="colhead" Text="{local:T col.project}" />
+      <TextBlock Grid.Column="2" Classes="colhead" Text="{local:T import.kind}" />
+    </Grid>
+
+    <Panel Grid.Row="2">
+      <ScrollViewer HorizontalScrollBarVisibility="Disabled" IsVisible="{Binding HasItems}">
+        <ItemsControl ItemsSource="{Binding Items}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="local:ImportItem">
+              <Border Classes="row" Padding="14,8">
+                <Grid ColumnDefinitions="36,*,90">
+                  <CheckBox Grid.Column="0" IsChecked="{Binding Selected}" MinWidth="0" VerticalAlignment="Center"
+                            AutomationProperties.Name="{Binding Name}" />
+                  <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center" Margin="0,0,12,0">
+                    <TextBlock Classes="name" Text="{Binding Name}" />
+                    <TextBlock Classes="path" Text="{Binding Path}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Path}" />
+                  </StackPanel>
+                  <TextBlock Grid.Column="2" Classes="muted" Text="{Binding Kind}" VerticalAlignment="Center" FontSize="12.5" />
+                </Grid>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+
+      <StackPanel IsVisible="{Binding !HasItems}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
+        <ProgressBar IsIndeterminate="True" Width="160" IsVisible="{Binding IsScanning}" />
+        <TextBlock Classes="muted" Text="{Binding Message}" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="440" />
+      </StackPanel>
+    </Panel>
+
+    <Grid Grid.Row="3" ColumnDefinitions="Auto,*,Auto" Margin="0,16,0,0">
+      <Button Grid.Column="0" Click="OnPickRoot" Padding="12,8" ToolTip.Tip="{local:T import.root.tip}" IsEnabled="{Binding !IsScanning}">
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <Path Data="{StaticResource FolderIcon}" Width="15" Height="13" Stretch="Uniform" StrokeThickness="1.4"
+                StrokeJoin="Round" Stroke="{DynamicResource TextBrush}" VerticalAlignment="Center" />
+          <TextBlock Text="{local:T import.root}" />
+        </StackPanel>
+      </Button>
+      <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10">
+        <Button Content="{local:T cancel}" Click="OnCancel" IsCancel="True" Padding="18,8" />
+        <Button Classes="accent" Click="OnImport" IsDefault="True" Padding="18,8"
+                Content="{Binding ImportLabel}" IsEnabled="{Binding CanImport}" />
+      </StackPanel>
+    </Grid>
+  </Grid>
+</Window>

@@ -6,7 +6,7 @@ using Avalonia.Threading;
 namespace BoosterAI;
 
 /// <summary>
-/// <c>--screenshot file.png [--window main|settings|install] [--theme light|dark] [--config file.json] [--fake-update [manual:]0.3.0] [--fake-status [error:]text] [--fake-denied]</c>:
+/// <c>--screenshot file.png [--window main|settings|install|import] [--theme light|dark] [--config file.json] [--fake-update [manual:]0.3.0] [--fake-status [error:]text] [--fake-denied]</c>:
 /// renders a window with Avalonia's headless Skia platform. Nothing is shown on the desktop and no
 /// focus changes. The window frame (title bar) is not drawn; only the client area.
 /// </summary>
@@ -29,6 +29,13 @@ internal static class Screenshot
     {
         var i = Array.IndexOf(args, name);
         return i >= 0 && i + 1 < args.Length ? args[i + 1] : null;
+    }
+
+    private static ImportViewModel SampleImport()
+    {
+        var vm = new ImportViewModel([]);
+        vm.ShowSample(OperatingSystem.IsWindows() ? @"C:\Users\me\Documents" : "/home/me/Documents");
+        return vm;
     }
 
     public static int Run(ScreenshotOptions o)
@@ -54,7 +61,8 @@ internal static class Screenshot
             "main" => new MainWindow(vm),
             "settings" => new SettingsWindow(vm),
             "install" => new ConfirmInstallWindow(vm.Tabs.First()),
-            _ => throw new ArgumentException($"Unknown --window '{o.Window}' (main, settings or install)"),
+            "import" => new ImportProjectsWindow(SampleImport()),
+            _ => throw new ArgumentException($"Unknown --window '{o.Window}' (main, settings, install or import)"),
         };
         window.Show();
         // The orchestra check runs in the background; give it a moment so the toggles show their real state.

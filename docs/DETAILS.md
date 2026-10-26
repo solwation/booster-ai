@@ -18,6 +18,10 @@ The app follows the system's light or dark theme; `--theme light` or `--theme da
 
 The settings window holds your projects (name and directory, with a folder picker), the tab colour theme, and where tabs run. On Windows you point at your normal Windows folders; WSL shares (`\\wsl.localhost\...`) and Linux paths such as `~/webshop` work too. Whether an agent then works in a mirror elsewhere is up to your own agent instructions.
 
+### Find projects
+
+**Find projects** (in the empty start window and at the bottom of Settings) searches your Documents folder (on Linux `~/Documents`, or your home folder when there is none) three levels down. A folder counts as a project when it has `.git` (a folder, or a file in worktrees) or one of `AGENTS.md`, `CLAUDE.md`, `AI.md`, `GEMINI.md`, `.claude/`, `.orchestra/`, `.agents/`, `.cursorrules` or `.github/copilot-instructions.md` in its root. The search does not go into a project it found, hidden folders, links, or folders such as `node_modules`, `bin` and `obj`. Projects you already have are left out; tick the ones to add and each becomes a tab named after its folder. *Search another folder* picks a different starting point, for example a WSL share such as `\\wsl.localhost\Ubuntu\home\me`.
+
 ### Font size
 
 *Font size* in the settings window zooms the CLI text in all tabs (80–200 %; saved as `"ZoomPercent"` in `config.json`, `0` = the terminal's default, which changes nothing). It applies on the next Start.

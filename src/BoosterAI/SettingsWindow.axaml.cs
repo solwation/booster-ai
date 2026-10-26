@@ -22,6 +22,8 @@ public partial class SettingsWindow : Window
 
     private void OnAddTab(object? sender, RoutedEventArgs e) => _vm.AddTab();
 
+    private async void OnFindProjects(object? sender, RoutedEventArgs e) => await ImportProjectsWindow.FindProjects(this, _vm);
+
     private void OnRemoveTab(object? sender, RoutedEventArgs e)
     {
         if ((sender as Control)?.DataContext is TabViewModel tab) _vm.Tabs.Remove(tab);
