@@ -7,7 +7,10 @@ if (-not (Test-Path $src)) { throw "Bygg först: tools/publish.sh win-x64 (sakna
 
 $dir = Join-Path $env:LOCALAPPDATA 'Programs\BoosterStart'
 New-Item -ItemType Directory -Force -Path $dir | Out-Null
-Get-Process BoosterStart -ErrorAction SilentlyContinue | Stop-Process -Force
+# A running copy locks the exe; stop it and wait until the file is free.
+$running = Get-Process BoosterStart -ErrorAction SilentlyContinue
+$running | Stop-Process -Force
+$running | Wait-Process -Timeout 10 -ErrorAction SilentlyContinue
 Copy-Item $src (Join-Path $dir 'BoosterStart.exe') -Force
 
 $shell = New-Object -ComObject WScript.Shell
