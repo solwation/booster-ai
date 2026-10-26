@@ -5,6 +5,7 @@ cd "$(dirname "$0")/.."
 src=dist/linux-x64/BoosterStart
 [ -x "$src" ] || { echo "Bygg först: tools/publish.sh linux-x64"; exit 1; }
 install -Dm755 "$src" ~/.local/bin/BoosterStart
+install -Dm644 assets/boosterstart.svg ~/.local/share/icons/hicolor/scalable/apps/boosterstart.svg
 install -Dm644 assets/boosterstart.png ~/.local/share/icons/hicolor/256x256/apps/boosterstart.png
 mkdir -p ~/.local/share/applications
 cat > ~/.local/share/applications/boosterstart.desktop <<DESKTOP
