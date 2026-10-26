@@ -69,7 +69,11 @@
                               VerticalAlignment="Center" />
                       <TextBox Text="{Binding Name}" FontWeight="SemiBold" MinWidth="160" Watermark="Fliknamn" />
                     </StackPanel>
-                    <TextBox Classes="dir" Text="{Binding Directory}" Watermark="~/projekt" />
+                    <Grid ColumnDefinitions="*,Auto">
+                      <TextBox Grid.Column="0" Classes="dir" Text="{Binding Directory}" Watermark="~/projekt" />
+                      <Button Grid.Column="1" Content="📁" Click="OnBrowse" Padding="6,2" Margin="4,0,0,0"
+                              VerticalAlignment="Stretch" ToolTip.Tip="Välj katalog" />
+                    </Grid>
                   </StackPanel>
                   <ComboBox Grid.Column="2" ItemsSource="{Binding Llms}" SelectedItem="{Binding Llm}"
                             HorizontalAlignment="Stretch" VerticalAlignment="Center" Margin="0,0,8,0" />
