@@ -85,7 +85,7 @@
     </StackPanel>
 
     <!-- Language and font size share one column grid so the combo boxes line up; hints wrap instead of clipping. -->
-    <Grid Grid.Row="4" ColumnDefinitions="Auto,170,*" RowDefinitions="Auto,Auto" Margin="0,16,0,0">
+    <Grid Grid.Row="4" ColumnDefinitions="Auto,170,*" RowDefinitions="Auto,Auto,Auto" Margin="0,16,0,0">
       <TextBlock Grid.Row="0" Grid.Column="0" Classes="colhead" Text="{local:T language.title}" VerticalAlignment="Center" Margin="0,0,10,0" />
       <ComboBox Grid.Row="0" Grid.Column="1" ItemsSource="{Binding LanguageChoices}" SelectedItem="{Binding SelectedLanguage}" Width="170"
                 AutomationProperties.Name="{local:T language.name}">
@@ -107,6 +107,17 @@
         </ComboBox.ItemTemplate>
       </ComboBox>
       <TextBlock Grid.Row="1" Grid.Column="2" Classes="muted" Text="{local:T zoom.hint}" VerticalAlignment="Center"
+                 TextWrapping="Wrap" Margin="10,12,0,0" />
+      <TextBlock Grid.Row="2" Grid.Column="0" Classes="colhead" Text="{local:T theme.title}" VerticalAlignment="Center" Margin="0,12,10,0" />
+      <ComboBox Grid.Row="2" Grid.Column="1" ItemsSource="{Binding AppearanceChoices}" SelectedItem="{Binding SelectedAppearance}" Width="170" Margin="0,12,0,0"
+                AutomationProperties.Name="{local:T theme.name}">
+        <ComboBox.ItemTemplate>
+          <DataTemplate x:DataType="local:ThemeChoice">
+            <TextBlock Text="{Binding Label}" />
+          </DataTemplate>
+        </ComboBox.ItemTemplate>
+      </ComboBox>
+      <TextBlock Grid.Row="2" Grid.Column="2" Classes="muted" Text="{local:T theme.hint}" VerticalAlignment="Center"
                  TextWrapping="Wrap" Margin="10,12,0,0" />
     </Grid>
 

@@ -32,6 +32,8 @@ public sealed class AppConfig
     public string ColorTheme { get; set; } = "Standard";
     /// <summary>UI language: "auto" (follow the OS), "sv" or "en". Applied at startup.</summary>
     public string Language { get; set; } = Loc.Auto;
+    /// <summary>App appearance: "auto" (follow the system), "light" or "dark". Applied live. Not the tab colour themes.</summary>
+    public string AppTheme { get; set; } = "auto";
     /// <summary>Close after Start (the behaviour before tab monitoring) instead of watching the tabs from the tray.</summary>
     public bool CloseAfterLaunch { get; set; }
     /// <summary>System notification when a watched tab closes, fails to start or its CLI fails.</summary>

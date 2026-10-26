@@ -17,17 +17,31 @@ public partial class App : Application
         // The language must be set before any XAML (and its {local:T} texts) loads.
         Loc.Init(_config.Language);
         AvaloniaXamlLoader.Load(this);
-        // --theme light|dark overrides the system theme (also used for screenshots).
-        var args = Environment.GetCommandLineArgs();
-        var i = Array.IndexOf(args, "--theme");
-        if (i >= 0 && i + 1 < args.Length)
-            RequestedThemeVariant = args[i + 1] switch
-            {
-                "light" => Avalonia.Styling.ThemeVariant.Light,
-                "dark" => Avalonia.Styling.ThemeVariant.Dark,
-                _ => RequestedThemeVariant,
-            };
+        ApplyTheme();
     }
+
+    /// <summary>Maps the config value to a theme variant: light, dark, anything else (auto, missing, unknown) follows the system.</summary>
+    public static Avalonia.Styling.ThemeVariant ThemeFor(string? value) => value switch
+    {
+        "light" => Avalonia.Styling.ThemeVariant.Light,
+        "dark" => Avalonia.Styling.ThemeVariant.Dark,
+        _ => Avalonia.Styling.ThemeVariant.Default,
+    };
+
+    /// <summary>The value after --theme on the command line, or null when the flag is absent.</summary>
+    public static string? ThemeArg(string[] args)
+    {
+        var i = Array.IndexOf(args, "--theme");
+        return i >= 0 && i + 1 < args.Length ? args[i + 1] : null;
+    }
+
+    /// <summary>The effective theme: a --theme light|dark flag wins over the config's AppTheme.</summary>
+    public static Avalonia.Styling.ThemeVariant ResolveTheme(string[] args, string? configValue) =>
+        ThemeArg(args) is "light" or "dark" ? ThemeFor(ThemeArg(args)) : ThemeFor(configValue);
+
+    /// <summary>Applies the effective theme to the whole application, so every open window follows at once.</summary>
+    public void ApplyTheme() =>
+        RequestedThemeVariant = ResolveTheme(Environment.GetCommandLineArgs(), _config.AppTheme);
 
     public override void OnFrameworkInitializationCompleted()
     {

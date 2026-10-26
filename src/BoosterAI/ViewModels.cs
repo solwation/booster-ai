@@ -265,6 +265,21 @@ public sealed class MainViewModel : Observable
         }
     }
 
+    /// <summary>Appearance setting shown in Settings; applies to all open windows at once.</summary>
+    public IReadOnlyList<ThemeChoice> AppearanceChoices { get; } = [new("auto"), new("light"), new("dark")];
+
+    public ThemeChoice SelectedAppearance
+    {
+        get => AppearanceChoices.FirstOrDefault(c => c.Id == _cfg.AppTheme) ?? AppearanceChoices[0];
+        set
+        {
+            if (value is null || value.Id == _cfg.AppTheme) return;
+            _cfg.AppTheme = value.Id;
+            (Avalonia.Application.Current as App)?.ApplyTheme();
+            Raise();
+        }
+    }
+
     /// <summary>Global CLI zoom shown in Settings; applies on the next start.</summary>
     public IReadOnlyList<ZoomChoice> ZoomChoices { get; } = [.. Launcher.ZoomChoices.Select(p => new ZoomChoice(p))];
 
@@ -464,6 +479,12 @@ public sealed class MainViewModel : Observable
 public sealed record LanguageChoice(string Id)
 {
     public string Label => Loc.Get("language." + Id);
+}
+
+/// <summary>One entry of the appearance picker: "auto", "light" or "dark".</summary>
+public sealed record ThemeChoice(string Id)
+{
+    public string Label => Loc.Get("theme." + Id);
 }
 
 /// <summary>One entry of the zoom picker; 0 means the terminal's default size.</summary>

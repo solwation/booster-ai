@@ -28,6 +28,10 @@ On Linux all tabs open as tabs of ONE window in `gnome-terminal` and `xfce4-term
 
 On Linux the zoom is passed to gnome-terminal (`--zoom`), kitty (`-o font_size`, 11 pt base) and wezterm (`--config font_size`, 12 pt base); other terminals (ptyxis, konsole, xfce4-terminal, xterm, ...) have no command-line option for it and ignore the setting. `BoosterAI --dry-run` prints the resulting commands and fragment.
 
+## Appearance
+
+*Appearance* in the settings window sets the app's light or dark look: **Auto** (follows the system, the default), **Light** or **Dark**. It is saved as `"AppTheme": "auto" | "light" | "dark"` in `config.json` and applies at once to all open windows. The command-line flag `--theme light|dark` wins over the config (used for screenshots). It does not affect the tab colour themes.
+
 ## Language
 
 BoosterAI speaks Swedish and English. By default it follows the operating system's UI language (Swedish if that is Swedish, otherwise English). Choose **Automatiskt / Svenska / English** under *Language* in the settings window; the choice is saved in `config.json` (`"Language": "auto" | "sv" | "en"`) and **takes effect after BoosterAI is restarted**. The prompt sent to the AI when it installs the orchestra follows the chosen language too.
