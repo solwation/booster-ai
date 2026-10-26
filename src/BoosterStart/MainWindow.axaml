@@ -1,0 +1,107 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="using:BoosterStart"
+        x:Class="BoosterStart.MainWindow"
+        x:DataType="local:MainViewModel"
+        Title="BoosterStart"
+        Icon="avares://BoosterStart/Assets/boosterstart.ico"
+        Width="900" Height="560" MinWidth="720" MinHeight="380"
+        WindowStartupLocation="CenterScreen">
+
+  <Window.Styles>
+    <Style Selector="TextBlock.h1">
+      <Setter Property="FontSize" Value="24" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="TextBlock.muted">
+      <Setter Property="Opacity" Value="0.65" />
+    </Style>
+    <Style Selector="TextBlock.colhead">
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="Opacity" Value="0.6" />
+    </Style>
+    <Style Selector="Border.card">
+      <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorDefaultBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="Margin" Value="0,0,0,8" />
+    </Style>
+    <Style Selector="TextBox.dir">
+      <Setter Property="FontFamily" Value="Cascadia Mono, Consolas, DejaVu Sans Mono, monospace" />
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="MinHeight" Value="26" />
+      <Setter Property="Padding" Value="6,3" />
+    </Style>
+  </Window.Styles>
+
+  <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="20,16,20,16">
+
+    <StackPanel Grid.Row="0" Spacing="2" Margin="0,0,0,12">
+      <TextBlock Classes="h1" Text="🚀 BoosterStart" />
+      <TextBlock Classes="muted" Text="Välj AI, modell och om /orkester ska köras i varje flik. Valen sparas till nästa gång." />
+    </StackPanel>
+
+    <!-- Column headers, same widths as the rows below. -->
+    <Grid Grid.Row="1" ColumnDefinitions="40,*,130,220,90,40" Margin="13,0,13,4">
+      <TextBlock Grid.Column="0" Classes="colhead" Text="Med" />
+      <TextBlock Grid.Column="1" Classes="colhead" Text="Flik och katalog" />
+      <TextBlock Grid.Column="2" Classes="colhead" Text="LLM" />
+      <TextBlock Grid.Column="3" Classes="colhead" Text="Modell" />
+      <TextBlock Grid.Column="4" Classes="colhead" Text="Orkester" />
+    </Grid>
+
+    <ScrollViewer Grid.Row="2">
+      <ItemsControl ItemsSource="{Binding Tabs}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="local:TabViewModel">
+            <Border Classes="card" ClipToBounds="True">
+              <Grid ColumnDefinitions="5,*">
+                <Button Grid.Column="0" Padding="0" CornerRadius="0" MinWidth="5" Width="5"
+                        VerticalAlignment="Stretch" Background="{Binding ColorBrush}"
+                        ToolTip.Tip="Byt färg" Click="OnNextColor" />
+                <Grid Grid.Column="1" ColumnDefinitions="40,*,130,220,90,40" Margin="8,8">
+                  <CheckBox Grid.Column="0" IsChecked="{Binding Enabled}" VerticalAlignment="Center"
+                            ToolTip.Tip="Öppna den här fliken" />
+                  <StackPanel Grid.Column="1" Spacing="4" Margin="0,0,12,0">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                      <Border Width="12" Height="12" CornerRadius="6" Background="{Binding ColorBrush}"
+                              VerticalAlignment="Center" />
+                      <TextBox Text="{Binding Name}" FontWeight="SemiBold" MinWidth="160" Watermark="Fliknamn" />
+                    </StackPanel>
+                    <TextBox Classes="dir" Text="{Binding Directory}" Watermark="~/projekt" />
+                  </StackPanel>
+                  <ComboBox Grid.Column="2" ItemsSource="{Binding Llms}" SelectedItem="{Binding Llm}"
+                            HorizontalAlignment="Stretch" VerticalAlignment="Center" Margin="0,0,8,0" />
+                  <ComboBox Grid.Column="3" IsEditable="True" ItemsSource="{Binding Models}"
+                            Text="{Binding Model}" IsEnabled="{Binding IsAi}"
+                            HorizontalAlignment="Stretch" VerticalAlignment="Center" Margin="0,0,8,0"
+                            ToolTip.Tip="Välj i listan eller skriv ett eget modell-id" />
+                  <ToggleSwitch Grid.Column="4" IsChecked="{Binding Orkester}" IsEnabled="{Binding IsAi}"
+                                OnContent="Ja" OffContent="Nej" VerticalAlignment="Center" />
+                  <Button Grid.Column="5" Content="✕" Click="OnRemoveTab" Padding="8,4"
+                          VerticalAlignment="Center" ToolTip.Tip="Ta bort fliken" />
+                </Grid>
+              </Grid>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+
+    <Grid Grid.Row="3" ColumnDefinitions="Auto,Auto,*,Auto" Margin="0,12,0,0">
+      <Button Grid.Column="0" Content="＋ Lägg till flik" Click="OnAddTab" />
+      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="16,0,0,0" VerticalAlignment="Center">
+        <TextBlock Classes="muted" Text="WSL:" VerticalAlignment="Center" IsVisible="{Binding IsWindows}" />
+        <TextBox Text="{Binding WslDistro}" Width="110" IsVisible="{Binding IsWindows}" />
+        <TextBlock Classes="muted" Text="Terminal:" VerticalAlignment="Center" IsVisible="{Binding IsLinux}" />
+        <ComboBox ItemsSource="{Binding LinuxTerminals}" SelectedItem="{Binding LinuxTerminal}"
+                  Width="170" IsVisible="{Binding IsLinux}" />
+      </StackPanel>
+      <TextBlock Grid.Column="2" Text="{Binding Status}" Foreground="#D20F39" TextWrapping="Wrap"
+                 VerticalAlignment="Center" Margin="16,0" />
+      <Button Grid.Column="3" Classes="accent" Click="OnLaunch" Padding="28,10" FontSize="16"
+              FontWeight="SemiBold" Content="Starta" IsDefault="True" />
+    </Grid>
+  </Grid>
+</Window>

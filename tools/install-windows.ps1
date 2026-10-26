@@ -1,0 +1,21 @@
+# Installs dist\win-x64\BoosterStart.exe for the current user (no admin needed):
+# %LOCALAPPDATA%\Programs\BoosterStart plus Start menu and desktop shortcuts.
+#   powershell -ExecutionPolicy Bypass -File tools\install-windows.ps1
+$ErrorActionPreference = 'Stop'
+$src = Join-Path $PSScriptRoot '..\dist\win-x64\BoosterStart.exe'
+if (-not (Test-Path $src)) { throw "Bygg först: tools/publish.sh win-x64 (saknar $src)" }
+
+$dir = Join-Path $env:LOCALAPPDATA 'Programs\BoosterStart'
+New-Item -ItemType Directory -Force -Path $dir | Out-Null
+Get-Process BoosterStart -ErrorAction SilentlyContinue | Stop-Process -Force
+Copy-Item $src (Join-Path $dir 'BoosterStart.exe') -Force
+
+$shell = New-Object -ComObject WScript.Shell
+foreach ($folder in @([Environment]::GetFolderPath('Programs'), [Environment]::GetFolderPath('Desktop'))) {
+  $lnk = $shell.CreateShortcut((Join-Path $folder 'BoosterStart.lnk'))
+  $lnk.TargetPath = Join-Path $dir 'BoosterStart.exe'
+  $lnk.WorkingDirectory = $dir
+  $lnk.Description = 'Starta arbetsflikar med AI-CLI'
+  $lnk.Save()
+}
+Write-Host "Installerat i $dir (Start-menyn och skrivbordet)."
