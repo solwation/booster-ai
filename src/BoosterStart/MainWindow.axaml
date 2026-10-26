@@ -70,9 +70,9 @@
                                   OnContent="{x:Null}" OffContent="{x:Null}" MinWidth="0"
                                   ToolTip.Tip="Skicka /orkester som första prompt" />
                     <Button Classes="link" IsVisible="{Binding CanInstallOrkester}" Click="OnInstallOrkester"
-                            AutomationProperties.Name="Installera med AI"
+                            AutomationProperties.Name="Installera orkestern"
                             ToolTip.Tip="Öppnar en flik där vald AI installerar orkestern i projektet">
-                      <TextBlock Text="Installera med AI" />
+                      <TextBlock Text="Installera" />
                     </Button>
                   </Panel>
                 </Grid>
