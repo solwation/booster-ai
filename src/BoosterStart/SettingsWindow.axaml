@@ -33,7 +33,7 @@
                 <TextBox Grid.Column="2" Classes="inline name" Text="{Binding Name}" Watermark="Fliknamn"
                          Margin="-6,0,16,0" VerticalAlignment="Center" />
                 <Grid Grid.Column="3" ColumnDefinitions="*,Auto,Auto" VerticalAlignment="Center">
-                  <TextBox Grid.Column="0" Classes="inline path" Text="{Binding Directory}" Watermark="~/projekt" />
+                  <TextBox Grid.Column="0" Classes="inline path" Text="{Binding Directory}" Watermark="{Binding DirectoryHint}" />
                   <Button Grid.Column="1" Classes="icon" Click="OnBrowse" ToolTip.Tip="Välj katalog" AutomationProperties.Name="Välj katalog" Margin="4,0,0,0">
                     <Path Data="{StaticResource FolderIcon}" Width="15" Height="13" />
                   </Button>

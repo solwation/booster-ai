@@ -32,7 +32,7 @@ The toggle appears only for projects that have it installed. Other projects show
 
 ## Settings
 
-The settings window holds your projects (name and directory, with a folder picker), the tab colour theme, and where tabs run. On Windows you can browse WSL folders through `\\wsl.localhost\...` and the choice becomes a Linux path.
+The settings window holds your projects (name and directory, with a folder picker), the tab colour theme, and where tabs run. On Windows you point at your normal Windows folders; WSL shares (`\\wsl.localhost\...`) and Linux paths such as `~/webshop` work too. Whether an agent then works in a mirror elsewhere is up to your own agent instructions.
 
 ![Settings window with the Nordisk theme](docs/verification/5/theme-nordic.png)
 
@@ -40,10 +40,10 @@ The settings window holds your projects (name and directory, with a folder picke
 
 | | Terminal | Where tabs run |
 |---|---|---|
-| Windows | Windows Terminal (`wt.exe`), one tab per project with colour and title | The WSL distribution you choose (default `Ubuntu`); directories are Linux paths |
+| Windows | Windows Terminal (`wt.exe`), one tab per project with colour and title | The WSL distribution you choose (default `Ubuntu`), in your Windows folder (`C:\…` opens as `/mnt/c/…`) |
 | Linux | `gnome-terminal`, `konsole`, `xfce4-terminal`, `kitty`, `wezterm` or `xterm` (chosen or auto-detected) | Locally |
 
-Settings are stored in `%APPDATA%\BoosterStart\config.json` on Windows and `~/.config/BoosterStart/config.json` on Linux. A project entry is just a name and a directory, for example `~/webshop`.
+Settings are stored in `%APPDATA%\BoosterStart\config.json` on Windows and `~/.config/BoosterStart/config.json` on Linux. A project entry is just a name and a directory, for example `C:\Projects\webshop` or `~/webshop`.
 
 `BoosterStart --dry-run` prints the commands that Start would run, without opening anything.
 The app follows the system's light or dark theme; `--theme light` or `--theme dark` overrides it.

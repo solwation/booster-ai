@@ -84,11 +84,18 @@ public static class Launcher
         {
             if (a.Count > 2) a.Add(";");
             a.AddRange(["new-tab", "--title", t.Name, "--tabColor", t.Color, "--suppressApplicationTitle",
-                "wsl.exe", "-d", distro, "--exec", "bash", "-lic", TabScript(t, prompt)]);
+                "wsl.exe", "-d", distro, "--exec", "bash", "-lic", TabScript(InWsl(t), prompt)]);
         }
         a.AddRange([";", "focus-tab", "-t", "0"]);
         return a;
     }
+
+    /// <summary>The tab as its WSL shell sees it: a Windows folder becomes /mnt/c/… or /home/….</summary>
+    private static TabConfig InWsl(TabConfig t) => new()
+    {
+        Name = t.Name, Color = t.Color, ColorIndex = t.ColorIndex, Enabled = t.Enabled,
+        Llm = t.Llm, Model = t.Model, Orkester = t.Orkester, Directory = PathMapping.ToWslPath(t.Directory),
+    };
 
     private static void LaunchWindowsTerminal(IReadOnlyList<TabConfig> tabs, string distro, string? prompt)
     {

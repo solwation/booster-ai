@@ -102,6 +102,8 @@ public sealed class TabViewModel : Observable
         return i >= 0 ? i : fallback;
     }
 
+    /// <summary>Example shown in an empty directory field.</summary>
+    public string DirectoryHint => OperatingSystem.IsWindows() ? @"C:\Users\du\Documents\projekt" : "~/projekt";
     public IReadOnlyList<string> Llms => Catalog.Llms;
     public IReadOnlyList<string> Models => Catalog.ModelsFor(_llm);
     public bool IsAi => _llm != Catalog.ShellOnly;
