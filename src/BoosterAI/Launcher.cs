@@ -11,7 +11,7 @@ public static class Launcher
     /// interactive login shell (so ~/.bashrc aliases and PATH apply), then leave a shell.
     /// It contains no ';' because Windows Terminal splits its command line on it.
     /// With a <paramref name="track"/>, the shell first sources tab-lib.sh, which logs start, CLI
-    /// start and exit code, and the shell's own exit (see TabSession); the closing shell is then a
+    /// start and exit code, formats the run-once event stream (bs_stream), and logs the shell's own exit (see TabSession); the closing shell is then a
     /// child instead of exec so that the exit trap still fires when the tab is closed. Every logging
     /// step is "|| true", so a missing lib never stops the CLI.
     /// </summary>
@@ -44,6 +44,11 @@ public static class Launcher
             });
         var cli = string.Join(' ', new[] { tab.Llm }.Concat(args));
         if (once && tab.Llm == "codex") cli = "codex exec" + cli["codex".Length..];
+        // claude -p and agy -p only print the final answer; their event streams, read by tab-lib.sh's
+        // bs_stream, show the text and tool calls as they happen. codex exec already prints progress.
+        // Without a lib (no track) they stay in text mode.
+        if (once && track is not null && tab.Llm != "codex")
+            cli = "bs_stream " + cli + (tab.Llm == "claude" ? " --output-format stream-json --verbose" : " --output-format stream-json");
         if (track is null) return $"{cd} && {cli} || true && exec bash";
         return $"{lib}{cd} && {Hook("bs_cli")} && {cli} && {Hook("bs_done 0")} || {Hook("bs_done $?")} && bash";
     }

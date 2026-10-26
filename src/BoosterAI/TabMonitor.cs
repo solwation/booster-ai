@@ -101,15 +101,79 @@ public static class TabStatus
 public sealed class TabSession
 {
     public const string Lib = """
-        # BoosterAI tab status log, sourced by the tab's shell: . tab-lib.sh <dir> <tab-id>
-        bs_log="$1/$2.log"
-        bs_ev() { printf '%s %s\n' "$(date +%s%3N)" "$*" >> "$bs_log" 2>/dev/null; }
-        bs_ev start pid=$$ starttime=$(cut -d' ' -f22 /proc/$$/stat)
-        trap 'bs_ev exit' EXIT
-        bs_cli() { bs_ev cli-start; }
-        bs_done() { bs_ev cli-exit rc=$1; }
+# BoosterAI tab status log, sourced by the tab's shell: . tab-lib.sh <dir> <tab-id>
+bs_log="$1/$2.log"
+bs_ev() { printf '%s %s\n' "$(date +%s%3N)" "$*" >> "$bs_log" 2>/dev/null; }
+bs_ev start pid=$$ starttime=$(cut -d' ' -f22 /proc/$$/stat)
+trap 'bs_ev exit' EXIT
+bs_cli() { bs_ev cli-start; }
+bs_done() { bs_ev cli-exit rc=$1; }
+# bs_stream <cli> <args>: run a CLI that emits stream-json (claude, agy), show it as readable
+# progress, and return the CLI's own exit code (not the formatter's).
+bs_stream() { "$@" | bs_fmt; return "${PIPESTATUS[0]}"; }
+bs_fmt() {
+  if command -v python3 >/dev/null 2>&1; then
+    PYTHONIOENCODING=utf-8 python3 -u -c 'import sys, json
+def one(v, n=110):
+    s = " ".join(str(v).split())
+    return s if len(s) <= n else s[:n - 1] + "..."
+def args(d):
+    if not isinstance(d, dict) or not d:
+        return ""
+    for k in ("command", "file_path", "path", "pattern", "url", "query", "description", "prompt", "skill"):
+        if k in d:
+            return one(d[k])
+    return one(next(iter(d.values())))
+def say(s):
+    print(s, flush=True)
+for line in sys.stdin:
+    try:
+        e = json.loads(line)
+    except ValueError:
+        sys.stdout.write(line)
+        sys.stdout.flush()
+        continue
+    if not isinstance(e, dict):
+        continue
+    t = e.get("type")
+    if t == "assistant":
+        for c in (e.get("message") or {}).get("content") or []:
+            if c.get("type") == "text" and c.get("text", "").strip():
+                say(c["text"].strip())
+            elif c.get("type") == "tool_use":
+                say("> " + str(c.get("name")) + " " + args(c.get("input")))
+    elif t == "user":
+        c = (e.get("message") or {}).get("content")
+        for r in c if isinstance(c, list) else []:
+            if isinstance(r, dict) and r.get("is_error"):
+                say("  ! " + one(r.get("content")))
+    elif t == "result":
+        say("== " + ("error: " if e.get("is_error") else "done ") + str(e.get("num_turns", "?")) + " turns, " + str(round((e.get("duration_ms") or 0) / 1000)) + " s")
+    elif e.get("event") == "step_update":
+        u = e.get("step_update") or {}
+        if u.get("text_delta"):
+            sys.stdout.write(u["text_delta"])
+            sys.stdout.flush()
+        elif u.get("step_type") == "tool" and u.get("state") == "ACTIVE":
+            i = u.get("tool_info") or {}
+            say("> " + str(i.get("name")) + " " + args(i.get("parameters")))
+    elif e.get("event") == "result":
+        r = e.get("result") or {}
+        say("== " + str(r.get("status", "done")).lower() + ", " + str(r.get("num_turns", "?")) + " turns")
+'
+  else
+    # No python3: pull the text and tool names out of each JSON line with grep/sed.
+    local l
+    while IFS= read -r l; do
+      case $l in
+        '{'*) printf '%s\n' "$l" | grep -oE '"(text|text_delta|name)":"([^"\\]|\\.)*"' | sed -e 's/^"[a-z_]*":"//' -e 's/"$//' -e 's/\\n/ /g' -e 's/\\"/"/g' ;;
+        *) printf '%s\n' "$l" ;;
+      esac
+    done
+  fi
+}
 
-        """;
+""";
 
     private int _next;
 
