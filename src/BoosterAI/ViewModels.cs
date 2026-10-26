@@ -435,7 +435,7 @@ public sealed class MainViewModel : Observable
     public void Restart(TabViewModel tab)
     {
         if (tab.LaunchedAs is not { } launched) return;
-        var cfg = new AppConfig { WslDistro = _cfg.WslDistro, LinuxTerminal = _cfg.LinuxTerminal, Tabs = [launched] };
+        var cfg = new AppConfig { WslDistro = _cfg.WslDistro, LinuxTerminal = _cfg.LinuxTerminal, ZoomPercent = _cfg.ZoomPercent, Tabs = [launched] };
         var error = Start(cfg, [(tab, launched)], _session?.WindowName);
         ShowStatus(error, error: error != "");
     }

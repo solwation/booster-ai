@@ -140,6 +140,17 @@ public class ZoomTests
     }
 
     [Fact]
+    public void NudgeTogglesOneTrailingNewline()
+    {
+        var original = "{\n  \"profiles\": {}\n}"u8.ToArray();
+        var once = Launcher.NudgedSettings(original);
+        Assert.Equal([.. original, (byte)'\n'], once);
+        var twice = Launcher.NudgedSettings(once);
+        Assert.Equal([.. once, (byte)'\n'], twice);
+        Assert.Equal(once, Launcher.NudgedSettings(twice));
+    }
+
+    [Fact]
     public void LinuxZoomArgsPerTerminal()
     {
         Assert.Empty(Launcher.LinuxZoomArgs("gnome-terminal", 0));

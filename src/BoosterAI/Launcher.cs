@@ -132,16 +132,55 @@ public static class Launcher
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "Microsoft", "Windows Terminal", "Fragments", "BoosterAI", "boosterai.json");
 
-    /// <summary>Writes the fragment for a non-default zoom, or removes it for the default.</summary>
-    private static void SyncZoomFragment(int zoomPercent)
+    /// <summary>Writes the fragment for a non-default zoom, or removes it for the default; true when the file changed.</summary>
+    private static bool SyncZoomFragment(int zoomPercent)
     {
         LegacyNames.RemoveOldFragment(LegacyNames.OldFragmentDir);
         if (zoomPercent > 0)
         {
+            var json = ZoomFragmentJson(zoomPercent);
+            if (File.Exists(ZoomFragmentPath) && File.ReadAllText(ZoomFragmentPath) == json) return false;
             Directory.CreateDirectory(Path.GetDirectoryName(ZoomFragmentPath)!);
-            File.WriteAllText(ZoomFragmentPath, ZoomFragmentJson(zoomPercent));
+            File.WriteAllText(ZoomFragmentPath, json);
+            return true;
         }
-        else if (File.Exists(ZoomFragmentPath)) File.Delete(ZoomFragmentPath);
+        if (!File.Exists(ZoomFragmentPath)) return false;
+        File.Delete(ZoomFragmentPath);
+        return true;
+    }
+
+    /// <summary>settings.json of Windows Terminal (Store, Preview and unpackaged installs).</summary>
+    private static IEnumerable<string> WtSettingsFiles()
+    {
+        var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        return new[]
+        {
+            Path.Combine(local, "Packages", "Microsoft.WindowsTerminal_8wekyb3d8bbwe", "LocalState", "settings.json"),
+            Path.Combine(local, "Packages", "Microsoft.WindowsTerminalPreview_8wekyb3d8bbwe", "LocalState", "settings.json"),
+            Path.Combine(local, "Microsoft", "Windows Terminal", "settings.json"),
+        }.Where(File.Exists);
+    }
+
+    /// <summary>
+    /// The settings.json content with one trailing newline added, or removed again if the last nudge added it.
+    /// A running Windows Terminal reads fragments only when it (re)loads settings, and it reloads only when
+    /// settings.json changes; whitespace after the closing brace changes nothing else.
+    /// </summary>
+    public static byte[] NudgedSettings(byte[] settings) =>
+        settings.Length >= 2 && settings[^1] == '\n' && settings[^2] == '\n' ? settings[..^1] : [.. settings, (byte)'\n'];
+
+    /// <summary>Makes a running Windows Terminal reload its settings, so a new zoom fragment applies to the tabs about to open.</summary>
+    private static void ReloadRunningWindowsTerminal()
+    {
+        if (Process.GetProcessesByName("WindowsTerminal").Length == 0) return;
+        var nudged = false;
+        foreach (var file in WtSettingsFiles())
+        {
+            try { File.WriteAllBytes(file, NudgedSettings(File.ReadAllBytes(file))); nudged = true; }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }
+        }
+        // The reload is asynchronous; without the wait the new tabs can still get the old profile set.
+        if (nudged) Thread.Sleep(2000);
     }
 
     /// <summary>Terminal arguments that apply the zoom, or none where the terminal has no such option.</summary>
@@ -169,7 +208,7 @@ public static class Launcher
     private static void LaunchWindowsTerminal(IReadOnlyList<TabConfig> tabs, string distro, string? prompt,
         IReadOnlyList<TabTrack?> tracks, string window, int zoomPercent)
     {
-        SyncZoomFragment(zoomPercent);
+        if (SyncZoomFragment(zoomPercent)) ReloadRunningWindowsTerminal();
         var psi = new ProcessStartInfo("wt.exe") { UseShellExecute = false };
         foreach (var arg in WindowsTerminalArgs(tabs, distro, prompt, tracks, window, zoomPercent)) psi.ArgumentList.Add(arg);
         Process.Start(psi);

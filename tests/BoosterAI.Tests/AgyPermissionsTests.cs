@@ -13,6 +13,8 @@ public class AgyPermissionsTests
     [InlineData("if test -f x\nthen cat x\nfi", "test,cat")]
     [InlineData("git log && git diff", "git")]
     [InlineData("\"$HOME/bin/tool\" run && ./x.sh", "tool,x.sh")]
+    [InlineData("PHASE=$(cat .agent-do-work-phase 2>/dev/null); echo \"$PHASE\"", "cat,echo")]
+    [InlineData("X=$( ls ) && git log", "ls,git")]
     [InlineData("", "")]
     public void FindsTheProgramsOfACommandLine(string line, string expected) =>
         Assert.Equal(expected.Split(',', StringSplitOptions.RemoveEmptyEntries), AgyPermissions.Programs(line));

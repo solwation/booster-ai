@@ -37,7 +37,9 @@ public static partial class AgyPermissions
         foreach (var segment in Separator().Split(commandLine))
         {
             var words = segment.Trim().TrimStart('(', '{').Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries)
-                .SkipWhile(w => Assignment().IsMatch(w) || Keywords.Contains(w));
+                // VAR=$(cat f): the substitution's program is what runs.
+                .Select(w => Assignment().IsMatch(w) && w.Contains("$(") ? w[(w.IndexOf("$(") + 2)..] : w)
+                .SkipWhile(w => w == "" || Assignment().IsMatch(w) || Keywords.Contains(w));
             var first = words.FirstOrDefault()?.Trim('"', '\'');
             if (first is null) continue;
             var name = first[(first.LastIndexOf('/') + 1)..];
