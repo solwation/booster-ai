@@ -75,3 +75,7 @@ squashed subtree at `.orchestra/shared`. Update with `git subtree pull` per
 never in this subtree. At conductor startup check that repository's releases/tags
 against this pin (reuse a successful check for 24 hours) and propose relevant fixes as
 an issue here.
+
+## Releasing
+
+Pushing a tag `vX.Y.Z` runs `.github/workflows/release.yml`: `dotnet test`, then `tools/package.sh` (win-x64 zip, linux-x64 tar.gz, `SHA256SUMS`), then a GitHub Release with generated notes (a tag with a `-suffix` becomes a pre-release). The tag sets the version (`-p:Version=${tag#v}` at publish); the `<Version>` in `BoosterStart.csproj` is only the default for local builds, so bump it to the released version afterwards. Try it locally with `tools/package.sh v0.0.0-test` (output in `dist/release/`). Release with `git tag v0.2.0 && git push origin v0.2.0`.

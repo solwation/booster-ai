@@ -62,21 +62,24 @@ The app follows the system's light or dark theme; `--theme light` or `--theme da
 
 ## Install
 
-Builds are self-contained single files, so the target machine needs no .NET. Build first (see below), then run the installer for your platform.
+Download the latest build from [Releases](https://github.com/solwation/booster-start/releases/latest). Builds are self-contained single files, so the target machine needs no .NET. Check the download against `SHA256SUMS` if you like (`sha256sum -c SHA256SUMS --ignore-missing`).
 
-Linux, installs to `~/.local/bin` and adds a menu entry:
+Linux: extract `BoosterStart-<version>-linux-x64.tar.gz` and run the installer inside it. It installs to `~/.local/bin` and adds a menu entry:
 
 ```sh
-tools/install-linux.sh
+tar -xzf BoosterStart-<version>-linux-x64.tar.gz
+BoosterStart-<version>-linux-x64/install-linux.sh
 ```
 
-Windows, adds Start menu and desktop shortcuts, no admin rights needed:
+Windows: extract `BoosterStart-<version>-win-x64.zip` and run the installer inside it. It adds Start menu and desktop shortcuts, no admin rights needed:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tools\install-windows.ps1
+powershell -ExecutionPolicy Bypass -File install-windows.ps1
 ```
 
 You also need at least one of the CLIs you want to start (`claude`, `codex` or `agy`) installed where the tabs run, and on Windows a WSL distribution.
+
+Alternatively, build from source (below) and run `tools/install-linux.sh` or `tools\install-windows.ps1` from the checkout.
 
 ## Build from source
 
@@ -84,6 +87,7 @@ You need the .NET 10 SDK.
 
 ```sh
 tools/publish.sh    # dist/win-x64/BoosterStart.exe and dist/linux-x64/BoosterStart
+tools/install-linux.sh   # or tools\\install-windows.ps1, see Install
 ```
 
 The app icon is drawn in `assets/boosterstart.svg` (with a bolt-only variant for 16–24 px in

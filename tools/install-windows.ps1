@@ -1,8 +1,9 @@
-# Installs dist\win-x64\BoosterStart.exe for the current user (no admin needed):
+# Installs BoosterStart.exe (next to this script in a release download, else dist\win-x64\) for the current user (no admin needed):
 # %LOCALAPPDATA%\Programs\BoosterStart plus Start menu and desktop shortcuts.
 #   powershell -ExecutionPolicy Bypass -File tools\install-windows.ps1
 $ErrorActionPreference = 'Stop'
-$src = Join-Path $PSScriptRoot '..\dist\win-x64\BoosterStart.exe'
+$src = Join-Path $PSScriptRoot 'BoosterStart.exe'
+if (-not (Test-Path $src)) { $src = Join-Path $PSScriptRoot '..\dist\win-x64\BoosterStart.exe' }
 if (-not (Test-Path $src)) { throw "Bygg först: tools/publish.sh win-x64 (saknar $src)" }
 
 $dir = Join-Path $env:LOCALAPPDATA 'Programs\BoosterStart'
