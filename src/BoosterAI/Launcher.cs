@@ -170,8 +170,58 @@ public static class Launcher
         Process.Start(psi);
     }
 
+    /// <summary>"auto" tries the rest in this order. Ptyxis is first: it is the default on Ubuntu 25.10+ and Fedora.</summary>
     public static readonly IReadOnlyList<string> LinuxTerminals =
-        ["auto", "gnome-terminal", "konsole", "xfce4-terminal", "kitty", "wezterm", "x-terminal-emulator", "xterm"];
+        ["auto", "ptyxis", "gnome-terminal", "konsole", "xfce4-terminal", "kitty", "wezterm", "x-terminal-emulator", "xterm"];
+
+    /// <summary>One terminal process to start; <paramref name="SettleAfter"/> = give it a moment to open its window before the next one.</summary>
+    public sealed record TermCall(string Exe, IReadOnlyList<string> Args, bool SettleAfter = false);
+
+    /// <summary>
+    /// The terminal processes that open the tabs, in order; used by Start and --dry-run.
+    /// gnome-terminal and xfce4-terminal take every tab in ONE call (--window, then --tab groups), so all tabs share one
+    /// window even when BoosterAI is not started from that terminal. Ptyxis and konsole need one call per tab, the later
+    /// ones joining the window the first opened. The other terminals have no tabs: one window per tab.
+    /// </summary>
+    public static List<TermCall> LinuxCommands(IReadOnlyList<TabConfig> tabs, string term, string? prompt,
+        IReadOnlyList<TabTrack?> tracks, int zoomPercent)
+    {
+        var zoom = LinuxZoomArgs(term, zoomPercent);
+        // --command / -e take ONE string that the terminal splits like a shell.
+        string Cmd(int i) => "bash -lic " + Quote(TabScript(tabs[i], prompt, tracks[i]));
+        var calls = new List<TermCall>();
+        switch (term)
+        {
+            case "gnome-terminal" or "xfce4-terminal":
+                // gnome-terminal: --zoom before the first --window is the default for every tab.
+                // -- / -x must be last in the whole call, so each tab uses --command.
+                var a = new List<string>(zoom);
+                for (var i = 0; i < tabs.Count; i++)
+                    a.AddRange([i == 0 ? "--window" : "--tab", $"--title={tabs[i].Name}", $"--command={Cmd(i)}"]);
+                calls.Add(new TermCall(term, a));
+                break;
+            case "ptyxis":
+                // --tab joins the active window; Ptyxis has no zoom option.
+                for (var i = 0; i < tabs.Count; i++)
+                    calls.Add(new TermCall(term, [i == 0 ? "--new-window" : "--tab", "-T", tabs[i].Name, "-x", Cmd(i)], i == 0));
+                break;
+            default:
+                for (var i = 0; i < tabs.Count; i++)
+                {
+                    string[] shell = ["bash", "-lic", TabScript(tabs[i], prompt, tracks[i])];
+                    string[] args = term switch
+                    {
+                        "konsole" => ["--new-tab", "-p", $"tabtitle={tabs[i].Name}", "-e", .. shell],
+                        "kitty" => ["--title", tabs[i].Name, .. shell],
+                        "wezterm" => ["start", "--", .. shell],
+                        _ => ["-T", tabs[i].Name, "-e", .. shell],
+                    };
+                    calls.Add(new TermCall(term, [.. zoom, .. args], term == "konsole" && i == 0));
+                }
+                break;
+        }
+        return calls;
+    }
 
     private static void LaunchLinux(IReadOnlyList<TabConfig> tabs, string preferred, string? prompt,
         IReadOnlyList<TabTrack?> tracks, int zoomPercent)
@@ -179,25 +229,12 @@ public static class Launcher
         var term = preferred != "auto" ? preferred
             : LinuxTerminals.Skip(1).FirstOrDefault(OnPath)
               ?? throw new InvalidOperationException(Loc.Get("err.noTerminal"));
-        for (var i = 0; i < tabs.Count; i++)
+        foreach (var call in LinuxCommands(tabs, term, prompt, tracks, zoomPercent))
         {
-            var t = tabs[i];
-            string[] shell = ["bash", "-lic", TabScript(t, prompt, tracks[i])];
-            string[] args = term switch
-            {
-                // Later tabs open in the window the first call created.
-                "gnome-terminal" => [i == 0 ? "--window" : "--tab", $"--title={t.Name}", "--", .. shell],
-                "konsole" => ["--new-tab", "-p", $"tabtitle={t.Name}", "-e", .. shell],
-                "xfce4-terminal" => [i == 0 ? "--window" : "--tab", "--title", t.Name, "-x", .. shell],
-                "kitty" => ["--title", t.Name, .. shell],
-                "wezterm" => ["start", "--", .. shell],
-                _ => ["-T", t.Name, "-e", .. shell],
-            };
-            args = [.. LinuxZoomArgs(term, zoomPercent), .. args];
-            var psi = new ProcessStartInfo(term) { UseShellExecute = false };
-            foreach (var a in args) psi.ArgumentList.Add(a);
+            var psi = new ProcessStartInfo(call.Exe) { UseShellExecute = false };
+            foreach (var a in call.Args) psi.ArgumentList.Add(a);
             Process.Start(psi);
-            if (term is "gnome-terminal" or "xfce4-terminal" && i == 0) Thread.Sleep(600);
+            if (call.SettleAfter) Thread.Sleep(600);
         }
     }
 

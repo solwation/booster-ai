@@ -227,3 +227,72 @@ public class RunOnceToggleTests
         Assert.DoesNotContain("-p ", Launcher.TabScript(cfg));
     }
 }
+
+public class LinuxCommandsTests
+{
+    private static readonly TabConfig[] Tabs =
+    [
+        new() { Name = "Alfa", Directory = "~/alfa", Llm = Catalog.ShellOnly },
+        new() { Name = "Beta test", Directory = "~/beta", Llm = Catalog.ShellOnly },
+        new() { Name = "Gamma", Directory = "/srv/gamma", Llm = Catalog.ShellOnly },
+    ];
+    private static readonly TabTrack?[] NoTracks = [null, null, null];
+
+    private const string A = "bash -lic 'cd ~/'\\''alfa'\\'' || true && exec bash'";
+    private const string B = "bash -lic 'cd ~/'\\''beta'\\'' || true && exec bash'";
+    private const string G = "bash -lic 'cd '\\''/srv/gamma'\\'' || true && exec bash'";
+
+    [Fact]
+    public void GnomeTerminalIsOneCallWithOneWindowAndThreeTabs()
+    {
+        var calls = Launcher.LinuxCommands(Tabs, "gnome-terminal", null, NoTracks, 125);
+        var call = Assert.Single(calls);
+        Assert.Equal("gnome-terminal", call.Exe);
+        Assert.Equal(
+        [
+            "--zoom=1.25",
+            "--window", "--title=Alfa", "--command=" + A,
+            "--tab", "--title=Beta test", "--command=" + B,
+            "--tab", "--title=Gamma", "--command=" + G,
+        ], call.Args);
+    }
+
+    [Fact]
+    public void GnomeTerminalWithoutZoomHasNoZoomArg()
+    {
+        var call = Assert.Single(Launcher.LinuxCommands(Tabs, "gnome-terminal", null, NoTracks, 0));
+        Assert.Equal("--window", call.Args[0]);
+    }
+
+    [Fact]
+    public void PtyxisOpensWindowThenTabsInTheActiveWindow()
+    {
+        var calls = Launcher.LinuxCommands(Tabs, "ptyxis", null, NoTracks, 125);
+        Assert.Equal(3, calls.Count);
+        Assert.All(calls, c => Assert.Equal("ptyxis", c.Exe));
+        Assert.Equal(["--new-window", "-T", "Alfa", "-x", A], calls[0].Args);
+        Assert.Equal(["--tab", "-T", "Beta test", "-x", B], calls[1].Args);
+        Assert.Equal(["--tab", "-T", "Gamma", "-x", G], calls[2].Args);
+        Assert.True(calls[0].SettleAfter);
+        Assert.False(calls[1].SettleAfter);
+    }
+
+    [Fact]
+    public void Xfce4TerminalIsOneCallToo()
+    {
+        var call = Assert.Single(Launcher.LinuxCommands(Tabs, "xfce4-terminal", null, NoTracks, 0));
+        Assert.Equal(["--window", "--title=Alfa", "--command=" + A, "--tab", "--title=Beta test", "--command=" + B,
+            "--tab", "--title=Gamma", "--command=" + G], call.Args);
+    }
+
+    [Fact]
+    public void ApostropheInDirectoryStaysQuoted()
+    {
+        var call = Assert.Single(Launcher.LinuxCommands([new() { Name = "x", Directory = "/srv/it's", Llm = Catalog.ShellOnly }],
+            "gnome-terminal", null, [null], 0));
+        Assert.Equal("--command=bash -lic 'cd '\\''/srv/it'\\''\\'\\'''\\''s'\\'' || true && exec bash'", call.Args[2]);
+    }
+
+    [Fact]
+    public void PtyxisIsTriedFirstByAuto() => Assert.Equal("ptyxis", Launcher.LinuxTerminals[1]);
+}

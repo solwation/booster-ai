@@ -7,7 +7,7 @@ How BoosterAI works, per platform and per feature. For the overview see the [REA
 | | Terminal | Where tabs run |
 |---|---|---|
 | Windows | Windows Terminal (`wt.exe`), one tab per project with colour and title | The WSL distribution you choose (default `Ubuntu`), in your Windows folder (`C:\…` opens as `/mnt/c/…`) |
-| Linux | `gnome-terminal`, `konsole`, `xfce4-terminal`, `kitty`, `wezterm` or `xterm` (chosen or auto-detected) | Locally |
+| Linux | `ptyxis`, `gnome-terminal`, `konsole`, `xfce4-terminal`, `kitty`, `wezterm` or `xterm` (chosen or auto-detected) | Locally |
 
 Settings are stored in `%APPDATA%\BoosterAI\config.json` on Windows and `~/.config/BoosterAI/config.json` on Linux. A project entry is just a name and a directory, for example `C:\Projects\webshop` or `~/webshop`.
 
@@ -24,7 +24,9 @@ The settings window holds your projects (name and directory, with a folder picke
 
 On Windows, BoosterAI writes `%LOCALAPPDATA%\Microsoft\Windows Terminal\Fragments\BoosterAI\boosterai.json` (a hidden "BoosterAI" profile that only sets `font.size`, as a percentage of Windows Terminal's 12 pt default, and inherits your other defaults) and opens the tabs with `-p BoosterAI`; at the default size the file is removed. Windows Terminal reads fragments when it starts, so a new or changed size applies once every Windows Terminal window has been closed and reopened (until then the tabs open at your default size). Your own `settings.json` is never touched.
 
-On Linux the zoom is passed to gnome-terminal (`--zoom`), kitty (`-o font_size`, 11 pt base) and wezterm (`--config font_size`, 12 pt base); other terminals (konsole, xfce4-terminal, xterm, ...) have no command-line option for it and ignore the setting. `BoosterAI --dry-run` prints the resulting commands and fragment.
+On Linux all tabs open as tabs of ONE window in `gnome-terminal` and `xfce4-terminal` (a single call with `--window` and `--tab` groups), and in `ptyxis` (Ubuntu 25.10+ and Fedora default; `--new-window`, then `--tab` in that window) and `konsole` (`--new-tab`, which joins an existing window and may open a new one on some setups). `kitty`, `wezterm`, `xterm` and `x-terminal-emulator` have no tabs here, so each tab gets its own window. With `auto`, Ptyxis is tried first, then gnome-terminal and the rest in the order listed.
+
+On Linux the zoom is passed to gnome-terminal (`--zoom`), kitty (`-o font_size`, 11 pt base) and wezterm (`--config font_size`, 12 pt base); other terminals (ptyxis, konsole, xfce4-terminal, xterm, ...) have no command-line option for it and ignore the setting. `BoosterAI --dry-run` prints the resulting commands and fragment.
 
 ## Language
 

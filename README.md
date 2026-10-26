@@ -21,7 +21,7 @@ Start your whole working day with one click: BoosterAI opens every project you w
 - **Your shell, your setup.** Tabs run through `bash -lic`, so your aliases and `PATH` apply, and you keep a normal shell when the CLI exits.
 - **Font size.** One setting zooms the CLI text in all tabs.
 - **Themes and language.** Five tab colour themes, light and dark, in Swedish or English.
-- **Windows and Linux.** Windows Terminal with WSL on Windows; gnome-terminal, konsole, xfce4-terminal, kitty, wezterm or xterm on Linux.
+- **Windows and Linux.** Windows Terminal with WSL on Windows; Ptyxis, gnome-terminal, konsole, xfce4-terminal, kitty, wezterm or xterm on Linux.
 
 ![The BoosterAI settings window](docs/settings.png)
 
