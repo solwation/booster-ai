@@ -121,8 +121,12 @@ trap 'bs_ev exit' EXIT
 bs_cli() { bs_ev cli-start; }
 bs_done() { bs_ev cli-exit rc=$1; }
 # bs_stream <cli> <args>: run a CLI that emits stream-json (claude, agy), show it as readable
-# progress, and return the CLI's own exit code (not the formatter's).
-bs_stream() { "$@" | bs_fmt; return "${PIPESTATUS[0]}"; }
+# progress, and return the CLI's own exit code (not the formatter's). The CLI is an argument
+# here, so bash does not expand the user's alias for it (agy='agy --dangerously-skip-permissions'):
+# apply it explicitly, as a typed command would.
+bs_stream() {
+  if [ -n "${BASH_ALIASES[$1]+x}" ]; then eval "set -- ${BASH_ALIASES[$1]}"' "${@:2}"'; fi
+  "$@" | bs_fmt; return "${PIPESTATUS[0]}"; }
 bs_fmt() {
   if command -v python3 >/dev/null 2>&1; then
     BS_LOG="$bs_log" PYTHONIOENCODING=utf-8 python3 -u -c 'import sys, json, os, time, base64, shutil

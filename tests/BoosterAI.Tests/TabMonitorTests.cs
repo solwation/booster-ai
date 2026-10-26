@@ -216,4 +216,24 @@ public class DeniedCommandTests
         }
         finally { Directory.Delete(dir, recursive: true); }
     }
+
+    /// <summary>bs_stream applies the user's alias for the CLI (agy='agy --dangerously-skip-permissions'), which bash itself skips for an argument.</summary>
+    [Fact]
+    public void StreamAppliesTheCliAlias()
+    {
+        if (!OperatingSystem.IsLinux()) return;
+        var dir = Directory.CreateTempSubdirectory("bs-alias").FullName;
+        try
+        {
+            File.WriteAllText(Path.Combine(dir, "tab-lib.sh"), TabSession.Lib);
+            var psi = new System.Diagnostics.ProcessStartInfo("bash") { RedirectStandardOutput = true, WorkingDirectory = dir };
+            psi.ArgumentList.Add("-c");
+            psi.ArgumentList.Add("shopt -s expand_aliases && alias printf='printf %s,%s,%s --skip' && . ./tab-lib.sh . t && bs_stream printf 'two words' x");
+            using var p = System.Diagnostics.Process.Start(psi)!;
+            var output = p.StandardOutput.ReadToEnd();
+            p.WaitForExit();
+            Assert.Equal("--skip,two words,x", output.Trim());
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
 }
