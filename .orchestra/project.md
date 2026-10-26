@@ -63,6 +63,10 @@ plan names a worker.
 The user works on the same Windows desktop: Windows checks must not pop up windows or steal
 focus. Run `powershell.exe` directly from WSL, pass `-WindowStyle Hidden` to any
 `Start-Process`, verify without Windows Terminal where possible and batch the visible steps.
+Workers never launch `wt.exe`; they verify tab scripts with `--dry-run`, unit tests and
+`script -qc` + `kill -HUP` in WSL. The conductor runs the one real-tab Command check per
+delivery at integration, combining deliveries into one `-w`-named window that is closed
+via `PostMessage` `WM_CLOSE`; test scripts contain no `;` (`wt` splits commands on it).
 
 No public secrets, personal paths beyond the examples, or customer/project names go into
 the repository; personal tabs live only in the user's local `config.json`.
