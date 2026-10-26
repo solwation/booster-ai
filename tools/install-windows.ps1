@@ -7,10 +7,12 @@ if (-not (Test-Path $src)) { $src = Join-Path $PSScriptRoot '..\dist\win-x64\Boo
 if (-not (Test-Path $src)) { throw "Bygg först: tools/publish.sh win-x64 (saknar $src)" }
 
 # Remove the pre-rename install (BoosterStart): stop it, delete its folder and shortcuts. Literal paths only.
-$old = Get-Process BoosterStart -ErrorAction SilentlyContinue
+$oldDir = Join-Path $env:LOCALAPPDATA 'Programs\BoosterStart'
+# Only the installed copy: a process whose Path is unknown or elsewhere is left alone.
+$old = Get-Process BoosterStart -ErrorAction SilentlyContinue |
+  Where-Object { $_.Path -and $_.Path.StartsWith("$oldDir\", [StringComparison]::OrdinalIgnoreCase) }
 $old | Stop-Process -Force
 $old | Wait-Process -Timeout 10 -ErrorAction SilentlyContinue
-$oldDir = Join-Path $env:LOCALAPPDATA 'Programs\BoosterStart'
 # The folder can stay locked as the working directory of a terminal the old app started;
 # then only its files go and the empty folder is left for later.
 if (Test-Path -LiteralPath $oldDir) {
@@ -24,12 +26,14 @@ foreach ($folder in @([Environment]::GetFolderPath('Programs'), [Environment]::G
 
 $dir = Join-Path $env:LOCALAPPDATA 'Programs\BoosterAI'
 New-Item -ItemType Directory -Force -Path $dir | Out-Null
-# A running copy locks the exe; stop it and wait until the file is free.
-$running = Get-Process BoosterAI -ErrorAction SilentlyContinue
+$dest = Join-Path $dir 'BoosterAI.exe'
+# The installed copy locks the exe; stop it and wait until the file is free. Copies run from
+# elsewhere (a desktop copy, an unpacked release) do not lock it and keep running.
+$running = Get-Process BoosterAI -ErrorAction SilentlyContinue |
+  Where-Object { $_.Path -and [string]::Equals($_.Path, $dest, [StringComparison]::OrdinalIgnoreCase) }
 $running | Stop-Process -Force
 $running | Wait-Process -Timeout 10 -ErrorAction SilentlyContinue
 # The file can stay locked for a moment after the process exits (AV scan, handle teardown): retry, then fail clearly.
-$dest = Join-Path $dir 'BoosterAI.exe'
 $copied = $false
 for ($i = 1; $i -le 10 -and -not $copied; $i++) {
   try { Copy-Item -LiteralPath $src -Destination $dest -Force; $copied = $true }
