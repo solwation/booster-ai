@@ -9,7 +9,7 @@
         WindowStartupLocation="CenterOwner">
 
   <!-- Columns: stripe 4 · gap 14 · name 220 · directory * · remove 36. -->
-  <Grid RowDefinitions="Auto,Auto,*,Auto,Auto,Auto" Margin="28,22,28,20">
+  <Grid RowDefinitions="Auto,Auto,*,Auto,Auto,Auto,Auto" Margin="28,22,28,20">
 
     <StackPanel Grid.Row="0" Spacing="2" Margin="0,0,0,20">
       <TextBlock Classes="title" Text="{local:T settings.projects.title}" />
@@ -101,7 +101,20 @@
                 ToolTip.Tip="{local:T settings.notifications.tip}" />
     </StackPanel>
 
-    <Grid Grid.Row="5" ColumnDefinitions="Auto,*,Auto" Margin="0,16,0,0">
+    <StackPanel Grid.Row="5" Orientation="Horizontal" Spacing="10" Margin="0,12,0,0">
+      <TextBlock Classes="colhead" Text="{local:T zoom.title}" VerticalAlignment="Center" />
+      <ComboBox ItemsSource="{Binding ZoomChoices}" SelectedItem="{Binding SelectedZoom}" Width="170"
+                AutomationProperties.Name="{local:T zoom.name}">
+        <ComboBox.ItemTemplate>
+          <DataTemplate x:DataType="local:ZoomChoice">
+            <TextBlock Text="{Binding Label}" />
+          </DataTemplate>
+        </ComboBox.ItemTemplate>
+      </ComboBox>
+      <TextBlock Classes="muted" Text="{local:T zoom.hint}" VerticalAlignment="Center" />
+    </StackPanel>
+
+    <Grid Grid.Row="6" ColumnDefinitions="Auto,*,Auto" Margin="0,16,0,0">
       <Button Grid.Column="0" Click="OnAddTab" Padding="12,8" AutomationProperties.Name="{local:T project.add}" VerticalAlignment="Center">
         <StackPanel Orientation="Horizontal" Spacing="8">
           <Path Data="{StaticResource PlusIcon}" Width="11" Height="11" StrokeThickness="1.6" StrokeLineCap="Round"

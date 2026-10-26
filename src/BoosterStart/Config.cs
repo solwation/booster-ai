@@ -34,6 +34,8 @@ public sealed class AppConfig
     public bool CloseAfterLaunch { get; set; }
     /// <summary>System notification when a watched tab closes, fails to start or its CLI fails.</summary>
     public bool Notifications { get; set; } = true;
+    /// <summary>Global CLI zoom in percent of the terminal's default font size; 0 = terminal default (nothing is changed).</summary>
+    public int ZoomPercent { get; set; }
 }
 
 [JsonSourceGenerationOptions(WriteIndented = true)]

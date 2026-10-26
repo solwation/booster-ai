@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Diagnostics;
 
 namespace BoosterStart;
@@ -74,8 +75,8 @@ public static class Launcher
         try
         {
             var tracks = tabs.Select(t => track?.Invoke(t)).ToList();
-            if (OperatingSystem.IsWindows()) LaunchWindowsTerminal(tabs, cfg.WslDistro, prompt, tracks, window);
-            else LaunchLinux(tabs, cfg.LinuxTerminal, prompt, tracks);
+            if (OperatingSystem.IsWindows()) LaunchWindowsTerminal(tabs, cfg.WslDistro, prompt, tracks, window, cfg.ZoomPercent);
+            else LaunchLinux(tabs, cfg.LinuxTerminal, prompt, tracks, cfg.ZoomPercent);
             return "";
         }
         catch (Exception e)
@@ -86,18 +87,66 @@ public static class Launcher
 
     /// <summary>The wt.exe arguments, exposed for --dry-run.</summary>
     public static List<string> WindowsTerminalArgs(IReadOnlyList<TabConfig> tabs, string distro, string? prompt = null,
-        IReadOnlyList<TabTrack?>? tracks = null, string window = "new")
+        IReadOnlyList<TabTrack?>? tracks = null, string window = "new", int zoomPercent = 0)
     {
+        // wt has no font-size flag: a zoomed run selects the profile from ZoomFragmentJson.
+        string[] profile = zoomPercent > 0 ? ["-p", ZoomProfileName] : [];
         var a = new List<string> { "-w", window };
         for (var i = 0; i < tabs.Count; i++)
         {
             var t = tabs[i];
             if (a.Count > 2) a.Add(";");
-            a.AddRange(["new-tab", "--title", t.Name, "--tabColor", t.Color, "--suppressApplicationTitle",
+            a.AddRange(["new-tab", .. profile, "--title", t.Name, "--tabColor", t.Color, "--suppressApplicationTitle",
                 "wsl.exe", "-d", distro, "--exec", "bash", "-lic", TabScript(InWsl(t), prompt, tracks?[i])]);
         }
         a.AddRange([";", "focus-tab", "-t", "0"]);
         return a;
+    }
+
+    /// <summary>The zoom levels offered in Settings, in percent; 0 = terminal default.</summary>
+    public static readonly IReadOnlyList<int> ZoomChoices = [0, 80, 90, 110, 125, 150, 175, 200];
+
+    public const string ZoomProfileName = "BoosterStart";
+    private const string ZoomProfileGuid = "{b005e57a-2a27-4c00-9a0e-5b0057a27001}";
+    /// <summary>Windows Terminal's built-in default font size in points; Windows zoom is a percentage of it.</summary>
+    private const double WtDefaultPoints = 12;
+
+    private static string Num(double v) => v.ToString("0.##", CultureInfo.InvariantCulture);
+
+    /// <summary>Windows Terminal JSON fragment with a hidden profile that only sets the font size; it inherits the user's defaults.</summary>
+    public static string ZoomFragmentJson(int zoomPercent) =>
+        "{\n  \"profiles\": [\n    {\n      \"name\": \"" + ZoomProfileName + "\",\n      \"guid\": \"" + ZoomProfileGuid +
+        "\",\n      \"hidden\": true,\n      \"font\": { \"size\": " + Num(WtDefaultPoints * zoomPercent / 100) + " }\n    }\n  ]\n}\n";
+
+    /// <summary>%LOCALAPPDATA%\Microsoft\Windows Terminal\Fragments\BoosterStart\boosterstart.json, the only file written for zoom.</summary>
+    public static string ZoomFragmentPath { get; } = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "Microsoft", "Windows Terminal", "Fragments", "BoosterStart", "boosterstart.json");
+
+    /// <summary>Writes the fragment for a non-default zoom, or removes it for the default.</summary>
+    private static void SyncZoomFragment(int zoomPercent)
+    {
+        if (zoomPercent > 0)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(ZoomFragmentPath)!);
+            File.WriteAllText(ZoomFragmentPath, ZoomFragmentJson(zoomPercent));
+        }
+        else if (File.Exists(ZoomFragmentPath)) File.Delete(ZoomFragmentPath);
+    }
+
+    /// <summary>Terminal arguments that apply the zoom, or none where the terminal has no such option.</summary>
+    public static string[] LinuxZoomArgs(string term, int zoomPercent)
+    {
+        if (zoomPercent <= 0) return [];
+        var f = zoomPercent / 100.0;
+        return term switch
+        {
+            "gnome-terminal" => [$"--zoom={Num(f)}"],
+            "kitty" => ["-o", $"font_size={Num(11 * f)}"],
+            // --config is a global option, so it goes before "start".
+            "wezterm" => ["--config", $"font_size={Num(12 * f)}"],
+            _ => [],
+        };
     }
 
     /// <summary>The tab as its WSL shell sees it: a Windows folder becomes /mnt/c/… or /home/….</summary>
@@ -108,17 +157,19 @@ public static class Launcher
     };
 
     private static void LaunchWindowsTerminal(IReadOnlyList<TabConfig> tabs, string distro, string? prompt,
-        IReadOnlyList<TabTrack?> tracks, string window)
+        IReadOnlyList<TabTrack?> tracks, string window, int zoomPercent)
     {
+        SyncZoomFragment(zoomPercent);
         var psi = new ProcessStartInfo("wt.exe") { UseShellExecute = false };
-        foreach (var arg in WindowsTerminalArgs(tabs, distro, prompt, tracks, window)) psi.ArgumentList.Add(arg);
+        foreach (var arg in WindowsTerminalArgs(tabs, distro, prompt, tracks, window, zoomPercent)) psi.ArgumentList.Add(arg);
         Process.Start(psi);
     }
 
     public static readonly IReadOnlyList<string> LinuxTerminals =
         ["auto", "gnome-terminal", "konsole", "xfce4-terminal", "kitty", "wezterm", "x-terminal-emulator", "xterm"];
 
-    private static void LaunchLinux(IReadOnlyList<TabConfig> tabs, string preferred, string? prompt, IReadOnlyList<TabTrack?> tracks)
+    private static void LaunchLinux(IReadOnlyList<TabConfig> tabs, string preferred, string? prompt,
+        IReadOnlyList<TabTrack?> tracks, int zoomPercent)
     {
         var term = preferred != "auto" ? preferred
             : LinuxTerminals.Skip(1).FirstOrDefault(OnPath)
@@ -137,6 +188,7 @@ public static class Launcher
                 "wezterm" => ["start", "--", .. shell],
                 _ => ["-T", t.Name, "-e", .. shell],
             };
+            args = [.. LinuxZoomArgs(term, zoomPercent), .. args];
             var psi = new ProcessStartInfo(term) { UseShellExecute = false };
             foreach (var a in args) psi.ArgumentList.Add(a);
             Process.Start(psi);

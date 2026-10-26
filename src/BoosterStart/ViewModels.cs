@@ -246,6 +246,20 @@ public sealed class MainViewModel : Observable
         }
     }
 
+    /// <summary>Global CLI zoom shown in Settings; applies on the next start.</summary>
+    public IReadOnlyList<ZoomChoice> ZoomChoices { get; } = [.. Launcher.ZoomChoices.Select(p => new ZoomChoice(p))];
+
+    public ZoomChoice SelectedZoom
+    {
+        get => ZoomChoices.FirstOrDefault(c => c.Percent == _cfg.ZoomPercent) ?? ZoomChoices[0];
+        set
+        {
+            if (value is null || value.Percent == _cfg.ZoomPercent) return;
+            _cfg.ZoomPercent = value.Percent;
+            Raise();
+        }
+    }
+
     public void TabsChanged()
     {
         Raise(nameof(HasTabs));
@@ -430,4 +444,10 @@ public sealed class MainViewModel : Observable
 public sealed record LanguageChoice(string Id)
 {
     public string Label => Loc.Get("language." + Id);
+}
+
+/// <summary>One entry of the zoom picker; 0 means the terminal's default size.</summary>
+public sealed record ZoomChoice(int Percent)
+{
+    public string Label => Percent == 0 ? Loc.Get("zoom.default") : Loc.Format("zoom.percent", Percent);
 }

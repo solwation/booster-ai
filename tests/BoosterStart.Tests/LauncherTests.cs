@@ -37,6 +37,52 @@ public class LauncherTests
     }
 }
 
+public class ZoomTests
+{
+    private static readonly TabConfig[] Tabs = [new() { Name = "a", Directory = "~/a" }, new() { Name = "b", Directory = "~/b" }];
+
+    [Fact]
+    public void DefaultZoomLeavesWindowsTerminalArgsUnchanged()
+    {
+        var args = Launcher.WindowsTerminalArgs(Tabs, "Ubuntu");
+        Assert.DoesNotContain("-p", args);
+        Assert.Equal(args, Launcher.WindowsTerminalArgs(Tabs, "Ubuntu", null, zoomPercent: 0));
+    }
+
+    [Fact]
+    public void ZoomSelectsTheBoosterStartProfileOnEveryTab()
+    {
+        var args = Launcher.WindowsTerminalArgs(Tabs, "Ubuntu", null, zoomPercent: 125);
+        Assert.Equal(2, args.Count(a => a == "-p"));
+        for (var i = 0; i < args.Count; i++)
+            if (args[i] == "new-tab") Assert.Equal(["new-tab", "-p", "BoosterStart", "--title"], args.Skip(i).Take(4));
+        Assert.DoesNotContain(args, a => a.Contains("125"));
+    }
+
+    [Fact]
+    public void FragmentSetsOnlyTheFontSize()
+    {
+        using var doc = System.Text.Json.JsonDocument.Parse(Launcher.ZoomFragmentJson(125));
+        var profile = doc.RootElement.GetProperty("profiles")[0];
+        Assert.Equal("BoosterStart", profile.GetProperty("name").GetString());
+        Assert.True(profile.GetProperty("hidden").GetBoolean());
+        Assert.Equal(15, profile.GetProperty("font").GetProperty("size").GetDouble());
+        Assert.Equal(["name", "guid", "hidden", "font"], profile.EnumerateObject().Select(p => p.Name));
+        Assert.Equal(9.6, System.Text.Json.JsonDocument.Parse(Launcher.ZoomFragmentJson(80))
+            .RootElement.GetProperty("profiles")[0].GetProperty("font").GetProperty("size").GetDouble());
+    }
+
+    [Fact]
+    public void LinuxZoomArgsPerTerminal()
+    {
+        Assert.Empty(Launcher.LinuxZoomArgs("gnome-terminal", 0));
+        Assert.Equal(["--zoom=1.25"], Launcher.LinuxZoomArgs("gnome-terminal", 125));
+        Assert.Equal(["-o", "font_size=13.75"], Launcher.LinuxZoomArgs("kitty", 125));
+        Assert.Equal(["--config", "font_size=15"], Launcher.LinuxZoomArgs("wezterm", 125));
+        Assert.Empty(Launcher.LinuxZoomArgs("konsole", 125));
+    }
+}
+
 public class PathMappingTests
 {
     [Fact]

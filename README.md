@@ -34,6 +34,8 @@ The toggle appears only for projects that have it installed. Other projects show
 
 The settings window holds your projects (name and directory, with a folder picker), the tab colour theme, and where tabs run. On Windows you point at your normal Windows folders; WSL shares (`\\wsl.localhost\...`) and Linux paths such as `~/webshop` work too. Whether an agent then works in a mirror elsewhere is up to your own agent instructions.
 
+**Font size.** *Font size* in the settings window zooms the CLI text in all tabs (80–200 %; saved as `"ZoomPercent"` in `config.json`, `0` = the terminal's default, which changes nothing). It applies on the next Start. On Windows, BoosterStart writes `%LOCALAPPDATA%\Microsoft\Windows Terminal\Fragments\BoosterStart\boosterstart.json` (a hidden "BoosterStart" profile that only sets `font.size`, as a percentage of Windows Terminal's 12 pt default, and inherits your other defaults) and opens the tabs with `-p BoosterStart`; at the default size the file is removed. Windows Terminal reads fragments when it starts, so a new or changed size applies once every Windows Terminal window has been closed and reopened (until then the tabs open at your default size). Your own `settings.json` is never touched. On Linux the zoom is passed to gnome-terminal (`--zoom`), kitty (`-o font_size`, 11 pt base) and wezterm (`--config font_size`, 12 pt base); other terminals (konsole, xfce4-terminal, xterm, ...) have no command-line option for it and ignore the setting. `BoosterStart --dry-run` prints the resulting commands and fragment.
+
 ![Settings window with the Nordisk theme](docs/verification/5/theme-nordic.png)
 
 ## Language

@@ -17,8 +17,15 @@ internal static class Program
             var dir = root.Replace('\\', '/') + "/<session>";
             var tracks = tabs.Select((_, i) => (TabTrack?)new TabTrack(dir + "/tab-lib.sh", dir, "tab" + (i + 1))).ToList();
             for (var i = 0; i < tabs.Count; i++) Console.WriteLine($"{tabs[i].Name}: bash -lic {Launcher.TabScript(tabs[i], null, tracks[i])}");
-            Console.WriteLine("wt.exe " + string.Join(' ', Launcher.WindowsTerminalArgs(tabs, cfg.WslDistro, null, tracks, "BoosterStart-<session>")
+            Console.WriteLine("wt.exe " + string.Join(' ', Launcher.WindowsTerminalArgs(tabs, cfg.WslDistro, null, tracks, "BoosterStart-<session>", cfg.ZoomPercent)
                 .Select(a => a.Contains(' ') ? $"\"{a}\"" : a)));
+            if (cfg.ZoomPercent > 0)
+            {
+                Console.WriteLine($"zoom {cfg.ZoomPercent}%: Windows writes {Launcher.ZoomFragmentPath}:");
+                Console.Write(Launcher.ZoomFragmentJson(cfg.ZoomPercent));
+                foreach (var term in new[] { "gnome-terminal", "kitty", "wezterm" })
+                    Console.WriteLine($"zoom {cfg.ZoomPercent}%: {term} {string.Join(' ', Launcher.LinuxZoomArgs(term, cfg.ZoomPercent))}");
+            }
             return;
         }
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
