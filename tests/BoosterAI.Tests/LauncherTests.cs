@@ -28,6 +28,55 @@ public class LauncherTests
         Assert.EndsWith("claude 'hej' || true && exec bash", Launcher.TabScript(new TabConfig { Llm = "claude", Orkester = true }, "hej"));
     }
 
+    private static TabConfig Once(string llm, bool orkester = true, string model = "x") =>
+        new() { Directory = "~/proj", Llm = llm, Model = model, Orkester = orkester, NonInteractive = true };
+
+    [Fact]
+    public void OneShotClaudeUsesPrint() => Assert.Equal(
+        "cd ~/'proj' && claude --model 'x' -p '/orkester' || true && exec bash",
+        Launcher.TabScript(Once("claude")));
+
+    [Fact]
+    public void OneShotAgyUsesPrintInsteadOfInteractive() => Assert.Equal(
+        "cd ~/'proj' && agy --model 'x' -p '/orkester' || true && exec bash",
+        Launcher.TabScript(Once("agy")));
+
+    [Fact]
+    public void OneShotCodexUsesExec() => Assert.Equal(
+        "cd ~/'proj' && codex exec --model 'x' $(test -d .agents/skills/orkester && echo '$orkester' || echo /orkester) || true && exec bash",
+        Launcher.TabScript(Once("codex")));
+
+    [Fact]
+    public void OneShotWithoutOrkesterIsIgnored()
+    {
+        foreach (var llm in new[] { "claude", "codex", "agy" })
+            Assert.Equal(Launcher.TabScript(new TabConfig { Directory = "~/proj", Llm = llm, Model = "x" }),
+                Launcher.TabScript(Once(llm, orkester: false)));
+    }
+
+    [Fact]
+    public void OneShotStaysInteractiveForTheInstallPrompt()
+    {
+        var script = Launcher.TabScript(Once("claude"), "it's a test");
+        Assert.DoesNotContain("-p ", script);
+        Assert.DoesNotContain("exec ", script.Replace("exec bash", ""));
+    }
+
+    [Fact]
+    public void OneShotWithTrackingKeepsHooksAndShell()
+    {
+        var track = new TabTrack("/s/lib.sh", "/s", "tab1");
+        foreach (var llm in new[] { "claude", "codex", "agy" })
+        {
+            var script = Launcher.TabScript(Once(llm), null, track);
+            Assert.DoesNotContain(';', script);
+            Assert.Contains("(bs_cli 2>/dev/null || true)", script);
+            Assert.Contains("(bs_done 0 2>/dev/null || true)", script);
+            Assert.Contains("(bs_done $? 2>/dev/null || true)", script);
+            Assert.EndsWith(" && bash", script);
+        }
+    }
+
     [Fact]
     public void RejectsUnsafeModelAndDirectory()
     {

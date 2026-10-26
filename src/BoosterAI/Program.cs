@@ -10,6 +10,8 @@ internal static class Program
         // --dry-run prints what "Starta" would run, without opening anything.
         if (args.Contains("--dry-run"))
         {
+            var at = Array.IndexOf(args, "--config");
+            if (at >= 0 && at + 1 < args.Length) ConfigStore.UseFile(args[at + 1]);
             var cfg = ConfigStore.Load();
             var tabs = cfg.Tabs.Where(t => t.Enabled).ToList();
             // Each Start gets a session directory with a status log per tab; shown here with a placeholder.

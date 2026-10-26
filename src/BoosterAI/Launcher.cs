@@ -29,17 +29,21 @@ public static class Launcher
 
         var args = new List<string>();
         if (tab.Model != Catalog.StandardModel) args.Add("--model " + Quote(tab.Model));
+        // One-shot mode applies to the orchestra command only; a given prompt (the install) stays interactive.
+        var once = tab.NonInteractive && tab.Orkester && prompt is null;
         if (prompt is not null)
             args.Add((tab.Llm == "agy" ? "-i " : "") + Quote(prompt));
         else if (tab.Orkester)
             args.Add(tab.Llm switch
             {
-                "agy" => "-i " + Quote("/orkester"),
+                "agy" => (once ? "-p " : "-i ") + Quote("/orkester"),
                 // Codex invokes repository skills as $name; repositories without one get the slash text.
                 "codex" => "$(test -d .agents/skills/orkester && echo '$orkester' || echo /orkester)",
+                _ when once => "-p " + Quote("/orkester"),
                 _ => Quote("/orkester"),
             });
         var cli = string.Join(' ', new[] { tab.Llm }.Concat(args));
+        if (once && tab.Llm == "codex") cli = "codex exec" + cli["codex".Length..];
         if (track is null) return $"{cd} && {cli} || true && exec bash";
         return $"{lib}{cd} && {Hook("bs_cli")} && {cli} && {Hook("bs_done 0")} || {Hook("bs_done $?")} && bash";
     }
@@ -154,7 +158,7 @@ public static class Launcher
     private static TabConfig InWsl(TabConfig t) => new()
     {
         Name = t.Name, Color = t.Color, ColorIndex = t.ColorIndex, Enabled = t.Enabled,
-        Llm = t.Llm, Model = t.Model, Orkester = t.Orkester, Directory = PathMapping.ToWslPath(t.Directory),
+        Llm = t.Llm, Model = t.Model, Orkester = t.Orkester, NonInteractive = t.NonInteractive, Directory = PathMapping.ToWslPath(t.Directory),
     };
 
     private static void LaunchWindowsTerminal(IReadOnlyList<TabConfig> tabs, string distro, string? prompt,

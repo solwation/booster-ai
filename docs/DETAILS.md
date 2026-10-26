@@ -36,6 +36,14 @@ BoosterAI speaks Swedish and English. By default it follows the operating system
 
 The toggle appears only for projects that have it installed. Other projects show an "Install" link: a dialog explains what will happen, then the AI you chose opens in a new tab and installs it, asking you about the rules before it commits anything.
 
+## Run once (non-interactive)
+
+With the orchestra on, a **Run once** toggle per project (`"NonInteractive": true` in `config.json`) starts the CLI non-interactively with the orchestra command instead of an interactive session: `claude -p '/orkester'`, `agy -p '/orkester'` and `codex exec <orkester skill or /orkester>`. The tab keeps a normal shell afterwards so the output stays on screen, and the tab status shows *CLI exited (0)* or the failing exit code. The restart button of such a tab runs the orchestra again (its tooltip says so).
+
+It means: one task that ends. You cannot answer or steer during the run, and tools that need approval are refused (no `--dangerously-*` flag is ever added). The toggle is disabled while the orchestra is off, and the install prompt always runs interactively.
+
+It does not save tokens by itself: every turn sends the same context in both modes. In a test on #20 (claude haiku, a 34-line project) two identical one-shot runs differed more from each other than any mode difference could explain. Background tasks (`sleep` polls) kept the claude, codex and agy runs alive until they finished in a 20-second test; a long multi-hour queue run is not verified.
+
 ## Watching the tabs
 
 After **Start**, BoosterAI stays running and shows a status per tab: *Starting…*, *Running*, *CLI exited (code)*, *CLI not found*, *Did not start*, *Tab closed* or *Lost*. On Windows the window goes to the system tray, and clicking the icon brings it back. On Linux it minimizes instead, because many desktops (plain GNOME, for example) have no tray. A tab that has closed or whose CLI has exited gets a restart button. The button opens the tab again with the same AI, model and orchestra choice, in the same Windows Terminal window.

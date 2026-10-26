@@ -17,6 +17,8 @@ public sealed class TabConfig
     public string Llm { get; set; } = Catalog.DefaultLlm;
     public string Model { get; set; } = Catalog.StandardModel;
     public bool Orkester { get; set; }
+    /// <summary>Run the orchestra command once non-interactively, then leave a shell. Ignored while Orkester is off.</summary>
+    public bool NonInteractive { get; set; }
 }
 
 public sealed class AppConfig

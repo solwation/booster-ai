@@ -28,7 +28,7 @@ public sealed class TabViewModel : Observable
     private readonly MainViewModel _owner;
     private string _name, _directory, _llm, _model;
     private int _colorIndex;
-    private bool _enabled, _orkester;
+    private bool _enabled, _orkester, _nonInteractive;
     private bool? _hasOrkester;
 
     public TabViewModel(TabConfig c, MainViewModel owner, int index)
@@ -39,10 +39,20 @@ public sealed class TabViewModel : Observable
         _llm = Catalog.Llms.Contains(c.Llm) ? c.Llm : Catalog.DefaultLlm;
         _model = string.IsNullOrWhiteSpace(c.Model) ? Catalog.StandardModel : c.Model;
         _orkester = c.Orkester;
+        _nonInteractive = c.NonInteractive;
     }
 
     public string Name { get => _name; set => Set(ref _name, value); }
-    public bool Orkester { get => _orkester; set => Set(ref _orkester, value); }
+    public bool Orkester
+    {
+        get => _orkester;
+        set { if (Set(ref _orkester, value)) Raise(nameof(CanNonInteractive)); }
+    }
+
+    public bool NonInteractive { get => _nonInteractive; set => Set(ref _nonInteractive, value); }
+
+    /// <summary>One-shot mode applies to the orchestra command only, so it needs the orchestra on.</summary>
+    public bool CanNonInteractive => _orkester && CanOrkester;
     public string Model { get => _model; set => Set(ref _model, value?.Trim() ?? ""); }
 
     public string Directory
@@ -74,6 +84,7 @@ public sealed class TabViewModel : Observable
             if (!Set(ref _hasOrkester, value)) return;
             Raise(nameof(CanOrkester));
             Raise(nameof(CanInstallOrkester));
+            Raise(nameof(CanNonInteractive));
         }
     }
 
@@ -117,6 +128,7 @@ public sealed class TabViewModel : Observable
             Raise(nameof(Models));
             Raise(nameof(IsAi));
             Raise(nameof(CanOrkester));
+            Raise(nameof(CanNonInteractive));
             Raise(nameof(CanInstallOrkester));
             // Another CLI's model id rarely fits; fall back to its default.
             if (!Catalog.ModelsFor(value).Contains(Model)) Model = Catalog.StandardModel;
@@ -139,8 +151,11 @@ public sealed class TabViewModel : Observable
     internal TabConfig? LaunchedAs { get; set; }
     internal string? TrackId { get; set; }
     internal DateTime LaunchedAt { get; set; }
+    internal void RaiseRestartTip() => Raise(nameof(RestartTip));
 
     public bool HasStatus => _state is not null;
+    /// <summary>A one-shot tab is "run again" rather than "open again".</summary>
+    public string RestartTip => Loc.Get(LaunchedAs is { NonInteractive: true, Orkester: true } ? "restart.once.tip" : "restart.tip");
     public bool CanRestart => _state is TabState.Closed or TabState.CliExited or TabState.CliMissing
         or TabState.NotStarted or TabState.Lost;
     public string StatusText => _state switch
@@ -173,6 +188,7 @@ public sealed class TabViewModel : Observable
         Name = Name.Trim(), Color = Color, ColorIndex = _colorIndex, Directory = Directory.Trim(), Enabled = Enabled,
         Llm = Llm, Model = string.IsNullOrWhiteSpace(Model) ? Catalog.StandardModel : Model,
         Orkester = forLaunch ? Orkester && CanOrkester : Orkester,
+        NonInteractive = NonInteractive,
     };
 }
 
@@ -369,6 +385,7 @@ public sealed class MainViewModel : Observable
             row.LaunchedAs = tab;
             row.TrackId = track.Id;
             row.LaunchedAt = DateTime.UtcNow;
+            row.RaiseRestartTip();
             row.SetState(TabState.Starting, null);
         }
         _poll ??= new DispatcherTimer(TimeSpan.FromSeconds(2), DispatcherPriority.Background, (_, _) => Poll());
