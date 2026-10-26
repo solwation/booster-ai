@@ -47,7 +47,7 @@ public static class Launcher
         return "";
     }
 
-    /// <summary>First prompt for "Installera med AI" in a project without the orchestra. No ';' (see TabScript).</summary>
+    /// <summary>First prompt for the "Installera" link in a project without the orchestra. No ';' (see TabScript).</summary>
     public const string InstallOrkesterPrompt =
         "Installera Dirigenten och orkestern i det här projektet. Följ INSTALL.md i " +
         "https://github.com/solwation/dirigenten-och-orkestern: senaste release som git subtree under " +

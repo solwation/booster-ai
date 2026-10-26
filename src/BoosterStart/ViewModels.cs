@@ -79,7 +79,7 @@ public sealed class TabViewModel : Observable
 
     public bool CanOrkester => _hasOrkester == true && IsAi;
 
-    /// <summary>What "Installera med AI" will do, for the confirmation dialog.</summary>
+    /// <summary>What the "Installera" link will do, for the confirmation dialog.</summary>
     public string InstallSummary =>
         $"Vald AI ({Llm}) startar i en ny flik med {(Model == Catalog.StandardModel ? "sin standardmodell" : "modellen " + Model)}, " +
         "läser projektet och frågar dig om språk, publicering och arbetsregler innan den skriver policyn. " +

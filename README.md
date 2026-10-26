@@ -73,6 +73,13 @@ You need the .NET 10 SDK.
 tools/publish.sh    # dist/win-x64/BoosterStart.exe and dist/linux-x64/BoosterStart
 ```
 
+The app icon is drawn in `assets/boosterstart.svg` (with a bolt-only variant for 16–24 px in
+`assets/boosterstart-small.svg`). After editing either, regenerate the PNG and the multi-size ICO:
+
+```sh
+dotnet run --project tools/IconRender
+```
+
 Run the tests with:
 
 ```sh

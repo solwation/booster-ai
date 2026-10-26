@@ -3,6 +3,9 @@
 BoosterStart is an Avalonia (.NET 10) desktop app that opens working tabs with an AI CLI
 in each, on Windows (Windows Terminal + WSL) and Linux. See [README.md](README.md).
 
+The icon's source is `assets/boosterstart*.svg`; regenerate `assets/boosterstart.png` and
+`.ico` with `dotnet run --project tools/IconRender`, never by editing them directly.
+
 Read and follow [.orchestra/project.md](.orchestra/project.md): issues, labels,
 verification, Windows install and delivery to `main`. The user writes Swedish; reply in
 Swedish. Code, comments and docs are English; UI text is Swedish.
