@@ -18,6 +18,7 @@ If you work in several repositories with AI coding tools, the morning routine is
 - **Per-tab choices each day.** Include the project or skip it, pick the LLM (`claude`, `codex`, `agy`, or a plain shell), pick the model from a list or type any model id. "Standard" uses the CLI's own default.
 - **Remembered between runs.** Your choices are saved, so the next start is usually one click.
 - **Orchestra on demand.** For projects that use [Dirigenten och orkestern](https://github.com/solwation/dirigenten-och-orkestern), a toggle sends `/orkester` as the first prompt. See below.
+- **Open the folder.** A button next to each project opens its directory in Explorer (WSL folders included), Finder or your Linux file manager.
 - **Your shell, your setup.** Each tab runs the CLI through `bash -lic`, so your aliases and `PATH` apply. When the CLI exits, you keep a normal shell in the tab.
 - **Themes.** Five tab colour themes: Standard, Pastell, Nordisk, Neon and Solnedgång.
 

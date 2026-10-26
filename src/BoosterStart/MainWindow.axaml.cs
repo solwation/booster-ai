@@ -30,6 +30,11 @@ public partial class MainWindow : Window
         if (await new ConfirmInstallWindow(tab).ShowDialog<bool>(this)) _vm.InstallOrkester(tab);
     }
 
+    private void OnOpenFolder(object? sender, RoutedEventArgs e)
+    {
+        if ((sender as Control)?.DataContext is TabViewModel tab) _vm.OpenFolder(tab);
+    }
+
     private void OnLaunch(object? sender, RoutedEventArgs e)
     {
         if (_vm.Launch()) Close();

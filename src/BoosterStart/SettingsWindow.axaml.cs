@@ -30,6 +30,11 @@ public partial class SettingsWindow : Window
     private void OnNextColor(object? sender, RoutedEventArgs e) =>
         ((sender as Control)?.DataContext as TabViewModel)?.NextColor();
 
+    private void OnOpenFolder(object? sender, RoutedEventArgs e)
+    {
+        if ((sender as Control)?.DataContext is TabViewModel tab) _vm.OpenFolder(tab);
+    }
+
     private void OnDone(object? sender, RoutedEventArgs e) => Close();
 
     private async void OnBrowse(object? sender, RoutedEventArgs e)

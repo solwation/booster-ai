@@ -264,6 +264,25 @@ public sealed class MainViewModel : Observable
         return error == "";
     }
 
+    /// <summary>Shows the tab's directory in Explorer, Finder or the Linux file manager.</summary>
+    public void OpenFolder(TabViewModel tab)
+    {
+        var local = PathMapping.ToLocalPath(tab.Directory, _cfg.WslDistro, _wslHome);
+        if (local is null) { ShowStatus("Hittar inte WSL-hemkatalogen än; försök igen om en stund.", error: true); return; }
+        if (!System.IO.Directory.Exists(local)) { ShowStatus($"Katalogen finns inte: {tab.Directory}", error: true); return; }
+        try
+        {
+            var opener = OperatingSystem.IsWindows() ? "explorer.exe" : OperatingSystem.IsMacOS() ? "open" : "xdg-open";
+            var psi = new ProcessStartInfo(opener) { UseShellExecute = false };
+            psi.ArgumentList.Add(local);
+            Process.Start(psi);
+        }
+        catch (Exception e)
+        {
+            ShowStatus("Kunde inte öppna katalogen: " + e.Message, error: true);
+        }
+    }
+
     /// <summary>Opens one tab whose AI is asked to install the orchestra in that project.</summary>
     public void InstallOrkester(TabViewModel tab)
     {

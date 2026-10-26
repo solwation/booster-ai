@@ -56,7 +56,13 @@
                   <StackPanel Grid.Column="3" Opacity="{Binding RowOpacity}" Margin="0,0,16,0"
                               VerticalAlignment="Center" Spacing="3">
                     <TextBlock Classes="name" Text="{Binding Name}" />
-                    <TextBlock Classes="path" Text="{Binding Directory}" />
+                    <Grid ColumnDefinitions="Auto,Auto" HorizontalAlignment="Left">
+                      <TextBlock Grid.Column="0" Classes="path" Text="{Binding Directory}" VerticalAlignment="Center" />
+                      <Button Grid.Column="1" Classes="icon" Click="OnOpenFolder" Margin="6,-6,0,-6"
+                            ToolTip.Tip="Öppna katalogen i Utforskaren eller filhanteraren" AutomationProperties.Name="Öppna katalogen">
+                      <Path Data="{StaticResource OpenExternalIcon}" Width="12" Height="12" />
+                    </Button>
+                    </Grid>
                   </StackPanel>
 
                   <ComboBox Grid.Column="4" Classes="field" ItemsSource="{Binding Llms}" SelectedItem="{Binding Llm}"

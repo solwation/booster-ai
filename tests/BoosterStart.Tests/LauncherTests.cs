@@ -49,6 +49,11 @@ public class PathMappingTests
         Assert.Equal(@"\\wsl.localhost\Ubuntu\home\me\proj", PathMapping.StartFolder("/home/me/proj", "Ubuntu"));
         Assert.Equal(@"\\wsl.localhost\Ubuntu\home", PathMapping.StartFolder("~/proj", "Ubuntu"));
         Assert.Equal(@"C:\Users\me", PathMapping.StartFolder("/mnt/c/Users/me", "Ubuntu"));
+        Assert.Equal(@"\\wsl.localhost\Ubuntu\home\me\proj", PathMapping.ToLocalPath("~/proj", "Ubuntu", "/home/me"));
+        Assert.Equal(@"\\wsl.localhost\Ubuntu\home\me", PathMapping.ToLocalPath("~", "Ubuntu", "/home/me"));
+        Assert.Equal(@"D:\work", PathMapping.ToLocalPath("/mnt/d/work", "Ubuntu", "/home/me"));
+        Assert.Null(PathMapping.ToLocalPath("~/proj", "Ubuntu", null));
+        Assert.Equal(@"\\wsl.localhost\Ubuntu\srv\x", PathMapping.ToLocalPath("/srv/x", "Ubuntu", null));
     }
 
     [Fact]
@@ -60,5 +65,6 @@ public class PathMappingTests
         Assert.Equal("~", PathMapping.ToTabPath(home));
         Assert.Equal("/srv/x", PathMapping.ToTabPath("/srv/x/"));
         Assert.Equal(home + "/proj", PathMapping.StartFolder("~/proj", "Ubuntu"));
+        Assert.Equal(home + "/proj", PathMapping.ToLocalPath("~/proj", "Ubuntu", null));
     }
 }
