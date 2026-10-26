@@ -125,9 +125,11 @@ bs_done() { bs_ev cli-exit rc=$1; }
 bs_stream() { "$@" | bs_fmt; return "${PIPESTATUS[0]}"; }
 bs_fmt() {
   if command -v python3 >/dev/null 2>&1; then
-    BS_LOG="$bs_log" PYTHONIOENCODING=utf-8 python3 -u -c 'import sys, json, os, time, base64
+    BS_LOG="$bs_log" PYTHONIOENCODING=utf-8 python3 -u -c 'import sys, json, os, time, base64, shutil
 last = ""
-def one(v, n=110):
+def one(v, n=None):
+    # Up to three lines of the current terminal width, so a wider window or a smaller zoom shows more.
+    n = n or max(110, 3 * shutil.get_terminal_size((110, 24)).columns - 4)
     s = " ".join(str(v).split())
     return s if len(s) <= n else s[:n - 1] + "..."
 def args(d):
@@ -141,7 +143,7 @@ def say(s):
     print(s, flush=True)
 def denied(cli, cmd):
     # BoosterAI reads this from the tab log and offers an allow-rule (AgyPermissions).
-    say("  ! denied without asking: " + one(cmd or "?"))
+    say("  ! denied without asking: " + one(cmd or "?", 4000))
     try:
         with open(os.environ["BS_LOG"], "a") as f:
             f.write("%d denied cli=%s cmd=%s\n" % (time.time() * 1000, cli, base64.b64encode(cmd.encode()).decode()))
