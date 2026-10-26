@@ -198,8 +198,14 @@ public static class UpdateLogic
             } catch { Start-Sleep -Milliseconds 500 }
           }
           if (-not $moved) { throw ('could not move ' + $target) }
-          try { Move-Item -LiteralPath $staged -Destination $target -Force }
-          catch { Move-Item -LiteralPath $old -Destination $target -Force; throw }
+          # Same bounded retry for the second move (AV scanners / indexers can hold the file briefly);
+          # only when it still fails is the old exe restored.
+          $placed = $false
+          for ($i = 0; $i -lt 10 -and -not $placed; $i++) {
+            try { Move-Item -LiteralPath $staged -Destination $target -Force; $placed = $true }
+            catch { Start-Sleep -Milliseconds 500 }
+          }
+          if (-not $placed) { Move-Item -LiteralPath $old -Destination $target -Force; throw ('could not move ' + $staged) }
           Log 'updated'
         } catch {
           Log ('failed: ' + $_)

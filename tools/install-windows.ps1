@@ -28,7 +28,16 @@ New-Item -ItemType Directory -Force -Path $dir | Out-Null
 $running = Get-Process BoosterAI -ErrorAction SilentlyContinue
 $running | Stop-Process -Force
 $running | Wait-Process -Timeout 10 -ErrorAction SilentlyContinue
-Copy-Item $src (Join-Path $dir 'BoosterAI.exe') -Force
+# The file can stay locked for a moment after the process exits (AV scan, handle teardown): retry, then fail clearly.
+$dest = Join-Path $dir 'BoosterAI.exe'
+$copied = $false
+for ($i = 1; $i -le 10 -and -not $copied; $i++) {
+  try { Copy-Item -LiteralPath $src -Destination $dest -Force; $copied = $true }
+  catch [System.IO.IOException] {
+    if ($i -eq 10) { throw "Kunde inte ersätta $dest efter 10 försök (filen används av en annan process). Stäng BoosterAI och kör igen." }
+    Start-Sleep -Milliseconds 500
+  }
+}
 
 $shell = New-Object -ComObject WScript.Shell
 foreach ($folder in @([Environment]::GetFolderPath('Programs'), [Environment]::GetFolderPath('Desktop'))) {
