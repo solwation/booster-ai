@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 using Avalonia.Media;
 using Avalonia.Threading;
 
-namespace BoosterStart;
+namespace BoosterAI;
 
 public abstract class Observable : INotifyPropertyChanged
 {
@@ -400,7 +400,7 @@ public sealed class MainViewModel : Observable
                 // Ignore a result for a tab that has been restarted meanwhile.
                 if (row.TrackId != id || !row.SetState(state, rc)) continue;
                 if (_cfg.Notifications && TabStatus.IsUnexpected(state, rc))
-                    Notifier.Show("BoosterStart", Loc.Format("notify.body", row.Name, row.StatusText));
+                    Notifier.Show("BoosterAI", Loc.Format("notify.body", row.Name, row.StatusText));
             }
         }, TaskScheduler.FromCurrentSynchronizationContext());
     }
@@ -435,7 +435,7 @@ public sealed class MainViewModel : Observable
         cfg.Tabs[0].Enabled = true;
         cfg.Tabs[0].Name = tab.Name.Trim() + " (" + Loc.Get("tab.installSuffix") + ")";
         var error = Launcher.Launch(cfg, Launcher.InstallOrkesterPrompt);
-        // The files appear once the agent has worked; reopening BoosterStart or editing the path rechecks.
+        // The files appear once the agent has worked; reopening BoosterAI or editing the path rechecks.
         ShowStatus(error != "" ? error : Loc.Format("status.installRunning", tab.Name.Trim()), error: error != "");
     }
 }

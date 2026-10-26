@@ -2,7 +2,7 @@ using System.Diagnostics;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 
-namespace BoosterStart;
+namespace BoosterAI;
 
 /// <summary>Explains the orchestra and asks before an AI installs it in a tab's directory.</summary>
 public partial class ConfirmInstallWindow : Window

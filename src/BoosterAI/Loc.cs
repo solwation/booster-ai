@@ -3,7 +3,7 @@ using System.Reflection;
 using System.Text.Json;
 using Avalonia.Markup.Xaml;
 
-namespace BoosterStart;
+namespace BoosterAI;
 
 /// <summary>
 /// UI text per language. The strings live in Resources/Strings.en.json and Strings.sv.json

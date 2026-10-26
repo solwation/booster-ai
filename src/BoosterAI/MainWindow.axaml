@@ -1,10 +1,10 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:local="using:BoosterStart"
-        x:Class="BoosterStart.MainWindow"
+        xmlns:local="using:BoosterAI"
+        x:Class="BoosterAI.MainWindow"
         x:DataType="local:MainViewModel"
-        Title="BoosterStart"
-        Icon="avares://BoosterStart/Assets/boosterstart.ico"
+        Title="BoosterAI"
+        Icon="avares://BoosterAI/Assets/boosterai.ico"
         Width="1100" Height="560" MinWidth="900" MinHeight="380"
         WindowStartupLocation="CenterScreen">
 
@@ -17,10 +17,10 @@
   <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="28,22,28,20">
 
     <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,20">
-      <Image Grid.Column="0" Source="avares://BoosterStart/Assets/boosterstart.png" Width="40" Height="40"
+      <Image Grid.Column="0" Source="avares://BoosterAI/Assets/boosterai.png" Width="40" Height="40"
              VerticalAlignment="Center" Margin="0,0,14,0" />
       <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
-        <TextBlock Classes="title" Text="BoosterStart" />
+        <TextBlock Classes="title" Text="BoosterAI" />
         <TextBlock Classes="muted" Text="{local:T main.subtitle}" />
       </StackPanel>
       <Button Grid.Column="2" Click="OnSettings" Padding="12,8" AutomationProperties.Name="{local:T settings.button}" VerticalAlignment="Center"

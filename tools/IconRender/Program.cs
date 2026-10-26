@@ -22,11 +22,11 @@ byte[] Render(string svgFile, int size)
     return image.Encode(SKEncodedImageFormat.Png, 100).ToArray();
 }
 
-var images = sizes.Select(s => (Size: s, Png: Render(s <= SmallUpTo ? "boosterstart-small.svg" : "boosterstart.svg", s))).ToList();
-File.WriteAllBytes(Path.Combine(assets, "boosterstart.png"), images.Single(i => i.Size == 256).Png);
+var images = sizes.Select(s => (Size: s, Png: Render(s <= SmallUpTo ? "boosterai-small.svg" : "boosterai.svg", s))).ToList();
+File.WriteAllBytes(Path.Combine(assets, "boosterai.png"), images.Single(i => i.Size == 256).Png);
 
 // ICO: header, one directory entry per image, then the PNG payloads.
-using var ico = new BinaryWriter(File.Create(Path.Combine(assets, "boosterstart.ico")));
+using var ico = new BinaryWriter(File.Create(Path.Combine(assets, "boosterai.ico")));
 ico.Write((ushort)0); ico.Write((ushort)1); ico.Write((ushort)images.Count);
 var offset = 6 + 16 * images.Count;
 foreach (var (size, png) in images)
@@ -36,4 +36,4 @@ foreach (var (size, png) in images)
     offset += png.Length;
 }
 foreach (var (_, png) in images) ico.Write(png);
-Console.WriteLine($"Wrote boosterstart.png and boosterstart.ico ({string.Join(", ", sizes)}) in {assets}");
+Console.WriteLine($"Wrote boosterai.png and boosterai.ico ({string.Join(", ", sizes)}) in {assets}");

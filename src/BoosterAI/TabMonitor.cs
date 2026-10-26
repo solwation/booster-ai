@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace BoosterStart;
+namespace BoosterAI;
 
 /// <summary>
 /// Where a tab writes its status log, as the tab's shell sees the paths (see Launcher.TabScript).
@@ -95,13 +95,13 @@ public static class TabStatus
 
 /// <summary>
 /// One "Start": a directory with the sourced tab-lib.sh and one log per tab, under
-/// %LOCALAPPDATA%\BoosterStart\sessions (Windows, written by WSL via /mnt/c) or
-/// ~/.local/share/BoosterStart/sessions (Linux).
+/// %LOCALAPPDATA%\BoosterAI\sessions (Windows, written by WSL via /mnt/c) or
+/// ~/.local/share/BoosterAI/sessions (Linux).
 /// </summary>
 public sealed class TabSession
 {
     public const string Lib = """
-        # BoosterStart tab status log, sourced by the tab's shell: . tab-lib.sh <dir> <tab-id>
+        # BoosterAI tab status log, sourced by the tab's shell: . tab-lib.sh <dir> <tab-id>
         bs_log="$1/$2.log"
         bs_ev() { printf '%s %s\n' "$(date +%s%3N)" "$*" >> "$bs_log" 2>/dev/null; }
         bs_ev start pid=$$ starttime=$(cut -d' ' -f22 /proc/$$/stat)
@@ -121,14 +121,15 @@ public sealed class TabSession
     {
         var id = now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);
         Directory = Path.Combine(root, id);
-        WindowName = "BoosterStart-" + id;
+        WindowName = "BoosterAI-" + id;
         System.IO.Directory.CreateDirectory(Directory);
         File.WriteAllText(Path.Combine(Directory, "tab-lib.sh"), Lib.Replace("\r\n", "\n"));
         CleanUp(root, now);
+        if (root == DefaultRoot) LegacyNames.RemoveOldLocalData(LegacyNames.OldLocalAppDir);
     }
 
     public static string DefaultRoot => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData, Environment.SpecialFolderOption.Create), "BoosterStart", "sessions");
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData, Environment.SpecialFolderOption.Create), "BoosterAI", "sessions");
 
     /// <summary>A new log id and the paths the tab's shell uses; null when the path cannot go into a tab script.</summary>
     public TabTrack? NewTrack()

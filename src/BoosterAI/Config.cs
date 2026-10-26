@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace BoosterStart;
+namespace BoosterAI;
 
 /// <summary>One terminal tab: where it opens and which AI CLI starts in it.</summary>
 public sealed class TabConfig
@@ -44,12 +44,13 @@ internal partial class ConfigJsonContext : JsonSerializerContext;
 
 public static class ConfigStore
 {
-    /// <summary>%APPDATA%\BoosterStart on Windows, ~/.config/BoosterStart on Linux.</summary>
+    /// <summary>%APPDATA%\BoosterAI on Windows, ~/.config/BoosterAI on Linux.</summary>
     public static string PathOnDisk { get; } = System.IO.Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "BoosterStart", "config.json");
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "BoosterAI", "config.json");
 
     public static AppConfig Load()
     {
+        LegacyNames.MigrateConfig(LegacyNames.OldConfigPath, PathOnDisk);
         try
         {
             if (File.Exists(PathOnDisk))

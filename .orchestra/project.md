@@ -1,4 +1,4 @@
-# BoosterStart orchestra policy
+# BoosterAI orchestra policy
 
 Read [AGENTS.md](../AGENTS.md), then [the shared core](shared/ORCHESTRA.md), the
 [Issueflow workflow](shared/ISSUE-WORKFLOW.md) and, for `/orkester`,
@@ -10,7 +10,7 @@ thin adapters. Reading or improving the instructions does not start an unattende
 | Setting | Value |
 | --- | --- |
 | Language | Swedish chat, issues and UI text; code, comments and docs in English |
-| Repository | `solwation/booster-start` (public, MIT) |
+| Repository | `solwation/booster-ai` (public, MIT) |
 | Coordination | #1; one editable status comment per session |
 | Exclusions | Pull requests, #1 and the `orkester` coordination label |
 | Labels | Exactly one `priority: high|medium|low` (missing counts as medium); `in-progress` and `orkester: <stable-session-id>` only during actual work |
@@ -41,9 +41,9 @@ New issues carry acceptance criteria and a one-line priority rationale. Unrelate
 
 ## Workspace
 
-Development happens in the ext4 checkout `~/booster-start` (WSL); the Windows clone in
-`Documents\booster-start` is a synced mirror that is never edited directly. Each worker
-uses its own `git worktree` under `~/booster-start-wt/<issue>` and its own `dist`/`bin`.
+Development happens in the ext4 checkout `~/booster-ai` (WSL); the Windows clone in
+`Documents\booster-ai` is a synced mirror that is never edited directly. Each worker
+uses its own `git worktree` under `~/booster-ai-wt/<issue>` and its own `dist`/`bin`.
 Requires the .NET 10 SDK (WSL: `/usr/lib/dotnet`; Windows: `dotnet` on PATH).
 
 ## Project phase hooks
@@ -53,11 +53,11 @@ plan names a worker.
 
 | Hook | Phase and trigger | Procedure | Completion evidence |
 | --- | --- | --- | --- |
-| Read code | `planning`: every change | Read the affected files in `src/BoosterStart` and the README section they touch | Plan names files, the 2–3 checks and whether the UI changes |
-| Build and test | `verification`: code changes | `dotnet build src/BoosterStart -c Release` and `dotnet test tests/BoosterStart.Tests`; add a test for new launcher/path logic. Platform-specific logic is also tested on Windows: run `dotnet test tests\BoosterStart.Tests` from the Windows mirror after the commit syncs | Green build and test counts on each affected platform |
-| Command check | `verification`: changes to `Launcher`, `TabScript` or terminal arguments | `BoosterStart --dry-run`; for Windows Terminal quoting, open one real `wt.exe` tab, in a dedicated named window closed right after, whose script writes a marker file in WSL and exits | Printed commands and the marker content |
+| Read code | `planning`: every change | Read the affected files in `src/BoosterAI` and the README section they touch | Plan names files, the 2–3 checks and whether the UI changes |
+| Build and test | `verification`: code changes | `dotnet build src/BoosterAI -c Release` and `dotnet test tests/BoosterAI.Tests`; add a test for new launcher/path logic. Platform-specific logic is also tested on Windows: run `dotnet test tests\BoosterAI.Tests` from the Windows mirror after the commit syncs | Green build and test counts on each affected platform |
+| Command check | `verification`: changes to `Launcher`, `TabScript` or terminal arguments | `BoosterAI --dry-run`; for Windows Terminal quoting, open one real `wt.exe` tab, in a dedicated named window closed right after, whose script writes a marker file in WSL and exits | Printed commands and the marker content |
 | UI screenshot | `verification`: visible UI changes | Install the Windows build, start it with a neutral example config (never personal project names), move its window off-screen without activation (`SetWindowPos`, `SWP_NOACTIVATE`; not minimized, which captures black), capture it with PowerShell `PrintWindow` (works without focus; `CopyFromScreen` can catch another window), close it, restore the user's config | Inspected image; update `docs/screenshot.png` when the main window changes |
-| Install on Windows | `delivery`: every change to `src/` | `tools/publish.sh win-x64`, then `powershell.exe -ExecutionPolicy Bypass -File \\wsl.localhost\Ubuntu\home\devcontainers\booster-start\tools\install-windows.ps1` | Installed exe updated from the delivered revision |
+| Install on Windows | `delivery`: every change to `src/` | `tools/publish.sh win-x64`, then `powershell.exe -ExecutionPolicy Bypass -File \\wsl.localhost\Ubuntu\home\devcontainers\booster-ai\tools\install-windows.ps1` | Installed exe updated from the delivered revision |
 | Complete issue | `follow-up`: every tracked change | Completion comment with revision, checks, screenshots (repository URLs pinned to the commit) and limits; remove active labels | Closed only when acceptance is met |
 
 The user works on the same Windows desktop: Windows checks must not pop up windows or steal
@@ -82,4 +82,4 @@ an issue here.
 
 ## Releasing
 
-Pushing a tag `vX.Y.Z` runs `.github/workflows/release.yml`: `dotnet test`, then `tools/package.sh` (win-x64 zip, linux-x64 tar.gz, `SHA256SUMS`), then a GitHub Release with generated notes (a tag with a `-suffix` becomes a pre-release). The tag sets the version (`-p:Version=${tag#v}` at publish); the `<Version>` in `BoosterStart.csproj` is only the default for local builds, so bump it to the released version afterwards. Try it locally with `tools/package.sh v0.0.0-test` (output in `dist/release/`). Release with `git tag v0.2.0 && git push origin v0.2.0`.
+Pushing a tag `vX.Y.Z` runs `.github/workflows/release.yml`: `dotnet test`, then `tools/package.sh` (win-x64 zip, linux-x64 tar.gz, `SHA256SUMS`), then a GitHub Release with generated notes (a tag with a `-suffix` becomes a pre-release). The tag sets the version (`-p:Version=${tag#v}` at publish); the `<Version>` in `BoosterAI.csproj` is only the default for local builds, so bump it to the released version afterwards. Try it locally with `tools/package.sh v0.0.0-test` (output in `dist/release/`). Release with `git tag v0.2.0 && git push origin v0.2.0`.

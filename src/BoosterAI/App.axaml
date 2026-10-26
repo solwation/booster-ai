@@ -1,12 +1,12 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             x:Class="BoosterStart.App"
+             x:Class="BoosterAI.App"
              RequestedThemeVariant="Default">
   <Application.Resources>
     <ResourceDictionary>
     <!-- One family for the interface, its mono sibling for paths, models and commands. -->
-    <FontFamily x:Key="UiFont">avares://BoosterStart/Assets/Fonts#IBM Plex Sans</FontFamily>
-    <FontFamily x:Key="MonoFont">avares://BoosterStart/Assets/Fonts#IBM Plex Mono</FontFamily>
+    <FontFamily x:Key="UiFont">avares://BoosterAI/Assets/Fonts#IBM Plex Sans</FontFamily>
+    <FontFamily x:Key="MonoFont">avares://BoosterAI/Assets/Fonts#IBM Plex Mono</FontFamily>
 
     <!-- Accent from the icon's bolt gradient (#1E66F5 → #8839EF), midpoint. -->
     <Color x:Key="SystemAccentColor">#5B5FF2</Color>
@@ -53,6 +53,6 @@
   </Application.Resources>
   <Application.Styles>
     <FluentTheme />
-    <StyleInclude Source="avares://BoosterStart/Styles.axaml" />
+    <StyleInclude Source="avares://BoosterAI/Styles.axaml" />
   </Application.Styles>
 </Application>

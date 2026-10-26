@@ -2,7 +2,7 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 
-namespace BoosterStart;
+namespace BoosterAI;
 
 /// <summary>Edits which projects open as tabs; changes apply live and are saved on close.</summary>
 public partial class SettingsWindow : Window

@@ -1,7 +1,7 @@
 using Avalonia.Data.Converters;
 using Avalonia.Media;
 
-namespace BoosterStart;
+namespace BoosterAI;
 
 public static class Converters
 {

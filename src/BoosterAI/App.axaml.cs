@@ -4,7 +4,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform;
 using Avalonia.Markup.Xaml;
 
-namespace BoosterStart;
+namespace BoosterAI;
 
 public partial class App : Application
 {
@@ -55,7 +55,7 @@ public partial class App : Application
         {
             if (_tray is null)
             {
-                using var icon = AssetLoader.Open(new Uri("avares://BoosterStart/Assets/boosterstart.ico"));
+                using var icon = AssetLoader.Open(new Uri("avares://BoosterAI/Assets/boosterai.ico"));
                 var show = new NativeMenuItem(Loc.Get("tray.show"));
                 var quit = new NativeMenuItem(Loc.Get("tray.quit"));
                 _tray = new TrayIcon { Icon = new WindowIcon(icon), ToolTipText = Loc.Get("tray.tip"), Menu = [show, quit] };

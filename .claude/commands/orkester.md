@@ -1,5 +1,5 @@
 ---
-description: Kör den gemensamma orkestern med BoosterStarts projektregler
+description: Kör den gemensamma orkestern med BoosterAIs projektregler
 argument-hint: "[område eller issuenummer]"
 ---
 

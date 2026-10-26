@@ -2,7 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 
-namespace BoosterStart;
+namespace BoosterAI;
 
 public partial class MainWindow : Window
 {

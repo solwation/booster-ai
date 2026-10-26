@@ -5,15 +5,15 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
-    <ApplicationIcon>../../assets/boosterstart.ico</ApplicationIcon>
-    <AssemblyName>BoosterStart</AssemblyName>
+    <ApplicationIcon>../../assets/boosterai.ico</ApplicationIcon>
+    <AssemblyName>BoosterAI</AssemblyName>
     <Version>0.1.0</Version>
-    <Product>BoosterStart</Product>
+    <Product>BoosterAI</Product>
     <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
   <ItemGroup>
-    <AvaloniaResource Include="../../assets/boosterstart.ico" Link="Assets/boosterstart.ico" />
-    <AvaloniaResource Include="../../assets/boosterstart.png" Link="Assets/boosterstart.png" />
+    <AvaloniaResource Include="../../assets/boosterai.ico" Link="Assets/boosterai.ico" />
+    <AvaloniaResource Include="../../assets/boosterai.png" Link="Assets/boosterai.png" />
     <AvaloniaResource Include="../../assets/fonts/*.ttf" Link="Assets/Fonts/%(Filename)%(Extension)" />
   </ItemGroup>
   <ItemGroup>

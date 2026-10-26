@@ -11,6 +11,6 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="../../src/BoosterStart/BoosterStart.csproj" />
+    <ProjectReference Include="../../src/BoosterAI/BoosterAI.csproj" />
   </ItemGroup>
 </Project>

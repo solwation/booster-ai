@@ -1,7 +1,7 @@
-using BoosterStart;
+using BoosterAI;
 using Xunit;
 
-namespace BoosterStart.Tests;
+namespace BoosterAI.Tests;
 
 public class LocTests
 {

@@ -1,6 +1,6 @@
 ---
 name: orkester
-description: Coordinate issue work in booster-start using the shared orchestra and this project's policy.
+description: Coordinate issue work in booster-ai using the shared orchestra and this project's policy.
 ---
 
 When the user requests orchestration, read and follow [AGENTS.md](../../../AGENTS.md),

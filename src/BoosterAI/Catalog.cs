@@ -1,4 +1,4 @@
-namespace BoosterStart;
+namespace BoosterAI;
 
 /// <summary>The AI CLIs and their known models. Any other model id can be typed in the UI.</summary>
 public static class Catalog

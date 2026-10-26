@@ -7,7 +7,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 for rid in "${@:-win-x64 linux-x64}"; do
   for r in $rid; do
-    dotnet publish src/BoosterStart -c Release -r "$r" --self-contained \
+    dotnet publish src/BoosterAI -c Release -r "$r" --self-contained \
       -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true \
       -p:EnableCompressionInSingleFile=true -p:DebugType=none ${VERSION:+-p:Version=$VERSION} -o "dist/$r"
   done

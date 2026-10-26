@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Diagnostics;
 
-namespace BoosterStart;
+namespace BoosterAI;
 
 /// <summary>Opens the enabled tabs in a terminal and starts each tab's AI CLI.</summary>
 public static class Launcher
@@ -106,7 +106,7 @@ public static class Launcher
     /// <summary>The zoom levels offered in Settings, in percent; 0 = terminal default.</summary>
     public static readonly IReadOnlyList<int> ZoomChoices = [0, 80, 90, 110, 125, 150, 175, 200];
 
-    public const string ZoomProfileName = "BoosterStart";
+    public const string ZoomProfileName = "BoosterAI";
     private const string ZoomProfileGuid = "{b005e57a-2a27-4c00-9a0e-5b0057a27001}";
     /// <summary>Windows Terminal's built-in default font size in points; Windows zoom is a percentage of it.</summary>
     private const double WtDefaultPoints = 12;
@@ -118,14 +118,15 @@ public static class Launcher
         "{\n  \"profiles\": [\n    {\n      \"name\": \"" + ZoomProfileName + "\",\n      \"guid\": \"" + ZoomProfileGuid +
         "\",\n      \"hidden\": true,\n      \"font\": { \"size\": " + Num(WtDefaultPoints * zoomPercent / 100) + " }\n    }\n  ]\n}\n";
 
-    /// <summary>%LOCALAPPDATA%\Microsoft\Windows Terminal\Fragments\BoosterStart\boosterstart.json, the only file written for zoom.</summary>
+    /// <summary>%LOCALAPPDATA%\Microsoft\Windows Terminal\Fragments\BoosterAI\boosterai.json, the only file written for zoom.</summary>
     public static string ZoomFragmentPath { get; } = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "Microsoft", "Windows Terminal", "Fragments", "BoosterStart", "boosterstart.json");
+        "Microsoft", "Windows Terminal", "Fragments", "BoosterAI", "boosterai.json");
 
     /// <summary>Writes the fragment for a non-default zoom, or removes it for the default.</summary>
     private static void SyncZoomFragment(int zoomPercent)
     {
+        LegacyNames.RemoveOldFragment(LegacyNames.OldFragmentDir);
         if (zoomPercent > 0)
         {
             Directory.CreateDirectory(Path.GetDirectoryName(ZoomFragmentPath)!);

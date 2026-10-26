@@ -1,5 +1,5 @@
 using System.Text;
-using BoosterStart;
+using BoosterAI;
 using Xunit;
 
 public class TabLogTests
@@ -101,7 +101,7 @@ public class TabStatusTests
         try
         {
             var s = new TabSession(root, new DateTime(2026, 10, 26, 12, 0, 0));
-            Assert.Equal("BoosterStart-20261026-120000", s.WindowName);
+            Assert.Equal("BoosterAI-20261026-120000", s.WindowName);
             Assert.DoesNotContain('\r', File.ReadAllText(Path.Combine(s.Directory, "tab-lib.sh")));
             var a = s.NewTrack()!;
             Assert.Equal("tab1", a.Id);
@@ -145,8 +145,8 @@ public class TrackedScriptTests
     public void RestartsJoinTheSessionWindow()
     {
         var args = Launcher.WindowsTerminalArgs([new TabConfig { Name = "A" }, new TabConfig { Name = "B" }], "Ubuntu", null,
-            [Track, Track with { Id = "tab2" }], "BoosterStart-x");
-        Assert.Equal(["-w", "BoosterStart-x"], args.Take(2));
+            [Track, Track with { Id = "tab2" }], "BoosterAI-x");
+        Assert.Equal(["-w", "BoosterAI-x"], args.Take(2));
         Assert.Contains(args, a => a.Contains("'tab2'"));
     }
 }
@@ -156,7 +156,7 @@ public class NotifierTests
     [Fact]
     public void ToastEscapesXmlAndPowerShellQuotes()
     {
-        var script = Notifier.ToastScript("BoosterStart", "Rock 'n' <roll> & co");
+        var script = Notifier.ToastScript("BoosterAI", "Rock 'n' <roll> & co");
         Assert.Contains("Rock &apos;n&apos; &lt;roll&gt; &amp; co", script);
         Assert.Contains($"CreateToastNotifier('{Notifier.AppId}')", script);
     }

@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.Security;
 using System.Text;
 
-namespace BoosterStart;
+namespace BoosterAI;
 
 /// <summary>
 /// System notifications without extra dependencies: a Windows toast through Windows PowerShell's
@@ -11,7 +11,7 @@ namespace BoosterStart;
 public static class Notifier
 {
     /// <summary>The AppUserModelID the toast is shown under; registered in HKCU on first use.</summary>
-    public const string AppId = "BoosterStart.App";
+    public const string AppId = "BoosterAI.App";
 
     public static void Show(string title, string body)
     {
@@ -23,7 +23,7 @@ public static class Notifier
                 Run("powershell.exe", ToastArgs(title, body));
             }
             else if (Launcher.OnPath("notify-send"))
-                Run("notify-send", ["-a", "BoosterStart", title, body]);
+                Run("notify-send", ["-a", "BoosterAI", title, body]);
         }
         catch (Exception)
         {
@@ -52,12 +52,14 @@ public static class Notifier
     private static void Register()
     {
         if (!OperatingSystem.IsWindows()) return;
+        Microsoft.Win32.Registry.CurrentUser.DeleteSubKeyTree(@"Software\Classes\AppUserModelId\" + LegacyNames.OldAppId, throwOnMissingSubKey: false);
         using var key = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(@"Software\Classes\AppUserModelId\" + AppId);
-        key.SetValue("DisplayName", "BoosterStart");
-        var icon = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BoosterStart", "boosterstart.png");
+        key.SetValue("DisplayName", "BoosterAI");
+        var icon = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BoosterAI", "boosterai.png");
+        LegacyNames.RemoveOldLocalData(LegacyNames.OldLocalAppDir);
         if (!File.Exists(icon))
         {
-            using var src = Avalonia.Platform.AssetLoader.Open(new Uri("avares://BoosterStart/Assets/boosterstart.png"));
+            using var src = Avalonia.Platform.AssetLoader.Open(new Uri("avares://BoosterAI/Assets/boosterai.png"));
             Directory.CreateDirectory(Path.GetDirectoryName(icon)!);
             using var dst = File.Create(icon);
             src.CopyTo(dst);

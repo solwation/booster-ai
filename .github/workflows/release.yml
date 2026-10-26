@@ -16,7 +16,7 @@ jobs:
         with:
           dotnet-version: 10.0.x
       - name: Test
-        run: dotnet test tests/BoosterStart.Tests -c Release
+        run: dotnet test tests/BoosterAI.Tests -c Release
       - name: Package (win-x64 cross-published from Linux, linux-x64)
         run: tools/package.sh "$GITHUB_REF_NAME"
       - name: Publish release
@@ -26,5 +26,5 @@ jobs:
           prerelease=()
           case "$GITHUB_REF_NAME" in *-*) prerelease=(--prerelease) ;; esac
           gh release create "$GITHUB_REF_NAME" dist/release/* \
-            --title "BoosterStart ${GITHUB_REF_NAME#v}" \
+            --title "BoosterAI ${GITHUB_REF_NAME#v}" \
             --generate-notes "${prerelease[@]}"

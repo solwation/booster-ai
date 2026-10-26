@@ -1,6 +1,6 @@
 using Avalonia;
 
-namespace BoosterStart;
+namespace BoosterAI;
 
 internal static class Program
 {
@@ -17,7 +17,7 @@ internal static class Program
             var dir = root.Replace('\\', '/') + "/<session>";
             var tracks = tabs.Select((_, i) => (TabTrack?)new TabTrack(dir + "/tab-lib.sh", dir, "tab" + (i + 1))).ToList();
             for (var i = 0; i < tabs.Count; i++) Console.WriteLine($"{tabs[i].Name}: bash -lic {Launcher.TabScript(tabs[i], null, tracks[i])}");
-            Console.WriteLine("wt.exe " + string.Join(' ', Launcher.WindowsTerminalArgs(tabs, cfg.WslDistro, null, tracks, "BoosterStart-<session>", cfg.ZoomPercent)
+            Console.WriteLine("wt.exe " + string.Join(' ', Launcher.WindowsTerminalArgs(tabs, cfg.WslDistro, null, tracks, "BoosterAI-<session>", cfg.ZoomPercent)
                 .Select(a => a.Contains(' ') ? $"\"{a}\"" : a)));
             if (cfg.ZoomPercent > 0)
             {

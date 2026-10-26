@@ -1,4 +1,4 @@
-using BoosterStart;
+using BoosterAI;
 using Xunit;
 
 public class LauncherTests
@@ -50,12 +50,12 @@ public class ZoomTests
     }
 
     [Fact]
-    public void ZoomSelectsTheBoosterStartProfileOnEveryTab()
+    public void ZoomSelectsTheBoosterAIProfileOnEveryTab()
     {
         var args = Launcher.WindowsTerminalArgs(Tabs, "Ubuntu", null, zoomPercent: 125);
         Assert.Equal(2, args.Count(a => a == "-p"));
         for (var i = 0; i < args.Count; i++)
-            if (args[i] == "new-tab") Assert.Equal(["new-tab", "-p", "BoosterStart", "--title"], args.Skip(i).Take(4));
+            if (args[i] == "new-tab") Assert.Equal(["new-tab", "-p", "BoosterAI", "--title"], args.Skip(i).Take(4));
         Assert.DoesNotContain(args, a => a.Contains("125"));
     }
 
@@ -64,7 +64,7 @@ public class ZoomTests
     {
         using var doc = System.Text.Json.JsonDocument.Parse(Launcher.ZoomFragmentJson(125));
         var profile = doc.RootElement.GetProperty("profiles")[0];
-        Assert.Equal("BoosterStart", profile.GetProperty("name").GetString());
+        Assert.Equal("BoosterAI", profile.GetProperty("name").GetString());
         Assert.True(profile.GetProperty("hidden").GetBoolean());
         Assert.Equal(15, profile.GetProperty("font").GetProperty("size").GetDouble());
         Assert.Equal(["name", "guid", "hidden", "font"], profile.EnumerateObject().Select(p => p.Name));

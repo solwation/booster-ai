@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace BoosterStart;
+namespace BoosterAI;
 
 /// <summary>
 /// Paths a tab can point at, and their forms for WSL, the file system and the folder dialog.
