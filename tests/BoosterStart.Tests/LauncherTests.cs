@@ -21,6 +21,14 @@ public class LauncherTests
     }
 
     [Fact]
+    public void InstallPromptSurvivesWindowsTerminal()
+    {
+        Assert.DoesNotContain(';', Launcher.InstallOrkesterPrompt);
+        Assert.Contains("-i '", Launcher.TabScript(new TabConfig { Llm = "agy" }, "hej"));
+        Assert.EndsWith("claude 'hej' || true && exec bash", Launcher.TabScript(new TabConfig { Llm = "claude", Orkester = true }, "hej"));
+    }
+
+    [Fact]
     public void RejectsUnsafeModelAndDirectory()
     {
         Assert.NotEqual("", Launcher.Validate([new TabConfig { Model = "x; rm -rf ~" }]));

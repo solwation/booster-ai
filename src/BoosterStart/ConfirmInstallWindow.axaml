@@ -1,0 +1,40 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="using:BoosterStart"
+        x:Class="BoosterStart.ConfirmInstallWindow"
+        x:DataType="local:TabViewModel"
+        Title="Installera orkestern"
+        Icon="avares://BoosterStart/Assets/boosterstart.ico"
+        Width="560" SizeToContent="Height" CanResize="False"
+        WindowStartupLocation="CenterOwner">
+  <StackPanel Margin="28,24,28,22" Spacing="14">
+    <TextBlock Classes="title" FontSize="20" TextWrapping="Wrap"
+               Text="{Binding Name, StringFormat='Installera orkestern i {0}?'}" />
+
+    <TextBlock TextWrapping="Wrap" LineHeight="21"
+               Text="Orkestern låter AI-agenter jobba igenom projektets GitHub-issues åt dig. En dirigent väljer issues efter prioritet, ger dem till agenter som arbetar parallellt i egna kopior, granskar resultatet och levererar det. Frågor som bara du kan svara på hamnar på issuet, inte i chatten." />
+
+    <StackPanel Spacing="6">
+      <TextBlock Classes="muted" Text="Installationen lägger till i" />
+      <Border Background="{DynamicResource RowHoverBrush}" CornerRadius="6" Padding="10,7">
+        <TextBlock Classes="path" Text="{Binding Directory}" Foreground="{DynamicResource TextBrush}" />
+      </Border>
+      <TextBlock Classes="muted" TextWrapping="Wrap" LineHeight="20"
+                 Text="en låst kopia av orkesterns instruktioner, en projektpolicy med dina regler och kommandot /orkester för Claude och Codex." />
+    </StackPanel>
+
+    <TextBlock TextWrapping="Wrap" LineHeight="21"
+               Text="{Binding InstallSummary}" />
+
+    <Button Classes="link" Click="OnReadMore" HorizontalAlignment="Left"
+            AutomationProperties.Name="Läs mer om orkestern på GitHub">
+      <TextBlock Text="Läs mer om Dirigenten och orkestern" />
+    </Button>
+
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,6,0,0">
+      <Button Content="Avbryt" Click="OnCancel" IsCancel="True" Padding="18,8" />
+      <Button Classes="accent" Click="OnConfirm" IsDefault="True" Padding="18,8"
+              Content="{Binding Llm, StringFormat='Installera med {0}'}" />
+    </StackPanel>
+  </StackPanel>
+</Window>

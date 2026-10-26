@@ -29,10 +29,26 @@ public static class Catalog
     public static IReadOnlyList<string> ModelsFor(string llm) =>
         Models.TryGetValue(llm, out var list) ? list : [StandardModel];
 
-    public static readonly IReadOnlyList<string> Palette =
-        ["#1E66F5", "#2E9E44", "#E8A317", "#8839EF", "#D20F39", "#04A5E5", "#FE640B", "#EA76CB", "#7C7F93"];
+    /// <summary>Tab colour themes; a tab keeps its index, so switching theme recolours every tab.</summary>
+    public static readonly IReadOnlyList<ColorTheme> Themes =
+    [
+        new("Standard", ["#1E66F5", "#2E9E44", "#E8A317", "#8839EF", "#D20F39", "#04A5E5", "#FE640B", "#EA76CB"]),
+        new("Pastell", ["#8AADF4", "#A6DA95", "#EED49F", "#C6A0F6", "#ED8796", "#91D7E3", "#F5A97F", "#F5BDE6"]),
+        new("Nordisk", ["#5E81AC", "#A3BE8C", "#EBCB8B", "#B48EAD", "#BF616A", "#88C0D0", "#D08770", "#8FBCBB"]),
+        new("Neon", ["#00E5FF", "#39FF14", "#FFEA00", "#D500F9", "#FF1744", "#2979FF", "#FF9100", "#FF4081"]),
+        new("Solnedgång", ["#F94144", "#F3722C", "#F8961E", "#F9C74F", "#90BE6D", "#43AA8B", "#577590", "#277DA1"]),
+    ];
+
+    public static ColorTheme Theme(string name) => Themes.FirstOrDefault(t => t.Name == name) ?? Themes[0];
 
     /// <summary>Model ids and directories end up in a shell command, so only plain characters pass.</summary>
     public static bool IsSafeModel(string s) =>
         s.Length is > 0 and < 100 && s.All(c => char.IsAsciiLetterOrDigit(c) || c is '.' or '_' or '-' or ':' or '/');
+}
+
+public sealed record ColorTheme(string Name, IReadOnlyList<string> Colors)
+{
+    public string ColorAt(int index) => Colors[((index % Colors.Count) + Colors.Count) % Colors.Count];
+    public IReadOnlyList<Avalonia.Media.IBrush> Swatches { get; } =
+        Colors.Select(c => (Avalonia.Media.IBrush)new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse(c))).ToList();
 }

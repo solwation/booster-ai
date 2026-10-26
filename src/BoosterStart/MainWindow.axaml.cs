@@ -1,6 +1,5 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Avalonia.Platform.Storage;
 
 namespace BoosterStart;
 
@@ -19,34 +18,16 @@ public partial class MainWindow : Window
         Closing += (_, _) => _vm.Save();
     }
 
-    private void OnAddTab(object? sender, RoutedEventArgs e) => _vm.AddTab();
-
-    private void OnRemoveTab(object? sender, RoutedEventArgs e)
+    private async void OnSettings(object? sender, RoutedEventArgs e)
     {
-        if ((sender as Control)?.DataContext is TabViewModel tab) _vm.Tabs.Remove(tab);
+        if (!_vm.HasTabs) _vm.AddTab();
+        await new SettingsWindow(_vm).ShowDialog(this);
     }
 
-    private void OnNextColor(object? sender, RoutedEventArgs e) =>
-        ((sender as Control)?.DataContext as TabViewModel)?.NextColor();
-
-    private async void OnBrowse(object? sender, RoutedEventArgs e)
+    private async void OnInstallOrkester(object? sender, RoutedEventArgs e)
     {
         if ((sender as Control)?.DataContext is not TabViewModel tab) return;
-        try
-        {
-            var start = await StorageProvider.TryGetFolderFromPathAsync(PathMapping.StartFolder(tab.Directory, _vm.WslDistro));
-            var picked = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
-            {
-                Title = $"Katalog för {tab.Name}",
-                SuggestedStartLocation = start,
-            });
-            if (picked.Count > 0 && picked[0].TryGetLocalPath() is { } path)
-                tab.Directory = PathMapping.ToTabPath(path);
-        }
-        catch (Exception ex)
-        {
-            _vm.Status = "Kunde inte öppna mappväljaren: " + ex.Message;
-        }
+        if (await new ConfirmInstallWindow(tab).ShowDialog<bool>(this)) _vm.InstallOrkester(tab);
     }
 
     private void OnLaunch(object? sender, RoutedEventArgs e)

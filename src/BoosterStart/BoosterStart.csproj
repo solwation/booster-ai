@@ -13,11 +13,12 @@
   </PropertyGroup>
   <ItemGroup>
     <AvaloniaResource Include="../../assets/boosterstart.ico" Link="Assets/boosterstart.ico" />
+    <AvaloniaResource Include="../../assets/boosterstart.png" Link="Assets/boosterstart.png" />
+    <AvaloniaResource Include="../../assets/fonts/*.ttf" Link="Assets/Fonts/%(Filename)%(Extension)" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="11.3.22" />
     <PackageReference Include="Avalonia.Desktop" Version="11.3.22" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.22" />
-    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.22" />
   </ItemGroup>
 </Project>

@@ -7,6 +7,9 @@ namespace BoosterStart;
 public sealed class TabConfig
 {
     public string Name { get; set; } = "Ny flik";
+    /// <summary>Position in the colour theme; -1 in files from before themes (derived from Color).</summary>
+    public int ColorIndex { get; set; } = -1;
+    /// <summary>The resolved colour, written for readability and used by the launcher.</summary>
     public string Color { get; set; } = "#1E66F5";
     /// <summary>Linux path: inside WSL on Windows, local on Linux.</summary>
     public string Directory { get; set; } = "~";
@@ -23,6 +26,8 @@ public sealed class AppConfig
     public string WslDistro { get; set; } = "Ubuntu";
     /// <summary>Linux only: terminal to use, or "auto".</summary>
     public string LinuxTerminal { get; set; } = "auto";
+    /// <summary>Name of the tab colour theme, see Catalog.Themes.</summary>
+    public string ColorTheme { get; set; } = "Standard";
 }
 
 [JsonSourceGenerationOptions(WriteIndented = true)]
@@ -42,7 +47,7 @@ public static class ConfigStore
             if (File.Exists(PathOnDisk))
             {
                 var cfg = JsonSerializer.Deserialize(File.ReadAllText(PathOnDisk), ConfigJsonContext.Default.AppConfig);
-                if (cfg is { Tabs.Count: > 0 }) return cfg;
+                if (cfg is not null) return cfg;
             }
         }
         catch (Exception e) when (e is IOException or JsonException or UnauthorizedAccessException)
@@ -60,9 +65,6 @@ public static class ConfigStore
         File.Move(tmp, PathOnDisk, overwrite: true);
     }
 
-    /// <summary>First start: one example tab in the home directory; add your own in the UI.</summary>
-    private static AppConfig Defaults() => new()
-    {
-        Tabs = { new() { Name = "Hem", Color = Catalog.Palette[0], Directory = "~" } },
-    };
+    /// <summary>First start: no projects; the start window asks for them.</summary>
+    private static AppConfig Defaults() => new();
 }

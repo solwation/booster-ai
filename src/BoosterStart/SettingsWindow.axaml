@@ -1,0 +1,102 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="using:BoosterStart"
+        x:Class="BoosterStart.SettingsWindow"
+        x:DataType="local:MainViewModel"
+        Title="BoosterStart – inställningar"
+        Icon="avares://BoosterStart/Assets/boosterstart.ico"
+        Width="820" Height="620" MinWidth="640" MinHeight="360"
+        WindowStartupLocation="CenterOwner">
+
+  <!-- Columns: stripe 4 · gap 14 · name 220 · directory * · remove 36. -->
+  <Grid RowDefinitions="Auto,Auto,*,Auto,Auto" Margin="28,22,28,20">
+
+    <StackPanel Grid.Row="0" Spacing="2" Margin="0,0,0,20">
+      <TextBlock Classes="title" Text="Projekt" />
+      <TextBlock Classes="muted"
+                 Text="Katalogerna som öppnas som flikar. Klicka på färgremsan för att byta färg på en flik." />
+    </StackPanel>
+
+    <Grid Grid.Row="1" ColumnDefinitions="4,14,220,*,36" Margin="0,0,0,6" IsVisible="{Binding HasTabs}">
+      <TextBlock Grid.Column="2" Classes="colhead" Text="Fliknamn" />
+      <TextBlock Grid.Column="3" Classes="colhead" Text="Katalog" />
+    </Grid>
+
+    <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Disabled">
+      <ItemsControl ItemsSource="{Binding Tabs}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="local:TabViewModel">
+            <Border Classes="row" Padding="0,6">
+              <Grid ColumnDefinitions="4,14,220,*,36">
+                <Button Grid.Column="0" Classes="stripe" Background="{Binding ColorBrush}"
+                        Click="OnNextColor" ToolTip.Tip="Byt färg på fliken" AutomationProperties.Name="Byt färg på fliken" />
+                <TextBox Grid.Column="2" Classes="inline name" Text="{Binding Name}" Watermark="Fliknamn"
+                         Margin="-6,0,16,0" VerticalAlignment="Center" />
+                <Grid Grid.Column="3" ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                  <TextBox Grid.Column="0" Classes="inline path" Text="{Binding Directory}" Watermark="~/projekt" />
+                  <Button Grid.Column="1" Classes="icon" Click="OnBrowse" ToolTip.Tip="Välj katalog" AutomationProperties.Name="Välj katalog" Margin="4,0,0,0">
+                    <Path Data="{StaticResource FolderIcon}" Width="15" Height="13" />
+                  </Button>
+                </Grid>
+                <Button Grid.Column="4" Classes="icon remove" Click="OnRemoveTab" ToolTip.Tip="Ta bort projektet" AutomationProperties.Name="Ta bort projektet"
+                        VerticalAlignment="Center" HorizontalAlignment="Right">
+                  <Path Data="{StaticResource CloseIcon}" Width="10" Height="10" />
+                </Button>
+              </Grid>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+
+    <StackPanel Grid.Row="3" Spacing="8" Margin="0,18,0,0">
+      <TextBlock Classes="colhead" Text="Flikfärger" />
+      <ListBox ItemsSource="{Binding Themes}" SelectedItem="{Binding SelectedTheme}" Classes="themes"
+               Background="Transparent" AutomationProperties.Name="Färgtema för flikarna">
+        <ListBox.ItemsPanel>
+          <ItemsPanelTemplate>
+            <WrapPanel Orientation="Horizontal" />
+          </ItemsPanelTemplate>
+        </ListBox.ItemsPanel>
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="local:ColorTheme">
+            <StackPanel Spacing="6">
+              <ItemsControl ItemsSource="{Binding Swatches}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <StackPanel Orientation="Horizontal" Spacing="3" />
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="IBrush">
+                    <Border Width="10" Height="10" CornerRadius="5" Background="{Binding}" />
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <TextBlock Text="{Binding Name}" FontSize="12.5" />
+            </StackPanel>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </StackPanel>
+
+    <Grid Grid.Row="4" ColumnDefinitions="Auto,*,Auto" Margin="0,16,0,0">
+      <Button Grid.Column="0" Click="OnAddTab" Padding="12,8" AutomationProperties.Name="Lägg till projekt" VerticalAlignment="Center">
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <Path Data="{StaticResource PlusIcon}" Width="11" Height="11" StrokeThickness="1.6" StrokeLineCap="Round"
+                Stroke="{DynamicResource TextBrush}" Stretch="Uniform" VerticalAlignment="Center" />
+          <TextBlock Text="Lägg till projekt" />
+        </StackPanel>
+      </Button>
+      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="24,0" VerticalAlignment="Center">
+        <TextBlock Classes="muted" Text="WSL-distribution" VerticalAlignment="Center" IsVisible="{Binding IsWindows}" />
+        <TextBox Text="{Binding WslDistro}" Width="120" FontFamily="{StaticResource MonoFont}" FontSize="13"
+                 IsVisible="{Binding IsWindows}" />
+        <TextBlock Classes="muted" Text="Terminal" VerticalAlignment="Center" IsVisible="{Binding IsLinux}" />
+        <ComboBox ItemsSource="{Binding LinuxTerminals}" SelectedItem="{Binding LinuxTerminal}" Width="170"
+                  FontFamily="{StaticResource MonoFont}" FontSize="13" IsVisible="{Binding IsLinux}" />
+      </StackPanel>
+      <Button Grid.Column="2" Classes="accent" Content="Klar" Click="OnDone" Padding="22,9" IsDefault="True" />
+    </Grid>
+  </Grid>
+</Window>

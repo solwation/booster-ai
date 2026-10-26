@@ -25,8 +25,7 @@ thin adapters. Reading or improving the instructions does not start an unattende
 | Questions | Comment on the affected issue with options and a recommendation, add `user question`, release active labels, continue other work; never ask in chat |
 | Publishing | Commit and push directly to `main`; no branches, PRs or force push |
 
-New issues carry a `Lapp: <2–6 everyday Swedish words>` line, acceptance criteria and a
-one-line priority rationale. Unrelated defects found on the way become their own issues.
+New issues carry acceptance criteria and a one-line priority rationale. Unrelated defects found on the way become their own issues.
 
 ## Session loop
 
