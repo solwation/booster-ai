@@ -11,7 +11,12 @@ $old = Get-Process BoosterStart -ErrorAction SilentlyContinue
 $old | Stop-Process -Force
 $old | Wait-Process -Timeout 10 -ErrorAction SilentlyContinue
 $oldDir = Join-Path $env:LOCALAPPDATA 'Programs\BoosterStart'
-if (Test-Path -LiteralPath $oldDir) { Remove-Item -LiteralPath $oldDir -Recurse -Force }
+# The folder can stay locked as the working directory of a terminal the old app started;
+# then only its files go and the empty folder is left for later.
+if (Test-Path -LiteralPath $oldDir) {
+  try { Remove-Item -LiteralPath $oldDir -Recurse -Force }
+  catch { Write-Warning "Kunde inte ta bort $oldDir helt (används av en annan process); ta bort mappen senare." }
+}
 foreach ($folder in @([Environment]::GetFolderPath('Programs'), [Environment]::GetFolderPath('Desktop'))) {
   $oldLnk = Join-Path $folder 'BoosterStart.lnk'
   if (Test-Path -LiteralPath $oldLnk) { Remove-Item -LiteralPath $oldLnk -Force }
