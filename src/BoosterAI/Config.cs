@@ -45,12 +45,22 @@ internal partial class ConfigJsonContext : JsonSerializerContext;
 public static class ConfigStore
 {
     /// <summary>%APPDATA%\BoosterAI on Windows, ~/.config/BoosterAI on Linux.</summary>
-    public static string PathOnDisk { get; } = System.IO.Path.Combine(
+    public static string PathOnDisk { get; private set; } = System.IO.Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "BoosterAI", "config.json");
+
+    /// <summary>Reads (and saves) this file instead of the real config; used by <c>--config</c> for screenshots.</summary>
+    public static void UseFile(string path)
+    {
+        PathOnDisk = System.IO.Path.GetFullPath(path);
+        _customFile = true;
+    }
+
+    // A --config file is never filled from the user's old BoosterStart config.
+    private static bool _customFile;
 
     public static AppConfig Load()
     {
-        LegacyNames.MigrateConfig(LegacyNames.OldConfigPath, PathOnDisk);
+        if (!_customFile) LegacyNames.MigrateConfig(LegacyNames.OldConfigPath, PathOnDisk);
         try
         {
             if (File.Exists(PathOnDisk))

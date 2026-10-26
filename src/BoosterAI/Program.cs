@@ -28,6 +28,12 @@ internal static class Program
             }
             return;
         }
+        var shot = Screenshot.Parse(args);
+        if (shot is not null)
+        {
+            Environment.ExitCode = Screenshot.Run(shot);
+            return;
+        }
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
     }
 

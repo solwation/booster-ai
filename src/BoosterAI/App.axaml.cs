@@ -10,6 +10,8 @@ public partial class App : Application
 {
     private readonly AppConfig _config = ConfigStore.Load();
 
+    public AppConfig Config => _config;
+
     public override void Initialize()
     {
         // The language must be set before any XAML (and its {local:T} texts) loads.
@@ -29,19 +31,13 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
-        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+        // --screenshot builds its window itself (Screenshot.Run), headless and never shown.
+        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop && !Screenshot.Active)
         {
             // A window hidden to the tray keeps the app running; closing it (or Quit in the tray) ends it.
             desktop.ShutdownMode = ShutdownMode.OnMainWindowClose;
             var vm = new MainViewModel(_config);
             desktop.MainWindow = new MainWindow(vm);
-            // --screenshot: sample tab statuses and a window that never takes focus (for README images).
-            // It still opens on screen: a start position off-screen is not honoured.
-            if (Environment.GetCommandLineArgs().Contains("--screenshot"))
-            {
-                desktop.MainWindow.ShowActivated = false;
-                vm.ShowSampleStatus();
-            }
         }
         base.OnFrameworkInitializationCompleted();
     }
