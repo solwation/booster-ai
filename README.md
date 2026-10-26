@@ -44,6 +44,8 @@ Windows: extract `BoosterAI-<version>-win-x64.zip` and run the installer inside 
 powershell -ExecutionPolicy Bypass -File install-windows.ps1
 ```
 
+`BoosterAI.exe` is not code-signed yet, so Windows 11 with Smart App Control on blocks it ("could not verify its publisher"). Smart App Control has no per-app exception; until signing lands ([#30](https://github.com/solwation/booster-ai/issues/30)), it has to be turned off to run BoosterAI.
+
 You also need at least one of the CLIs you want to start (`claude`, `codex` or `agy`) installed where the tabs run, and on Windows a WSL distribution.
 
 ## More
