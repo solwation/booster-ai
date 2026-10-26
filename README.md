@@ -6,7 +6,8 @@ Starta alla dina arbetsflikar på en gång, med en AI-CLI i varje.
 
 För varje flik väljer du:
 
-- **katalog**, där fliken öppnas;
+- **katalog**, där fliken öppnas; skriv sökvägen eller välj med 📁 (på Windows kan du bläddra i
+  WSL via `\\wsl.localhost\…`, valet blir en Linux-sökväg);
 - **LLM**: `claude`, `codex`, `agy` eller `skal` (bara ett skal, ingen AI);
 - **modell**: välj i listan eller skriv ett eget modell-id; `standard` använder CLI:ns eget val;
 - **Orkester**: om `/orkester` skickas som första prompt (Codex får `$orkester` när repot har en sådan skill).
@@ -42,6 +43,12 @@ powershell -ExecutionPolicy Bypass -File tools\install-windows.ps1   # Start-men
 ```
 
 `BoosterStart --dry-run` skriver ut kommandona som **Starta** skulle köra, utan att öppna något.
+
+## Utveckling
+
+Arbetet styrs av issues och [Dirigenten och orkestern](https://github.com/solwation/dirigenten-och-orkestern):
+se [AGENTS.md](AGENTS.md) och [.orchestra/project.md](.orchestra/project.md). Kör testerna med
+`dotnet test tests/BoosterStart.Tests`.
 
 ## Licens
 
