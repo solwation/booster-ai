@@ -8,19 +8,22 @@ namespace BoosterAI;
 /// </summary>
 public sealed record TabTrack(string Lib, string Dir, string Id);
 
-public enum TabState { Starting, Running, CliExited, CliMissing, NotStarted, Closed, Lost }
+public enum TabState { Starting, Running, CliExited, CliMissing, NotStarted, Closed, Lost, Denied }
 
 /// <summary>
 /// What a tab's log says. One line per event, written by tab-lib.sh:
-/// "&lt;epoch-ms&gt; start pid=N starttime=N", "… cli-start", "… cli-exit rc=N", "… exit".
+/// "&lt;epoch-ms&gt; start pid=N starttime=N", "… cli-start", "… cli-exit rc=N", "… exit", and
+/// "… denied cli=agy cmd=&lt;base64&gt;" when agy refused a command it could not ask about.
+/// <paramref name="Denied"/> holds those command lines (null: none).
 /// </summary>
-public sealed record TabLog(int? Pid, long? StartTime, bool CliStarted, int? CliExit, bool Exited)
+public sealed record TabLog(int? Pid, long? StartTime, bool CliStarted, int? CliExit, bool Exited, IReadOnlyList<string>? Denied = null)
 {
     public static TabLog Parse(string text)
     {
         int? pid = null, rc = null;
         long? start = null;
         bool cliStarted = false, exited = false;
+        List<string>? denied = null;
         foreach (var line in text.Split('\n'))
         {
             var parts = line.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -37,9 +40,16 @@ public sealed record TabLog(int? Pid, long? StartTime, bool CliStarted, int? Cli
                 case "cli-start": cliStarted = true; break;
                 case "cli-exit": rc = Int(values, "rc") ?? -1; break;
                 case "exit": exited = true; break;
+                case "denied": (denied ??= []).Add(Decode(values.GetValueOrDefault("cmd"))); break;
             }
         }
-        return new TabLog(pid, start, cliStarted, rc, exited);
+        return new TabLog(pid, start, cliStarted, rc, exited, denied);
+    }
+
+    private static string Decode(string? base64)
+    {
+        try { return System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(base64 ?? "")); }
+        catch (FormatException) { return ""; }
     }
 
     private static int? Int(Dictionary<string, string> v, string key) =>
@@ -70,6 +80,8 @@ public static class TabStatus
             // No cli-start: the cd failed before the CLI ran.
             _ when !log.CliStarted => TabState.NotStarted,
             126 or 127 => TabState.CliMissing,
+            // agy reports success (rc 0) even when it stopped at a denied command.
+            _ when log.Denied is not null => TabState.Denied,
             _ => TabState.CliExited,
         };
     }
@@ -113,7 +125,8 @@ bs_done() { bs_ev cli-exit rc=$1; }
 bs_stream() { "$@" | bs_fmt; return "${PIPESTATUS[0]}"; }
 bs_fmt() {
   if command -v python3 >/dev/null 2>&1; then
-    PYTHONIOENCODING=utf-8 python3 -u -c 'import sys, json
+    BS_LOG="$bs_log" PYTHONIOENCODING=utf-8 python3 -u -c 'import sys, json, os, time, base64
+last = ""
 def one(v, n=110):
     s = " ".join(str(v).split())
     return s if len(s) <= n else s[:n - 1] + "..."
@@ -126,6 +139,14 @@ def args(d):
     return one(next(iter(d.values())))
 def say(s):
     print(s, flush=True)
+def denied(cli, cmd):
+    # BoosterAI reads this from the tab log and offers an allow-rule (AgyPermissions).
+    say("  ! denied without asking: " + one(cmd or "?"))
+    try:
+        with open(os.environ["BS_LOG"], "a") as f:
+            f.write("%d denied cli=%s cmd=%s\n" % (time.time() * 1000, cli, base64.b64encode(cmd.encode()).decode()))
+    except (KeyError, OSError):
+        pass
 for line in sys.stdin:
     try:
         e = json.loads(line)
@@ -156,9 +177,15 @@ for line in sys.stdin:
             sys.stdout.flush()
         elif u.get("step_type") == "tool" and u.get("state") == "ACTIVE":
             i = u.get("tool_info") or {}
-            say("> " + str(i.get("name")) + " " + args(i.get("parameters")))
+            p = i.get("parameters") or {}
+            say("> " + str(i.get("name")) + " " + args(p))
+            if i.get("name") == "run_command" and isinstance(p, dict):
+                last = str(p.get("CommandLine", ""))
     elif e.get("event") == "result":
         r = e.get("result") or {}
+        # A command agy could not ask about ends the turn, so it is the last one started.
+        if any(isinstance(d, dict) and d.get("action") == "command" for d in r.get("denied_actions") or []):
+            denied("agy", last)
         say("== " + str(r.get("status", "done")).lower() + ", " + str(r.get("num_turns", "?")) + " turns")
 '
   else

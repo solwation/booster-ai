@@ -169,3 +169,51 @@ public class NotifierTests
         Assert.Equal(Notifier.ToastScript("T", "B"), Encoding.Unicode.GetString(Convert.FromBase64String(args[5])));
     }
 }
+
+public class DeniedCommandTests
+{
+    private static string B64(string s) => Convert.ToBase64String(Encoding.UTF8.GetBytes(s));
+
+    [Fact]
+    public void ParsesDeniedCommandLines()
+    {
+        var log = TabLog.Parse($"1 start pid=5 starttime=9\n2 cli-start\n3 denied cli=agy cmd={B64("git status && gh auth status")}\n4 cli-exit rc=0\n");
+        Assert.Equal(["git status && gh auth status"], log.Denied!);
+        Assert.Equal(TabState.Denied, TabStatus.Evaluate(log, TimeSpan.Zero, null));
+        Assert.True(TabStatus.IsUnexpected(TabState.Denied, 0));
+    }
+
+    [Fact]
+    public void BrokenOrEmptyCommandStillCountsAsDenied() =>
+        Assert.Equal(["", ""], TabLog.Parse("1 denied cli=agy cmd=\n2 denied cli=agy cmd=%%%\n").Denied!);
+
+    [Fact]
+    public void NoDenialKeepsTheNormalExit() =>
+        Assert.Equal(TabState.CliExited, TabStatus.Evaluate(TabLog.Parse("1 start pid=5\n2 cli-start\n3 cli-exit rc=0\n"), TimeSpan.Zero, null));
+
+    /// <summary>The real tab-lib.sh formatter on an agy stream-json run that stopped at a denied command (recorded 2026-10-26).</summary>
+    [Fact]
+    public void FormatterLogsTheDeniedAgyCommand()
+    {
+        if (!OperatingSystem.IsLinux() || !File.Exists("/usr/bin/python3")) return;
+        var dir = Directory.CreateTempSubdirectory("bs-denied").FullName;
+        try
+        {
+            File.WriteAllText(Path.Combine(dir, "tab-lib.sh"), TabSession.Lib);
+            File.WriteAllText(Path.Combine(dir, "stream.jsonl"), """
+                {"event":"init","conversation_id":"c","init":{"model":"m"}}
+                {"event":"step_update","step_update":{"step_index":2,"state":"ACTIVE","step_type":"tool","tool_name":"run_command","tool_info":{"name":"run_command","parameters":{"CommandLine":"git status && gh auth status"}}}}
+                {"event":"result","result":{"status":"SUCCESS","response":"","num_turns":1,"denied_actions":[{"action":"command","display_name":"RunCommand"}]}}
+                """);
+            var psi = new System.Diagnostics.ProcessStartInfo("bash") { RedirectStandardOutput = true, WorkingDirectory = dir };
+            psi.ArgumentList.Add("-c");
+            psi.ArgumentList.Add(". ./tab-lib.sh . t && bs_stream cat stream.jsonl");
+            using var p = System.Diagnostics.Process.Start(psi)!;
+            var output = p.StandardOutput.ReadToEnd();
+            p.WaitForExit();
+            Assert.Contains("denied without asking: git status && gh auth status", output);
+            Assert.Equal(["git status && gh auth status"], TabLog.Parse(File.ReadAllText(Path.Combine(dir, "t.log"))).Denied!);
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+}

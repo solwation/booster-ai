@@ -34,7 +34,8 @@
     </Grid>
 
     <!-- Update prompt: a quiet bar, only while a newer release is offered (see UpdateViewModel). -->
-    <Border Grid.Row="1" Classes="update" IsVisible="{Binding Update.IsVisible}" Margin="0,0,0,14">
+    <StackPanel Grid.Row="1">
+    <Border Classes="update" IsVisible="{Binding Update.IsVisible}" Margin="0,0,0,14">
       <Grid ColumnDefinitions="Auto,*,Auto">
         <Path Grid.Column="0" Data="{StaticResource DownloadIcon}" Width="14" Height="14" Stretch="Uniform" StrokeThickness="1.5"
               StrokeLineCap="Round" StrokeJoin="Round" Stroke="{DynamicResource LinkBrush}" VerticalAlignment="Center" Margin="0,0,10,0" />
@@ -50,6 +51,20 @@
         </StackPanel>
       </Grid>
     </Border>
+
+    <!-- Denied commands: agy refused a command in a Run once tab; offer allow-rules (see DenialViewModel). -->
+    <Border Classes="update" IsVisible="{Binding Denial.IsVisible}" Margin="0,0,0,14">
+      <Grid ColumnDefinitions="Auto,*,Auto">
+        <Path Grid.Column="0" Data="{StaticResource ShieldIcon}" Width="14" Height="14" Stretch="Uniform" StrokeThickness="1.5"
+              StrokeLineCap="Round" StrokeJoin="Round" Stroke="{DynamicResource LinkBrush}" VerticalAlignment="Center" Margin="0,0,10,0" />
+        <TextBlock Grid.Column="1" Text="{Binding Denial.Text}" TextWrapping="Wrap" VerticalAlignment="Center" FontSize="13.5" />
+        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" Margin="16,0,0,0" VerticalAlignment="Center">
+          <Button Classes="accent" Content="{local:T denied.allow}" Click="OnAllowDenied" ToolTip.Tip="{Binding Denial.AllowTip}" Padding="14,6" />
+          <Button Content="{local:T denied.dismiss}" Click="OnDismissDenied" Padding="14,6" />
+        </StackPanel>
+      </Grid>
+    </Border>
+    </StackPanel>
 
     <Grid Grid.Row="2" ColumnDefinitions="4,14,36,*,165,132,195,110,130" Margin="0,0,0,6" IsVisible="{Binding HasTabs}">
       <TextBlock Grid.Column="2" Classes="colhead" Text="{local:T col.with}" />

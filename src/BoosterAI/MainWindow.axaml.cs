@@ -67,6 +67,10 @@ public partial class MainWindow : Window
 
     private void OnUpdateSkip(object? sender, RoutedEventArgs e) => _vm.Update.Skip();
 
+    private void OnAllowDenied(object? sender, RoutedEventArgs e) => _vm.AllowDenied();
+
+    private void OnDismissDenied(object? sender, RoutedEventArgs e) => _vm.DismissDenied();
+
     private void OnRestart(object? sender, RoutedEventArgs e)
     {
         if ((sender as Control)?.DataContext is TabViewModel tab) _vm.Restart(tab);

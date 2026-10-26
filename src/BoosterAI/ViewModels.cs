@@ -152,6 +152,7 @@ public sealed class TabViewModel : Observable
     // Monitoring: set once the tab has been started from this window.
     private TabState? _state;
     private int? _rc;
+    private IReadOnlyList<string> _denied = [];
     internal TabConfig? LaunchedAs { get; set; }
     internal string? TrackId { get; set; }
     internal DateTime LaunchedAt { get; set; }
@@ -161,11 +162,14 @@ public sealed class TabViewModel : Observable
     /// <summary>A one-shot tab is "run again" rather than "open again".</summary>
     public string RestartTip => Loc.Get(LaunchedAs is { NonInteractive: true, Orkester: true } ? "restart.once.tip" : "restart.tip");
     public bool CanRestart => _state is TabState.Closed or TabState.CliExited or TabState.CliMissing
-        or TabState.NotStarted or TabState.Lost;
+        or TabState.NotStarted or TabState.Lost or TabState.Denied;
+    /// <summary>The programs of the commands agy denied (state Denied).</summary>
+    internal IReadOnlyList<string> DeniedPrograms => _denied;
     public string StatusText => _state switch
     {
         null => "",
         TabState.CliExited => Loc.Format("tabstate.CliExited", _rc ?? -1),
+        TabState.Denied => Loc.Format("tabstate.Denied", _denied.Count > 0 ? string.Join(", ", _denied) : "?"),
         var s => Loc.Get("tabstate." + s),
     };
     public IBrush StatusBrush => new SolidColorBrush(Avalonia.Media.Color.Parse(_state switch
@@ -178,11 +182,13 @@ public sealed class TabViewModel : Observable
     }));
 
     /// <summary>Updates the state; true when it changed.</summary>
-    internal bool SetState(TabState state, int? rc)
+    internal bool SetState(TabState state, int? rc, IReadOnlyList<string>? denied = null)
     {
-        if (_state == state && _rc == rc) return false;
+        denied ??= [];
+        if (_state == state && _rc == rc && _denied.SequenceEqual(denied)) return false;
         _state = state;
         _rc = rc;
+        _denied = denied;
         foreach (var n in new[] { nameof(HasStatus), nameof(CanRestart), nameof(StatusText), nameof(StatusBrush) }) Raise(n);
         return true;
     }
@@ -209,6 +215,7 @@ public sealed class MainViewModel : Observable
         Tabs = new ObservableCollection<TabViewModel>(cfg.Tabs.Select((t, i) => new TabViewModel(t, this, i)));
         Tabs.CollectionChanged += (_, _) => TabsChanged();
         Update = new UpdateViewModel(cfg, Save);
+        Denial = new DenialViewModel();
         _ = InitAsync();
     }
 
@@ -258,6 +265,9 @@ public sealed class MainViewModel : Observable
 
     /// <summary>The update prompt in the main window.</summary>
     public UpdateViewModel Update { get; }
+
+    /// <summary>The offer to allow the commands agy denied in Run once tabs.</summary>
+    public DenialViewModel Denial { get; }
 
     public bool CheckForUpdates
     {
@@ -395,6 +405,14 @@ public sealed class MainViewModel : Observable
         foreach (var (tab, (state, rc)) in Tabs.Where(t => t.Enabled).Zip(samples)) tab.SetState(state, rc);
     }
 
+    /// <summary>For --screenshot --fake-denied: the first enabled tab had "git status &amp;&amp; gh auth status" denied.</summary>
+    public void ShowSampleDenial()
+    {
+        if (Tabs.FirstOrDefault(t => t.Enabled) is not { } tab) return;
+        tab.SetState(TabState.Denied, 0, ["git", "gh"]);
+        Denial.Offer(["git", "gh"], [tab.Name.Trim()]);
+    }
+
     /// <summary>Opens the tab again with the choices it was started with, in the session's window.</summary>
     public void Restart(TabViewModel tab)
     {
@@ -437,26 +455,86 @@ public sealed class MainViewModel : Observable
         var watched = Tabs.Where(t => t.TrackId is not null).Select(t => (Row: t, Id: t.TrackId!, t.LaunchedAt)).ToList();
         _polling = true;
         var distro = _cfg.WslDistro;
+        var settingsPath = AgySettingsFile;
         Task.Run(() =>
         {
             var live = TabSession.Liveness(distro);
-            return watched.Select(w =>
+            var results = watched.Select(w =>
             {
                 var log = session.ReadLog(w.Id);
-                return (w.Row, w.Id, State: TabStatus.Evaluate(log, DateTime.UtcNow - w.LaunchedAt, live), log?.CliExit);
+                var denied = log?.Denied?.SelectMany(AgyPermissions.Programs).Distinct().ToList();
+                return (w.Row, w.Id, State: TabStatus.Evaluate(log, DateTime.UtcNow - w.LaunchedAt, live), log?.CliExit, Denied: denied);
             }).ToList();
+            // agy's settings are only read while a tab has a denial to offer rules for.
+            var settings = results.Any(r => r.State == TabState.Denied) ? ReadText(settingsPath) : null;
+            return (results, settings);
         }).ContinueWith(t =>
         {
             _polling = false;
             if (!t.IsCompletedSuccessfully) return;
-            foreach (var (row, id, state, rc) in t.Result)
+            var (results, settings) = t.Result;
+            foreach (var (row, id, state, rc, denied) in results)
             {
                 // Ignore a result for a tab that has been restarted meanwhile.
-                if (row.TrackId != id || !row.SetState(state, rc)) continue;
+                if (row.TrackId != id || !row.SetState(state, rc, denied)) continue;
                 if (_cfg.Notifications && TabStatus.IsUnexpected(state, rc))
                     Notifier.Show("BoosterAI", Loc.Format("notify.body", row.Name, row.StatusText));
             }
+            OfferRules(settings);
         }, TaskScheduler.FromCurrentSynchronizationContext());
+    }
+
+    /// <summary>agy's settings.json as this process can read it; null until the WSL home is known.</summary>
+    private string? AgySettingsFile => PathMapping.ToLocalPath(AgyPermissions.SettingsPath, _cfg.WslDistro, _wslHome);
+
+    private static string? ReadText(string? path)
+    {
+        try { return path is not null && File.Exists(path) ? File.ReadAllText(path) : null; }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return null; }
+    }
+
+    private readonly HashSet<string> _dismissedPrograms = [];
+
+    /// <summary>The denied tabs and the programs agy's settings do not allow yet (minus those dismissed this session).</summary>
+    private List<(TabViewModel Row, IReadOnlyList<string> Missing)> DeniedRows(string? settings) =>
+        Tabs.Where(t => t.DeniedPrograms.Count > 0 && t.LaunchedAs?.Llm == "agy")
+            .Select(t => (Row: t, Missing: AgyPermissions.Missing(settings, t.DeniedPrograms.Except(_dismissedPrograms))))
+            .Where(r => r.Missing.Count > 0).ToList();
+
+    private void OfferRules(string? settings)
+    {
+        var rows = DeniedRows(settings);
+        if (rows.Count == 0) { Denial.Hide(); return; }
+        Denial.Offer(rows.SelectMany(r => r.Missing).Distinct().ToList(), rows.Select(r => r.Row.Name.Trim()).ToList());
+    }
+
+    /// <summary>Adds allow-rules for the offered programs to agy's settings and runs the denied tabs again.</summary>
+    public void AllowDenied()
+    {
+        if (AgySettingsFile is not { } path) { ShowStatus(Loc.Get("status.wslHomeMissing"), error: true); return; }
+        try
+        {
+            var current = File.Exists(path) ? File.ReadAllText(path) : null;
+            var rows = DeniedRows(current);
+            var programs = rows.SelectMany(r => r.Missing).Distinct().ToList();
+            System.IO.Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            // Written in place, so the file keeps its permissions (agy creates it 0600).
+            File.WriteAllText(path, AgyPermissions.AddRules(current, programs));
+            Denial.Hide();
+            ShowStatus(Loc.Format("status.rulesAdded", string.Join(", ", programs)), error: false);
+            foreach (var (row, _) in rows) Restart(row);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.Text.Json.JsonException)
+        {
+            ShowStatus(Loc.Format("status.rulesFailed", path, e.Message), error: true);
+        }
+    }
+
+    /// <summary>"Not now": the offered programs are not offered again until BoosterAI restarts.</summary>
+    public void DismissDenied()
+    {
+        _dismissedPrograms.UnionWith(Denial.Programs);
+        Denial.Hide();
     }
 
     /// <summary>Shows the tab's directory in Explorer, Finder or the Linux file manager.</summary>
@@ -492,6 +570,29 @@ public sealed class MainViewModel : Observable
         // The files appear once the agent has worked; reopening BoosterAI or editing the path rechecks.
         ShowStatus(error != "" ? error : Loc.Format("status.installRunning", tab.Name.Trim()), error: error != "");
     }
+}
+
+/// <summary>The quiet bar offering allow-rules for commands agy denied (see MainViewModel.AllowDenied).</summary>
+public sealed class DenialViewModel : Observable
+{
+    private bool _visible;
+    private string _text = "";
+
+    public bool IsVisible { get => _visible; private set => Set(ref _visible, value); }
+    public string Text { get => _text; private set => Set(ref _text, value); }
+    public IReadOnlyList<string> Programs { get; private set; } = [];
+    public string AllowTip => Loc.Format("denied.allow.tip", AgyPermissions.SettingsPath,
+        string.Join(", ", Programs.Select(p => $"command({p})")));
+
+    public void Offer(IReadOnlyList<string> programs, IReadOnlyList<string> tabs)
+    {
+        Programs = programs;
+        Text = Loc.Format("denied.offer", string.Join(", ", programs), string.Join(", ", tabs));
+        Raise(nameof(AllowTip));
+        IsVisible = true;
+    }
+
+    public void Hide() => IsVisible = false;
 }
 
 /// <summary>One entry of the language picker: "auto", "sv" or "en".</summary>
