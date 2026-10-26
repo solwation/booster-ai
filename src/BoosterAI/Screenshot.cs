@@ -49,7 +49,20 @@ internal static class Screenshot
             _ => throw new ArgumentException($"Unknown --window '{o.Window}' (main, settings or install)"),
         };
         window.Show();
+        // The orchestra check runs in the background; give it a moment so the toggles show their real state.
+        for (var i = 0; i < 40 && vm.Tabs.Any(t => t.HasOrkester is null && t.Directory.Trim() != ""); i++)
+        {
+            Dispatcher.UIThread.RunJobs();
+            Thread.Sleep(50);
+        }
         Dispatcher.UIThread.RunJobs();
+        for (var i = 0; i < 3; i++)
+        {
+            Thread.Sleep(30);
+            Dispatcher.UIThread.RunJobs();
+            window.UpdateLayout();
+            AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+        }
         var frame = window.CaptureRenderedFrame() ?? throw new InvalidOperationException("No frame was rendered");
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(o.File))!);
         frame.Save(o.File);

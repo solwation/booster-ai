@@ -46,10 +46,13 @@ public sealed class TabViewModel : Observable
     public bool Orkester
     {
         get => _orkester;
-        set { if (Set(ref _orkester, value)) Raise(nameof(CanNonInteractive)); }
+        set { if (Set(ref _orkester, value)) { Raise(nameof(CanNonInteractive)); Raise(nameof(OnceChecked)); } }
     }
 
-    public bool NonInteractive { get => _nonInteractive; set => Set(ref _nonInteractive, value); }
+    public bool NonInteractive { get => _nonInteractive; set { if (Set(ref _nonInteractive, value)) Raise(nameof(OnceChecked)); } }
+
+    /// <summary>What the toggle shows: a stored choice looks off while it cannot apply (orchestra off).</summary>
+    public bool OnceChecked { get => _nonInteractive && _orkester; set => NonInteractive = value; }
 
     /// <summary>One-shot mode applies to the orchestra command only, so it needs the orchestra on.</summary>
     public bool CanNonInteractive => _orkester && CanOrkester;

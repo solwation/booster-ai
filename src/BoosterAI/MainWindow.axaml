@@ -11,7 +11,7 @@
   <!--
     Today's choices only: which tabs, and the AI, model and /orkester for each.
     Names and directories are edited in Settings. The header and the rows share
-    one column layout (stripe 4 · gap 14 · check 36 · name * · status 150 · llm 132 · model 210 · orkester 110 · once 130)
+    one column layout (stripe 4 · gap 14 · check 36 · name * · status 165 · llm 132 · model 195 · orkester 110 · once 130)
     inside the same padding, so labels sit exactly over their fields.
   -->
   <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="28,22,28,20">
@@ -33,7 +33,7 @@
       </Button>
     </Grid>
 
-    <Grid Grid.Row="1" ColumnDefinitions="4,14,36,*,150,132,210,110,130" Margin="0,0,0,6" IsVisible="{Binding HasTabs}">
+    <Grid Grid.Row="1" ColumnDefinitions="4,14,36,*,165,132,195,110,130" Margin="0,0,0,6" IsVisible="{Binding HasTabs}">
       <TextBlock Grid.Column="2" Classes="colhead" Text="{local:T col.with}" />
       <TextBlock Grid.Column="3" Classes="colhead" Text="{local:T col.project}" />
       <TextBlock Grid.Column="4" Classes="colhead" Text="{local:T col.status}" />
@@ -49,7 +49,7 @@
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="local:TabViewModel">
               <Border Classes="row">
-                <Grid ColumnDefinitions="4,14,36,*,150,132,210,110,130">
+                <Grid ColumnDefinitions="4,14,36,*,165,132,195,110,130">
                   <Border Grid.Column="0" Background="{Binding ColorBrush}" CornerRadius="2" />
 
                   <CheckBox Grid.Column="2" IsChecked="{Binding Enabled}" AutomationProperties.Name="{Binding Name}" VerticalAlignment="Center"
@@ -67,15 +67,16 @@
                     </Grid>
                   </StackPanel>
 
-                  <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="7" VerticalAlignment="Center"
-                              Margin="0,0,12,0" IsVisible="{Binding HasStatus}">
-                    <Ellipse Width="8" Height="8" Fill="{Binding StatusBrush}" VerticalAlignment="Center" />
-                    <TextBlock Text="{Binding StatusText}" FontSize="12.5" VerticalAlignment="Center" />
-                    <Button Classes="icon" Click="OnRestart" IsVisible="{Binding CanRestart}" Margin="0,-6"
+                  <Grid Grid.Column="4" ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center"
+                        Margin="0,0,12,0" IsVisible="{Binding HasStatus}" ClipToBounds="True">
+                    <Ellipse Grid.Column="0" Width="8" Height="8" Fill="{Binding StatusBrush}" VerticalAlignment="Center" Margin="0,0,7,0" />
+                    <TextBlock Grid.Column="1" Text="{Binding StatusText}" FontSize="12.5" VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding StatusText}" />
+                    <Button Grid.Column="2" Classes="icon" Click="OnRestart" IsVisible="{Binding CanRestart}" Margin="7,-6,0,-6"
                             ToolTip.Tip="{Binding RestartTip}" AutomationProperties.Name="{local:T restart.name}">
                       <Path Data="{StaticResource RestartIcon}" Width="12" Height="12" />
                     </Button>
-                  </StackPanel>
+                  </Grid>
 
                   <ComboBox Grid.Column="5" Classes="field" ItemsSource="{Binding Llms}" SelectedItem="{Binding Llm}"
                             Margin="0,0,12,0" Opacity="{Binding RowOpacity}">
@@ -101,7 +102,7 @@
                   </Panel>
 
                   <ToggleSwitch Grid.Column="8" Margin="16,0,0,0" VerticalAlignment="Center" Opacity="{Binding RowOpacity}"
-                                IsChecked="{Binding NonInteractive}" IsEnabled="{Binding CanNonInteractive}"
+                                IsChecked="{Binding OnceChecked}" IsEnabled="{Binding CanNonInteractive}" IsVisible="{Binding CanOrkester}"
                                 OnContent="{x:Null}" OffContent="{x:Null}" MinWidth="0"
                                 ToolTip.Tip="{local:T once.tip}" AutomationProperties.Name="{local:T col.once}" />
                 </Grid>

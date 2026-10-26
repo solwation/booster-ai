@@ -182,3 +182,48 @@ public class PathMappingTests
         Assert.Equal(home + "/proj", PathMapping.ToLocalPath("~/proj", "Ubuntu", null));
     }
 }
+
+public class RunOnceToggleTests
+{
+    private static TabViewModel Tab(bool orkester, bool once, bool? hasOrkester)
+    {
+        var vm = new MainViewModel(new AppConfig { Tabs = [new TabConfig { Llm = "claude", Orkester = orkester, NonInteractive = once }] });
+        var tab = vm.Tabs[0];
+        tab.HasOrkester = hasOrkester;
+        return tab;
+    }
+
+    [Fact]
+    public void EnabledOnlyWithOrchestraAvailableAndOn()
+    {
+        Assert.True(Tab(true, true, true).CanNonInteractive);
+        Assert.False(Tab(false, true, true).CanNonInteractive);
+        Assert.False(Tab(true, true, false).CanNonInteractive);
+        Assert.False(Tab(true, true, null).CanNonInteractive);
+    }
+
+    [Fact]
+    public void StoredChoiceLooksOffWhileItCannotApply()
+    {
+        Assert.True(Tab(true, true, true).OnceChecked);
+        Assert.False(Tab(false, true, true).OnceChecked);
+        var t = Tab(false, true, true);
+        t.Orkester = true;
+        Assert.True(t.OnceChecked);
+    }
+
+    [Fact]
+    public void OnlyShownWhereTheOrchestraToggleIs()
+    {
+        Assert.True(Tab(false, false, true).CanOrkester);
+        Assert.False(Tab(false, false, false).CanOrkester);
+    }
+
+    [Fact]
+    public void LaunchIgnoresOneShotWithoutOrchestra()
+    {
+        var cfg = Tab(true, true, false).ToConfig(forLaunch: true);
+        Assert.False(cfg.Orkester);
+        Assert.DoesNotContain("-p ", Launcher.TabScript(cfg));
+    }
+}
