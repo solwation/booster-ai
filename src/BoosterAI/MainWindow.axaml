@@ -88,17 +88,16 @@
                   <CheckBox Grid.Column="2" IsChecked="{Binding Enabled}" AutomationProperties.Name="{Binding Name}" VerticalAlignment="Center"
                             MinWidth="0" ToolTip.Tip="{local:T tab.open.tip}" />
 
-                  <StackPanel Grid.Column="3" Opacity="{Binding RowOpacity}" Margin="0,0,16,0"
-                              VerticalAlignment="Center" Spacing="3">
-                    <TextBlock Classes="name" Text="{Binding Name}" />
-                    <Grid ColumnDefinitions="Auto,Auto" HorizontalAlignment="Left">
-                      <TextBlock Grid.Column="0" Classes="path" Text="{Binding Directory}" VerticalAlignment="Center" />
-                      <Button Grid.Column="1" Classes="icon" Click="OnOpenFolder" Margin="6,-6,0,-6"
+                  <!-- The path is a hover tip on the name; the icon after it opens the folder. -->
+                  <Grid Grid.Column="3" ColumnDefinitions="*,Auto" HorizontalAlignment="Left" VerticalAlignment="Center"
+                        Opacity="{Binding RowOpacity}" Margin="0,0,16,0">
+                    <TextBlock Grid.Column="0" Classes="name" Text="{Binding Name}" VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Directory}" />
+                    <Button Grid.Column="1" Classes="icon" Click="OnOpenFolder" Margin="6,-6,0,-6"
                             ToolTip.Tip="{local:T folder.open.tip}" AutomationProperties.Name="{local:T folder.open.name}">
                       <Path Data="{StaticResource OpenExternalIcon}" Width="12" Height="12" />
                     </Button>
-                    </Grid>
-                  </StackPanel>
+                  </Grid>
 
                   <Grid Grid.Column="4" ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center"
                         Margin="0,0,12,0" IsVisible="{Binding HasStatus}" ClipToBounds="True">

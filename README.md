@@ -18,7 +18,7 @@ Start your whole working day with one click: BoosterAI opens every project you w
 - **Orchestra on demand.** For projects that use [Dirigenten och orkestern](https://github.com/solwation/dirigenten-och-orkestern), a toggle sends `/orkester` as the first prompt, and projects without it get a one-click install.
 - **Run the orchestra once.** A per-project toggle runs `/orkester` non-interactively and leaves you a normal shell with the result; the restart button then runs it again.
 - **Find your projects.** *Find projects* searches Documents (or any folder you pick) for git checkouts and folders with an AI instruction file (`AGENTS.md`, `CLAUDE.md`, `AI.md` …) and adds the ones you tick.
-- **Open the folder.** One button per project opens its directory in Explorer (WSL folders included), Finder or your Linux file manager.
+- **Open the folder.** The icon after each project name opens its directory in Explorer (WSL folders included), Finder or your Linux file manager; hover the name to see the path.
 - **Your shell, your setup.** Tabs run through `bash -lic`, so your aliases and `PATH` apply, and you keep a normal shell when the CLI exits.
 - **Font size.** One setting zooms the CLI text in all tabs.
 - **Themes and language.** Five tab colour themes, an Appearance setting (Auto, Light or Dark, applied at once), in Swedish or English.
