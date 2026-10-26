@@ -6,7 +6,9 @@ Start your whole working day with one click. BoosterStart opens every project yo
 
 ![The BoosterStart start window](docs/screenshot.png)
 
-BoosterStart is a small desktop app for Windows and Linux, built with Avalonia on .NET 10. The interface is currently in Swedish.
+English interface: ![The BoosterStart start window in English](docs/screenshot-en.png)
+
+BoosterStart is a small desktop app for Windows and Linux, built with Avalonia on .NET 10. The interface is available in Swedish and English (see [Language](#language)).
 
 ## Why
 
@@ -35,6 +37,18 @@ The toggle appears only for projects that have it installed. Other projects show
 The settings window holds your projects (name and directory, with a folder picker), the tab colour theme, and where tabs run. On Windows you point at your normal Windows folders; WSL shares (`\\wsl.localhost\...`) and Linux paths such as `~/webshop` work too. Whether an agent then works in a mirror elsewhere is up to your own agent instructions.
 
 ![Settings window with the Nordisk theme](docs/verification/5/theme-nordic.png)
+
+## Language
+
+BoosterStart speaks Swedish and English. By default it follows the operating system's UI language (Swedish if that is Swedish, otherwise English). Choose **Automatiskt / Svenska / English** under *Language* in the settings window; the choice is saved in `config.json` (`"Language": "auto" | "sv" | "en"`) and **takes effect after BoosterStart is restarted**. The prompt sent to the AI when it installs the orchestra follows the chosen language too.
+
+| | Swedish | English |
+| --- | --- | --- |
+| Start window | ![](docs/screenshot-sv.png) | ![](docs/screenshot-en.png) |
+| Settings | ![](docs/settings-sv.png) | ![](docs/settings-en.png) |
+| Install dialog | ![](docs/install-orchestra.png) | ![](docs/install-orchestra-en.png) |
+
+To add a string for development: add the same key to both `src/BoosterStart/Resources/Strings.sv.json` and `Strings.en.json` (a test fails if they differ), then use `{local:T some.key}` in XAML or `Loc.Get("some.key")` / `Loc.Format("some.key", args)` in code.
 
 ## How it works per platform
 

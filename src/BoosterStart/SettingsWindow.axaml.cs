@@ -45,19 +45,19 @@ public partial class SettingsWindow : Window
             var start = await StorageProvider.TryGetFolderFromPathAsync(PathMapping.StartFolder(tab.Directory, _vm.WslDistro));
             var picked = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
             {
-                Title = $"Katalog för {tab.Name}",
+                Title = Loc.Format("picker.title", tab.Name),
                 SuggestedStartLocation = start,
             });
             if (picked.Count > 0 && picked[0].TryGetLocalPath() is { } path)
             {
                 tab.Directory = PathMapping.ToTabPath(path);
                 // A new tab named after its folder saves typing.
-                if (tab.Name is "" or "Ny flik") tab.Name = picked[0].Name;
+                if (tab.Name == "" || Loc.IsDefaultTabName(tab.Name)) tab.Name = picked[0].Name;
             }
         }
         catch (Exception ex)
         {
-            _vm.ShowStatus("Kunde inte öppna mappväljaren: " + ex.Message, error: true);
+            _vm.ShowStatus(Loc.Format("status.pickerFailed", ex.Message), error: true);
         }
     }
 }

@@ -3,23 +3,23 @@
         xmlns:local="using:BoosterStart"
         x:Class="BoosterStart.SettingsWindow"
         x:DataType="local:MainViewModel"
-        Title="BoosterStart – inställningar"
+        Title="{local:T settings.title}"
         Icon="avares://BoosterStart/Assets/boosterstart.ico"
         Width="820" Height="620" MinWidth="640" MinHeight="360"
         WindowStartupLocation="CenterOwner">
 
   <!-- Columns: stripe 4 · gap 14 · name 220 · directory * · remove 36. -->
-  <Grid RowDefinitions="Auto,Auto,*,Auto,Auto" Margin="28,22,28,20">
+  <Grid RowDefinitions="Auto,Auto,*,Auto,Auto,Auto" Margin="28,22,28,20">
 
     <StackPanel Grid.Row="0" Spacing="2" Margin="0,0,0,20">
-      <TextBlock Classes="title" Text="Projekt" />
+      <TextBlock Classes="title" Text="{local:T settings.projects.title}" />
       <TextBlock Classes="muted"
-                 Text="Katalogerna som öppnas som flikar. Klicka på färgremsan för att byta färg på en flik." />
+                 Text="{local:T settings.projects.hint}" />
     </StackPanel>
 
     <Grid Grid.Row="1" ColumnDefinitions="4,14,220,*,36" Margin="0,0,0,6" IsVisible="{Binding HasTabs}">
-      <TextBlock Grid.Column="2" Classes="colhead" Text="Fliknamn" />
-      <TextBlock Grid.Column="3" Classes="colhead" Text="Katalog" />
+      <TextBlock Grid.Column="2" Classes="colhead" Text="{local:T col.tabname}" />
+      <TextBlock Grid.Column="3" Classes="colhead" Text="{local:T col.directory}" />
     </Grid>
 
     <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Disabled">
@@ -29,20 +29,20 @@
             <Border Classes="row" Padding="0,6">
               <Grid ColumnDefinitions="4,14,220,*,36">
                 <Button Grid.Column="0" Classes="stripe" Background="{Binding ColorBrush}"
-                        Click="OnNextColor" ToolTip.Tip="Byt färg på fliken" AutomationProperties.Name="Byt färg på fliken" />
-                <TextBox Grid.Column="2" Classes="inline name" Text="{Binding Name}" Watermark="Fliknamn"
+                        Click="OnNextColor" ToolTip.Tip="{local:T color.change}" AutomationProperties.Name="{local:T color.change}" />
+                <TextBox Grid.Column="2" Classes="inline name" Text="{Binding Name}" Watermark="{local:T col.tabname}"
                          Margin="-6,0,16,0" VerticalAlignment="Center" />
                 <Grid Grid.Column="3" ColumnDefinitions="*,Auto,Auto" VerticalAlignment="Center">
                   <TextBox Grid.Column="0" Classes="inline path" Text="{Binding Directory}" Watermark="{Binding DirectoryHint}" />
-                  <Button Grid.Column="1" Classes="icon" Click="OnBrowse" ToolTip.Tip="Välj katalog" AutomationProperties.Name="Välj katalog" Margin="4,0,0,0">
+                  <Button Grid.Column="1" Classes="icon" Click="OnBrowse" ToolTip.Tip="{local:T folder.pick}" AutomationProperties.Name="{local:T folder.pick}" Margin="4,0,0,0">
                     <Path Data="{StaticResource FolderIcon}" Width="15" Height="13" />
                   </Button>
                   <Button Grid.Column="2" Classes="icon" Click="OnOpenFolder" Margin="2,0,0,0"
-                            ToolTip.Tip="Öppna katalogen i Utforskaren eller filhanteraren" AutomationProperties.Name="Öppna katalogen">
+                            ToolTip.Tip="{local:T folder.open.tip}" AutomationProperties.Name="{local:T folder.open.name}">
                       <Path Data="{StaticResource OpenExternalIcon}" Width="12" Height="12" />
                     </Button>
                 </Grid>
-                <Button Grid.Column="4" Classes="icon remove" Click="OnRemoveTab" ToolTip.Tip="Ta bort projektet" AutomationProperties.Name="Ta bort projektet"
+                <Button Grid.Column="4" Classes="icon remove" Click="OnRemoveTab" ToolTip.Tip="{local:T project.remove}" AutomationProperties.Name="{local:T project.remove}"
                         VerticalAlignment="Center" HorizontalAlignment="Right">
                   <Path Data="{StaticResource CloseIcon}" Width="10" Height="10" />
                 </Button>
@@ -54,9 +54,9 @@
     </ScrollViewer>
 
     <StackPanel Grid.Row="3" Spacing="8" Margin="0,18,0,0">
-      <TextBlock Classes="colhead" Text="Flikfärger" />
+      <TextBlock Classes="colhead" Text="{local:T colors.title}" />
       <ListBox ItemsSource="{Binding Themes}" SelectedItem="{Binding SelectedTheme}" Classes="themes"
-               Background="Transparent" AutomationProperties.Name="Färgtema för flikarna">
+               Background="Transparent" AutomationProperties.Name="{local:T colors.name}">
         <ListBox.ItemsPanel>
           <ItemsPanelTemplate>
             <WrapPanel Orientation="Horizontal" />
@@ -77,30 +77,43 @@
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
-              <TextBlock Text="{Binding Name}" FontSize="12.5" />
+              <TextBlock Text="{Binding DisplayName}" FontSize="12.5" />
             </StackPanel>
           </DataTemplate>
         </ListBox.ItemTemplate>
       </ListBox>
     </StackPanel>
 
-    <Grid Grid.Row="4" ColumnDefinitions="Auto,*,Auto" Margin="0,16,0,0">
-      <Button Grid.Column="0" Click="OnAddTab" Padding="12,8" AutomationProperties.Name="Lägg till projekt" VerticalAlignment="Center">
+    <StackPanel Grid.Row="4" Orientation="Horizontal" Spacing="10" Margin="0,16,0,0">
+      <TextBlock Classes="colhead" Text="{local:T language.title}" VerticalAlignment="Center" />
+      <ComboBox ItemsSource="{Binding LanguageChoices}" SelectedItem="{Binding SelectedLanguage}" Width="170"
+                AutomationProperties.Name="{local:T language.name}">
+        <ComboBox.ItemTemplate>
+          <DataTemplate x:DataType="local:LanguageChoice">
+            <TextBlock Text="{Binding Label}" />
+          </DataTemplate>
+        </ComboBox.ItemTemplate>
+      </ComboBox>
+      <TextBlock Classes="muted" Text="{local:T language.restart}" VerticalAlignment="Center" />
+    </StackPanel>
+
+    <Grid Grid.Row="5" ColumnDefinitions="Auto,*,Auto" Margin="0,16,0,0">
+      <Button Grid.Column="0" Click="OnAddTab" Padding="12,8" AutomationProperties.Name="{local:T project.add}" VerticalAlignment="Center">
         <StackPanel Orientation="Horizontal" Spacing="8">
           <Path Data="{StaticResource PlusIcon}" Width="11" Height="11" StrokeThickness="1.6" StrokeLineCap="Round"
                 Stroke="{DynamicResource TextBrush}" Stretch="Uniform" VerticalAlignment="Center" />
-          <TextBlock Text="Lägg till projekt" />
+          <TextBlock Text="{local:T project.add}" />
         </StackPanel>
       </Button>
       <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="24,0" VerticalAlignment="Center">
-        <TextBlock Classes="muted" Text="WSL-distribution" VerticalAlignment="Center" IsVisible="{Binding IsWindows}" />
+        <TextBlock Classes="muted" Text="{local:T wsl.distro}" VerticalAlignment="Center" IsVisible="{Binding IsWindows}" />
         <TextBox Text="{Binding WslDistro}" Width="120" FontFamily="{StaticResource MonoFont}" FontSize="13"
                  IsVisible="{Binding IsWindows}" />
-        <TextBlock Classes="muted" Text="Terminal" VerticalAlignment="Center" IsVisible="{Binding IsLinux}" />
+        <TextBlock Classes="muted" Text="{local:T terminal}" VerticalAlignment="Center" IsVisible="{Binding IsLinux}" />
         <ComboBox ItemsSource="{Binding LinuxTerminals}" SelectedItem="{Binding LinuxTerminal}" Width="170"
                   FontFamily="{StaticResource MonoFont}" FontSize="13" IsVisible="{Binding IsLinux}" />
       </StackPanel>
-      <Button Grid.Column="2" Classes="accent" Content="Klar" Click="OnDone" Padding="22,9" IsDefault="True" />
+      <Button Grid.Column="2" Classes="accent" Content="{local:T done}" Click="OnDone" Padding="22,9" IsDefault="True" />
     </Grid>
   </Grid>
 </Window>

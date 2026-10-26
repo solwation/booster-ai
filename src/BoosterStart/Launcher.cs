@@ -40,28 +40,21 @@ public static class Launcher
     {
         foreach (var t in tabs.Where(t => t.Enabled))
         {
-            if (!Catalog.IsSafeModel(t.Model)) return $"{t.Name}: ogiltigt modell-id \"{t.Model}\".";
-            if (t.Directory.IndexOfAny([';', '\n', '\r']) >= 0) return $"{t.Name}: katalogen får inte innehålla ; eller radbrytning.";
-            if (t.Name.Contains(';')) return $"{t.Name}: fliknamnet får inte innehålla ;.";
+            if (!Catalog.IsSafeModel(t.Model)) return Loc.Format("err.model", t.Name, t.Model);
+            if (t.Directory.IndexOfAny([';', '\n', '\r']) >= 0) return Loc.Format("err.directory", t.Name);
+            if (t.Name.Contains(';')) return Loc.Format("err.name", t.Name);
         }
         return "";
     }
 
-    /// <summary>First prompt for the "Installera" link in a project without the orchestra. No ';' (see TabScript).</summary>
-    public const string InstallOrkesterPrompt =
-        "Installera Dirigenten och orkestern i det här projektet. Följ INSTALL.md i " +
-        "https://github.com/solwation/dirigenten-och-orkestern: senaste release som git subtree under " +
-        ".orchestra/shared, en projektpolicy i .orchestra/project.md utifrån PROJECT.example.md, " +
-        "kommandot /orkester för Claude (.claude/commands/orkester.md) och Codex-skillen " +
-        "(.agents/skills/orkester/SKILL.md), länkade från AGENTS.md och CLAUDE.md. " +
-        "Läs projektet först och fråga mig om språk, publicering, kapacitet och timers innan du " +
-        "skriver policyn. Committa när jag har godkänt.";
+    /// <summary>First prompt for the "Install" link in a project without the orchestra, in the UI language. No ';' (see TabScript).</summary>
+    public static string InstallOrkesterPrompt => Loc.Get("prompt.install");
 
-    /// <summary>Starts the terminal; returns a Swedish error text, or "" on success.</summary>
+    /// <summary>Starts the terminal; returns an error text in the UI language, or "" on success.</summary>
     public static string Launch(AppConfig cfg, string? prompt = null)
     {
         var tabs = cfg.Tabs.Where(t => t.Enabled).ToList();
-        if (tabs.Count == 0) return "Ingen flik är vald.";
+        if (tabs.Count == 0) return Loc.Get("err.noTab");
         var error = Validate(tabs);
         if (error != "") return error;
         try
@@ -72,7 +65,7 @@ public static class Launcher
         }
         catch (Exception e)
         {
-            return "Kunde inte starta terminalen: " + e.Message;
+            return Loc.Format("err.launch", e.Message);
         }
     }
 
@@ -111,7 +104,7 @@ public static class Launcher
     {
         var term = preferred != "auto" ? preferred
             : LinuxTerminals.Skip(1).FirstOrDefault(OnPath)
-              ?? throw new InvalidOperationException("hittade ingen terminal (gnome-terminal, konsole, kitty …).");
+              ?? throw new InvalidOperationException(Loc.Get("err.noTerminal"));
         for (var i = 0; i < tabs.Count; i++)
         {
             var t = tabs[i];

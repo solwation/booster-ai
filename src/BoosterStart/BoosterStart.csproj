@@ -17,6 +17,9 @@
     <AvaloniaResource Include="../../assets/fonts/*.ttf" Link="Assets/Fonts/%(Filename)%(Extension)" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Resources/Strings.*.json" WithCulture="false" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Avalonia" Version="11.3.22" />
     <PackageReference Include="Avalonia.Desktop" Version="11.3.22" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.22" />

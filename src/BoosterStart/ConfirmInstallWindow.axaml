@@ -3,38 +3,38 @@
         xmlns:local="using:BoosterStart"
         x:Class="BoosterStart.ConfirmInstallWindow"
         x:DataType="local:TabViewModel"
-        Title="Installera orkestern"
+        Title="{local:T confirm.title}"
         Icon="avares://BoosterStart/Assets/boosterstart.ico"
         Width="560" SizeToContent="Height" CanResize="False"
         WindowStartupLocation="CenterOwner">
   <StackPanel Margin="28,24,28,22" Spacing="14">
     <TextBlock Classes="title" FontSize="20" TextWrapping="Wrap"
-               Text="{Binding Name, StringFormat='Installera orkestern i {0}?'}" />
+               Text="{Binding InstallTitle}" />
 
     <TextBlock TextWrapping="Wrap" LineHeight="21"
-               Text="Orkestern låter AI-agenter jobba igenom projektets GitHub-issues åt dig. En dirigent väljer issues efter prioritet, ger dem till agenter som arbetar parallellt i egna kopior, granskar resultatet och levererar det. Frågor som bara du kan svara på hamnar på issuet, inte i chatten." />
+               Text="{local:T confirm.intro}" />
 
     <StackPanel Spacing="6">
-      <TextBlock Classes="muted" Text="Installationen lägger till i" />
+      <TextBlock Classes="muted" Text="{local:T confirm.addsTo}" />
       <Border Background="{DynamicResource RowHoverBrush}" CornerRadius="6" Padding="10,7">
         <TextBlock Classes="path" Text="{Binding Directory}" Foreground="{DynamicResource TextBrush}" />
       </Border>
       <TextBlock Classes="muted" TextWrapping="Wrap" LineHeight="20"
-                 Text="en låst kopia av orkesterns instruktioner, en projektpolicy med dina regler och kommandot /orkester för Claude och Codex." />
+                 Text="{local:T confirm.addsDetail}" />
     </StackPanel>
 
     <TextBlock TextWrapping="Wrap" LineHeight="21"
                Text="{Binding InstallSummary}" />
 
     <Button Classes="link" Click="OnReadMore" HorizontalAlignment="Left"
-            AutomationProperties.Name="Läs mer om orkestern på GitHub">
-      <TextBlock Text="Läs mer om Dirigenten och orkestern" />
+            AutomationProperties.Name="{local:T confirm.readmore.name}">
+      <TextBlock Text="{local:T confirm.readmore}" />
     </Button>
 
     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,6,0,0">
-      <Button Content="Avbryt" Click="OnCancel" IsCancel="True" Padding="18,8" />
+      <Button Content="{local:T cancel}" Click="OnCancel" IsCancel="True" Padding="18,8" />
       <Button Classes="accent" Click="OnConfirm" IsDefault="True" Padding="18,8"
-              Content="{Binding Llm, StringFormat='Installera med {0}'}" />
+              Content="{Binding InstallButton}" />
     </StackPanel>
   </StackPanel>
 </Window>

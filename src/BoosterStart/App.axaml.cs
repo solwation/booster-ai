@@ -6,8 +6,12 @@ namespace BoosterStart;
 
 public partial class App : Application
 {
+    private readonly AppConfig _config = ConfigStore.Load();
+
     public override void Initialize()
     {
+        // The language must be set before any XAML (and its {local:T} texts) loads.
+        Loc.Init(_config.Language);
         AvaloniaXamlLoader.Load(this);
         // --theme light|dark overrides the system theme (also used for screenshots).
         var args = Environment.GetCommandLineArgs();
@@ -24,7 +28,7 @@ public partial class App : Application
     public override void OnFrameworkInitializationCompleted()
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
-            desktop.MainWindow = new MainWindow(new MainViewModel(ConfigStore.Load()));
+            desktop.MainWindow = new MainWindow(new MainViewModel(_config));
         base.OnFrameworkInitializationCompleted();
     }
 }

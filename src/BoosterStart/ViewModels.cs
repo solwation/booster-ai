@@ -80,10 +80,10 @@ public sealed class TabViewModel : Observable
     public bool CanOrkester => _hasOrkester == true && IsAi;
 
     /// <summary>What the "Installera" link will do, for the confirmation dialog.</summary>
-    public string InstallSummary =>
-        $"Vald AI ({Llm}) startar i en ny flik med {(Model == Catalog.StandardModel ? "sin standardmodell" : "modellen " + Model)}, " +
-        "läser projektet och frågar dig om språk, publicering och arbetsregler innan den skriver policyn. " +
-        "Inget committas förrän du har godkänt.";
+    public string InstallSummary => Loc.Format("confirm.summary", Llm,
+        Model == Catalog.StandardModel ? Loc.Get("confirm.summary.standardModel") : Loc.Format("confirm.summary.model", Model));
+    public string InstallTitle => Loc.Format("confirm.heading", Name);
+    public string InstallButton => Loc.Format("confirm.button", Loc.Display("llm", Llm));
     public bool CanInstallOrkester => _hasOrkester == false && IsAi;
 
     public string Color => _owner.Theme.ColorAt(_colorIndex);
@@ -103,7 +103,7 @@ public sealed class TabViewModel : Observable
     }
 
     /// <summary>Example shown in an empty directory field.</summary>
-    public string DirectoryHint => OperatingSystem.IsWindows() ? @"C:\Users\du\Documents\projekt" : "~/projekt";
+    public string DirectoryHint => Loc.Get(OperatingSystem.IsWindows() ? "dir.hint" : "dir.hint.unix");
     public IReadOnlyList<string> Llms => Catalog.Llms;
     public IReadOnlyList<string> Models => Catalog.ModelsFor(_llm);
     public bool IsAi => _llm != Catalog.ShellOnly;
@@ -191,7 +191,22 @@ public sealed class MainViewModel : Observable
     public bool HasTabs => Tabs.Count > 0;
     public int EnabledCount => Tabs.Count(t => t.Enabled);
     public bool CanLaunch => EnabledCount > 0;
-    public string LaunchLabel => EnabledCount switch { 0 => "Ingen flik vald", 1 => "Starta 1 flik", var n => $"Starta {n} flikar" };
+    public string LaunchLabel => EnabledCount switch { 0 => Loc.Get("launch.none"), 1 => Loc.Get("launch.one"), var n => Loc.Format("launch.many", n) };
+
+    /// <summary>Language setting shown in Settings; the change applies after a restart.</summary>
+    public IReadOnlyList<LanguageChoice> LanguageChoices { get; } =
+        [new(Loc.Auto), new("sv"), new("en")];
+
+    public LanguageChoice SelectedLanguage
+    {
+        get => LanguageChoices.FirstOrDefault(c => c.Id == _cfg.Language) ?? LanguageChoices[0];
+        set
+        {
+            if (value is null || value.Id == _cfg.Language) return;
+            _cfg.Language = value.Id;
+            Raise();
+        }
+    }
 
     public void TabsChanged()
     {
@@ -254,7 +269,7 @@ public sealed class MainViewModel : Observable
     public void Save()
     {
         try { ConfigStore.Save(Snapshot(forLaunch: false)); }
-        catch (Exception e) { ShowStatus("Kunde inte spara: " + e.Message, error: true); }
+        catch (Exception e) { ShowStatus(Loc.Format("status.saveFailed", e.Message), error: true); }
     }
 
     /// <summary>Saves the choices and opens the terminal; true when the window can close.</summary>
@@ -270,8 +285,8 @@ public sealed class MainViewModel : Observable
     public void OpenFolder(TabViewModel tab)
     {
         var local = PathMapping.ToLocalPath(tab.Directory, _cfg.WslDistro, _wslHome);
-        if (local is null) { ShowStatus("Hittar inte WSL-hemkatalogen än; försök igen om en stund.", error: true); return; }
-        if (!System.IO.Directory.Exists(local)) { ShowStatus($"Katalogen finns inte: {tab.Directory}", error: true); return; }
+        if (local is null) { ShowStatus(Loc.Get("status.wslHomeMissing"), error: true); return; }
+        if (!System.IO.Directory.Exists(local)) { ShowStatus(Loc.Format("status.dirMissing", tab.Directory), error: true); return; }
         try
         {
             var opener = OperatingSystem.IsWindows() ? "explorer.exe" : OperatingSystem.IsMacOS() ? "open" : "xdg-open";
@@ -281,7 +296,7 @@ public sealed class MainViewModel : Observable
         }
         catch (Exception e)
         {
-            ShowStatus("Kunde inte öppna katalogen: " + e.Message, error: true);
+            ShowStatus(Loc.Format("status.openFailed", e.Message), error: true);
         }
     }
 
@@ -294,9 +309,15 @@ public sealed class MainViewModel : Observable
             Tabs = [tab.ToConfig(forLaunch: false)],
         };
         cfg.Tabs[0].Enabled = true;
-        cfg.Tabs[0].Name = tab.Name.Trim() + " (orkester)";
+        cfg.Tabs[0].Name = tab.Name.Trim() + " (" + Loc.Get("tab.installSuffix") + ")";
         var error = Launcher.Launch(cfg, Launcher.InstallOrkesterPrompt);
         // The files appear once the agent has worked; reopening BoosterStart or editing the path rechecks.
-        ShowStatus(error != "" ? error : $"Installationen körs i en ny flik för {tab.Name.Trim()}.", error: error != "");
+        ShowStatus(error != "" ? error : Loc.Format("status.installRunning", tab.Name.Trim()), error: error != "");
     }
+}
+
+/// <summary>One entry of the language picker: "auto", "sv" or "en".</summary>
+public sealed record LanguageChoice(string Id)
+{
+    public string Label => Loc.Get("language." + Id);
 }

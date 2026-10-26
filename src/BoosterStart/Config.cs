@@ -6,7 +6,7 @@ namespace BoosterStart;
 /// <summary>One terminal tab: where it opens and which AI CLI starts in it.</summary>
 public sealed class TabConfig
 {
-    public string Name { get; set; } = "Ny flik";
+    public string Name { get; set; } = Loc.Get("tab.newName");
     /// <summary>Position in the colour theme; -1 in files from before themes (derived from Color).</summary>
     public int ColorIndex { get; set; } = -1;
     /// <summary>The resolved colour, written for readability and used by the launcher.</summary>
@@ -28,6 +28,8 @@ public sealed class AppConfig
     public string LinuxTerminal { get; set; } = "auto";
     /// <summary>Name of the tab colour theme, see Catalog.Themes.</summary>
     public string ColorTheme { get; set; } = "Standard";
+    /// <summary>UI language: "auto" (follow the OS), "sv" or "en". Applied at startup.</summary>
+    public string Language { get; set; } = Loc.Auto;
 }
 
 [JsonSourceGenerationOptions(WriteIndented = true)]

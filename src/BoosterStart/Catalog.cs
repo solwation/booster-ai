@@ -49,6 +49,8 @@ public static class Catalog
 public sealed record ColorTheme(string Name, IReadOnlyList<string> Colors)
 {
     public string ColorAt(int index) => Colors[((index % Colors.Count) + Colors.Count) % Colors.Count];
+    /// <summary>Localised name; Name stays the stable id saved in the config.</summary>
+    public string DisplayName => Loc.Display("theme", Name);
     public IReadOnlyList<Avalonia.Media.IBrush> Swatches { get; } =
         Colors.Select(c => (Avalonia.Media.IBrush)new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse(c))).ToList();
 }
