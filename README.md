@@ -48,7 +48,7 @@ Settings are stored in `%APPDATA%\BoosterStart\config.json` on Windows and `~/.c
 
 ## Install
 
-Releases are self-contained single files, so the target machine needs no .NET. Build them first (see below), then run the installer for your platform.
+Builds are self-contained single files, so the target machine needs no .NET. Build first (see below), then run the installer for your platform.
 
 Linux, installs to `~/.local/bin` and adds a menu entry:
 
