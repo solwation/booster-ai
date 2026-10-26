@@ -60,6 +60,18 @@ Settings are stored in `%APPDATA%\BoosterStart\config.json` on Windows and `~/.c
 `BoosterStart --dry-run` prints the commands that Start would run, without opening anything.
 The app follows the system's light or dark theme; `--theme light` or `--theme dark` overrides it.
 
+## Watching the tabs
+
+After **Start**, BoosterStart stays running and shows a status per tab: *Starting…*, *Running*, *CLI exited (code)*, *CLI not found*, *Did not start*, *Tab closed* or *Lost*. On Windows the window goes to the system tray, and clicking the icon brings it back. On Linux it minimizes instead, because many desktops (plain GNOME, for example) have no tray. A tab that has closed or whose CLI has exited gets a restart button. The button opens the tab again with the same AI, model and orchestra choice, in the same Windows Terminal window.
+
+When something unexpected happens (a tab closes, does not start, or its CLI exits with an error), BoosterStart shows a system notification. On Windows this is a toast. On Linux it uses `notify-send` when that is installed. In *Settings* you can turn **Notifications** off, and you can choose **Close after Start** to get the old behaviour back.
+
+How it works: each Start creates a session folder (`%LOCALAPPDATA%\BoosterStart\sessions\…` on Windows, which WSL writes to through `/mnt/c`, or `~/.local/share/BoosterStart/sessions/…` on Linux) containing a small `tab-lib.sh`. Each tab's shell sources that script, and it appends `start` (PID and start time), `cli-start`, `cli-exit rc=N` and `exit` to the tab's log. The CLI still runs in the tab's own interactive login shell, so `~/.bashrc` aliases still apply, and closing the tab still ends the CLI. The app polls the logs every 2 seconds. A shell that is gone without logging `exit` (for example after `wsl --shutdown`) counts as *Lost*. Windows detects this through `\\wsl.localhost\<distro>\proc`. Session folders older than two days are removed.
+
+Known limit: when you close a Windows Terminal window that holds several tabs, WSL may keep their shells alive for up to about a minute, so *Tab closed* can appear late.
+
+`--screenshot` shows sample statuses and opens the window without taking focus (used for the images above).
+
 ## Install
 
 Download the latest build from [Releases](https://github.com/solwation/booster-start/releases/latest). Builds are self-contained single files, so the target machine needs no .NET. Check the download against `SHA256SUMS` if you like (`sha256sum -c SHA256SUMS --ignore-missing`).

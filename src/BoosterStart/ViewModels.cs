@@ -133,6 +133,41 @@ public sealed class TabViewModel : Observable
     /// The saved choice keeps Orkester even while the directory lacks the orchestra;
     /// a launch only sends /orkester where it exists.
     /// </summary>
+    // Monitoring: set once the tab has been started from this window.
+    private TabState? _state;
+    private int? _rc;
+    internal TabConfig? LaunchedAs { get; set; }
+    internal string? TrackId { get; set; }
+    internal DateTime LaunchedAt { get; set; }
+
+    public bool HasStatus => _state is not null;
+    public bool CanRestart => _state is TabState.Closed or TabState.CliExited or TabState.CliMissing
+        or TabState.NotStarted or TabState.Lost;
+    public string StatusText => _state switch
+    {
+        null => "",
+        TabState.CliExited => Loc.Format("tabstate.CliExited", _rc ?? -1),
+        var s => Loc.Get("tabstate." + s),
+    };
+    public IBrush StatusBrush => new SolidColorBrush(Avalonia.Media.Color.Parse(_state switch
+    {
+        TabState.Running => "#2E9E5B",
+        TabState.Starting => "#8A8FA0",
+        TabState.CliExited when _rc == 0 => "#8A8FA0",
+        TabState.Closed => "#D08A1E",
+        _ => "#D2453F",
+    }));
+
+    /// <summary>Updates the state; true when it changed.</summary>
+    internal bool SetState(TabState state, int? rc)
+    {
+        if (_state == state && _rc == rc) return false;
+        _state = state;
+        _rc = rc;
+        foreach (var n in new[] { nameof(HasStatus), nameof(CanRestart), nameof(StatusText), nameof(StatusBrush) }) Raise(n);
+        return true;
+    }
+
     public TabConfig ToConfig(bool forLaunch) => new()
     {
         Name = Name.Trim(), Color = Color, ColorIndex = _colorIndex, Directory = Directory.Trim(), Enabled = Enabled,
@@ -196,6 +231,9 @@ public sealed class MainViewModel : Observable
     /// <summary>Language setting shown in Settings; the change applies after a restart.</summary>
     public IReadOnlyList<LanguageChoice> LanguageChoices { get; } =
         [new(Loc.Auto), new("sv"), new("en")];
+
+    public bool CloseAfterLaunch { get => _cfg.CloseAfterLaunch; set { _cfg.CloseAfterLaunch = value; Raise(); } }
+    public bool Notifications { get => _cfg.Notifications; set { _cfg.Notifications = value; Raise(); } }
 
     public LanguageChoice SelectedLanguage
     {
@@ -272,13 +310,85 @@ public sealed class MainViewModel : Observable
         catch (Exception e) { ShowStatus(Loc.Format("status.saveFailed", e.Message), error: true); }
     }
 
-    /// <summary>Saves the choices and opens the terminal; true when the window can close.</summary>
+    /// <summary>Saves the choices and opens the terminal; true on success.</summary>
     public bool Launch()
     {
-        var error = Launcher.Launch(Snapshot(forLaunch: true));
+        var cfg = Snapshot(forLaunch: true);
+        var rows = Tabs.Zip(cfg.Tabs).Where(p => p.Second.Enabled).ToList();
+        var error = Start(cfg, rows, window: null);
         Save();
         ShowStatus(error, error: error != "");
         return error == "";
+    }
+
+    /// <summary>For --screenshot: one of each common state, without starting anything.</summary>
+    public void ShowSampleStatus()
+    {
+        (TabState, int?)[] samples = [(TabState.Running, null), (TabState.Closed, null), (TabState.CliExited, 1), (TabState.Starting, null)];
+        foreach (var (tab, (state, rc)) in Tabs.Where(t => t.Enabled).Zip(samples)) tab.SetState(state, rc);
+    }
+
+    /// <summary>Opens the tab again with the choices it was started with, in the session's window.</summary>
+    public void Restart(TabViewModel tab)
+    {
+        if (tab.LaunchedAs is not { } launched) return;
+        var cfg = new AppConfig { WslDistro = _cfg.WslDistro, LinuxTerminal = _cfg.LinuxTerminal, Tabs = [launched] };
+        var error = Start(cfg, [(tab, launched)], _session?.WindowName);
+        ShowStatus(error, error: error != "");
+    }
+
+    private TabSession? _session;
+    private DispatcherTimer? _poll;
+    private bool _polling;
+
+    /// <summary>Launches with a status log per tab (one session per window) and starts watching.</summary>
+    private string Start(AppConfig cfg, IReadOnlyList<(TabViewModel Row, TabConfig Tab)> rows, string? window)
+    {
+        try { _session ??= new TabSession(TabSession.DefaultRoot, DateTime.Now); }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { _session = null; }
+        var tracks = rows.ToDictionary(r => r.Tab, r => _session?.NewTrack());
+        var error = Launcher.Launch(cfg, track: t => tracks.GetValueOrDefault(t), window: window ?? _session?.WindowName ?? "new");
+        if (error != "") return error;
+        foreach (var (row, tab) in rows)
+        {
+            if (tracks[tab] is not { } track) continue;
+            row.LaunchedAs = tab;
+            row.TrackId = track.Id;
+            row.LaunchedAt = DateTime.UtcNow;
+            row.SetState(TabState.Starting, null);
+        }
+        _poll ??= new DispatcherTimer(TimeSpan.FromSeconds(2), DispatcherPriority.Background, (_, _) => Poll());
+        _poll.Start();
+        return "";
+    }
+
+    /// <summary>Reads the logs and checks liveness off the UI thread (UNC reads can take a few hundred ms).</summary>
+    private void Poll()
+    {
+        if (_polling || _session is not { } session) return;
+        var watched = Tabs.Where(t => t.TrackId is not null).Select(t => (Row: t, Id: t.TrackId!, t.LaunchedAt)).ToList();
+        _polling = true;
+        var distro = _cfg.WslDistro;
+        Task.Run(() =>
+        {
+            var live = TabSession.Liveness(distro);
+            return watched.Select(w =>
+            {
+                var log = session.ReadLog(w.Id);
+                return (w.Row, w.Id, State: TabStatus.Evaluate(log, DateTime.UtcNow - w.LaunchedAt, live), log?.CliExit);
+            }).ToList();
+        }).ContinueWith(t =>
+        {
+            _polling = false;
+            if (!t.IsCompletedSuccessfully) return;
+            foreach (var (row, id, state, rc) in t.Result)
+            {
+                // Ignore a result for a tab that has been restarted meanwhile.
+                if (row.TrackId != id || !row.SetState(state, rc)) continue;
+                if (_cfg.Notifications && TabStatus.IsUnexpected(state, rc))
+                    Notifier.Show("BoosterStart", Loc.Format("notify.body", row.Name, row.StatusText));
+            }
+        }, TaskScheduler.FromCurrentSynchronizationContext());
     }
 
     /// <summary>Shows the tab's directory in Explorer, Finder or the Linux file manager.</summary>

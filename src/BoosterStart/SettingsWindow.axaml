@@ -95,6 +95,10 @@
         </ComboBox.ItemTemplate>
       </ComboBox>
       <TextBlock Classes="muted" Text="{local:T language.restart}" VerticalAlignment="Center" />
+      <CheckBox IsChecked="{Binding CloseAfterLaunch}" Content="{local:T settings.closeAfterLaunch}" Margin="24,0,0,0"
+                ToolTip.Tip="{local:T settings.closeAfterLaunch.tip}" />
+      <CheckBox IsChecked="{Binding Notifications}" Content="{local:T settings.notifications}"
+                ToolTip.Tip="{local:T settings.notifications.tip}" />
     </StackPanel>
 
     <Grid Grid.Row="5" ColumnDefinitions="Auto,*,Auto" Margin="0,16,0,0">

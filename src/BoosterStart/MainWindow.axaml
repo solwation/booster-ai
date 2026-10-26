@@ -5,13 +5,13 @@
         x:DataType="local:MainViewModel"
         Title="BoosterStart"
         Icon="avares://BoosterStart/Assets/boosterstart.ico"
-        Width="960" Height="560" MinWidth="780" MinHeight="380"
+        Width="1100" Height="560" MinWidth="900" MinHeight="380"
         WindowStartupLocation="CenterScreen">
 
   <!--
     Today's choices only: which tabs, and the AI, model and /orkester for each.
     Names and directories are edited in Settings. The header and the rows share
-    one column layout (stripe 4 · gap 14 · check 36 · name * · llm 132 · model 236 · orkester 120)
+    one column layout (stripe 4 · gap 14 · check 36 · name * · status 150 · llm 132 · model 236 · orkester 120)
     inside the same padding, so labels sit exactly over their fields.
   -->
   <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="28,22,28,20">
@@ -33,12 +33,13 @@
       </Button>
     </Grid>
 
-    <Grid Grid.Row="1" ColumnDefinitions="4,14,36,*,132,236,120" Margin="0,0,0,6" IsVisible="{Binding HasTabs}">
+    <Grid Grid.Row="1" ColumnDefinitions="4,14,36,*,150,132,236,120" Margin="0,0,0,6" IsVisible="{Binding HasTabs}">
       <TextBlock Grid.Column="2" Classes="colhead" Text="{local:T col.with}" />
       <TextBlock Grid.Column="3" Classes="colhead" Text="{local:T col.project}" />
-      <TextBlock Grid.Column="4" Classes="colhead" Text="{local:T col.llm}" />
-      <TextBlock Grid.Column="5" Classes="colhead" Text="{local:T col.model}" />
-      <TextBlock Grid.Column="6" Classes="colhead" Text="{local:T col.orkester}" Margin="16,0,0,0" />
+      <TextBlock Grid.Column="4" Classes="colhead" Text="{local:T col.status}" />
+      <TextBlock Grid.Column="5" Classes="colhead" Text="{local:T col.llm}" />
+      <TextBlock Grid.Column="6" Classes="colhead" Text="{local:T col.model}" />
+      <TextBlock Grid.Column="7" Classes="colhead" Text="{local:T col.orkester}" Margin="16,0,0,0" />
     </Grid>
 
     <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Disabled">
@@ -47,7 +48,7 @@
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="local:TabViewModel">
               <Border Classes="row">
-                <Grid ColumnDefinitions="4,14,36,*,132,236,120">
+                <Grid ColumnDefinitions="4,14,36,*,150,132,236,120">
                   <Border Grid.Column="0" Background="{Binding ColorBrush}" CornerRadius="2" />
 
                   <CheckBox Grid.Column="2" IsChecked="{Binding Enabled}" AutomationProperties.Name="{Binding Name}" VerticalAlignment="Center"
@@ -65,7 +66,17 @@
                     </Grid>
                   </StackPanel>
 
-                  <ComboBox Grid.Column="4" Classes="field" ItemsSource="{Binding Llms}" SelectedItem="{Binding Llm}"
+                  <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="7" VerticalAlignment="Center"
+                              Margin="0,0,12,0" IsVisible="{Binding HasStatus}">
+                    <Ellipse Width="8" Height="8" Fill="{Binding StatusBrush}" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding StatusText}" FontSize="12.5" VerticalAlignment="Center" />
+                    <Button Classes="icon" Click="OnRestart" IsVisible="{Binding CanRestart}" Margin="0,-6"
+                            ToolTip.Tip="{local:T restart.tip}" AutomationProperties.Name="{local:T restart.name}">
+                      <Path Data="{StaticResource RestartIcon}" Width="12" Height="12" />
+                    </Button>
+                  </StackPanel>
+
+                  <ComboBox Grid.Column="5" Classes="field" ItemsSource="{Binding Llms}" SelectedItem="{Binding Llm}"
                             Margin="0,0,12,0" Opacity="{Binding RowOpacity}">
                     <ComboBox.ItemTemplate>
                       <DataTemplate x:DataType="x:String">
@@ -73,11 +84,11 @@
                       </DataTemplate>
                     </ComboBox.ItemTemplate>
                   </ComboBox>
-                  <ComboBox Grid.Column="5" Classes="field" IsEditable="True" ItemsSource="{Binding Models}"
+                  <ComboBox Grid.Column="6" Classes="field" IsEditable="True" ItemsSource="{Binding Models}"
                             Text="{Binding Model}" IsEnabled="{Binding IsAi}" Opacity="{Binding RowOpacity}"
                             ToolTip.Tip="{local:T model.tip}" />
 
-                  <Panel Grid.Column="6" Margin="16,0,0,0" VerticalAlignment="Center" Opacity="{Binding RowOpacity}">
+                  <Panel Grid.Column="7" Margin="16,0,0,0" VerticalAlignment="Center" Opacity="{Binding RowOpacity}">
                     <ToggleSwitch IsChecked="{Binding Orkester}" IsVisible="{Binding CanOrkester}"
                                   OnContent="{x:Null}" OffContent="{x:Null}" MinWidth="0"
                                   ToolTip.Tip="{local:T orkester.tip}" />

@@ -9,8 +9,12 @@ public static class Launcher
     /// The bash command a tab runs: cd into its directory, start the CLI through an
     /// interactive login shell (so ~/.bashrc aliases and PATH apply), then leave a shell.
     /// It contains no ';' because Windows Terminal splits its command line on it.
+    /// With a <paramref name="track"/>, the shell first sources tab-lib.sh, which logs start, CLI
+    /// start and exit code, and the shell's own exit (see TabSession); the closing shell is then a
+    /// child instead of exec so that the exit trap still fires when the tab is closed. Every logging
+    /// step is "|| true", so a missing lib never stops the CLI.
     /// </summary>
-    public static string TabScript(TabConfig tab, string? prompt = null)
+    public static string TabScript(TabConfig tab, string? prompt = null, TabTrack? track = null)
     {
         var cd = tab.Directory.Trim() switch
         {
@@ -18,7 +22,9 @@ public static class Launcher
             var d when d.StartsWith("~/") => "cd ~/" + Quote(d[2..]),
             var d => "cd " + Quote(d),
         };
-        if (tab.Llm == Catalog.ShellOnly) return $"{cd} || true && exec bash";
+        var lib = track is null ? "" : $". {Quote(track.Lib)} {Quote(track.Dir)} {Quote(track.Id)} 2>/dev/null || true && ";
+        var shell = track is null ? "exec bash" : "bash";
+        if (tab.Llm == Catalog.ShellOnly) return $"{lib}{cd} || true && {shell}";
 
         var args = new List<string>();
         if (tab.Model != Catalog.StandardModel) args.Add("--model " + Quote(tab.Model));
@@ -33,8 +39,12 @@ public static class Launcher
                 _ => Quote("/orkester"),
             });
         var cli = string.Join(' ', new[] { tab.Llm }.Concat(args));
-        return $"{cd} && {cli} || true && exec bash";
+        if (track is null) return $"{cd} && {cli} || true && exec bash";
+        return $"{lib}{cd} && {Hook("bs_cli")} && {cli} && {Hook("bs_done 0")} || {Hook("bs_done $?")} && bash";
     }
+
+    /// <summary>A logging call that can neither fail the chain nor print "command not found".</summary>
+    private static string Hook(string call) => $"({call} 2>/dev/null || true)";
 
     public static string Validate(IEnumerable<TabConfig> tabs)
     {
@@ -50,8 +60,12 @@ public static class Launcher
     /// <summary>First prompt for the "Install" link in a project without the orchestra, in the UI language. No ';' (see TabScript).</summary>
     public static string InstallOrkesterPrompt => Loc.Get("prompt.install");
 
-    /// <summary>Starts the terminal; returns an error text in the UI language, or "" on success.</summary>
-    public static string Launch(AppConfig cfg, string? prompt = null)
+    /// <summary>
+    /// Starts the terminal; returns an error text in the UI language, or "" on success.
+    /// <paramref name="track"/> gives each tab its status log; <paramref name="window"/> is the
+    /// Windows Terminal window to open in ("new", or a session's name so restarts join it).
+    /// </summary>
+    public static string Launch(AppConfig cfg, string? prompt = null, Func<TabConfig, TabTrack?>? track = null, string window = "new")
     {
         var tabs = cfg.Tabs.Where(t => t.Enabled).ToList();
         if (tabs.Count == 0) return Loc.Get("err.noTab");
@@ -59,8 +73,9 @@ public static class Launcher
         if (error != "") return error;
         try
         {
-            if (OperatingSystem.IsWindows()) LaunchWindowsTerminal(tabs, cfg.WslDistro, prompt);
-            else LaunchLinux(tabs, cfg.LinuxTerminal, prompt);
+            var tracks = tabs.Select(t => track?.Invoke(t)).ToList();
+            if (OperatingSystem.IsWindows()) LaunchWindowsTerminal(tabs, cfg.WslDistro, prompt, tracks, window);
+            else LaunchLinux(tabs, cfg.LinuxTerminal, prompt, tracks);
             return "";
         }
         catch (Exception e)
@@ -70,14 +85,16 @@ public static class Launcher
     }
 
     /// <summary>The wt.exe arguments, exposed for --dry-run.</summary>
-    public static List<string> WindowsTerminalArgs(IReadOnlyList<TabConfig> tabs, string distro, string? prompt = null)
+    public static List<string> WindowsTerminalArgs(IReadOnlyList<TabConfig> tabs, string distro, string? prompt = null,
+        IReadOnlyList<TabTrack?>? tracks = null, string window = "new")
     {
-        var a = new List<string> { "-w", "new" };
-        foreach (var t in tabs)
+        var a = new List<string> { "-w", window };
+        for (var i = 0; i < tabs.Count; i++)
         {
+            var t = tabs[i];
             if (a.Count > 2) a.Add(";");
             a.AddRange(["new-tab", "--title", t.Name, "--tabColor", t.Color, "--suppressApplicationTitle",
-                "wsl.exe", "-d", distro, "--exec", "bash", "-lic", TabScript(InWsl(t), prompt)]);
+                "wsl.exe", "-d", distro, "--exec", "bash", "-lic", TabScript(InWsl(t), prompt, tracks?[i])]);
         }
         a.AddRange([";", "focus-tab", "-t", "0"]);
         return a;
@@ -90,17 +107,18 @@ public static class Launcher
         Llm = t.Llm, Model = t.Model, Orkester = t.Orkester, Directory = PathMapping.ToWslPath(t.Directory),
     };
 
-    private static void LaunchWindowsTerminal(IReadOnlyList<TabConfig> tabs, string distro, string? prompt)
+    private static void LaunchWindowsTerminal(IReadOnlyList<TabConfig> tabs, string distro, string? prompt,
+        IReadOnlyList<TabTrack?> tracks, string window)
     {
         var psi = new ProcessStartInfo("wt.exe") { UseShellExecute = false };
-        foreach (var arg in WindowsTerminalArgs(tabs, distro, prompt)) psi.ArgumentList.Add(arg);
+        foreach (var arg in WindowsTerminalArgs(tabs, distro, prompt, tracks, window)) psi.ArgumentList.Add(arg);
         Process.Start(psi);
     }
 
     public static readonly IReadOnlyList<string> LinuxTerminals =
         ["auto", "gnome-terminal", "konsole", "xfce4-terminal", "kitty", "wezterm", "x-terminal-emulator", "xterm"];
 
-    private static void LaunchLinux(IReadOnlyList<TabConfig> tabs, string preferred, string? prompt)
+    private static void LaunchLinux(IReadOnlyList<TabConfig> tabs, string preferred, string? prompt, IReadOnlyList<TabTrack?> tracks)
     {
         var term = preferred != "auto" ? preferred
             : LinuxTerminals.Skip(1).FirstOrDefault(OnPath)
@@ -108,7 +126,7 @@ public static class Launcher
         for (var i = 0; i < tabs.Count; i++)
         {
             var t = tabs[i];
-            string[] shell = ["bash", "-lic", TabScript(t, prompt)];
+            string[] shell = ["bash", "-lic", TabScript(t, prompt, tracks[i])];
             string[] args = term switch
             {
                 // Later tabs open in the window the first call created.
@@ -126,7 +144,7 @@ public static class Launcher
         }
     }
 
-    private static bool OnPath(string exe) =>
+    public static bool OnPath(string exe) =>
         (Environment.GetEnvironmentVariable("PATH") ?? "").Split(':')
             .Any(dir => dir != "" && File.Exists(Path.Combine(dir, exe)));
 

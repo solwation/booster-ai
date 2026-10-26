@@ -1,5 +1,7 @@
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Platform;
 using Avalonia.Markup.Xaml;
 
 namespace BoosterStart;
@@ -28,7 +30,50 @@ public partial class App : Application
     public override void OnFrameworkInitializationCompleted()
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
-            desktop.MainWindow = new MainWindow(new MainViewModel(_config));
+        {
+            // A window hidden to the tray keeps the app running; closing it (or Quit in the tray) ends it.
+            desktop.ShutdownMode = ShutdownMode.OnMainWindowClose;
+            var vm = new MainViewModel(_config);
+            desktop.MainWindow = new MainWindow(vm);
+            // --screenshot: sample tab statuses and a window that never takes focus (for README images).
+            // It still opens on screen: a start position off-screen is not honoured.
+            if (Environment.GetCommandLineArgs().Contains("--screenshot"))
+            {
+                desktop.MainWindow.ShowActivated = false;
+                vm.ShowSampleStatus();
+            }
+        }
         base.OnFrameworkInitializationCompleted();
+    }
+
+    private TrayIcon? _tray;
+
+    /// <summary>Shows the tray icon that brings <paramref name="window"/> back; false if there is none.</summary>
+    public bool ShowTray(Window window)
+    {
+        try
+        {
+            if (_tray is null)
+            {
+                using var icon = AssetLoader.Open(new Uri("avares://BoosterStart/Assets/boosterstart.ico"));
+                var show = new NativeMenuItem(Loc.Get("tray.show"));
+                var quit = new NativeMenuItem(Loc.Get("tray.quit"));
+                _tray = new TrayIcon { Icon = new WindowIcon(icon), ToolTipText = Loc.Get("tray.tip"), Menu = [show, quit] };
+                _tray.Clicked += (_, _) => Restore(window);
+                show.Click += (_, _) => Restore(window);
+                quit.Click += (_, _) => window.Close();
+                TrayIcon.SetIcons(this, [_tray]);
+            }
+            _tray.IsVisible = true;
+            return true;
+        }
+        catch (Exception) { return false; }
+    }
+
+    private static void Restore(Window window)
+    {
+        window.Show();
+        window.WindowState = WindowState.Normal;
+        window.Activate();
     }
 }

@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 
@@ -37,6 +38,16 @@ public partial class MainWindow : Window
 
     private void OnLaunch(object? sender, RoutedEventArgs e)
     {
-        if (_vm.Launch()) Close();
+        if (!_vm.Launch()) return;
+        if (_vm.CloseAfterLaunch) Close();
+        // Windows: keep watching from the tray. Linux trays need a StatusNotifierItem host
+        // (missing on plain GNOME), so the window only minimizes there.
+        else if (OperatingSystem.IsWindows() && Application.Current is App app && app.ShowTray(this)) Hide();
+        else WindowState = WindowState.Minimized;
+    }
+
+    private void OnRestart(object? sender, RoutedEventArgs e)
+    {
+        if ((sender as Control)?.DataContext is TabViewModel tab) _vm.Restart(tab);
     }
 }
