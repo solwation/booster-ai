@@ -55,10 +55,14 @@ plan names a worker.
 | --- | --- | --- | --- |
 | Read code | `planning`: every change | Read the affected files in `src/BoosterStart` and the README section they touch | Plan names files, the 2–3 checks and whether the UI changes |
 | Build and test | `verification`: code changes | `dotnet build src/BoosterStart -c Release` and `dotnet test tests/BoosterStart.Tests`; add a test for new launcher/path logic. Platform-specific logic is also tested on Windows: run `dotnet test tests\BoosterStart.Tests` from the Windows mirror after the commit syncs | Green build and test counts on each affected platform |
-| Command check | `verification`: changes to `Launcher`, `TabScript` or terminal arguments | `BoosterStart --dry-run`; for Windows Terminal quoting, open one real `wt.exe` tab whose script writes a marker file in WSL and exits | Printed commands and the marker content |
-| UI screenshot | `verification`: visible UI changes | Install the Windows build, start it with a neutral example config (never personal project names), capture the window with PowerShell `PrintWindow` (works without focus; `CopyFromScreen` can catch another window), restore the user's config | Inspected image; update `docs/screenshot.png` when the main window changes |
+| Command check | `verification`: changes to `Launcher`, `TabScript` or terminal arguments | `BoosterStart --dry-run`; for Windows Terminal quoting, open one real `wt.exe` tab, in a dedicated named window closed right after, whose script writes a marker file in WSL and exits | Printed commands and the marker content |
+| UI screenshot | `verification`: visible UI changes | Install the Windows build, start it with a neutral example config (never personal project names), move its window off-screen without activation (`SetWindowPos`, `SWP_NOACTIVATE`; not minimized, which captures black), capture it with PowerShell `PrintWindow` (works without focus; `CopyFromScreen` can catch another window), close it, restore the user's config | Inspected image; update `docs/screenshot.png` when the main window changes |
 | Install on Windows | `delivery`: every change to `src/` | `tools/publish.sh win-x64`, then `powershell.exe -ExecutionPolicy Bypass -File \\wsl.localhost\Ubuntu\home\devcontainers\booster-start\tools\install-windows.ps1` | Installed exe updated from the delivered revision |
 | Complete issue | `follow-up`: every tracked change | Completion comment with revision, checks, screenshots (repository URLs pinned to the commit) and limits; remove active labels | Closed only when acceptance is met |
+
+The user works on the same Windows desktop: Windows checks must not pop up windows or steal
+focus. Run `powershell.exe` directly from WSL, pass `-WindowStyle Hidden` to any
+`Start-Process`, verify without Windows Terminal where possible and batch the visible steps.
 
 No public secrets, personal paths beyond the examples, or customer/project names go into
 the repository; personal tabs live only in the user's local `config.json`.
