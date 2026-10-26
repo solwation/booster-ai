@@ -52,7 +52,7 @@ It does not save tokens by itself: every turn sends the same context in both mod
 
 ## Watching the tabs
 
-After **Start**, BoosterAI stays running and shows a status per tab: *Starting…*, *Running*, *CLI exited (code)*, *CLI not found*, *Did not start*, *Tab closed* or *Lost*. On Windows the window goes to the system tray, and clicking the icon brings it back. On Linux it minimizes instead, because many desktops (plain GNOME, for example) have no tray. A tab that has closed or whose CLI has exited gets a restart button. The button opens the tab again with the same AI, model and orchestra choice, in the same Windows Terminal window.
+After **Start**, BoosterAI stays running and shows a status per tab: *Starting…*, *Running*, *CLI exited (code)*, *CLI not found*, *Did not start*, *Tab closed* or *Lost*. The window minimizes to the taskbar, so the status is one click away. Closing the window quits BoosterAI. On Windows there is also a tray icon (Windows may tuck it behind the ^ arrow) whose menu shows the window or quits. Linux gets no tray icon, because many desktops (plain GNOME, for example) have no tray. A tab that has closed or whose CLI has exited gets a restart button. The button opens the tab again with the same AI, model and orchestra choice, in the same Windows Terminal window.
 
 When something unexpected happens (a tab closes, does not start, or its CLI exits with an error), BoosterAI shows a system notification. On Windows this is a toast. On Linux it uses `notify-send` when that is installed. In *Settings* you can turn **Notifications** off, and you can choose **Close after Start** to get the old behaviour back.
 

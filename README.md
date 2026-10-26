@@ -13,7 +13,7 @@ Start your whole working day with one click: BoosterAI opens every project you w
 - **One click, many tabs.** Each project opens in its own tab, in the right directory, with its own colour and title.
 - **Model per tab.** Include or skip a project, pick `claude`, `codex`, `agy` or a plain shell, and pick a model from the list or type any model id.
 - **Remembered between runs.** Your choices are saved, so the next start is usually one click.
-- **Status per tab.** Running, exited, not found or closed, with a restart button and a tray icon (Windows) or minimized window (Linux).
+- **Status per tab.** Running, exited, not found or closed, with a restart button; the window minimizes to the taskbar (plus a tray icon on Windows).
 - **Notifications.** A system notification when a tab closes, fails to start or its CLI exits with an error.
 - **Orchestra on demand.** For projects that use [Dirigenten och orkestern](https://github.com/solwation/dirigenten-och-orkestern), a toggle sends `/orkester` as the first prompt, and projects without it get a one-click install.
 - **Run the orchestra once.** A per-project toggle runs `/orkester` non-interactively and leaves you a normal shell with the result; the restart button then runs it again.

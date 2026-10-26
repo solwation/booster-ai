@@ -40,10 +40,13 @@ public partial class MainWindow : Window
     {
         if (!_vm.Launch()) return;
         if (_vm.CloseAfterLaunch) Close();
-        // Windows: keep watching from the tray. Linux trays need a StatusNotifierItem host
-        // (missing on plain GNOME), so the window only minimizes there.
-        else if (OperatingSystem.IsWindows() && Application.Current is App app && app.ShowTray(this)) Hide();
-        else WindowState = WindowState.Minimized;
+        else
+        {
+            // Minimize rather than hide: the taskbar button stays, so the status is one click away.
+            // Windows also gets a tray icon; Linux trays need a StatusNotifierItem host (missing on plain GNOME).
+            if (OperatingSystem.IsWindows() && Application.Current is App app) app.ShowTray(this);
+            WindowState = WindowState.Minimized;
+        }
     }
 
     private void OnRestart(object? sender, RoutedEventArgs e)

@@ -48,7 +48,7 @@ public partial class App : Application
         // --screenshot builds its window itself (Screenshot.Run), headless and never shown.
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop && !Screenshot.Active)
         {
-            // A window hidden to the tray keeps the app running; closing it (or Quit in the tray) ends it.
+            // A minimized window keeps the app running; closing it (or Quit in the tray) ends it.
             desktop.ShutdownMode = ShutdownMode.OnMainWindowClose;
             var vm = new MainViewModel(_config);
             desktop.MainWindow = new MainWindow(vm);
