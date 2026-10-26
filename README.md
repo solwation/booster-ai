@@ -6,8 +6,6 @@ Start your whole working day with one click. BoosterStart opens every project yo
 
 ![The BoosterStart start window](docs/screenshot.png)
 
-English interface: ![The BoosterStart start window in English](docs/screenshot-en.png)
-
 BoosterStart is a small desktop app for Windows and Linux, built with Avalonia on .NET 10. The interface is available in Swedish and English (see [Language](#language)).
 
 ## Why
