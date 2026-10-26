@@ -46,6 +46,7 @@ The settings window holds your projects (name and directory, with a folder picke
 Settings are stored in `%APPDATA%\BoosterStart\config.json` on Windows and `~/.config/BoosterStart/config.json` on Linux. A project entry is just a name and a directory, for example `~/webshop`.
 
 `BoosterStart --dry-run` prints the commands that Start would run, without opening anything.
+The app follows the system's light or dark theme; `--theme light` or `--theme dark` overrides it.
 
 ## Install
 
