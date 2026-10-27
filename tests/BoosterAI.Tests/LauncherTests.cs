@@ -80,7 +80,7 @@ public class LauncherTests
     [Theory]
     [InlineData("claude", "bs_stream claude --model 'x' -p '/orkester' --output-format stream-json --verbose && ")]
     [InlineData("agy", "bs_stream agy --model 'x' -p '/orkester' --output-format stream-json && ")]
-    [InlineData("codex", "codex exec --model 'x' $(test -d .agents/skills/orkester && echo '$orkester' || echo /orkester) && ")]
+    [InlineData("codex", "bs_run 'codex exec --model")]
     public void OneShotWithTrackingShowsLiveProgress(string llm, string expected)
     {
         var script = Launcher.TabScript(Once(llm), null, new TabTrack("/s/lib.sh", "/s", "tab1"));

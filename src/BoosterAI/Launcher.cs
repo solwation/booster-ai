@@ -11,7 +11,8 @@ public static class Launcher
     /// interactive login shell (so ~/.bashrc aliases and PATH apply), then leave a shell.
     /// It contains no ';' because Windows Terminal splits its command line on it.
     /// With a <paramref name="track"/>, the shell first sources tab-lib.sh, which logs start, CLI
-    /// start and exit code, formats the run-once event stream (bs_stream), and logs the shell's own exit (see TabSession); the closing shell is then a
+    /// start and exit code, tracks terminal output timing (bs_run), formats the run-once event stream
+    /// (bs_stream), and logs the shell's own exit (see TabSession); the closing shell is then a
     /// child instead of exec so that the exit trap still fires when the tab is closed. Every logging
     /// step is "|| true", so a missing lib never stops the CLI.
     /// </summary>
@@ -20,15 +21,20 @@ public static class Launcher
         var cd = Cd(tab);
         var lib = track is null ? "" : $". {Quote(track.Lib)} {Quote(track.Dir)} {Quote(track.Id)} 2>/dev/null || true && ";
         var shell = track is null ? "exec bash" : "bash";
-        if (tab.Llm == Catalog.ShellOnly) return $"{lib}{cd} || true && {shell}";
+        if (tab.Llm == Catalog.ShellOnly)
+            return track is null ? $"{cd} || true && {shell}"
+                : $"{lib}{cd} || true && {Hook("bs_cli")} && bs_run {Quote("bash")}";
         var cli = CliCommand(tab, prompt, track, resume: false);
         if (track is null) return $"{cd} && {cli} || true && exec bash";
         // bs_next runs what an in-place restart queued (see RestartScript) before the shell is left.
-        return $"{lib}{cd} && {Hook("bs_cli")} && {cli} && {Hook("bs_done 0")} || {Hook("bs_done $?")} && {Next} && bash";
+        return $"{lib}{cd} && {Hook("bs_cli")} && {TrackedCommand(cli)} && {Hook("bs_done 0")} || {Hook("bs_done $?")} && {Next} && bash";
     }
 
     // In the tab's own shell, not a subshell: stopping a restarted CLI's process group must not take bs_next's loop with it.
     private const string Next = "(type bs_next >/dev/null 2>&1) && bs_next || true";
+
+    private static string TrackedCommand(string command) =>
+        command.StartsWith("bs_stream ", StringComparison.Ordinal) ? command : "bs_run " + Quote(command);
 
     /// <summary>
     /// What tab-lib.sh's bs_next runs in a tab whose CLI BoosterAI stopped for an in-place restart: the CLI
@@ -37,7 +43,7 @@ public static class Launcher
     /// </summary>
     public static string RestartScript(TabConfig tab, TabTrack track, bool resume) =>
         tab.Llm == Catalog.ShellOnly ? $"{Cd(tab)} || true"
-            : $"{Cd(tab)} && {Hook("bs_cli")} && {CliCommand(tab, null, track, resume)} && {Hook("bs_done 0")} || {Hook("bs_done $?")}";
+            : $"{Cd(tab)} && {Hook("bs_cli")} && {TrackedCommand(CliCommand(tab, null, track, resume))} && {Hook("bs_done 0")} || {Hook("bs_done $?")}";
 
     /// <summary>A model change on claude or codex restarts with the same conversation; anything else starts fresh.</summary>
     public static bool CanResume(TabConfig from, TabConfig to) =>

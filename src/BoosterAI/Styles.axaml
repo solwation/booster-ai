@@ -38,6 +38,14 @@
   <Style Selector="Border.row:pointerover">
     <Setter Property="Background" Value="{DynamicResource RowHoverBrush}" />
   </Style>
+  <Style Selector="Border.row.drop-before">
+    <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColor}" />
+    <Setter Property="BorderThickness" Value="0,2,0,0" />
+  </Style>
+  <Style Selector="Border.row.drop-after">
+    <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColor}" />
+    <Setter Property="BorderThickness" Value="0,0,0,2" />
+  </Style>
 
   <!-- Inline-editable text: reads as text, becomes a field on hover/focus. -->
   <Style Selector="TextBox.inline">

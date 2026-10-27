@@ -11,7 +11,7 @@
   <!--
     Today's choices only: which tabs, and the AI, model and /orkester for each.
     Names and directories are edited in Settings. The header and the rows share
-    one column layout (stripe 4 · gap 14 · check 36 · name * · status 165 · llm 132 · model 195 · orkester 110 · once 130)
+    one column layout (stripe 4 · drag handle 20 · check 36 · name * · status 165 · llm 132 · model 195 · orkester 110 · once 130)
     inside the same padding, so labels sit exactly over their fields.
   -->
   <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" Margin="28,22,28,20">
@@ -66,7 +66,7 @@
     </Border>
     </StackPanel>
 
-    <Grid Grid.Row="2" ColumnDefinitions="4,14,36,*,165,132,195,110,130" Margin="0,0,0,6" IsVisible="{Binding HasTabs}">
+    <Grid Grid.Row="2" ColumnDefinitions="4,20,36,*,165,132,195,110,130" Margin="0,0,0,6" IsVisible="{Binding HasTabs}">
       <TextBlock Grid.Column="2" Classes="colhead" Text="{local:T col.with}" />
       <TextBlock Grid.Column="3" Classes="colhead" Text="{local:T col.project}" />
       <TextBlock Grid.Column="4" Classes="colhead" Text="{local:T col.status}" />
@@ -81,9 +81,13 @@
         <ItemsControl ItemsSource="{Binding Tabs}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="local:TabViewModel">
-              <Border Classes="row">
-                <Grid ColumnDefinitions="4,14,36,*,165,132,195,110,130">
+              <Border Classes="row" DragDrop.AllowDrop="True" DragDrop.DragOver="OnTabDragOver"
+                      DragDrop.DragLeave="OnTabDragLeave" DragDrop.Drop="OnTabDrop">
+                <Grid ColumnDefinitions="4,20,36,*,165,132,195,110,130">
                   <Border Grid.Column="0" Background="{Binding ColorBrush}" CornerRadius="2" />
+                  <TextBlock Grid.Column="1" Text="⋮" Foreground="{DynamicResource FaintBrush}" FontSize="16"
+                             HorizontalAlignment="Center" VerticalAlignment="Center" PointerPressed="OnTabDragStart"
+                             ToolTip.Tip="{local:T tab.reorder.tip}" />
 
                   <CheckBox Grid.Column="2" IsChecked="{Binding Enabled}" AutomationProperties.Name="{Binding Name}" VerticalAlignment="Center"
                             MinWidth="0" ToolTip.Tip="{local:T tab.open.tip}" />

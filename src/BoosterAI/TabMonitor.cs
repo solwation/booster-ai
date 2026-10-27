@@ -70,6 +70,9 @@ public static class TabStatus
     /// <summary>How long a tab may take (WSL boot, login shell) before it counts as not started.</summary>
     public static readonly TimeSpan StartTimeout = TimeSpan.FromSeconds(45);
 
+    /// <summary>How long terminal output can be quiet before a live CLI is shown as idle.</summary>
+    public static readonly TimeSpan OutputIdleTimeout = TimeSpan.FromSeconds(60);
+
     /// <summary>
     /// The tab's state from its log (null: no log yet). <paramref name="liveStartTime"/> returns the
     /// start time of a live process with that PID (null: no such process); pass null when liveness
@@ -124,11 +127,25 @@ public sealed class TabSession
     public const string Lib = """
 # BoosterAI tab status log, sourced by the tab's shell: . tab-lib.sh <dir> <tab-id>
 bs_log="$1/$2.log"
+bs_timing="$1/$2.timing"
 bs_ev() { printf '%s %s\n' "$(date +%s%3N)" "$*" >> "$bs_log" 2>/dev/null; }
 bs_ev start pid=$$ starttime=$(cut -d' ' -f22 /proc/$$/stat)
 trap 'bs_ev exit' EXIT
-bs_cli() { bs_ev cli-start; }
+bs_cli() { : > "$bs_timing" 2>/dev/null || true; bs_ev cli-start; }
 bs_done() { bs_ev cli-exit rc=$1; }
+# Run interactive commands under a nested PTY so util-linux script can record output timing
+# without saving the output itself. Keep aliases and shell functions from the user's login shell.
+bs_run() {
+  local cmd="$1"
+  case "$cmd" in
+    bs_stream\ *) eval "$cmd"; return $? ;;
+  esac
+  local name="${cmd%% *}"
+  if [ -n "${BASH_ALIASES[$name]+x}" ]; then cmd="${BASH_ALIASES[$name]}${cmd#"$name"}"; fi
+  if declare -F "$name" >/dev/null; then export -f "$name"; fi
+  if ! command -v script >/dev/null 2>&1; then rm -f "$bs_timing"; eval "$cmd"; return $?; fi
+  BS_COMMAND="$cmd" script --quiet --flush --return --log-out /dev/null --log-timing "$bs_timing" --command 'eval "$BS_COMMAND"'
+}
 # bs_next: run what BoosterAI queued for an in-place restart (it then stops the CLI), until nothing is queued.
 bs_next_f="$1/$2.next"
 bs_next() {
@@ -144,7 +161,7 @@ bs_stream() {
   "$@" | bs_fmt; return "${PIPESTATUS[0]}"; }
 bs_fmt() {
   if command -v python3 >/dev/null 2>&1; then
-    BS_LOG="$bs_log" PYTHONIOENCODING=utf-8 python3 -u -c 'import sys, json, os, time, base64, shutil
+    BS_LOG="$bs_log" BS_TIMING="$bs_timing" PYTHONIOENCODING=utf-8 python3 -u -c 'import sys, json, os, time, base64, shutil
 last = ""
 def one(v, n=None):
     # Up to three lines of the current terminal width, so a wider window or a smaller zoom shows more.
@@ -160,6 +177,10 @@ def args(d):
     return one(next(iter(d.values())))
 def say(s):
     print(s, flush=True)
+    try:
+        os.utime(os.environ["BS_TIMING"], None)
+    except (KeyError, OSError):
+        pass
 def denied(cli, cmd):
     # BoosterAI reads this from the tab log and offers an allow-rule (AgyPermissions).
     say("  ! denied without asking: " + one(cmd or "?", 4000))
@@ -174,6 +195,10 @@ for line in sys.stdin:
     except ValueError:
         sys.stdout.write(line)
         sys.stdout.flush()
+        try:
+            os.utime(os.environ["BS_TIMING"], None)
+        except (KeyError, OSError):
+            pass
         continue
     if not isinstance(e, dict):
         continue
@@ -196,6 +221,10 @@ for line in sys.stdin:
         if u.get("text_delta"):
             sys.stdout.write(u["text_delta"])
             sys.stdout.flush()
+            try:
+                os.utime(os.environ["BS_TIMING"], None)
+            except (KeyError, OSError):
+                pass
         elif u.get("step_type") == "tool" and u.get("state") == "ACTIVE":
             i = u.get("tool_info") or {}
             p = i.get("parameters") or {}
@@ -214,8 +243,8 @@ for line in sys.stdin:
     local l
     while IFS= read -r l; do
       case $l in
-        '{'*) printf '%s\n' "$l" | grep -oE '"(text|text_delta|name)":"([^"\\]|\\.)*"' | sed -e 's/^"[a-z_]*":"//' -e 's/"$//' -e 's/\\n/ /g' -e 's/\\"/"/g' ;;
-        *) printf '%s\n' "$l" ;;
+        '{'*) touch "$bs_timing" 2>/dev/null || true; printf '%s\n' "$l" | grep -oE '"(text|text_delta|name)":"([^"\\]|\\.)*"' | sed -e 's/^"[a-z_]*":"//' -e 's/"$//' -e 's/\\n/ /g' -e 's/\\"/"/g' ;;
+        *) touch "$bs_timing" 2>/dev/null || true; printf '%s\n' "$l" ;;
       esac
     done
   fi
@@ -343,6 +372,23 @@ for line in sys.stdin:
             return File.Exists(path) ? TabLog.Parse(File.ReadAllText(path)) : null;
         }
         catch (IOException) { return null; }
+    }
+
+    /// <summary>Uses explicit CLI hooks when available, otherwise the last terminal output time.</summary>
+    public Activity ReadActivity(string id, TabLog? log, DateTime nowUtc)
+    {
+        if (log is null) return Activity.Unknown;
+        if (log.Activity != Activity.Unknown) return log.Activity;
+
+        try
+        {
+            var timing = Path.Combine(Directory, id + ".timing");
+            if (!File.Exists(timing)) return Activity.Unknown;
+            var lastOutput = File.GetLastWriteTimeUtc(timing);
+            return nowUtc - lastOutput < TabStatus.OutputIdleTimeout ? Activity.Busy : Activity.Idle;
+        }
+        catch (IOException) { return Activity.Unknown; }
+        catch (UnauthorizedAccessException) { return Activity.Unknown; }
     }
 
     /// <summary>Old sessions are only logs; keep two days, and longer while one of their tabs still runs.</summary>

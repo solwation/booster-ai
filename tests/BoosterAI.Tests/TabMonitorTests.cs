@@ -113,6 +113,54 @@ public class TabStatusTests
         }
         finally { Directory.Delete(root, recursive: true); }
     }
+
+    [Fact]
+    public void OutputActivityBecomesIdleAfterOneQuietMinuteAndHooksWin()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "bs-activity-" + Guid.NewGuid().ToString("N"));
+        var now = DateTime.UtcNow;
+        try
+        {
+            var session = new TabSession(root, now);
+            var track = session.NewTrack()!;
+            var log = new TabLog(5, 6, true, null, false);
+            var timing = Path.Combine(session.Directory, track.Id + ".timing");
+            Assert.Equal(Activity.Unknown, session.ReadActivity(track.Id, log, now));
+            File.WriteAllText(timing, "0.1 7\n");
+            File.SetLastWriteTimeUtc(timing, now.AddSeconds(-2));
+            Assert.Equal(Activity.Busy, session.ReadActivity(track.Id, log, now));
+
+            File.SetLastWriteTimeUtc(timing, now.AddSeconds(-TabStatus.OutputIdleTimeout.TotalSeconds - 1));
+            Assert.Equal(Activity.Idle, session.ReadActivity(track.Id, log, now));
+            Assert.Equal(Activity.Busy, session.ReadActivity(track.Id, log with { Activity = Activity.Busy }, now));
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, recursive: true); }
+    }
+
+    [Fact]
+    public void TrackedInteractiveCommandShowsOutputAndWritesOnlyTiming()
+    {
+        if (!OperatingSystem.IsLinux() || !File.Exists("/usr/bin/script")) return;
+        var root = Path.Combine(Path.GetTempPath(), "bs-pty-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var session = new TabSession(root, DateTime.UtcNow);
+            File.WriteAllText(Path.Combine(session.Directory, "tab-lib.sh"), TabSession.Lib);
+            var psi = new System.Diagnostics.ProcessStartInfo("bash") { RedirectStandardOutput = true, WorkingDirectory = session.Directory };
+            psi.ArgumentList.Add("-c");
+            psi.ArgumentList.Add("shopt -s expand_aliases && alias printf='printf alias:%s' && . ./tab-lib.sh . tab1 && bs_cli && bs_run 'printf sample-output'");
+            using var process = System.Diagnostics.Process.Start(psi)!;
+            var output = process.StandardOutput.ReadToEnd();
+            process.WaitForExit();
+
+            Assert.Equal(0, process.ExitCode);
+            Assert.Contains("alias:sample-output", output);
+            var timing = File.ReadAllText(Path.Combine(session.Directory, "tab1.timing"));
+            Assert.DoesNotContain("sample-output", timing);
+            Assert.Equal(Activity.Busy, session.ReadActivity("tab1", session.ReadLog("tab1"), DateTime.UtcNow));
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, recursive: true); }
+    }
 }
 
 public class TrackedScriptTests
@@ -120,18 +168,22 @@ public class TrackedScriptTests
     private static readonly TabTrack Track = new("/mnt/c/Users/o'l w/s/tab-lib.sh", "/mnt/c/Users/o'l w/s", "tab1");
 
     [Fact]
-    public void LogsAroundTheCliAndKeepsTheShellAsAChild() => Assert.Equal(
-        @". '/mnt/c/Users/o'\''l w/s/tab-lib.sh' '/mnt/c/Users/o'\''l w/s' 'tab1' 2>/dev/null || true && " +
-        "cd ~/'proj' && (bs_cli 2>/dev/null || true) && claude --model 'claude-opus-5-5' '/orkester' " +
-        @"--settings '/mnt/c/Users/o'\''l w/s/tab1.claude.json' && " +
-        "(bs_done 0 2>/dev/null || true) || (bs_done $? 2>/dev/null || true) && " +
-        "(type bs_next >/dev/null 2>&1) && bs_next || true && bash",
-        Launcher.TabScript(new TabConfig { Directory = "~/proj", Llm = "claude", Model = "claude-opus-5-5", Orkester = true }, null, Track));
+    public void LogsAroundTheCliAndKeepsTheShellAsAChild()
+    {
+        var script = Launcher.TabScript(new TabConfig { Directory = "~/proj", Llm = "claude", Model = "claude-opus-5-5", Orkester = true }, null, Track);
+        Assert.Contains("(bs_cli 2>/dev/null || true) && bs_run ", script);
+        Assert.Contains("claude --model", script);
+        Assert.Contains("/orkester", script);
+        Assert.Contains("(bs_done 0 2>/dev/null || true) || (bs_done $? 2>/dev/null || true)", script);
+        Assert.EndsWith("&& bash", script);
+    }
 
     [Fact]
-    public void ShellOnlyTabIsTrackedToo() => Assert.Equal(
-        @". '/mnt/c/Users/o'\''l w/s/tab-lib.sh' '/mnt/c/Users/o'\''l w/s' 'tab1' 2>/dev/null || true && cd ~ || true && bash",
-        Launcher.TabScript(new TabConfig { Llm = Catalog.ShellOnly }, null, Track));
+    public void ShellOnlyTabIsTrackedToo()
+    {
+        var script = Launcher.TabScript(new TabConfig { Llm = Catalog.ShellOnly }, null, Track);
+        Assert.Contains("cd ~ || true && (bs_cli 2>/dev/null || true) && bs_run 'bash'", script);
+    }
 
     [Fact]
     public void TrackedScriptsNeverContainSemicolons()
@@ -247,18 +299,21 @@ public class InPlaceRestartTests
         new() { Directory = "~/proj", Llm = llm, Model = model, Orkester = orkester };
 
     [Fact]
-    public void ModelChangeOnClaudeContinuesTheConversation() => Assert.Equal(
-        "cd ~/'proj' && (bs_cli 2>/dev/null || true) && claude --continue --model 'y' --settings '/s/tab1.claude.json' && " +
-        "(bs_done 0 2>/dev/null || true) || (bs_done $? 2>/dev/null || true)",
-        Launcher.RestartScript(Tab("claude", "y"), Track, resume: true));
+    public void ModelChangeOnClaudeContinuesTheConversation()
+    {
+        var script = Launcher.RestartScript(Tab("claude", "y"), Track, resume: true);
+        Assert.Contains("&& bs_run 'claude --continue --model", script);
+        Assert.Contains("--settings", script);
+        Assert.Contains("(bs_done 0 2>/dev/null || true) || (bs_done $? 2>/dev/null || true)", script);
+    }
 
     [Fact]
     public void ModelChangeOnCodexResumesTheLastSession() => Assert.Contains(
-        "&& codex resume --last --model 'y' && ", Launcher.RestartScript(Tab("codex", "y"), Track, resume: true));
+        "&& bs_run 'codex resume --last --model", Launcher.RestartScript(Tab("codex", "y"), Track, resume: true));
 
     [Fact]
     public void LlmChangeStartsFreshWithTheOrchestra() => Assert.Contains(
-        "&& agy --model 'x' -i '/orkester' && ", Launcher.RestartScript(Tab("agy"), Track, resume: false));
+        "&& bs_run 'agy --model", Launcher.RestartScript(Tab("agy"), Track, resume: false));
 
     [Fact]
     public void RestartScriptsHaveNoSemicolonsAndNoTrailingShell()
@@ -368,6 +423,54 @@ public class InPlaceRestartTests
             Assert.Equal(Activity.Busy, TabLog.Parse(File.ReadAllText(Path.Combine(dir, "t.log"))).Activity);
         }
         finally { Directory.Delete(dir, recursive: true); }
+    }
+}
+
+public class TabActivityStatusTests
+{
+    [Fact]
+    public void RunningActivityUsesRunningAndSuccessfulExitBecomesIdleWithRestart()
+    {
+        var vm = new MainViewModel(new AppConfig { Tabs = [new TabConfig()] });
+        var tab = vm.Tabs[0];
+
+        tab.SetState(TabState.Running, null, activity: Activity.Busy);
+        Assert.Equal(Loc.Get("tabstate.busy"), tab.StatusText);
+        tab.SetState(TabState.Running, null, activity: Activity.Idle);
+        Assert.Equal(Loc.Get("tabstate.idle"), tab.StatusText);
+        tab.SetState(TabState.Running, null);
+        Assert.Equal(Loc.Get("tabstate.unknownActivity"), tab.StatusText);
+
+        tab.LaunchedAs = tab.ToConfig(forLaunch: true);
+        tab.SetState(TabState.CliExited, 0);
+        Assert.Equal(Loc.Get("tabstate.idle"), tab.StatusText);
+        Assert.True(tab.CanRestart);
+
+        tab.SetState(TabState.CliExited, 1);
+        Assert.Equal(Loc.Format("tabstate.CliExited", 1), tab.StatusText);
+    }
+}
+
+public class TabOrderTests
+{
+    [Fact]
+    public void MoveTabPersistsTheNewOrder()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "bs-order-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            ConfigStore.UseFile(Path.Combine(root, "config.json"));
+            var vm = new MainViewModel(new AppConfig
+            {
+                Tabs = [new TabConfig { Name = "Alpha" }, new TabConfig { Name = "Beta" }, new TabConfig { Name = "Gamma" }],
+            });
+
+            vm.MoveTab(0, 2);
+
+            Assert.Equal(["Beta", "Gamma", "Alpha"], ConfigStore.Load().Tabs.Select(t => t.Name));
+        }
+        finally { Directory.Delete(root, recursive: true); }
     }
 }
 

@@ -1,11 +1,13 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Input;
 
 namespace BoosterAI;
 
 public partial class MainWindow : Window
 {
+    private static readonly DataFormat<string> TabDragFormat = DataFormat.CreateStringApplicationFormat("boosterai-tab-index");
     private readonly MainViewModel _vm;
 
     // Required by the XAML previewer.
@@ -38,6 +40,62 @@ public partial class MainWindow : Window
     private void OnOpenFolder(object? sender, RoutedEventArgs e)
     {
         if ((sender as Control)?.DataContext is TabViewModel tab) _vm.OpenFolder(tab);
+    }
+
+    private async void OnTabDragStart(object? sender, PointerPressedEventArgs e)
+    {
+        if ((sender as Control)?.DataContext is not TabViewModel tab) return;
+        var index = _vm.Tabs.IndexOf(tab);
+        if (index < 0) return;
+        var data = new DataTransfer();
+        data.Add(DataTransferItem.Create(TabDragFormat, index.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+        e.Handled = true;
+        await DragDrop.DoDragDropAsync(e, data, DragDropEffects.Move);
+    }
+
+    private static void OnTabDragOver(object? sender, DragEventArgs e)
+    {
+        if (sender is not Border target || !e.DataTransfer.Contains(TabDragFormat))
+        {
+            e.DragEffects = DragDropEffects.None;
+            return;
+        }
+        e.DragEffects = DragDropEffects.Move;
+        SetDropTarget(target, e.GetPosition(target).Y < target.Bounds.Height / 2);
+        e.Handled = true;
+    }
+
+    private static void OnTabDragLeave(object? sender, DragEventArgs e)
+    {
+        if (sender is Border target) ClearDropTarget(target);
+    }
+
+    private void OnTabDrop(object? sender, DragEventArgs e)
+    {
+        if (sender is not Border target || target.DataContext is not TabViewModel tab
+            || !int.TryParse(e.DataTransfer.TryGetValue(TabDragFormat), out var sourceIndex)) return;
+
+        var targetIndex = _vm.Tabs.IndexOf(tab);
+        if (targetIndex < 0) return;
+        var after = e.GetPosition(target).Y >= target.Bounds.Height / 2;
+        var insertionIndex = targetIndex + (after ? 1 : 0);
+        if (sourceIndex < insertionIndex) insertionIndex--;
+        _vm.MoveTab(sourceIndex, insertionIndex);
+        ClearDropTarget(target);
+        e.DragEffects = DragDropEffects.Move;
+        e.Handled = true;
+    }
+
+    private static void SetDropTarget(Border target, bool before)
+    {
+        ClearDropTarget(target);
+        target.Classes.Add(before ? "drop-before" : "drop-after");
+    }
+
+    private static void ClearDropTarget(Border target)
+    {
+        target.Classes.Remove("drop-before");
+        target.Classes.Remove("drop-after");
     }
 
     private void OnLaunch(object? sender, RoutedEventArgs e)

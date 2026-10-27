@@ -219,6 +219,8 @@ public sealed class TabViewModel : Observable
         TabState.Running when IsChanged => Loc.Get("tabstate.changed"),
         TabState.Running when Activity == Activity.Busy => Loc.Get("tabstate.busy"),
         TabState.Running when Activity == Activity.Idle => Loc.Get("tabstate.idle"),
+        TabState.Running => Loc.Get("tabstate.unknownActivity"),
+        TabState.CliExited when _rc == 0 => Loc.Get("tabstate.idle"),
         TabState.CliExited => Loc.Format("tabstate.CliExited", _rc ?? -1),
         TabState.Denied => Loc.Format("tabstate.Denied", _denied.Count > 0 ? string.Join(", ", _denied) : "?"),
         var s => Loc.Get("tabstate." + s),
@@ -398,6 +400,14 @@ public sealed class MainViewModel : Observable
         Raise(nameof(LaunchLabel));
     }
 
+    /// <summary>Moves one project tab to a new position and persists its order.</summary>
+    public void MoveTab(int oldIndex, int newIndex)
+    {
+        if (oldIndex < 0 || oldIndex >= Tabs.Count || newIndex < 0 || newIndex >= Tabs.Count || oldIndex == newIndex) return;
+        Tabs.Move(oldIndex, newIndex);
+        Save();
+    }
+
     public void AddTab()
     {
         var tab = new TabViewModel(new TabConfig { ColorIndex = Tabs.Count }, this, Tabs.Count);
@@ -491,8 +501,26 @@ public sealed class MainViewModel : Observable
     /// <summary>For --screenshot: one of each common state, without starting anything.</summary>
     public void ShowSampleStatus()
     {
-        (TabState, int?)[] samples = [(TabState.Running, null), (TabState.Closed, null), (TabState.CliExited, 1), (TabState.Starting, null)];
-        foreach (var (tab, (state, rc)) in Tabs.Where(t => t.Enabled).Zip(samples)) tab.SetState(state, rc);
+        (TabState State, int? Rc, Activity Activity)[] samples =
+        [
+            (TabState.Running, null, Activity.Busy),
+            (TabState.Running, null, Activity.Idle),
+            (TabState.CliExited, 0, Activity.Unknown),
+            (TabState.Closed, null, Activity.Unknown),
+            (TabState.CliExited, 1, Activity.Unknown),
+            (TabState.Starting, null, Activity.Unknown),
+        ];
+        foreach (var (tab, sample) in Tabs.Where(t => t.Enabled).Zip(samples))
+        {
+            if (sample.State == TabState.CliExited && sample.Rc == 0)
+            {
+                var launched = tab.ToConfig(forLaunch: true);
+                launched.NonInteractive = true;
+                launched.Orkester = true;
+                tab.LaunchedAs = launched;
+            }
+            tab.SetState(sample.State, sample.Rc, activity: sample.Activity);
+        }
     }
 
     /// <summary>For --screenshot --fake-changed: the first tab runs a turn with another model than the one now chosen.</summary>
@@ -616,7 +644,8 @@ public sealed class MainViewModel : Observable
                     row.ShellPid = found.Log.Pid;
                     row.LaunchedAt = DateTime.UtcNow - TabStatus.StartTimeout;
                     row.RaiseRestartTip();
-                    row.SetState(TabStatus.Evaluate(found.Log, TabStatus.StartTimeout, null), found.Log.CliExit, null, found.Log.Activity);
+                    row.SetState(TabStatus.Evaluate(found.Log, TabStatus.StartTimeout, null), found.Log.CliExit, null,
+                        session.ReadActivity(found.Id, found.Log, DateTime.UtcNow));
                     joined++;
                 }
                 catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }
@@ -648,8 +677,9 @@ public sealed class MainViewModel : Observable
             {
                 var log = w.Session.ReadLog(w.Id);
                 var denied = log?.Denied?.SelectMany(AgyPermissions.Programs).Distinct().ToList();
-                return (w.Row, w.Id, State: TabStatus.Evaluate(log, DateTime.UtcNow - w.LaunchedAt, live), log?.CliExit, Denied: denied,
-                    log?.Pid, Activity: log?.Activity ?? Activity.Unknown);
+                var now = DateTime.UtcNow;
+                return (w.Row, w.Id, State: TabStatus.Evaluate(log, now - w.LaunchedAt, live), log?.CliExit, Denied: denied,
+                    log?.Pid, Activity: w.Session.ReadActivity(w.Id, log, now));
             }).ToList();
             // agy's settings are only read while a tab has a denial to offer rules for.
             var settings = results.Any(r => r.State == TabState.Denied) ? ReadText(settingsPath) : null;
