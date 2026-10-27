@@ -635,8 +635,9 @@ public sealed record ZoomChoice(int Percent)
 }
 
 /// <summary>
-/// The discreet "Version X finns" bar in the main window: a background check at start and then at most
-/// once a day, and the verified self-update (only for a copy in the tools/install-* location).
+/// The discreet "Version X finns" bar in the main window: a background check at start, when the window is
+/// activated and every Interval while it stays active, and the verified self-update (only for a copy in the
+/// tools/install-* location).
 /// </summary>
 public sealed class UpdateViewModel : Observable
 {
@@ -647,6 +648,9 @@ public sealed class UpdateViewModel : Observable
     private DispatcherTimer? _timer;
     private ReleaseInfo? _release;
     private ReleaseAsset? _asset;
+    private AppVersion? _laterVersion;
+    private DateTime? _laterUtc;
+    private bool _active;
     private bool _visible, _busy, _checking, _canInstall, _failed;
     private string _text = "";
 
@@ -683,21 +687,33 @@ public sealed class UpdateViewModel : Observable
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
 
-    /// <summary>Called once the main window exists: tidies a previous update, checks now and then hourly whether a day has passed.</summary>
+    /// <summary>Called once the main window exists: tidies a previous update, checks now and then each minute while the window is active.</summary>
     public void Start()
     {
         if (IsInstalledCopy)
             foreach (var leftover in new[] { InstalledPath + ".new", InstalledPath + ".new.part", InstalledPath + ".old" })
                 try { File.Delete(leftover); } catch (Exception) { /* still locked; the next start tries again */ }
         if (_cfg.CheckForUpdates) _ = CheckAsync();
-        _timer = new DispatcherTimer(TimeSpan.FromHours(1), DispatcherPriority.Background, (_, _) =>
+        _timer = new DispatcherTimer(TimeSpan.FromMinutes(1), DispatcherPriority.Background, (_, _) =>
         {
-            if (_cfg.CheckForUpdates && UpdateLogic.IsDue(_cfg.LastUpdateCheck, DateTime.UtcNow)) _ = CheckAsync();
+            if (_active) CheckIfDue();
         });
         _timer.Start();
     }
 
-    /// <summary>The setting was toggled: turning it on checks if a day has passed; turning it off hides the bar.</summary>
+    /// <summary>The main window gained (true) or lost focus: an inactive or minimized window never checks.</summary>
+    public void WindowActive(bool active)
+    {
+        _active = active;
+        if (active && _timer is not null) CheckIfDue();
+    }
+
+    private void CheckIfDue()
+    {
+        if (_cfg.CheckForUpdates && UpdateLogic.IsDue(_cfg.LastUpdateCheck, DateTime.UtcNow)) _ = CheckAsync();
+    }
+
+    /// <summary>The setting was toggled: turning it on checks if one is due; turning it off hides the bar.</summary>
     public void SettingChanged()
     {
         if (!_cfg.CheckForUpdates) { if (!IsBusy) IsVisible = false; return; }
@@ -713,11 +729,12 @@ public sealed class UpdateViewModel : Observable
             _client ??= new UpdateClient(UpdateClient.CreateHttp());
             var client = _client;
             var latest = await Task.Run(() => client.LatestAsync());
-            // A failed request is retried at the next start or hourly tick, not counted as a check.
+            // A failed request is retried at the next tick or activation, not counted as a check.
             if (latest is null) return;
             _cfg.LastUpdateCheck = DateTime.UtcNow;
             _save();
-            if (_cfg.CheckForUpdates && UpdateLogic.ShouldOffer(latest, UpdateLogic.Current, _cfg.SkippedVersion))
+            if (_cfg.CheckForUpdates && UpdateLogic.ShouldOffer(latest, UpdateLogic.Current, _cfg.SkippedVersion)
+                && !UpdateLogic.IsSnoozed(latest.Version, _laterVersion, _laterUtc, DateTime.UtcNow))
                 Offer(latest, IsInstalledCopy);
         }
         catch (Exception) { /* silent: the check never interrupts */ }
@@ -748,8 +765,14 @@ public sealed class UpdateViewModel : Observable
         Offer(new ReleaseInfo("v" + v, v, false, UpdateLogic.ReleasesPage, [new(name, ""), new(UpdateLogic.SumsName, "")]), installedCopy: !manual);
     }
 
-    /// <summary>"Senare": hidden until the next check.</summary>
-    public void Later() { if (!IsBusy) IsVisible = false; }
+    /// <summary>"Senare": this version stays hidden for UpdateLogic.Snooze (until the app restarts); a newer one shows at once.</summary>
+    public void Later()
+    {
+        if (IsBusy) return;
+        _laterVersion = _release?.Version;
+        _laterUtc = DateTime.UtcNow;
+        IsVisible = false;
+    }
 
     /// <summary>"Hoppa över den här versionen": saved, never offered again (a newer one still is).</summary>
     public void Skip()

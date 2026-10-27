@@ -17,6 +17,8 @@ public partial class MainWindow : Window
         DataContext = vm;
         InitializeComponent();
         Closing += (_, _) => _vm.Save();
+        Activated += (_, _) => _vm.Update.WindowActive(true);
+        Deactivated += (_, _) => _vm.Update.WindowActive(false);
     }
 
     private async void OnSettings(object? sender, RoutedEventArgs e)

@@ -75,17 +75,30 @@ public class UpdateTests
     public void NoReleaseIsNoOffer() => Assert.False(UpdateLogic.ShouldOffer(null, V("0.2.0"), null));
 
     [Fact]
-    public void DueLogicIsOncePerDay()
+    public void DueLogicIsEveryFiveMinutes()
     {
         var now = new DateTime(2026, 10, 26, 12, 0, 0, DateTimeKind.Utc);
         Assert.True(UpdateLogic.IsDue(null, now));
-        Assert.False(UpdateLogic.IsDue(now.AddHours(-1), now));
-        Assert.False(UpdateLogic.IsDue(now.AddHours(-23.9), now));
-        Assert.True(UpdateLogic.IsDue(now.AddDays(-1), now));
+        Assert.False(UpdateLogic.IsDue(now.AddMinutes(-1), now));
+        Assert.False(UpdateLogic.IsDue(now.AddMinutes(-4.9), now));
+        Assert.True(UpdateLogic.IsDue(now.AddMinutes(-5), now));
         Assert.True(UpdateLogic.IsDue(now.AddDays(-30), now));
         // A timestamp from the future (clock was wrong) must not block checks forever.
         Assert.True(UpdateLogic.IsDue(now.AddDays(2), now));
         Assert.False(UpdateLogic.IsDue(now.AddMinutes(1), now));
+    }
+
+    [Fact]
+    public void LaterHidesThatVersionForADay()
+    {
+        var now = new DateTime(2026, 10, 26, 12, 0, 0, DateTimeKind.Utc);
+        Assert.False(UpdateLogic.IsSnoozed(V("0.5.0"), null, null, now));
+        Assert.True(UpdateLogic.IsSnoozed(V("0.5.0"), V("0.5.0"), now.AddHours(-23), now));
+        Assert.False(UpdateLogic.IsSnoozed(V("0.5.0"), V("0.5.0"), now.AddDays(-1), now));
+        // A newer release than the one put off shows at once.
+        Assert.False(UpdateLogic.IsSnoozed(V("0.6.0"), V("0.5.0"), now.AddMinutes(-10), now));
+        // A wrong clock does not hide it forever.
+        Assert.False(UpdateLogic.IsSnoozed(V("0.5.0"), V("0.5.0"), now.AddDays(3), now));
     }
 
     [Fact]

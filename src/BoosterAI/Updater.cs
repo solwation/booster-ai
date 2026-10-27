@@ -74,16 +74,24 @@ public static class UpdateLogic
     public const string LatestApi = "https://api.github.com/repos/" + Repository + "/releases/latest";
     public const string ReleasesPage = "https://github.com/" + Repository + "/releases/latest";
     public const string SumsName = "SHA256SUMS";
-    public static readonly TimeSpan Interval = TimeSpan.FromDays(1);
+    /// <summary>How often the main window checks while it is active (GitHub allows 60 unauthenticated calls an hour).</summary>
+    public static readonly TimeSpan Interval = TimeSpan.FromMinutes(5);
+    /// <summary>How long "Senare" hides the offered version; a newer one shows at once.</summary>
+    public static readonly TimeSpan Snooze = TimeSpan.FromDays(1);
 
     /// <summary>The running build's version (release builds get it from the tag via -p:Version).</summary>
     public static AppVersion Current { get; } =
         AppVersion.Parse(Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion)
         ?? AppVersion.Parse(Assembly.GetExecutingAssembly().GetName().Version?.ToString()) ?? new AppVersion(0, 0, 0, "");
 
-    /// <summary>A check is due when none has been made, the last one is a day old, or the clock went backwards.</summary>
+    /// <summary>A check is due when none has been made, the last one is an Interval old, or the clock went backwards.</summary>
     public static bool IsDue(DateTime? lastUtc, DateTime nowUtc) =>
         lastUtc is not { } last || nowUtc - last >= Interval || last > nowUtc + TimeSpan.FromMinutes(5);
+
+    /// <summary>Whether "Senare" on <paramref name="laterVersion"/> at <paramref name="laterUtc"/> still hides <paramref name="latest"/>.</summary>
+    public static bool IsSnoozed(AppVersion latest, AppVersion? laterVersion, DateTime? laterUtc, DateTime nowUtc) =>
+        laterVersion is not null && laterUtc is { } at && latest.CompareTo(laterVersion) == 0
+        && nowUtc - at < Snooze && at <= nowUtc + TimeSpan.FromMinutes(5);
 
     /// <summary>Whether to offer <paramref name="latest"/>: a newer full release that the user has not skipped.</summary>
     public static bool ShouldOffer(ReleaseInfo? latest, AppVersion current, string? skipped) =>

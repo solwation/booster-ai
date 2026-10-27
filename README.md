@@ -22,7 +22,7 @@ Start your whole working day with one click: BoosterAI opens every project you w
 - **Your shell, your setup.** Tabs run through `bash -lic`, so your aliases and `PATH` apply, and you keep a normal shell when the CLI exits.
 - **Font size.** One setting zooms the CLI text in all tabs.
 - **Themes and language.** Five tab colour themes, an Appearance setting (Auto, Light or Dark, applied at once), in Swedish or English.
-- **Stays up to date.** At start and once a day BoosterAI asks GitHub for a newer release and offers it in a quiet bar: *Update* downloads it, checks it against `SHA256SUMS` and restarts into the new version; *Later* or *Skip this version* (turn the check off in Settings).
+- **Stays up to date.** At start, when its window gets focus and every five minutes while it is active, BoosterAI asks GitHub for a newer release and offers it in a quiet bar: *Update* downloads it, checks it against `SHA256SUMS` and restarts into the new version; *Later* (hides that version for a day) or *Skip this version* (turn the check off in Settings).
 - **Windows and Linux.** Windows Terminal with WSL on Windows; Ptyxis, gnome-terminal, konsole, xfce4-terminal, kitty, wezterm or xterm on Linux.
 
 ![The BoosterAI settings window](docs/settings.png)

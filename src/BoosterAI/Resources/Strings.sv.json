@@ -117,7 +117,7 @@
   "settings.notifications": "Aviseringar",
   "settings.notifications.tip": "Avisera när en flik stängs, inte startar eller dess CLI fallerar",
   "settings.updates": "Sök efter uppdateringar",
-  "settings.updates.tip": "Fråga GitHub vid start och en gång per dygn om det finns en nyare version (nu {0})",
+  "settings.updates.tip": "Fråga GitHub vid start, när fönstret får fokus och var femte minut medan det är aktivt om det finns en nyare version (nu {0})",
   "update.available": "Version {0} finns.",
   "update.manual": "Version {0} finns – den här kopian kan inte uppdatera sig själv.",
   "update.install": "Uppdatera",
