@@ -370,3 +370,102 @@ public class InPlaceRestartTests
         finally { Directory.Delete(dir, recursive: true); }
     }
 }
+
+public class FindRunningTabsTests
+{
+    private static string Session(string root, string name, params (string Id, string Log, TabConfig? Tab)[] tabs)
+    {
+        var dir = Path.Combine(root, name);
+        Directory.CreateDirectory(dir);
+        foreach (var (id, log, tab) in tabs)
+        {
+            File.WriteAllText(Path.Combine(dir, id + ".log"), log);
+            if (tab is not null)
+                File.WriteAllText(Path.Combine(dir, id + ".tab.json"),
+                    System.Text.Json.JsonSerializer.Serialize(tab, ConfigJsonContext.Default.TabConfig));
+        }
+        return dir;
+    }
+
+    // PID 10 runs since 100, PID 20 since 200; everything else is gone.
+    private static long? Live(int pid) => pid switch { 10 => 100, 20 => 200, _ => null };
+
+    [Fact]
+    public void FindsOnlyLiveShellsWithTheirChoicesNewestSessionFirst()
+    {
+        var root = Directory.CreateTempSubdirectory("bs-find").FullName;
+        try
+        {
+            var a = new TabConfig { Name = "a", Directory = "~/a", Llm = "codex", Model = "gpt-6-sol" };
+            Session(root, "20261027-080000",
+                ("tab1", "1 start pid=10 starttime=100\n2 cli-start\n", a),
+                ("tab2", "1 start pid=11 starttime=5\n", new TabConfig { Name = "gone" }),          // process gone
+                ("tab3", "1 start pid=20 starttime=999\n", new TabConfig { Name = "reused" }),      // PID reused
+                ("tab4", "1 start pid=10 starttime=100\n2 exit\n", new TabConfig { Name = "exited" }),
+                ("tab5", "1 start pid=10 starttime=100\n", null));                                 // no choices saved
+            Session(root, "20261027-090000", ("tab1", "1 start pid=20 starttime=200\n3 busy\n", new TabConfig { Name = "b" }));
+
+            var found = TabSession.FindRunning(root, Live);
+            Assert.Equal(["b", "a"], found.Select(f => f.Tab.Name));
+            Assert.Equal("gpt-6-sol", found[1].Tab.Model);
+            Assert.Equal("tab1", found[1].Id);
+            Assert.Empty(TabSession.FindRunning(root, null));
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
+    [Fact]
+    public void CleanUpKeepsOldSessionsWhoseTabsStillRun()
+    {
+        var root = Directory.CreateTempSubdirectory("bs-clean").FullName;
+        try
+        {
+            var live = Session(root, "old-live", ("tab1", "1 start pid=10 starttime=100\n", null));
+            var dead = Session(root, "old-dead", ("tab1", "1 start pid=11 starttime=5\n", null));
+            foreach (var d in new[] { live, dead }) Directory.SetCreationTime(d, DateTime.Now.AddDays(-3));
+            TabSession.CleanUp(root, DateTime.Now, Live);
+            Assert.True(Directory.Exists(live));
+            Assert.False(Directory.Exists(dead));
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
+    [Fact]
+    public void ReopenedSessionContinuesTheTabNumbers()
+    {
+        var root = Directory.CreateTempSubdirectory("bs-open").FullName;
+        try
+        {
+            var dir = Session(root, "s", ("tab1", "", null), ("tab3", "", null));
+            var session = TabSession.Open(dir);
+            Assert.Equal("tab4", session.NewTrack()!.Id);
+            Assert.Equal("tab3", session.Track("tab3").Id);
+            Assert.True(File.Exists(Path.Combine(dir, "tab-lib.sh")));
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
+    [Fact]
+    public void RunningTabMatchesByNameAndDirectoryAndStartSkipsIt()
+    {
+        var vm = new MainViewModel(new AppConfig { Tabs =
+        [
+            new TabConfig { Name = "a", Directory = "~/a" },
+            new TabConfig { Name = "b", Directory = "~/b" },
+        ] });
+        Assert.Null(vm.Match(new TabConfig { Name = "a", Directory = "~/other" }));
+        var a = vm.Match(new TabConfig { Name = "a ", Directory = "~/a" });
+        Assert.Same(vm.Tabs[0], a);
+        Assert.Equal(2, vm.ToStartCount);
+        a!.LaunchedAs = a.ToConfig(forLaunch: true);
+        a.SetState(TabState.Running, null);
+        vm.TabsChanged();
+        Assert.Null(vm.Match(new TabConfig { Name = "a", Directory = "~/a" }));   // already watched
+        Assert.Equal(1, vm.ToStartCount);
+        Assert.True(vm.CanLaunch);
+        vm.Tabs[1].SetState(TabState.Starting, null);
+        Assert.Equal(0, vm.ToStartCount);
+        Assert.False(vm.CanLaunch);
+        Assert.Equal(Loc.Get("launch.allRunning"), vm.LaunchLabel);
+    }
+}

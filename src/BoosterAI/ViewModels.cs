@@ -157,6 +157,8 @@ public sealed class TabViewModel : Observable
     private bool _pending;
     private IReadOnlyList<string> _denied = [];
     internal TabConfig? LaunchedAs { get; set; }
+    /// <summary>The session the tab's log is in; an earlier BoosterAI run's for a tab found running at start.</summary>
+    internal TabSession? Session { get; set; }
     internal TabTrack? Track { get; set; }
     internal string? TrackId => Track?.Id;
     internal DateTime LaunchedAt { get; set; }
@@ -166,6 +168,8 @@ public sealed class TabViewModel : Observable
 
     public bool HasStatus => _state is not null;
     public bool IsRunning => _state is TabState.Running;
+    /// <summary>Started or running: Start leaves it alone rather than opening a duplicate.</summary>
+    public bool IsAlive => _state is TabState.Running or TabState.Starting;
 
     /// <summary>The CLI is working on a turn; a one-shot run is busy until it exits.</summary>
     public Activity Activity => LaunchedAs is { NonInteractive: true, Orkester: true } && IsRunning ? Activity.Busy : _activity;
@@ -239,7 +243,7 @@ public sealed class TabViewModel : Observable
         _denied = denied;
         _activity = activity;
         if (state != TabState.Running) PendingRestart = false;
-        foreach (var n in new[] { nameof(HasStatus), nameof(IsRunning), nameof(Activity), nameof(StatusText), nameof(StatusBrush) }) Raise(n);
+        foreach (var n in new[] { nameof(HasStatus), nameof(IsRunning), nameof(IsAlive), nameof(Activity), nameof(StatusText), nameof(StatusBrush) }) Raise(n);
         RaiseRestart();
         return stateChanged;
     }
@@ -307,8 +311,16 @@ public sealed class MainViewModel : Observable
 
     public bool HasTabs => Tabs.Count > 0;
     public int EnabledCount => Tabs.Count(t => t.Enabled);
-    public bool CanLaunch => EnabledCount > 0;
-    public string LaunchLabel => EnabledCount switch { 0 => Loc.Get("launch.none"), 1 => Loc.Get("launch.one"), var n => Loc.Format("launch.many", n) };
+    /// <summary>The chosen tabs Start opens: those not already running.</summary>
+    public int ToStartCount => Tabs.Count(t => t.Enabled && !t.IsAlive);
+    public bool CanLaunch => ToStartCount > 0;
+    public string LaunchLabel => ToStartCount switch
+    {
+        0 when EnabledCount > 0 => Loc.Get("launch.allRunning"),
+        0 => Loc.Get("launch.none"),
+        1 => Loc.Get("launch.one"),
+        var n => Loc.Format("launch.many", n),
+    };
 
     /// <summary>Language setting shown in Settings; the change applies after a restart.</summary>
     public IReadOnlyList<LanguageChoice> LanguageChoices { get; } =
@@ -381,6 +393,7 @@ public sealed class MainViewModel : Observable
     {
         Raise(nameof(HasTabs));
         Raise(nameof(EnabledCount));
+        Raise(nameof(ToStartCount));
         Raise(nameof(CanLaunch));
         Raise(nameof(LaunchLabel));
     }
@@ -459,12 +472,17 @@ public sealed class MainViewModel : Observable
         catch (Exception e) { ShowStatus(Loc.Format("status.saveFailed", e.Message), error: true); }
     }
 
-    /// <summary>Saves the choices and opens the terminal; true on success.</summary>
+    /// <summary>Saves the choices and opens the chosen tabs that are not already running; true on success.</summary>
     public bool Launch()
     {
-        var cfg = Snapshot(forLaunch: true);
-        var rows = Tabs.Zip(cfg.Tabs).Where(p => p.Second.Enabled).ToList();
-        var error = Start(cfg, rows, window: null);
+        var all = Snapshot(forLaunch: true);
+        var rows = Tabs.Zip(all.Tabs).Where(p => p.Second.Enabled && !p.First.IsAlive).ToList();
+        var cfg = new AppConfig
+        {
+            WslDistro = all.WslDistro, LinuxTerminal = all.LinuxTerminal, ZoomPercent = all.ZoomPercent, Tabs = rows.Select(r => r.Second).ToList(),
+        };
+        // Running tabs joined from an earlier BoosterAI run keep their window: new tabs open next to them.
+        var error = Start(cfg, rows, window: _session?.WindowName);
         Save();
         ShowStatus(error, error: error != "");
         return error == "";
@@ -505,12 +523,12 @@ public sealed class MainViewModel : Observable
         if (!tab.IsChanged || tab.LaunchedAs is not { } launched) return;
         var next = tab.ToConfig(forLaunch: true);
         var error = Launcher.Validate([next]);
-        if (error == "" && (_session is null || tab.Track is null || tab.ShellPid is null)) error = Loc.Get("err.restartInPlace");
+        if (error == "" && (tab.Session is null || tab.Track is null || tab.ShellPid is null)) error = Loc.Get("err.restartInPlace");
         if (error != "") { ShowStatus(error, error: true); return; }
         try
         {
             var resume = Launcher.CanResume(launched, next);
-            _session!.QueueNext(tab.Track!.Id, Launcher.RestartScript(next, tab.Track, resume));
+            tab.Session!.QueueNext(tab.Track!.Id, Launcher.RestartScript(next, tab.Track, resume));
             var pid = tab.ShellPid!.Value;
             var distro = _cfg.WslDistro;
             Task.Run(() => Launcher.StopForeground(pid, distro));
@@ -542,7 +560,7 @@ public sealed class MainViewModel : Observable
     /// <summary>Launches with a status log per tab (one session per window) and starts watching.</summary>
     private string Start(AppConfig cfg, IReadOnlyList<(TabViewModel Row, TabConfig Tab)> rows, string? window)
     {
-        try { _session ??= new TabSession(TabSession.DefaultRoot, DateTime.Now); }
+        try { _session ??= new TabSession(TabSession.DefaultRoot, DateTime.Now, TabSession.Liveness(_cfg.WslDistro)); }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException) { _session = null; }
         var tracks = rows.ToDictionary(r => r.Tab, r => _session?.NewTrack());
         var error = Launcher.Launch(cfg, track: t => tracks.GetValueOrDefault(t), window: window ?? _session?.WindowName ?? "new");
@@ -550,7 +568,9 @@ public sealed class MainViewModel : Observable
         foreach (var (row, tab) in rows)
         {
             if (tracks[tab] is not { } track) continue;
+            _session!.SaveTab(track.Id, tab);
             row.LaunchedAs = tab;
+            row.Session = _session;
             row.Track = track;
             row.ShellPid = null;
             row.PendingRestart = false;
@@ -558,16 +578,66 @@ public sealed class MainViewModel : Observable
             row.RaiseRestartTip();
             row.SetState(TabState.Starting, null);
         }
-        _poll ??= new DispatcherTimer(TimeSpan.FromSeconds(2), DispatcherPriority.Background, (_, _) => Poll());
-        _poll.Start();
+        StartPolling();
+        TabsChanged();
         return "";
     }
+
+    private void StartPolling()
+    {
+        _poll ??= new DispatcherTimer(TimeSpan.FromSeconds(2), DispatcherPriority.Background, (_, _) => Poll());
+        _poll.Start();
+    }
+
+    /// <summary>
+    /// At start: finds the tabs an earlier BoosterAI run opened that still run, and watches them again on the
+    /// configured tab with the same name and directory. Start then opens only the others, in their window.
+    /// </summary>
+    public void FindRunningTabs()
+    {
+        var distro = _cfg.WslDistro;
+        Task.Run(() => TabSession.FindRunning(TabSession.DefaultRoot, TabSession.Liveness(distro))).ContinueWith(t =>
+        {
+            if (!t.IsCompletedSuccessfully || t.Result.Count == 0) return;
+            var sessions = new Dictionary<string, TabSession>();
+            var joined = 0;
+            foreach (var found in t.Result)
+            {
+                if (Match(found.Tab) is not { } row) continue;
+                try
+                {
+                    if (!sessions.TryGetValue(found.SessionDirectory, out var session))
+                        sessions[found.SessionDirectory] = session = TabSession.Open(found.SessionDirectory);
+                    // The newest session is first: new tabs and reopened ones join its window.
+                    _session ??= session;
+                    row.LaunchedAs = found.Tab;
+                    row.Session = session;
+                    row.Track = session.Track(found.Id);
+                    row.ShellPid = found.Log.Pid;
+                    row.LaunchedAt = DateTime.UtcNow - TabStatus.StartTimeout;
+                    row.RaiseRestartTip();
+                    row.SetState(TabStatus.Evaluate(found.Log, TabStatus.StartTimeout, null), found.Log.CliExit, null, found.Log.Activity);
+                    joined++;
+                }
+                catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }
+            }
+            if (joined == 0) return;
+            StartPolling();
+            TabsChanged();
+            ShowStatus(Loc.Format(joined == 1 ? "status.foundRunning.one" : "status.foundRunning.many", joined), error: false);
+        }, TaskScheduler.FromCurrentSynchronizationContext());
+    }
+
+    /// <summary>The configured tab a running one belongs to: same name and directory, not already watched.</summary>
+    internal TabViewModel? Match(TabConfig running) =>
+        Tabs.FirstOrDefault(t => t.LaunchedAs is null && t.Name.Trim() == running.Name.Trim() && t.Directory.Trim() == running.Directory.Trim());
 
     /// <summary>Reads the logs and checks liveness off the UI thread (UNC reads can take a few hundred ms).</summary>
     private void Poll()
     {
-        if (_polling || _session is not { } session) return;
-        var watched = Tabs.Where(t => t.TrackId is not null).Select(t => (Row: t, Id: t.TrackId!, t.LaunchedAt)).ToList();
+        var watched = Tabs.Where(t => t.TrackId is not null && t.Session is not null)
+            .Select(t => (Row: t, Id: t.TrackId!, t.LaunchedAt, Session: t.Session!)).ToList();
+        if (_polling || watched.Count == 0) return;
         _polling = true;
         var distro = _cfg.WslDistro;
         var settingsPath = AgySettingsFile;
@@ -576,7 +646,7 @@ public sealed class MainViewModel : Observable
             var live = TabSession.Liveness(distro);
             var results = watched.Select(w =>
             {
-                var log = session.ReadLog(w.Id);
+                var log = w.Session.ReadLog(w.Id);
                 var denied = log?.Denied?.SelectMany(AgyPermissions.Programs).Distinct().ToList();
                 return (w.Row, w.Id, State: TabStatus.Evaluate(log, DateTime.UtcNow - w.LaunchedAt, live), log?.CliExit, Denied: denied,
                     log?.Pid, Activity: log?.Activity ?? Activity.Unknown);
@@ -599,6 +669,8 @@ public sealed class MainViewModel : Observable
                 if (_cfg.Notifications && TabStatus.IsUnexpected(state, rc))
                     Notifier.Show("BoosterAI", Loc.Format("notify.body", row.Name, row.StatusText));
             }
+            // A tab that closed can be started again: the Start button counts it.
+            TabsChanged();
             OfferRules(settings);
         }, TaskScheduler.FromCurrentSynchronizationContext());
     }

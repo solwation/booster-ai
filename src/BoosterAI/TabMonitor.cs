@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.Json;
 
 namespace BoosterAI;
 
@@ -228,16 +229,76 @@ for line in sys.stdin:
     /// <summary>The Windows Terminal window all tabs and restarts of this session open in.</summary>
     public string WindowName { get; }
 
-    public TabSession(string root, DateTime now)
+    /// <summary>A new session; <paramref name="live"/> (see Liveness) keeps old sessions whose tabs still run.</summary>
+    public TabSession(string root, DateTime now, Func<int, long?>? live = null)
+        : this(Path.Combine(root, now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture)))
     {
-        var id = now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);
-        Directory = Path.Combine(root, id);
-        WindowName = "BoosterAI-" + id;
-        System.IO.Directory.CreateDirectory(Directory);
-        File.WriteAllText(Path.Combine(Directory, "tab-lib.sh"), Lib.Replace("\r\n", "\n"));
-        CleanUp(root, now);
+        CleanUp(root, now, live);
         if (root == DefaultRoot) LegacyNames.RemoveOldLocalData(LegacyNames.OldLocalAppDir);
     }
+
+    /// <summary>
+    /// Opens a session directory, new or from an earlier BoosterAI run whose tabs still run; new tab ids follow
+    /// the ones already there. The lib is rewritten for new tabs (running shells sourced theirs already).
+    /// </summary>
+    private TabSession(string directory)
+    {
+        Directory = directory;
+        WindowName = "BoosterAI-" + Path.GetFileName(directory);
+        System.IO.Directory.CreateDirectory(Directory);
+        File.WriteAllText(Path.Combine(Directory, "tab-lib.sh"), Lib.Replace("\r\n", "\n"));
+        _next = System.IO.Directory.GetFiles(Directory, "tab*.log")
+            .Select(f => int.TryParse(Path.GetFileNameWithoutExtension(f)[3..], CultureInfo.InvariantCulture, out var n) ? n : 0)
+            .DefaultIfEmpty(0).Max();
+    }
+
+    public static TabSession Open(string directory) => new(directory);
+
+    /// <summary>The paths the tab's shell uses for <paramref name="id"/>.</summary>
+    public TabTrack Track(string id)
+    {
+        var dir = OperatingSystem.IsWindows() ? PathMapping.ToWslPath(Directory) : Directory;
+        return new TabTrack(dir + "/tab-lib.sh", dir, id);
+    }
+
+    /// <summary>Remembers what tab <paramref name="id"/> was started with, so a later BoosterAI can find it again (FindRunning).</summary>
+    public void SaveTab(string id, TabConfig tab)
+    {
+        try { File.WriteAllText(Path.Combine(Directory, id + ".tab.json"), JsonSerializer.Serialize(tab, ConfigJsonContext.Default.TabConfig)); }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { /* not found again after a restart */ }
+    }
+
+    /// <summary>A tab from an earlier BoosterAI run whose shell still runs.</summary>
+    public sealed record RunningTab(string SessionDirectory, string Id, TabConfig Tab, TabLog Log);
+
+    /// <summary>
+    /// The tabs under <paramref name="root"/> whose shell is still alive (same PID and start time, no "exit"),
+    /// newest session first. Nothing when liveness cannot be checked (<paramref name="live"/> null).
+    /// </summary>
+    public static List<RunningTab> FindRunning(string root, Func<int, long?>? live)
+    {
+        var found = new List<RunningTab>();
+        if (live is null || !System.IO.Directory.Exists(root)) return found;
+        try
+        {
+            foreach (var dir in System.IO.Directory.GetDirectories(root).OrderByDescending(Path.GetFileName, StringComparer.Ordinal))
+                foreach (var meta in System.IO.Directory.GetFiles(dir, "tab*.tab.json").Order(StringComparer.Ordinal))
+                {
+                    var id = Path.GetFileName(meta)[..^".tab.json".Length];
+                    var logPath = Path.Combine(dir, id + ".log");
+                    if (!File.Exists(logPath)) continue;
+                    var log = TabLog.Parse(File.ReadAllText(logPath));
+                    if (!IsAlive(log, live)) continue;
+                    if (JsonSerializer.Deserialize(File.ReadAllText(meta), ConfigJsonContext.Default.TabConfig) is { } tab)
+                        found.Add(new RunningTab(dir, id, tab, log));
+                }
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException) { }
+        return found;
+    }
+
+    private static bool IsAlive(TabLog log, Func<int, long?> live) =>
+        log is { Pid: { } pid, Exited: false, StartTime: { } start } && live(pid) == start;
 
     public static string DefaultRoot => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData, Environment.SpecialFolderOption.Create), "BoosterAI", "sessions");
@@ -260,7 +321,7 @@ for line in sys.stdin:
     {
         object Hook(string ev) => new[] { new { hooks = new[] { new { type = "command",
             command = $"printf '%s {ev}\\n' \"$(date +%s%3N)\" >> '{log.Replace("'", "'\\''")}'" } } } };
-        return System.Text.Json.JsonSerializer.Serialize(new
+        return JsonSerializer.Serialize(new
         {
             hooks = new Dictionary<string, object>
             {
@@ -284,16 +345,19 @@ for line in sys.stdin:
         catch (IOException) { return null; }
     }
 
-    /// <summary>Old sessions are only logs; keep two days.</summary>
-    private static void CleanUp(string root, DateTime now)
+    /// <summary>Old sessions are only logs; keep two days, and longer while one of their tabs still runs.</summary>
+    internal static void CleanUp(string root, DateTime now, Func<int, long?>? live)
     {
         try
         {
             foreach (var d in new DirectoryInfo(root).GetDirectories())
-                if (d.CreationTime < now.AddDays(-2)) d.Delete(recursive: true);
+                if (d.CreationTime < now.AddDays(-2) && !HasLiveTab(d.FullName, live)) d.Delete(recursive: true);
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }
     }
+
+    private static bool HasLiveTab(string dir, Func<int, long?>? live) =>
+        live is not null && System.IO.Directory.GetFiles(dir, "tab*.log").Any(f => IsAlive(TabLog.Parse(File.ReadAllText(f)), live));
 
     /// <summary>
     /// Start time of a live process in the tab's Linux, or null when there is none. Returns

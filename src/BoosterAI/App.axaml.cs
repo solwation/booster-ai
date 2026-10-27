@@ -53,6 +53,7 @@ public partial class App : Application
             var vm = new MainViewModel(_config);
             desktop.MainWindow = new MainWindow(vm);
             vm.Update.Start();
+            vm.FindRunningTabs();
         }
         base.OnFrameworkInitializationCompleted();
     }

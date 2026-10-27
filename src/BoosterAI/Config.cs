@@ -50,6 +50,7 @@ public sealed class AppConfig
 
 [JsonSourceGenerationOptions(WriteIndented = true)]
 [JsonSerializable(typeof(AppConfig))]
+[JsonSerializable(typeof(TabConfig))]
 internal partial class ConfigJsonContext : JsonSerializerContext;
 
 public static class ConfigStore

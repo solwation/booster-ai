@@ -166,5 +166,8 @@
   "restartConfirm.whenIdle": "Restart when idle",
   "status.restarted": "{0} restarts with {1} / {2}.",
   "status.restartedResume": "{0} restarts with {1} / {2}, keeping the conversation.",
-  "err.restartInPlace": "The tab cannot be restarted in place (no status log). Close it and press Start."
+  "err.restartInPlace": "The tab cannot be restarted in place (no status log). Close it and press Start.",
+  "launch.allRunning": "All chosen tabs are running",
+  "status.foundRunning.one": "1 tab from the last run is still running and is watched again.",
+  "status.foundRunning.many": "{0} tabs from the last run are still running and are watched again."
 }
