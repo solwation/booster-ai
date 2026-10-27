@@ -309,10 +309,10 @@ public class LinuxCommandsTests
     }
 
     [Fact]
-    public void PtyxisColdStartOpensEveryTabWithTab()
+    public void PtyxisRestoringColdStartOpensEveryTabWithTab()
     {
-        // A cold start restores the saved session into a window that takes every --tab; a --new-window would be a second one.
-        var calls = Launcher.LinuxCommands(Tabs, "ptyxis", null, NoTracks, 0, ptyxisRunning: false);
+        // A restored session's window takes every --tab; a --new-window would be one more.
+        var calls = Launcher.LinuxCommands(Tabs, "ptyxis", null, NoTracks, 0, ptyxisRestores: true);
         Assert.Equal(["--tab", "-T", "Alfa", "-x", A], calls[0].Args);
         Assert.All(calls, c => Assert.Equal("--tab", c.Args[0]));
     }
@@ -320,7 +320,7 @@ public class LinuxCommandsTests
     [Fact]
     public void PtyxisRunningStateDoesNotAffectOtherTerminals() =>
         Assert.Equal(Launcher.LinuxCommands(Tabs, "konsole", null, NoTracks, 0)[0].Args,
-            Launcher.LinuxCommands(Tabs, "konsole", null, NoTracks, 0, ptyxisRunning: false)[0].Args);
+            Launcher.LinuxCommands(Tabs, "konsole", null, NoTracks, 0, ptyxisRestores: true)[0].Args);
 
     private static readonly TimeSpan Short = TimeSpan.FromMilliseconds(200), Tick = TimeSpan.FromMilliseconds(1);
 

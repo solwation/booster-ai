@@ -283,10 +283,10 @@ public static class Launcher
     /// gnome-terminal and xfce4-terminal take every tab in ONE call (--window, then --tab groups), so all tabs share one
     /// window even when BoosterAI is not started from that terminal. Ptyxis and konsole need one call per tab, the later
     /// ones joining the window the first opened. The other terminals have no tabs: one window per tab.
-    /// <paramref name="ptyxisRunning"/> false means Ptyxis has no instance yet (a cold start), see the ptyxis case.
+    /// <paramref name="ptyxisRestores"/> true means these calls start Ptyxis and it restores its saved session, see the ptyxis case.
     /// </summary>
     public static List<TermCall> LinuxCommands(IReadOnlyList<TabConfig> tabs, string term, string? prompt,
-        IReadOnlyList<TabTrack?> tracks, int zoomPercent, bool ptyxisRunning = true)
+        IReadOnlyList<TabTrack?> tracks, int zoomPercent, bool ptyxisRestores = false)
     {
         var zoom = LinuxZoomArgs(term, zoomPercent);
         // --command / -e take ONE string that the terminal splits like a shell.
@@ -305,11 +305,11 @@ public static class Launcher
             case "ptyxis":
                 // --tab joins the active window; Ptyxis has no zoom option. Each call waits until the instance has
                 // handled the previous one (BusName), so the tabs keep their order and the first call owns the instance.
-                // A cold start first restores the saved session (restore-session, on by default) into its own window,
-                // which then becomes the active window and takes every --tab; so a cold start opens the first tab with
-                // --tab too, and all tabs join that one window (a new one when there is no saved session).
+                // A cold start normally restores the saved session (restore-session) first; LaunchLinux turns that off
+                // for the start (see SuppressPtyxisRestore). When it cannot, the restored windows take the active window
+                // from the new one, so the first tab also uses --tab: the tabs then at least join a restored window.
                 for (var i = 0; i < tabs.Count; i++)
-                    calls.Add(new TermCall(term, [i == 0 && ptyxisRunning ? "--new-window" : "--tab", "-T", tabs[i].Name, "-x", Cmd(i)],
+                    calls.Add(new TermCall(term, [i == 0 && !ptyxisRestores ? "--new-window" : "--tab", "-T", tabs[i].Name, "-x", Cmd(i)],
                         i == 0, PtyxisBusName));
                 break;
             default:
@@ -337,8 +337,9 @@ public static class Launcher
             : LinuxTerminals.Skip(1).FirstOrDefault(OnPath)
               ?? throw new InvalidOperationException(Loc.Get("err.noTerminal"));
         // Without gdbus the state is unknown: assume a running instance, the --new-window behaviour.
-        var ptyxisRunning = term != "ptyxis" || BusNameOwned(PtyxisBusName) != false;
-        foreach (var call in LinuxCommands(tabs, term, prompt, tracks, zoomPercent, ptyxisRunning))
+        var coldPtyxis = term == "ptyxis" && BusNameOwned(PtyxisBusName) == false;
+        using var restore = coldPtyxis ? SuppressPtyxisRestore() : null;
+        foreach (var call in LinuxCommands(tabs, term, prompt, tracks, zoomPercent, coldPtyxis && restore is null))
         {
             var psi = new ProcessStartInfo(call.Exe) { UseShellExecute = false };
             foreach (var a in call.Args) psi.ArgumentList.Add(a);
@@ -349,6 +350,41 @@ public static class Launcher
                     TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(100));
             else if (call.SettleAfter) Thread.Sleep(600);
         }
+        // The new instance reads the setting while it handles the first call; a single call is not waited for that long.
+        if (restore is not null) Thread.Sleep(1000);
+    }
+
+    /// <summary>
+    /// Turns off Ptyxis' restore-session for a cold start and returns what turns it back on, or null when it was off or
+    /// gsettings is missing. A restored session reopens the last run's tabs as plain shells, spread over their old windows,
+    /// and whichever of those gets focus takes the --tab calls, so the tabs ended up in several windows next to shells
+    /// without a CLI. Without the restore the first call's window is the only one, and every tab joins it.
+    /// </summary>
+    private static IDisposable? SuppressPtyxisRestore()
+    {
+        if (!OnPath("gsettings") || Gsettings("get", "org.gnome.Ptyxis", "restore-session") != "true") return null;
+        if (Gsettings("set", "org.gnome.Ptyxis", "restore-session", "false") is null) return null;
+        return new Undo(() => Gsettings("set", "org.gnome.Ptyxis", "restore-session", "true"));
+    }
+
+    private sealed class Undo(Action undo) : IDisposable
+    {
+        public void Dispose() => undo();
+    }
+
+    /// <summary>Runs gsettings; its trimmed output, or null when it fails.</summary>
+    private static string? Gsettings(params string[] args)
+    {
+        try
+        {
+            var psi = new ProcessStartInfo("gsettings") { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true };
+            foreach (var a in args) psi.ArgumentList.Add(a);
+            using var p = Process.Start(psi);
+            if (p is null) return null;
+            var output = p.StandardOutput.ReadToEnd();
+            return p.WaitForExit(2000) && p.ExitCode == 0 ? output.Trim() : null;
+        }
+        catch (Exception) { return null; }
     }
 
     /// <summary>
