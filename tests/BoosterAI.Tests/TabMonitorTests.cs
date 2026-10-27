@@ -122,8 +122,10 @@ public class TrackedScriptTests
     [Fact]
     public void LogsAroundTheCliAndKeepsTheShellAsAChild() => Assert.Equal(
         @". '/mnt/c/Users/o'\''l w/s/tab-lib.sh' '/mnt/c/Users/o'\''l w/s' 'tab1' 2>/dev/null || true && " +
-        "cd ~/'proj' && (bs_cli 2>/dev/null || true) && claude --model 'claude-opus-5-5' '/orkester' && " +
-        "(bs_done 0 2>/dev/null || true) || (bs_done $? 2>/dev/null || true) && bash",
+        "cd ~/'proj' && (bs_cli 2>/dev/null || true) && claude --model 'claude-opus-5-5' '/orkester' " +
+        @"--settings '/mnt/c/Users/o'\''l w/s/tab1.claude.json' && " +
+        "(bs_done 0 2>/dev/null || true) || (bs_done $? 2>/dev/null || true) && " +
+        "(type bs_next >/dev/null 2>&1) && bs_next || true && bash",
         Launcher.TabScript(new TabConfig { Directory = "~/proj", Llm = "claude", Model = "claude-opus-5-5", Orkester = true }, null, Track));
 
     [Fact]
@@ -233,6 +235,137 @@ public class DeniedCommandTests
             var output = p.StandardOutput.ReadToEnd();
             p.WaitForExit();
             Assert.Equal("--skip,two words,x", output.Trim());
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+}
+
+public class InPlaceRestartTests
+{
+    private static readonly TabTrack Track = new("/s/tab-lib.sh", "/s", "tab1");
+    private static TabConfig Tab(string llm, string model = "x", bool orkester = true) =>
+        new() { Directory = "~/proj", Llm = llm, Model = model, Orkester = orkester };
+
+    [Fact]
+    public void ModelChangeOnClaudeContinuesTheConversation() => Assert.Equal(
+        "cd ~/'proj' && (bs_cli 2>/dev/null || true) && claude --continue --model 'y' --settings '/s/tab1.claude.json' && " +
+        "(bs_done 0 2>/dev/null || true) || (bs_done $? 2>/dev/null || true)",
+        Launcher.RestartScript(Tab("claude", "y"), Track, resume: true));
+
+    [Fact]
+    public void ModelChangeOnCodexResumesTheLastSession() => Assert.Contains(
+        "&& codex resume --last --model 'y' && ", Launcher.RestartScript(Tab("codex", "y"), Track, resume: true));
+
+    [Fact]
+    public void LlmChangeStartsFreshWithTheOrchestra() => Assert.Contains(
+        "&& agy --model 'x' -i '/orkester' && ", Launcher.RestartScript(Tab("agy"), Track, resume: false));
+
+    [Fact]
+    public void RestartScriptsHaveNoSemicolonsAndNoTrailingShell()
+    {
+        foreach (var llm in Catalog.Llms)
+            foreach (var resume in new[] { false, true })
+            {
+                var script = Launcher.RestartScript(Tab(llm), Track, resume);
+                Assert.DoesNotContain(';', script);
+                Assert.False(script.EndsWith("bash"), script);
+            }
+    }
+
+    [Theory]
+    [InlineData("claude", "claude", false, true)]
+    [InlineData("codex", "codex", false, true)]
+    [InlineData("agy", "agy", false, false)]
+    [InlineData("claude", "codex", false, false)]
+    [InlineData("claude", "claude", true, false)]   // a one-shot run starts fresh
+    public void ResumesOnlyAModelChangeOnClaudeOrCodex(string from, string to, bool once, bool resumes)
+    {
+        var target = Tab(to);
+        target.NonInteractive = once;
+        Assert.Equal(resumes, Launcher.CanResume(Tab(from), target));
+    }
+
+    [Fact]
+    public void ActivityFollowsTheHooksAndANewCliStartsOver()
+    {
+        Assert.Equal(Activity.Unknown, TabLog.Parse("1 start pid=5\n2 cli-start\n").Activity);
+        Assert.Equal(Activity.Busy, TabLog.Parse("1 start pid=5\n2 cli-start\n3 busy\n").Activity);
+        Assert.Equal(Activity.Idle, TabLog.Parse("1 start pid=5\n2 cli-start\n3 busy\n4 idle\n").Activity);
+        var restarted = TabLog.Parse("1 start pid=5\n2 cli-start\n3 idle\n4 cli-exit rc=143\n5 cli-start\n");
+        Assert.Equal(Activity.Unknown, restarted.Activity);
+        Assert.Null(restarted.CliExit);
+        Assert.Equal(TabState.Running, TabStatus.Evaluate(restarted, TimeSpan.Zero, null));
+    }
+
+    [Fact]
+    public void StopsOnlyAForegroundGroupThatIsNotTheShell()
+    {
+        var script = Launcher.StopForegroundScript(42);
+        Assert.Contains("/proc/42/stat", script);
+        Assert.Contains("[ \"$g\" != 42 ]", script);
+        Assert.EndsWith("kill -TERM -- -$g", script);
+    }
+
+    private static TabViewModel Running(string llm, string model)
+    {
+        var vm = new MainViewModel(new AppConfig { Tabs = [new TabConfig { Llm = llm, Model = model }] });
+        var tab = vm.Tabs[0];
+        tab.LaunchedAs = tab.ToConfig(forLaunch: true);
+        tab.SetState(TabState.Running, null);
+        return tab;
+    }
+
+    [Fact]
+    public void ChangingLlmOrModelOfARunningTabOffersARestart()
+    {
+        var tab = Running("claude", "claude-opus-5-5");
+        Assert.False(tab.IsChanged);
+        Assert.False(tab.CanRestart);
+        tab.Model = "claude-sonnet-5-5";
+        Assert.True(tab.IsChanged);
+        Assert.True(tab.CanRestart);
+        Assert.True(tab.RestartResumes);
+        tab.Llm = "codex";
+        Assert.False(tab.RestartResumes);
+        tab.Llm = "claude";
+        tab.Model = "claude-opus-5-5";
+        Assert.False(tab.IsChanged);
+    }
+
+    [Fact]
+    public void WaitingForIdleEndsWhenTheChoiceIsUndoneOrTheTabStops()
+    {
+        var tab = Running("claude", "claude-opus-5-5");
+        tab.Model = "claude-sonnet-5-5";
+        tab.PendingRestart = true;
+        tab.Model = "claude-opus-5-5";
+        Assert.False(tab.PendingRestart);
+        tab.Model = "claude-sonnet-5-5";
+        tab.PendingRestart = true;
+        tab.SetState(TabState.Closed, null);
+        Assert.False(tab.PendingRestart);
+    }
+
+    /// <summary>The real tab-lib.sh: bs_next runs every queued restart and removes it; the hook command logs busy.</summary>
+    [Fact]
+    public void LibRunsQueuedRestartsAndHooksLogActivity()
+    {
+        if (!OperatingSystem.IsLinux()) return;
+        var dir = Directory.CreateTempSubdirectory("bs-next").FullName;
+        try
+        {
+            File.WriteAllText(Path.Combine(dir, "tab-lib.sh"), TabSession.Lib);
+            File.WriteAllText(Path.Combine(dir, "t.next"), "echo first >> out && printf 'echo second >> out\\n' > t.next\n");
+            var hook = System.Text.Json.JsonDocument.Parse(TabSession.HooksJson(Path.Combine(dir, "t.log")))
+                .RootElement.GetProperty("hooks").GetProperty("UserPromptSubmit")[0].GetProperty("hooks")[0].GetProperty("command").GetString()!;
+            var psi = new System.Diagnostics.ProcessStartInfo("bash") { WorkingDirectory = dir };
+            psi.ArgumentList.Add("-c");
+            psi.ArgumentList.Add(". ./tab-lib.sh . t && bs_next && sh -c \"$0\"");
+            psi.ArgumentList.Add(hook);
+            using (var p = System.Diagnostics.Process.Start(psi)!) p.WaitForExit();
+            Assert.Equal("first\nsecond\n", File.ReadAllText(Path.Combine(dir, "out")));
+            Assert.False(File.Exists(Path.Combine(dir, "t.next")));
+            Assert.Equal(Activity.Busy, TabLog.Parse(File.ReadAllText(Path.Combine(dir, "t.log"))).Activity);
         }
         finally { Directory.Delete(dir, recursive: true); }
     }

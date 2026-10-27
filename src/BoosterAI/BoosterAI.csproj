@@ -25,4 +25,7 @@
     <PackageReference Include="Avalonia.Headless" Version="11.3.22" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.22" />
   </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="BoosterAI.Tests" />
+  </ItemGroup>
 </Project>

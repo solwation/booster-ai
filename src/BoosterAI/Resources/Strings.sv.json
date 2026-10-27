@@ -149,5 +149,22 @@
   "import.one": "Lägg till 1 projekt",
   "import.many": "Lägg till {0} projekt",
   "status.imported.one": "1 projekt tillagt.",
-  "status.imported.many": "{0} projekt tillagda."
+  "status.imported.many": "{0} projekt tillagda.",
+  "restart.changed.tip": "Starta om fliken med {0} / {1}",
+  "restart.changed.resume.tip": "Starta om fliken med {0} / {1} – samtalet behålls",
+  "restart.pending.tip": "Väntar på att CLI:n blir ledig – klicka för att ångra",
+  "restart.standardModel": "standardmodell",
+  "tabstate.busy": "Arbetar",
+  "tabstate.idle": "Ledig",
+  "tabstate.changed": "Körs – nytt val",
+  "tabstate.waitingIdle": "Väntar på ledig…",
+  "restartConfirm.title": "Starta om fliken",
+  "restartConfirm.heading": "Starta om {0}?",
+  "restartConfirm.busy": "CLI:n arbetar just nu. Startar du om nu avbryts det den håller på med.",
+  "restartConfirm.unknown": "BoosterAI kan inte se om den här CLI:n arbetar just nu. Startar du om avbryts det den eventuellt håller på med.",
+  "restartConfirm.now": "Starta om nu",
+  "restartConfirm.whenIdle": "Starta om när den är ledig",
+  "status.restarted": "{0} startas om med {1} / {2}.",
+  "status.restartedResume": "{0} startas om med {1} / {2}, samtalet behålls.",
+  "err.restartInPlace": "Fliken kan inte startas om på plats (ingen statuslogg). Stäng den och tryck Starta."
 }

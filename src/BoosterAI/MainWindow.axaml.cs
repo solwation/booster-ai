@@ -75,8 +75,17 @@ public partial class MainWindow : Window
 
     private void OnDismissDenied(object? sender, RoutedEventArgs e) => _vm.DismissDenied();
 
-    private void OnRestart(object? sender, RoutedEventArgs e)
+    private async void OnRestart(object? sender, RoutedEventArgs e)
     {
-        if ((sender as Control)?.DataContext is TabViewModel tab) _vm.Restart(tab);
+        if ((sender as Control)?.DataContext is not TabViewModel tab) return;
+        if (!tab.IsChanged) { _vm.Restart(tab); return; }
+        // A changed running tab: a second click cancels the wait; an idle CLI restarts at once; otherwise ask.
+        if (tab.PendingRestart) { tab.PendingRestart = false; return; }
+        if (tab.Activity == Activity.Idle) { _vm.RestartChanged(tab); return; }
+        switch (await new ConfirmRestartWindow(tab).ShowDialog<RestartChoice>(this))
+        {
+            case RestartChoice.Now: _vm.RestartChanged(tab); break;
+            case RestartChoice.WhenIdle: tab.PendingRestart = true; break;
+        }
     }
 }

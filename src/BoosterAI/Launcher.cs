@@ -17,21 +17,52 @@ public static class Launcher
     /// </summary>
     public static string TabScript(TabConfig tab, string? prompt = null, TabTrack? track = null)
     {
-        var cd = tab.Directory.Trim() switch
-        {
-            "" or "~" => "cd ~",
-            var d when d.StartsWith("~/") => "cd ~/" + Quote(d[2..]),
-            var d => "cd " + Quote(d),
-        };
+        var cd = Cd(tab);
         var lib = track is null ? "" : $". {Quote(track.Lib)} {Quote(track.Dir)} {Quote(track.Id)} 2>/dev/null || true && ";
         var shell = track is null ? "exec bash" : "bash";
         if (tab.Llm == Catalog.ShellOnly) return $"{lib}{cd} || true && {shell}";
+        var cli = CliCommand(tab, prompt, track, resume: false);
+        if (track is null) return $"{cd} && {cli} || true && exec bash";
+        // bs_next runs what an in-place restart queued (see RestartScript) before the shell is left.
+        return $"{lib}{cd} && {Hook("bs_cli")} && {cli} && {Hook("bs_done 0")} || {Hook("bs_done $?")} && {Next} && bash";
+    }
 
+    // In the tab's own shell, not a subshell: stopping a restarted CLI's process group must not take bs_next's loop with it.
+    private const string Next = "(type bs_next >/dev/null 2>&1) && bs_next || true";
+
+    /// <summary>
+    /// What tab-lib.sh's bs_next runs in a tab whose CLI BoosterAI stopped for an in-place restart: the CLI
+    /// with the new choices, logged like the first one. <paramref name="resume"/> keeps the conversation
+    /// (claude --continue, codex resume --last) for a model change.
+    /// </summary>
+    public static string RestartScript(TabConfig tab, TabTrack track, bool resume) =>
+        tab.Llm == Catalog.ShellOnly ? $"{Cd(tab)} || true"
+            : $"{Cd(tab)} && {Hook("bs_cli")} && {CliCommand(tab, null, track, resume)} && {Hook("bs_done 0")} || {Hook("bs_done $?")}";
+
+    /// <summary>A model change on claude or codex restarts with the same conversation; anything else starts fresh.</summary>
+    public static bool CanResume(TabConfig from, TabConfig to) =>
+        from.Llm == to.Llm && to.Llm is "claude" or "codex" && !(to.NonInteractive && to.Orkester);
+
+    /// <summary>The settings file whose hooks log busy/idle for an interactive claude tab (written by TabSession.NewTrack).</summary>
+    public static string HooksFile(TabTrack track) => $"{track.Dir}/{track.Id}.claude.json";
+
+    private static string Cd(TabConfig tab) => tab.Directory.Trim() switch
+    {
+        "" or "~" => "cd ~",
+        var d when d.StartsWith("~/") => "cd ~/" + Quote(d[2..]),
+        var d => "cd " + Quote(d),
+    };
+
+    private static string CliCommand(TabConfig tab, string? prompt, TabTrack? track, bool resume)
+    {
         var args = new List<string>();
+        if (resume && tab.Llm == "claude") args.Add("--continue");
         if (tab.Model != Catalog.StandardModel) args.Add("--model " + Quote(tab.Model));
         // One-shot mode applies to the orchestra command only; a given prompt (the install) stays interactive.
-        var once = tab.NonInteractive && tab.Orkester && prompt is null;
-        if (prompt is not null)
+        var once = tab.NonInteractive && tab.Orkester && prompt is null && !resume;
+        // A resumed conversation gets no first prompt: it already ran /orkester or the install.
+        if (resume) { }
+        else if (prompt is not null)
             args.Add((tab.Llm == "agy" ? "-i " : "") + Quote(prompt));
         else if (tab.Orkester)
             args.Add(tab.Llm switch
@@ -42,15 +73,35 @@ public static class Launcher
                 _ when once => "-p " + Quote("/orkester"),
                 _ => Quote("/orkester"),
             });
+        // An interactive claude reports busy/idle through hooks; a one-shot run is busy until it exits.
+        if (track is not null && tab.Llm == "claude" && !once) args.Add("--settings " + Quote(HooksFile(track)));
         var cli = string.Join(' ', new[] { tab.Llm }.Concat(args));
         if (once && tab.Llm == "codex") cli = "codex exec" + cli["codex".Length..];
+        if (resume && tab.Llm == "codex") cli = "codex resume --last" + cli["codex".Length..];
         // claude -p and agy -p only print the final answer; their event streams, read by tab-lib.sh's
         // bs_stream, show the text and tool calls as they happen. codex exec already prints progress.
         // Without a lib (no track) they stay in text mode.
         if (once && track is not null && tab.Llm != "codex")
             cli = "bs_stream " + cli + (tab.Llm == "claude" ? " --output-format stream-json --verbose" : " --output-format stream-json");
-        if (track is null) return $"{cd} && {cli} || true && exec bash";
-        return $"{lib}{cd} && {Hook("bs_cli")} && {cli} && {Hook("bs_done 0")} || {Hook("bs_done $?")} && bash";
+        return cli;
+    }
+
+    /// <summary>
+    /// Stops what runs in the foreground of the tab whose shell is <paramref name="shellPid"/> (the CLI's process
+    /// group, found through the tty's foreground group), never the shell itself; its chain then runs bs_next.
+    /// </summary>
+    public static string StopForegroundScript(int shellPid) =>
+        $"g=$(cut -d' ' -f8 /proc/{shellPid}/stat) && [ \"$g\" -gt 0 ] && [ \"$g\" != {shellPid} ] && kill -TERM -- -$g";
+
+    public static void StopForeground(int shellPid, string wslDistro)
+    {
+        var psi = OperatingSystem.IsWindows()
+            ? new ProcessStartInfo("wsl.exe") { ArgumentList = { "-d", wslDistro, "-e", "bash", "-c", StopForegroundScript(shellPid) } }
+            : new ProcessStartInfo("bash") { ArgumentList = { "-c", StopForegroundScript(shellPid) } };
+        psi.UseShellExecute = false;
+        psi.CreateNoWindow = true;
+        using var p = Process.Start(psi);
+        p?.WaitForExit(10000);
     }
 
     /// <summary>A logging call that can neither fail the chain nor print "command not found".</summary>

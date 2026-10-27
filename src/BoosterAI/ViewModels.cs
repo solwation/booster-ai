@@ -57,7 +57,7 @@ public sealed class TabViewModel : Observable
 
     /// <summary>One-shot mode applies to the orchestra command only, so it needs the orchestra on.</summary>
     public bool CanNonInteractive => _orkester && CanOrkester;
-    public string Model { get => _model; set => Set(ref _model, value?.Trim() ?? ""); }
+    public string Model { get => _model; set { if (Set(ref _model, value?.Trim() ?? "")) ChoiceChanged(); } }
 
     public string Directory
     {
@@ -136,6 +136,7 @@ public sealed class TabViewModel : Observable
             Raise(nameof(CanInstallOrkester));
             // Another CLI's model id rarely fits; fall back to its default.
             if (!Catalog.ModelsFor(value).Contains(Model)) Model = Catalog.StandardModel;
+            ChoiceChanged();
         }
     }
 
@@ -152,22 +153,68 @@ public sealed class TabViewModel : Observable
     // Monitoring: set once the tab has been started from this window.
     private TabState? _state;
     private int? _rc;
+    private Activity _activity;
+    private bool _pending;
     private IReadOnlyList<string> _denied = [];
     internal TabConfig? LaunchedAs { get; set; }
-    internal string? TrackId { get; set; }
+    internal TabTrack? Track { get; set; }
+    internal string? TrackId => Track?.Id;
     internal DateTime LaunchedAt { get; set; }
-    internal void RaiseRestartTip() => Raise(nameof(RestartTip));
+    /// <summary>The tab's shell, from its log; what an in-place restart stops the foreground of.</summary>
+    internal int? ShellPid { get; set; }
+    internal void RaiseRestartTip() => RaiseRestart();
 
     public bool HasStatus => _state is not null;
-    /// <summary>A one-shot tab is "run again" rather than "open again".</summary>
-    public string RestartTip => Loc.Get(LaunchedAs is { NonInteractive: true, Orkester: true } ? "restart.once.tip" : "restart.tip");
-    public bool CanRestart => _state is TabState.Closed or TabState.CliExited or TabState.CliMissing
+    public bool IsRunning => _state is TabState.Running;
+
+    /// <summary>The CLI is working on a turn; a one-shot run is busy until it exits.</summary>
+    public Activity Activity => LaunchedAs is { NonInteractive: true, Orkester: true } && IsRunning ? Activity.Busy : _activity;
+
+    /// <summary>The LLM or model differs from what the running tab was started with.</summary>
+    public bool IsChanged => IsRunning && LaunchedAs is { } l && l.Llm != Catalog.ShellOnly
+        && (l.Llm != Llm || l.Model != (string.IsNullOrWhiteSpace(Model) ? Catalog.StandardModel : Model));
+
+    /// <summary>"Starta om när den är ledig" is waiting for the CLI's next idle.</summary>
+    public bool PendingRestart
+    {
+        get => _pending;
+        internal set { if (Set(ref _pending, value)) RaiseRestart(); }
+    }
+
+    /// <summary>Whether the in-place restart keeps the conversation (model change on claude/codex).</summary>
+    public bool RestartResumes => LaunchedAs is { } l && Launcher.CanResume(l, ToConfig(forLaunch: true));
+
+    /// <summary>A one-shot tab is "run again" rather than "open again"; a changed one restarts with the new choices.</summary>
+    public string RestartTip =>
+        PendingRestart ? Loc.Get("restart.pending.tip")
+        : IsChanged ? Loc.Format(RestartResumes ? "restart.changed.resume.tip" : "restart.changed.tip", Llm, ModelLabel)
+        : Loc.Get(LaunchedAs is { NonInteractive: true, Orkester: true } ? "restart.once.tip" : "restart.tip");
+
+    private string ModelLabel => string.IsNullOrWhiteSpace(Model) || Model == Catalog.StandardModel ? Loc.Get("restart.standardModel") : Model;
+
+    public bool CanRestart => IsChanged || _state is TabState.Closed or TabState.CliExited or TabState.CliMissing
         or TabState.NotStarted or TabState.Lost or TabState.Denied;
+
+    private void ChoiceChanged()
+    {
+        if (!IsChanged) PendingRestart = false;
+        RaiseRestart();
+        Raise(nameof(StatusText));
+    }
+
+    private void RaiseRestart()
+    {
+        foreach (var n in new[] { nameof(IsChanged), nameof(CanRestart), nameof(RestartTip), nameof(PendingRestart) }) Raise(n);
+    }
     /// <summary>The programs of the commands agy denied (state Denied).</summary>
     internal IReadOnlyList<string> DeniedPrograms => _denied;
     public string StatusText => _state switch
     {
         null => "",
+        TabState.Running when PendingRestart => Loc.Get("tabstate.waitingIdle"),
+        TabState.Running when IsChanged => Loc.Get("tabstate.changed"),
+        TabState.Running when Activity == Activity.Busy => Loc.Get("tabstate.busy"),
+        TabState.Running when Activity == Activity.Idle => Loc.Get("tabstate.idle"),
         TabState.CliExited => Loc.Format("tabstate.CliExited", _rc ?? -1),
         TabState.Denied => Loc.Format("tabstate.Denied", _denied.Count > 0 ? string.Join(", ", _denied) : "?"),
         var s => Loc.Get("tabstate." + s),
@@ -182,15 +229,19 @@ public sealed class TabViewModel : Observable
     }));
 
     /// <summary>Updates the state; true when it changed.</summary>
-    internal bool SetState(TabState state, int? rc, IReadOnlyList<string>? denied = null)
+    internal bool SetState(TabState state, int? rc, IReadOnlyList<string>? denied = null, Activity activity = Activity.Unknown)
     {
         denied ??= [];
-        if (_state == state && _rc == rc && _denied.SequenceEqual(denied)) return false;
+        if (_state == state && _rc == rc && _denied.SequenceEqual(denied) && _activity == activity) return false;
+        var stateChanged = _state != state || _rc != rc || !_denied.SequenceEqual(denied);
         _state = state;
         _rc = rc;
         _denied = denied;
-        foreach (var n in new[] { nameof(HasStatus), nameof(CanRestart), nameof(StatusText), nameof(StatusBrush) }) Raise(n);
-        return true;
+        _activity = activity;
+        if (state != TabState.Running) PendingRestart = false;
+        foreach (var n in new[] { nameof(HasStatus), nameof(IsRunning), nameof(Activity), nameof(StatusText), nameof(StatusBrush) }) Raise(n);
+        RaiseRestart();
+        return stateChanged;
     }
 
     public TabConfig ToConfig(bool forLaunch) => new()
@@ -426,12 +477,53 @@ public sealed class MainViewModel : Observable
         foreach (var (tab, (state, rc)) in Tabs.Where(t => t.Enabled).Zip(samples)) tab.SetState(state, rc);
     }
 
+    /// <summary>For --screenshot --fake-changed: the first tab runs a turn with another model than the one now chosen.</summary>
+    public void ShowSampleChange()
+    {
+        if (Tabs.FirstOrDefault(t => t.Enabled && t.IsAi) is not { } tab) return;
+        var launched = tab.ToConfig(forLaunch: true);
+        launched.Model = Catalog.ModelsFor(tab.Llm).FirstOrDefault(m => m != tab.Model) ?? Catalog.StandardModel;
+        tab.LaunchedAs = launched;
+        tab.SetState(TabState.Running, null, activity: Activity.Busy);
+    }
+
     /// <summary>For --screenshot --fake-denied: the first enabled tab had "git status &amp;&amp; gh auth status" denied.</summary>
     public void ShowSampleDenial()
     {
         if (Tabs.FirstOrDefault(t => t.Enabled) is not { } tab) return;
         tab.SetState(TabState.Denied, 0, ["git", "gh"]);
         Denial.Offer(["git", "gh"], [tab.Name.Trim()]);
+    }
+
+    /// <summary>
+    /// Restarts a running tab whose LLM or model changed, in the same tab: queues the new CLI for the tab's
+    /// bs_next, then stops the old CLI. Its conversation is kept for a model change (claude, codex).
+    /// </summary>
+    public void RestartChanged(TabViewModel tab)
+    {
+        tab.PendingRestart = false;
+        if (!tab.IsChanged || tab.LaunchedAs is not { } launched) return;
+        var next = tab.ToConfig(forLaunch: true);
+        var error = Launcher.Validate([next]);
+        if (error == "" && (_session is null || tab.Track is null || tab.ShellPid is null)) error = Loc.Get("err.restartInPlace");
+        if (error != "") { ShowStatus(error, error: true); return; }
+        try
+        {
+            var resume = Launcher.CanResume(launched, next);
+            _session!.QueueNext(tab.Track!.Id, Launcher.RestartScript(next, tab.Track, resume));
+            var pid = tab.ShellPid!.Value;
+            var distro = _cfg.WslDistro;
+            Task.Run(() => Launcher.StopForeground(pid, distro));
+            tab.LaunchedAs = next;
+            tab.RaiseRestartTip();
+            ShowStatus(Loc.Format(resume ? "status.restartedResume" : "status.restarted", tab.Name.Trim(), next.Llm,
+                next.Model == Catalog.StandardModel ? Loc.Get("restart.standardModel") : next.Model), error: false);
+            Save();
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.ComponentModel.Win32Exception)
+        {
+            ShowStatus(Loc.Format("err.launch", e.Message), error: true);
+        }
     }
 
     /// <summary>Opens the tab again with the choices it was started with, in the session's window.</summary>
@@ -459,7 +551,9 @@ public sealed class MainViewModel : Observable
         {
             if (tracks[tab] is not { } track) continue;
             row.LaunchedAs = tab;
-            row.TrackId = track.Id;
+            row.Track = track;
+            row.ShellPid = null;
+            row.PendingRestart = false;
             row.LaunchedAt = DateTime.UtcNow;
             row.RaiseRestartTip();
             row.SetState(TabState.Starting, null);
@@ -484,7 +578,8 @@ public sealed class MainViewModel : Observable
             {
                 var log = session.ReadLog(w.Id);
                 var denied = log?.Denied?.SelectMany(AgyPermissions.Programs).Distinct().ToList();
-                return (w.Row, w.Id, State: TabStatus.Evaluate(log, DateTime.UtcNow - w.LaunchedAt, live), log?.CliExit, Denied: denied);
+                return (w.Row, w.Id, State: TabStatus.Evaluate(log, DateTime.UtcNow - w.LaunchedAt, live), log?.CliExit, Denied: denied,
+                    log?.Pid, Activity: log?.Activity ?? Activity.Unknown);
             }).ToList();
             // agy's settings are only read while a tab has a denial to offer rules for.
             var settings = results.Any(r => r.State == TabState.Denied) ? ReadText(settingsPath) : null;
@@ -494,10 +589,13 @@ public sealed class MainViewModel : Observable
             _polling = false;
             if (!t.IsCompletedSuccessfully) return;
             var (results, settings) = t.Result;
-            foreach (var (row, id, state, rc, denied) in results)
+            foreach (var (row, id, state, rc, denied, pid, activity) in results)
             {
                 // Ignore a result for a tab that has been restarted meanwhile.
-                if (row.TrackId != id || !row.SetState(state, rc, denied)) continue;
+                if (row.TrackId != id) continue;
+                row.ShellPid = pid;
+                if (row.PendingRestart && state == TabState.Running && activity == Activity.Idle) RestartChanged(row);
+                if (!row.SetState(state, rc, denied, activity)) continue;
                 if (_cfg.Notifications && TabStatus.IsUnexpected(state, rc))
                     Notifier.Show("BoosterAI", Loc.Format("notify.body", row.Name, row.StatusText));
             }

@@ -10,13 +10,18 @@ public sealed record TabTrack(string Lib, string Dir, string Id);
 
 public enum TabState { Starting, Running, CliExited, CliMissing, NotStarted, Closed, Lost, Denied }
 
+/// <summary>Whether a running CLI is working on a turn; Unknown for CLIs without hooks (codex, agy).</summary>
+public enum Activity { Unknown, Busy, Idle }
+
 /// <summary>
 /// What a tab's log says. One line per event, written by tab-lib.sh:
 /// "&lt;epoch-ms&gt; start pid=N starttime=N", "… cli-start", "… cli-exit rc=N", "… exit", and
-/// "… denied cli=agy cmd=&lt;base64&gt;" when agy refused a command it could not ask about.
-/// <paramref name="Denied"/> holds those command lines (null: none).
+/// "… denied cli=agy cmd=&lt;base64&gt;" when agy refused a command it could not ask about, and "… busy" /
+/// "… idle" from claude's hooks. <paramref name="Denied"/> holds those command lines (null: none). An in-place
+/// restart logs a new cli-start, which starts the CLI's part of the log over.
 /// </summary>
-public sealed record TabLog(int? Pid, long? StartTime, bool CliStarted, int? CliExit, bool Exited, IReadOnlyList<string>? Denied = null)
+public sealed record TabLog(int? Pid, long? StartTime, bool CliStarted, int? CliExit, bool Exited, IReadOnlyList<string>? Denied = null,
+    Activity Activity = Activity.Unknown)
 {
     public static TabLog Parse(string text)
     {
@@ -24,6 +29,7 @@ public sealed record TabLog(int? Pid, long? StartTime, bool CliStarted, int? Cli
         long? start = null;
         bool cliStarted = false, exited = false;
         List<string>? denied = null;
+        var activity = Activity.Unknown;
         foreach (var line in text.Split('\n'))
         {
             var parts = line.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -37,13 +43,15 @@ public sealed record TabLog(int? Pid, long? StartTime, bool CliStarted, int? Cli
                     pid = Int(values, "pid");
                     start = values.TryGetValue("starttime", out var s) && long.TryParse(s, CultureInfo.InvariantCulture, out var st) ? st : null;
                     break;
-                case "cli-start": cliStarted = true; break;
+                case "cli-start": cliStarted = true; rc = null; denied = null; activity = Activity.Unknown; break;
+                case "busy": activity = Activity.Busy; break;
+                case "idle": activity = Activity.Idle; break;
                 case "cli-exit": rc = Int(values, "rc") ?? -1; break;
                 case "exit": exited = true; break;
                 case "denied": (denied ??= []).Add(Decode(values.GetValueOrDefault("cmd"))); break;
             }
         }
-        return new TabLog(pid, start, cliStarted, rc, exited, denied);
+        return new TabLog(pid, start, cliStarted, rc, exited, denied, activity);
     }
 
     private static string Decode(string? base64)
@@ -120,6 +128,12 @@ bs_ev start pid=$$ starttime=$(cut -d' ' -f22 /proc/$$/stat)
 trap 'bs_ev exit' EXIT
 bs_cli() { bs_ev cli-start; }
 bs_done() { bs_ev cli-exit rc=$1; }
+# bs_next: run what BoosterAI queued for an in-place restart (it then stops the CLI), until nothing is queued.
+bs_next_f="$1/$2.next"
+bs_next() {
+  local c
+  while [ -f "$bs_next_f" ]; do c=$(cat "$bs_next_f") && rm -f "$bs_next_f" && eval "$c"; done
+  return 0; }
 # bs_stream <cli> <args>: run a CLI that emits stream-json (claude, agy), show it as readable
 # progress, and return the CLI's own exit code (not the formatter's). The CLI is an argument
 # here, so bash does not expand the user's alias for it (agy='agy --dangerously-skip-permissions'):
@@ -228,13 +242,37 @@ for line in sys.stdin:
     public static string DefaultRoot => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData, Environment.SpecialFolderOption.Create), "BoosterAI", "sessions");
 
-    /// <summary>A new log id and the paths the tab's shell uses; null when the path cannot go into a tab script.</summary>
+    /// <summary>
+    /// A new log id and the paths the tab's shell uses; null when the path cannot go into a tab script.
+    /// Also writes the claude settings whose hooks log busy (prompt sent) and idle (turn done).
+    /// </summary>
     public TabTrack? NewTrack()
     {
         var dir = OperatingSystem.IsWindows() ? PathMapping.ToWslPath(Directory) : Directory;
         if (dir.IndexOfAny([';', '\n', '\r']) >= 0) return null;
-        return new TabTrack(dir + "/tab-lib.sh", dir, "tab" + Interlocked.Increment(ref _next));
+        var track = new TabTrack(dir + "/tab-lib.sh", dir, "tab" + Interlocked.Increment(ref _next));
+        try { File.WriteAllText(Path.Combine(Directory, track.Id + ".claude.json"), HooksJson($"{dir}/{track.Id}.log")); }
+        catch (IOException) { /* no hooks: the tab's activity stays unknown */ }
+        return track;
     }
+
+    public static string HooksJson(string log)
+    {
+        object Hook(string ev) => new[] { new { hooks = new[] { new { type = "command",
+            command = $"printf '%s {ev}\\n' \"$(date +%s%3N)\" >> '{log.Replace("'", "'\\''")}'" } } } };
+        return System.Text.Json.JsonSerializer.Serialize(new
+        {
+            hooks = new Dictionary<string, object>
+            {
+                // Not Notification: it also fires for a permission prompt in the middle of a turn.
+                ["UserPromptSubmit"] = Hook("busy"), ["Stop"] = Hook("idle"),
+            },
+        });
+    }
+
+    /// <summary>Queues <paramref name="script"/> for the tab's bs_next (an in-place restart).</summary>
+    public void QueueNext(string id, string script) =>
+        File.WriteAllText(Path.Combine(Directory, id + ".next"), script.Replace("\r\n", "\n") + "\n");
 
     public TabLog? ReadLog(string id)
     {

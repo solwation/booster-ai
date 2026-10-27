@@ -149,5 +149,22 @@
   "import.one": "Add 1 project",
   "import.many": "Add {0} projects",
   "status.imported.one": "1 project added.",
-  "status.imported.many": "{0} projects added."
+  "status.imported.many": "{0} projects added.",
+  "restart.changed.tip": "Restart the tab with {0} / {1}",
+  "restart.changed.resume.tip": "Restart the tab with {0} / {1} – the conversation is kept",
+  "restart.pending.tip": "Waiting for the CLI to be idle – click to cancel",
+  "restart.standardModel": "default model",
+  "tabstate.busy": "Working",
+  "tabstate.idle": "Idle",
+  "tabstate.changed": "Running – new choice",
+  "tabstate.waitingIdle": "Waiting for idle…",
+  "restartConfirm.title": "Restart the tab",
+  "restartConfirm.heading": "Restart {0}?",
+  "restartConfirm.busy": "The CLI is working right now. Restarting now interrupts what it is doing.",
+  "restartConfirm.unknown": "BoosterAI cannot tell whether this CLI is working right now. Restarting interrupts anything it may be doing.",
+  "restartConfirm.now": "Restart now",
+  "restartConfirm.whenIdle": "Restart when idle",
+  "status.restarted": "{0} restarts with {1} / {2}.",
+  "status.restartedResume": "{0} restarts with {1} / {2}, keeping the conversation.",
+  "err.restartInPlace": "The tab cannot be restarted in place (no status log). Close it and press Start."
 }
