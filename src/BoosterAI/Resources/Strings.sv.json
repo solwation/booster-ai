@@ -2,6 +2,7 @@
   "main.subtitle": "Välj AI och modell för dagens arbete och starta.",
   "settings.button": "Inställningar",
   "settings.tip": "Vilka projekt som öppnas, WSL och terminal",
+  "version.tip": "Versionen som körs nu",
   "col.with": "Med",
   "col.project": "Projekt",
   "col.llm": "LLM",

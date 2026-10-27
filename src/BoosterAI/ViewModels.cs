@@ -223,6 +223,9 @@ public sealed class MainViewModel : Observable
     public bool IsWindows => OperatingSystem.IsWindows();
     public bool IsLinux => !OperatingSystem.IsWindows();
     public IReadOnlyList<string> LinuxTerminals => Launcher.LinuxTerminals;
+    /// <summary>The window title and the bottom-left label name the running build, so any report says which version it was.</summary>
+    public string AppTitle => "BoosterAI " + UpdateLogic.Current;
+    public string VersionText => "v" + UpdateLogic.Current;
     public string Status { get => _status; private set => Set(ref _status, value); }
     public bool StatusIsError { get => _statusIsError; private set => Set(ref _statusIsError, value); }
 

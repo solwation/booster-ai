@@ -3,7 +3,7 @@
         xmlns:local="using:BoosterAI"
         x:Class="BoosterAI.MainWindow"
         x:DataType="local:MainViewModel"
-        Title="BoosterAI"
+        Title="{Binding AppTitle}"
         Icon="avares://BoosterAI/Assets/boosterai.ico"
         Width="1100" Height="560" MinWidth="900" MinHeight="380"
         WindowStartupLocation="CenterScreen">
@@ -156,9 +156,13 @@
     </ScrollViewer>
 
     <Grid Grid.Row="4" ColumnDefinitions="*,Auto" Margin="0,16,0,0">
-      <TextBlock Grid.Column="0" Text="{Binding Status}" TextWrapping="Wrap" VerticalAlignment="Center"
-                 Margin="0,0,20,0" Classes.muted="{Binding !StatusIsError}"
-                 Foreground="{Binding StatusIsError, Converter={x:Static local:Converters.ErrorBrush}}" />
+      <!-- The running version sits under the status, bottom left, so a report always says which build it was. -->
+      <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,20,0" Spacing="4">
+        <TextBlock Text="{Binding Status}" TextWrapping="Wrap" IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                   Classes.muted="{Binding !StatusIsError}"
+                   Foreground="{Binding StatusIsError, Converter={x:Static local:Converters.ErrorBrush}}" />
+        <TextBlock Classes="muted" Text="{Binding VersionText}" FontSize="11.5" ToolTip.Tip="{local:T version.tip}" />
+      </StackPanel>
       <Button Grid.Column="1" Classes="boost" Click="OnLaunch" AutomationProperties.Name="{Binding LaunchLabel}" IsDefault="True" IsEnabled="{Binding CanLaunch}">
         <StackPanel Orientation="Horizontal" Spacing="9">
           <Path Data="{StaticResource BoltIcon}" Fill="White" Width="12" Height="15" Stretch="Uniform"
