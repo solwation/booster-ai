@@ -24,6 +24,7 @@ thin adapters. Reading or improving the instructions does not start an unattende
 | Intake hooks | None |
 | Questions | Comment on the affected issue with options and a recommendation, add `user question`, release active labels, continue other work; never ask in chat |
 | Publishing | Commit and push directly to `main`; no branches, PRs or force push |
+| Release | Mandatory when the backlog drains: tag a new version without asking (see [When to release](#releasing)); never end a session or enter the idle watch with user-facing commits after the latest tag |
 
 New issues carry acceptance criteria and a one-line priority rationale. Unrelated defects found on the way become their own issues.
 
@@ -37,7 +38,10 @@ New issues carry acceptance criteria and a one-line priority rationale. Unrelate
 5. When nothing is startable and no worker is active, run the session review.
 6. Review findings become issues.
 7. If eligible issues exist or were created, continue at 1.
-8. Otherwise run the idle watch with queue polls; new issues resume the loop.
+8. Otherwise **release** (see [When to release](#releasing)) if `git log <latest tag>..main`
+   has user-facing commits; this step is never skipped, and installed apps only get fixes
+   through a release.
+9. Then run the idle watch with queue polls; new issues resume the loop.
 
 ## Workspace
 
