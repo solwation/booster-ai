@@ -4,7 +4,21 @@ For the overview see the [README](../README.md); for how the app behaves see [De
 
 ## Build from source
 
-You need the .NET 10 SDK.
+You need the .NET 10 SDK. On Windows, install it without administrator rights in a PowerShell session:
+
+```powershell
+$installDir = Join-Path $env:LOCALAPPDATA 'Programs\dotnet'
+$scriptPath = Join-Path $env:TEMP 'dotnet-install.ps1'
+Invoke-WebRequest 'https://dot.net/v1/dotnet-install.ps1' -OutFile $scriptPath
+& $scriptPath -Channel 10.0 -InstallDir $installDir -NoPath
+$userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+$userPathParts = @($userPath -split ';' | Where-Object { $_ -and $_.TrimEnd('\') -ne $installDir.TrimEnd('\') })
+[Environment]::SetEnvironmentVariable('Path', (@($installDir) + $userPathParts) -join ';', 'User')
+$env:Path = "$installDir;$env:Path"
+dotnet --info
+```
+
+Open a new PowerShell window after installation so it picks up the user PATH. The install script installs the latest .NET 10 SDK; it is available from [Microsoft's .NET install page](https://learn.microsoft.com/dotnet/core/install/windows). If Windows reports `0x800711C7` and says Application Control blocked a test assembly, the machine's security policy is blocking the unsigned build; do not change that policy as part of test setup.
 
 ```sh
 tools/publish.sh    # dist/win-x64/BoosterAI.exe and dist/linux-x64/BoosterAI
@@ -17,6 +31,8 @@ Run the tests with:
 ```sh
 dotnet test tests/BoosterAI.Tests
 ```
+
+On Windows, run `dotnet test tests\BoosterAI.Tests` from the Windows mirror after it has synced the revision under test.
 
 ## UI strings
 

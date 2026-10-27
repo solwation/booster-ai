@@ -48,7 +48,7 @@ New issues carry acceptance criteria and a one-line priority rationale. Unrelate
 Development happens in the ext4 checkout `~/booster-ai` (WSL); the Windows clone in
 `Documents\booster-ai` is a synced mirror that is never edited directly. Each worker
 uses its own `git worktree` under `~/booster-ai-wt/<issue>` and its own `dist`/`bin`.
-Requires the .NET 10 SDK (WSL: `/usr/lib/dotnet`; Windows: `dotnet` on PATH).
+Requires the .NET 10 SDK (WSL: `/usr/lib/dotnet`; Windows: `dotnet` on PATH). If it is missing, install it user-locally using the steps in [Development](../docs/DEVELOPMENT.md#build-from-source), then open a new PowerShell session before Windows tests.
 
 ## Project phase hooks
 
