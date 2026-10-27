@@ -304,7 +304,32 @@ public class LinuxCommandsTests
         Assert.Equal(["--tab", "-T", "Gamma", "-x", G], calls[2].Args);
         Assert.True(calls[0].SettleAfter);
         Assert.False(calls[1].SettleAfter);
+        Assert.Equal(Launcher.PtyxisBusName, calls[0].BusName);
+        Assert.Null(calls[1].BusName);
     }
+
+    private static readonly TimeSpan Short = TimeSpan.FromMilliseconds(200), Tick = TimeSpan.FromMilliseconds(1);
+
+    [Fact]
+    public void ColdStartIsReadyOnceTheNewInstanceOwnsTheBusName()
+    {
+        var polls = 0;
+        Assert.True(Launcher.WaitForInstance(() => false, () => ++polls >= 3, ownedBefore: false, Short, Tick));
+        Assert.Equal(3, polls);
+    }
+
+    [Fact]
+    public void RunningInstanceIsReadyOnlyWhenTheRemoteCallExits()
+    {
+        var polls = 0;
+        // The name is owned all along (the running instance), so only the remote process exiting counts.
+        Assert.True(Launcher.WaitForInstance(() => ++polls >= 4, () => true, ownedBefore: true, Short, Tick));
+        Assert.Equal(4, polls);
+    }
+
+    [Fact]
+    public void WaitForInstanceGivesUpAfterTheTimeout() =>
+        Assert.False(Launcher.WaitForInstance(() => false, () => false, ownedBefore: false, TimeSpan.FromMilliseconds(30), Tick));
 
     [Fact]
     public void Xfce4TerminalIsOneCallToo()

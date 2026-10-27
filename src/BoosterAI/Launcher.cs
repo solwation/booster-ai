@@ -218,8 +218,14 @@ public static class Launcher
     public static readonly IReadOnlyList<string> LinuxTerminals =
         ["auto", "ptyxis", "gnome-terminal", "konsole", "xfce4-terminal", "kitty", "wezterm", "x-terminal-emulator", "xterm"];
 
-    /// <summary>One terminal process to start; <paramref name="SettleAfter"/> = give it a moment to open its window before the next one.</summary>
-    public sealed record TermCall(string Exe, IReadOnlyList<string> Args, bool SettleAfter = false);
+    /// <summary>
+    /// One terminal process to start; <paramref name="SettleAfter"/> = give it a moment to open its window before the next one.
+    /// With a <paramref name="BusName"/> the wait is for the terminal's single-instance D-Bus name instead (see WaitForInstance).
+    /// </summary>
+    public sealed record TermCall(string Exe, IReadOnlyList<string> Args, bool SettleAfter = false, string? BusName = null);
+
+    /// <summary>Ptyxis' application id, which it owns on the session bus while an instance runs.</summary>
+    public const string PtyxisBusName = "org.gnome.Ptyxis";
 
     /// <summary>
     /// The terminal processes that open the tabs, in order; used by Start and --dry-run.
@@ -245,9 +251,11 @@ public static class Launcher
                 calls.Add(new TermCall(term, a));
                 break;
             case "ptyxis":
-                // --tab joins the active window; Ptyxis has no zoom option.
+                // --tab joins the active window; Ptyxis has no zoom option. The first call must own the instance
+                // before any --tab starts, or a --tab that registers first opens a second window.
                 for (var i = 0; i < tabs.Count; i++)
-                    calls.Add(new TermCall(term, [i == 0 ? "--new-window" : "--tab", "-T", tabs[i].Name, "-x", Cmd(i)], i == 0));
+                    calls.Add(new TermCall(term, [i == 0 ? "--new-window" : "--tab", "-T", tabs[i].Name, "-x", Cmd(i)], i == 0,
+                        i == 0 ? PtyxisBusName : null));
                 break;
             default:
                 for (var i = 0; i < tabs.Count; i++)
@@ -277,9 +285,48 @@ public static class Launcher
         {
             var psi = new ProcessStartInfo(call.Exe) { UseShellExecute = false };
             foreach (var a in call.Args) psi.ArgumentList.Add(a);
-            Process.Start(psi);
-            if (call.SettleAfter) Thread.Sleep(600);
+            var ownedBefore = call.BusName is not null && BusNameOwned(call.BusName) == true;
+            using var proc = Process.Start(psi);
+            if (call.BusName is not null && proc is not null && OnPath("gdbus"))
+                WaitForInstance(() => proc.HasExited, () => BusNameOwned(call.BusName) == true, ownedBefore,
+                    TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(100));
+            else if (call.SettleAfter) Thread.Sleep(600);
         }
+    }
+
+    /// <summary>
+    /// Waits until a single-instance (GApplication) terminal has taken the call, so the next call joins its window.
+    /// A remote call (instance already running, <paramref name="ownedBefore"/>) is done when its process exits: the
+    /// instance has then handled it. A cold start is done when the new process owns the bus name: later calls are
+    /// queued behind its own command line, which opens the window. Returns false on timeout.
+    /// </summary>
+    public static bool WaitForInstance(Func<bool> exited, Func<bool> owned, bool ownedBefore, TimeSpan timeout, TimeSpan poll)
+    {
+        var until = DateTime.UtcNow + timeout;
+        while (true)
+        {
+            if (exited() || (!ownedBefore && owned())) return true;
+            if (DateTime.UtcNow >= until) return false;
+            Thread.Sleep(poll);
+        }
+    }
+
+    /// <summary>Whether <paramref name="name"/> has an owner on the session bus; null when gdbus cannot tell.</summary>
+    private static bool? BusNameOwned(string name)
+    {
+        try
+        {
+            var psi = new ProcessStartInfo("gdbus") { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true };
+            foreach (var a in new[] { "call", "--session", "--dest", "org.freedesktop.DBus", "--object-path", "/org/freedesktop/DBus",
+                         "--method", "org.freedesktop.DBus.NameHasOwner", name })
+                psi.ArgumentList.Add(a);
+            using var p = Process.Start(psi);
+            if (p is null) return null;
+            var output = p.StandardOutput.ReadToEnd();
+            if (!p.WaitForExit(2000) || p.ExitCode != 0) return null;
+            return output.Contains("true");
+        }
+        catch (Exception) { return null; }
     }
 
     public static bool OnPath(string exe) =>

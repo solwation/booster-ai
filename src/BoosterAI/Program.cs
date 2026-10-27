@@ -21,6 +21,9 @@ internal static class Program
             for (var i = 0; i < tabs.Count; i++) Console.WriteLine($"{tabs[i].Name}: bash -lic {Launcher.TabScript(tabs[i], null, tracks[i])}");
             Console.WriteLine("wt.exe " + string.Join(' ', Launcher.WindowsTerminalArgs(tabs, cfg.WslDistro, null, tracks, "BoosterAI-<session>", cfg.ZoomPercent)
                 .Select(a => a.Contains(' ') ? $"\"{a}\"" : a)));
+            if (!OperatingSystem.IsWindows())
+                Console.WriteLine($"linux terminal: {cfg.LinuxTerminal} -> " + (cfg.LinuxTerminal != "auto" ? cfg.LinuxTerminal
+                    : Launcher.LinuxTerminals.Skip(1).FirstOrDefault(Launcher.OnPath) ?? "(none found)"));
             foreach (var term in new[] { "gnome-terminal", "ptyxis" })
                 foreach (var call in Launcher.LinuxCommands(tabs, term, null, tracks, cfg.ZoomPercent))
                     Console.WriteLine($"linux {term}: {call.Exe} " + string.Join(' ', call.Args.Select(a => a.Contains(' ') ? $"\"{a}\"" : a)));
