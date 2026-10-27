@@ -88,9 +88,11 @@ an issue here.
 
 Pushing a tag `vX.Y.Z` runs `.github/workflows/release.yml`: `dotnet test`, then `tools/package.sh` (win-x64 zip, linux-x64 tar.gz, `SHA256SUMS`), then a GitHub Release with generated notes (a tag with a `-suffix` becomes a pre-release). The tag sets the version (`-p:Version=${tag#v}` at publish); the `<Version>` in `BoosterAI.csproj` is only the default for local builds, so bump it to the released version afterwards. Try it locally with `tools/package.sh v0.0.0-test` (output in `dist/release/`). Release with `git tag v0.2.0 && git push origin v0.2.0`.
 
-**When to release:** the conductor releases without asking whenever the backlog drains:
-after the session review, when no eligible startable issue remains and something
-user-facing was delivered since the last release tag. Bump minor for new features, patch
+**When to release:** whoever empties the backlog releases, without asking. That is the
+conductor after the session review, and equally any other agent or chat session that
+closes the last open work issue: never assume another orchestra is waiting to release.
+Release when no eligible startable issue remains and something user-facing was delivered
+since the last release tag (check `git log <latest tag>..main`). Bump minor for new features, patch
 for fixes only. Wait for the workflow, check `sha256sum -c SHA256SUMS` and that
 `releases/latest` points at the tag, then bump `<Version>` in `BoosterAI.csproj` and record
 the release in the #1 status comment. Issues still open only for a user action (e.g. a

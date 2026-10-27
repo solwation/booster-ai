@@ -14,3 +14,8 @@ When the user writes `/orkester` or `$orkester`, run the orchestra for the reque
 scope through [.claude/commands/orkester.md](.claude/commands/orkester.md) (Claude) or
 [.agents/skills/orkester/SKILL.md](.agents/skills/orkester/SKILL.md) (Codex and others).
 Reading or maintaining these files does not start an unattended queue session.
+
+**Release when you drain the backlog**, in or outside an orchestra session: if your work
+closes the last open work issue and user-facing commits exist after the latest tag, tag the
+next version yourself per [Releasing](.orchestra/project.md#releasing). No one else is
+guaranteed to be waiting to do it.
