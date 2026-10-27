@@ -232,9 +232,10 @@ public static class Launcher
     /// gnome-terminal and xfce4-terminal take every tab in ONE call (--window, then --tab groups), so all tabs share one
     /// window even when BoosterAI is not started from that terminal. Ptyxis and konsole need one call per tab, the later
     /// ones joining the window the first opened. The other terminals have no tabs: one window per tab.
+    /// <paramref name="ptyxisRunning"/> false means Ptyxis has no instance yet (a cold start), see the ptyxis case.
     /// </summary>
     public static List<TermCall> LinuxCommands(IReadOnlyList<TabConfig> tabs, string term, string? prompt,
-        IReadOnlyList<TabTrack?> tracks, int zoomPercent)
+        IReadOnlyList<TabTrack?> tracks, int zoomPercent, bool ptyxisRunning = true)
     {
         var zoom = LinuxZoomArgs(term, zoomPercent);
         // --command / -e take ONE string that the terminal splits like a shell.
@@ -251,11 +252,14 @@ public static class Launcher
                 calls.Add(new TermCall(term, a));
                 break;
             case "ptyxis":
-                // --tab joins the active window; Ptyxis has no zoom option. The first call must own the instance
-                // before any --tab starts, or a --tab that registers first opens a second window.
+                // --tab joins the active window; Ptyxis has no zoom option. Each call waits until the instance has
+                // handled the previous one (BusName), so the tabs keep their order and the first call owns the instance.
+                // A cold start first restores the saved session (restore-session, on by default) into its own window,
+                // which then becomes the active window and takes every --tab; so a cold start opens the first tab with
+                // --tab too, and all tabs join that one window (a new one when there is no saved session).
                 for (var i = 0; i < tabs.Count; i++)
-                    calls.Add(new TermCall(term, [i == 0 ? "--new-window" : "--tab", "-T", tabs[i].Name, "-x", Cmd(i)], i == 0,
-                        i == 0 ? PtyxisBusName : null));
+                    calls.Add(new TermCall(term, [i == 0 && ptyxisRunning ? "--new-window" : "--tab", "-T", tabs[i].Name, "-x", Cmd(i)],
+                        i == 0, PtyxisBusName));
                 break;
             default:
                 for (var i = 0; i < tabs.Count; i++)
@@ -281,7 +285,9 @@ public static class Launcher
         var term = preferred != "auto" ? preferred
             : LinuxTerminals.Skip(1).FirstOrDefault(OnPath)
               ?? throw new InvalidOperationException(Loc.Get("err.noTerminal"));
-        foreach (var call in LinuxCommands(tabs, term, prompt, tracks, zoomPercent))
+        // Without gdbus the state is unknown: assume a running instance, the --new-window behaviour.
+        var ptyxisRunning = term != "ptyxis" || BusNameOwned(PtyxisBusName) != false;
+        foreach (var call in LinuxCommands(tabs, term, prompt, tracks, zoomPercent, ptyxisRunning))
         {
             var psi = new ProcessStartInfo(call.Exe) { UseShellExecute = false };
             foreach (var a in call.Args) psi.ArgumentList.Add(a);

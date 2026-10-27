@@ -27,6 +27,8 @@ internal static class Program
             foreach (var term in new[] { "gnome-terminal", "ptyxis" })
                 foreach (var call in Launcher.LinuxCommands(tabs, term, null, tracks, cfg.ZoomPercent))
                     Console.WriteLine($"linux {term}: {call.Exe} " + string.Join(' ', call.Args.Select(a => a.Contains(' ') ? $"\"{a}\"" : a)));
+            if (tabs.Count > 0)
+                Console.WriteLine("linux ptyxis cold start (no instance yet): the first call uses --tab instead of --new-window");
             if (cfg.ZoomPercent > 0)
             {
                 Console.WriteLine($"zoom {cfg.ZoomPercent}%: Windows writes {Launcher.ZoomFragmentPath}:");
