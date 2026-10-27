@@ -77,12 +77,14 @@ the repository; personal tabs live only in the user's local `config.json`.
 
 ## Shared version
 
-Shared release: **v0.4.0**, commit **d317d0d8733f548d5e62cf8cb1717c495f316c91**, imported as a
-squashed subtree at `.orchestra/shared`. Update with `git subtree pull` per
-[INSTALL.md](shared/INSTALL.md); improve the core in `solwation/dirigenten-och-orkestern`,
-never in this subtree. At conductor startup check that repository's releases/tags
-against this pin (reuse a successful check for 24 hours) and propose relevant fixes as
-an issue here.
+Shared release: **v0.4.1**, commit **5e48d8370f051f5a15bbb740881dbf51187316a9**, imported as a
+squashed subtree at `.orchestra/shared`. Improve the core in
+`solwation/dirigenten-och-orkestern`, never in this subtree. At conductor startup and
+resume, check that repository's stable releases/tags against this pin (reuse a
+successful check for 24 hours). If a newer stable release exists, review its release
+notes and full diff, then always import it with the documented `git subtree pull`,
+update this pin and run applicable host checks. This is standing user authorization:
+do not ask or create a proposal issue before updating. Ignore drafts and prereleases.
 
 ## Releasing
 
