@@ -27,7 +27,7 @@ public static class Launcher
         var cli = CliCommand(tab, prompt, track, resume && CanContinue(tab));
         if (track is null) return $"{cd} && {cli} || true && exec bash";
         // bs_next runs what an in-place restart queued (see RestartScript) before the shell is left.
-        return $"{lib}{cd} && {Hook("bs_cli")} && {TrackedCommand(cli)} && {Hook("bs_done 0")} || {Hook("bs_done $?")} && {Next} && bash";
+        return $"{lib}{cd} && {Hook("bs_cli")} && {TrackedCommand(cli)} && {Hook("bs_done 0")} || {Hook("bs_done $?")} && {Next} && (type bs_shell >/dev/null 2>&1) && bs_shell || bash";
     }
 
     // In the tab's own shell, not a subshell: stopping a restarted CLI's process group must not take bs_next's loop with it.
@@ -155,6 +155,25 @@ g=${bs_fields[5]}
 [ "$g" -gt 0 ] && [ "$g" != {{pid}} ] && kill -TERM -- -$g
 """;
 
+    /// <summary>Wake only the idle child recorded by bs_shell, never a CLI that consumed the queue meanwhile.</summary>
+    internal static string WakeIdleShellScript(TabTrack track) => $$"""
+for ((i=0; i<40; i++))
+do
+  [ -f {{Quote(track.Dir + "/" + track.Id + ".next")}} ] || exit 0
+  if read -r bs_idle_pid bs_idle_start 2>/dev/null < {{Quote(track.Dir + "/" + track.Id + ".next.idle")}}
+  then
+    bs_stat=$(cat /proc/$bs_idle_pid/stat 2>/dev/null) || exit 0
+    bs_stat=${bs_stat##*) }
+    read -ra bs_fields <<< "$bs_stat"
+    [ "${bs_fields[19]}" = "$bs_idle_start" ] || exit 0
+    kill -HUP -- -$bs_idle_pid 2>/dev/null || true
+    exit 0
+  fi
+  sleep 0.05
+done
+exit 1
+""";
+
     /// <summary>Only the recorded shell and its descendants are closed, never the terminal server or another tab.</summary>
     public static string CloseTabScript(int shellPid, long startTime, bool exitCleanly = false) => $$"""
 bs_close_ids=()
@@ -202,6 +221,16 @@ bs_signal() {
 bs_signal TERM
 sleep 0.2
 bs_signal KILL
+# A completed CLI may create its idle shell after the first collection. Wake that
+# verified descendant too, so the parent's pending clean-close trap can run.
+if [ "$(bs_start {{shellPid}})" = {{startTime}} ]
+then
+  for c in $(cat /proc/{{shellPid}}/task/{{shellPid}}/children 2>/dev/null)
+  do
+    bs_collect "$c"
+  done
+  bs_signal HUP
+fi
 if [ "$(bs_start {{shellPid}})" = {{startTime}} ]
 then
   kill -HUP {{shellPid}} 2>/dev/null || true
@@ -267,7 +296,7 @@ fi
         {
             var tracks = tabs.Select(t => track?.Invoke(t)).ToList();
             if (OperatingSystem.IsWindows()) LaunchWindowsTerminal(tabs, cfg.WslDistro, prompt, tracks, window, cfg.ZoomPercent, resume);
-            else LaunchLinux(tabs, cfg.LinuxTerminal, prompt, tracks, cfg.ZoomPercent, resume);
+            else LaunchLinux(tabs, cfg.LinuxTerminal, prompt, tracks, cfg.ZoomPercent, resume, window != "new");
             return "";
         }
         catch (Exception e)
@@ -408,8 +437,8 @@ fi
     /// <summary>
     /// The terminal processes that open the tabs, in order; used by Start and --dry-run.
     /// gnome-terminal and xfce4-terminal take every tab in ONE call (--window, then --tab groups), so all tabs share one
-    /// window even when BoosterAI is not started from that terminal. Ptyxis and konsole need one call per tab, the later
-    /// ones joining the window the first opened. The other terminals have no tabs: one window per tab.
+    /// window even when BoosterAI is not started from that terminal. Ptyxis needs one call per tab, later calls joining the window the first opened.
+    /// Konsole uses isolated instances; the remaining terminals also use one window per tab.
     /// <paramref name="ptyxisRestores"/> true means these calls start Ptyxis and it restores its saved session, see the ptyxis case.
     /// </summary>
     public static List<TermCall> LinuxCommands(IReadOnlyList<TabConfig> tabs, string term, string? prompt,
@@ -451,7 +480,7 @@ fi
                     string[] shell = ["bash", "-lic", TabScript(tabs[i], prompt, tracks[i], resume)];
                     string[] args = term switch
                     {
-                        "konsole" => ["--new-tab", "-p", $"tabtitle={tabs[i].Name}", "-e", .. shell],
+                        "konsole" => ["--separate", "--new-tab", "-p", $"tabtitle={tabs[i].Name}", "-e", .. shell],
                         "kitty" => ["--title", tabs[i].Name, .. shell],
                         "wezterm" => ["start", "--", .. shell],
                         _ => ["-T", tabs[i].Name, "-e", .. shell],
@@ -463,8 +492,18 @@ fi
         return calls;
     }
 
+    /// <summary>
+    /// A closed-tab restart cannot safely target the session window with these CLIs. Explicitly
+    /// fall back to fresh windows; Ptyxis, GNOME and Xfce group this batch in one fresh window.
+    /// Konsole uses separate instances because --new-tab otherwise targets an unrelated instance.
+    /// </summary>
+    public static List<TermCall> LinuxRestartCommands(IReadOnlyList<TabConfig> tabs, string term, string? prompt,
+        IReadOnlyList<TabTrack?> tracks, int zoomPercent, bool resume = false) =>
+        // Restored Ptyxis windows are not verified session targets either: always request a fresh one.
+        LinuxCommands(tabs, term, prompt, tracks, zoomPercent, ptyxisRestores: false, resume: resume);
+
     private static void LaunchLinux(IReadOnlyList<TabConfig> tabs, string preferred, string? prompt,
-        IReadOnlyList<TabTrack?> tracks, int zoomPercent, bool resume)
+        IReadOnlyList<TabTrack?> tracks, int zoomPercent, bool resume, bool joinExisting)
     {
         var term = preferred != "auto" ? preferred
             : LinuxTerminals.Skip(1).FirstOrDefault(OnPath)
@@ -472,7 +511,10 @@ fi
         // Without gdbus the state is unknown: assume a running instance, the --new-window behaviour.
         var coldPtyxis = term == "ptyxis" && BusNameOwned(PtyxisBusName) == false;
         using var restore = coldPtyxis ? SuppressPtyxisRestore() : null;
-        foreach (var call in LinuxCommands(tabs, term, prompt, tracks, zoomPercent, coldPtyxis && restore is null, resume))
+        var calls = joinExisting
+            ? LinuxRestartCommands(tabs, term, prompt, tracks, zoomPercent, resume)
+            : LinuxCommands(tabs, term, prompt, tracks, zoomPercent, coldPtyxis && restore is null, resume);
+        foreach (var call in calls)
         {
             var psi = new ProcessStartInfo(call.Exe) { UseShellExecute = false };
             foreach (var a in call.Args) psi.ArgumentList.Add(a);

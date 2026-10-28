@@ -712,15 +712,71 @@ public sealed partial class MainViewModel : Observable
         }
     }
 
-    /// <summary>Opens the tab again with the choices it was started with, in the session's window.</summary>
+    /// <summary>Reuses an exited CLI's verified shell, otherwise opens the original choices again.</summary>
     public void Restart(TabViewModel tab, bool resume = false)
     {
         if (IsClosingAll || tab.LaunchedAs is not { } launched || (resume && !tab.CanContinueClosed)) return;
-        var cfg = new AppConfig { WslDistro = _cfg.WslDistro, LinuxTerminal = _cfg.LinuxTerminal, ZoomPercent = _cfg.ZoomPercent, Tabs = [launched] };
-        var error = Start(cfg, [(tab, launched)], _session?.WindowName, resume);
+        if (RestartExited(tab, launched, resume)) return;
+        RestartClosed([(tab, launched)], resume);
+    }
+
+    internal static bool CanRestartExited(TabLog? log, Func<int, long?>? live) =>
+        log is { CanRestartExited: true, CliExit: not null } && live is not null && TabSession.IsAlive(log, live);
+
+    // Returns true when handled, including validation/queue errors: never open a duplicate after an error.
+    private bool RestartExited(TabViewModel tab, TabConfig launched, bool resume)
+    {
+        if (tab.Session is not { } session || tab.Track is not { } track) return false;
+        TabLog? log;
+        try { log = session.ReadLog(track.Id); }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            ShowStatus(Loc.Format("err.launch", e.Message), error: true);
+            return true;
+        }
+        if (!CanRestartExited(log, TabSession.Liveness(_cfg.WslDistro))) return false;
+        DismissRecoveredStatus();
+        var error = Launcher.Validate([launched]);
+        try
+        {
+            if (error == "")
+            {
+                session.QueueNext(track.Id, Launcher.RestartScript(launched, track, resume));
+                var distro = _cfg.WslDistro;
+                // The idle child may still be starting after cli-exit. Its own PID/start time
+                // prevents a delayed wake from interrupting the newly restarted CLI.
+                var wake = Launcher.WakeIdleShellScript(track);
+                Task.Run(() =>
+                {
+                    try { Launcher.RunTabControl(wake, distro); }
+                    catch (Exception e) when (e is IOException or System.ComponentModel.Win32Exception)
+                    {
+                        Dispatcher.UIThread.Post(() => ShowStatus(Loc.Format("err.launch", e.Message), error: true));
+                    }
+                });
+                tab.PendingRestart = false;
+            }
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.ComponentModel.Win32Exception)
+        {
+            error = Loc.Format("err.launch", e.Message);
+        }
         ShowStatus(error != "" ? error : resume
             ? Loc.Format("status.restartedResume", tab.Name.Trim(), launched.Llm,
                 launched.Model == Catalog.StandardModel ? Loc.Get("restart.standardModel") : launched.Model)
+            : "", error: error != "");
+        return true;
+    }
+
+    private void RestartClosed(IReadOnlyList<(TabViewModel Row, TabConfig Tab)> rows, bool resume = false)
+    {
+        if (rows.Count == 0) return;
+        var cfg = new AppConfig { WslDistro = _cfg.WslDistro, LinuxTerminal = _cfg.LinuxTerminal, ZoomPercent = _cfg.ZoomPercent, Tabs = rows.Select(r => r.Tab).ToList() };
+        var error = Start(cfg, rows, _session?.WindowName, resume);
+        var first = rows[0];
+        ShowStatus(error != "" ? error : resume
+            ? Loc.Format("status.restartedResume", first.Row.Name.Trim(), first.Tab.Llm,
+                first.Tab.Model == Catalog.StandardModel ? Loc.Get("restart.standardModel") : first.Tab.Model)
             : "", error: error != "");
     }
 
@@ -930,7 +986,10 @@ public sealed partial class MainViewModel : Observable
             File.WriteAllText(path, AgyPermissions.AddRules(current, programs));
             Denial.Hide();
             ShowStatus(Loc.Format("status.rulesAdded", string.Join(", ", programs)), error: false);
-            foreach (var (row, _) in rows) Restart(row);
+            var closed = new List<(TabViewModel Row, TabConfig Tab)>();
+            foreach (var (row, _) in rows)
+                if (row.LaunchedAs is { } launched && !RestartExited(row, launched, resume: false)) closed.Add((row, launched));
+            RestartClosed(closed);
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.Text.Json.JsonException)
         {

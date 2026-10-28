@@ -27,13 +27,13 @@ public enum Activity { Unknown, Busy, Idle, Watching }
 /// restart logs a new cli-start, which starts the CLI's part of the log over.
 /// </summary>
 public sealed record TabLog(int? Pid, long? StartTime, bool CliStarted, int? CliExit, bool Exited, IReadOnlyList<string>? Denied = null,
-    Activity Activity = Activity.Unknown, long? WatchingSince = null, string? CloseSaveToken = null, bool CanCloseCleanly = false)
+    Activity Activity = Activity.Unknown, long? WatchingSince = null, string? CloseSaveToken = null, bool CanCloseCleanly = false, bool CanRestartExited = false)
 {
     public static TabLog Parse(string text)
     {
         int? pid = null, rc = null;
         long? start = null, watching = null;
-        bool cliStarted = false, exited = false, canClose = false;
+        bool cliStarted = false, exited = false, canClose = false, canRestart = false;
         List<string>? denied = null;
         var activity = Activity.Unknown;
         string? closeToken = null;
@@ -52,6 +52,7 @@ public sealed record TabLog(int? Pid, long? StartTime, bool CliStarted, int? Cli
                     break;
                 case "cli-start": closeToken = null; cliStarted = true; rc = null; denied = null; activity = Activity.Unknown; watching = null; break;
                 case "close-ready": canClose = true; break;
+                case "restart-ready": canRestart = true; break;
                 case "close-save": closeToken = values.GetValueOrDefault("token"); break;
                 case "turn-done": watching = at; break;
                 case "turn-start": watching = null; break;
@@ -62,7 +63,7 @@ public sealed record TabLog(int? Pid, long? StartTime, bool CliStarted, int? Cli
                 case "denied": (denied ??= []).Add(Decode(values.GetValueOrDefault("cmd"))); break;
             }
         }
-        return new TabLog(pid, start, cliStarted, rc, exited, denied, activity, watching, closeToken, canClose);
+        return new TabLog(pid, start, cliStarted, rc, exited, denied, activity, watching, closeToken, canClose, canRestart);
     }
 
     private static string Decode(string? base64)
@@ -196,6 +197,18 @@ bs_next() {
   local c
   while [ -f "$bs_next_f" ]; do c=$(cat "$bs_next_f") && rm -f "$bs_next_f" && eval "$c"; done
   return 0; }
+# Keep the parent chain available after the CLI exits. Restart wakes the idle child shell,
+# then this loop consumes its queued command in the original tracked shell.
+bs_shell() {
+  bs_ev restart-ready
+  while true; do
+    rm -f "$bs_next_f.idle"
+    bs_next
+    BS_IDLE_FILE="$bs_next_f.idle" bash --rcfile <(printf '%s\n' '[ ! -f ~/.bashrc ] || . ~/.bashrc' 'printf "%s %s\n" "$$" "$(cut -d" " -f22 /proc/$$/stat)" > "$BS_IDLE_FILE"')
+    rm -f "$bs_next_f.idle"
+    [ -f "$bs_next_f" ] || break
+  done
+}
 # bs_stream <cli> <args>: run a CLI that emits stream-json (claude, agy), show it as readable
 # progress, and return the CLI's own exit code (not the formatter's). The CLI is an argument
 # here, so bash does not expand the user's alias for it (agy='agy --dangerously-skip-permissions'):
@@ -401,7 +414,7 @@ for line in sys.stdin:
         return found;
     }
 
-    private static bool IsAlive(TabLog log, Func<int, long?> live) =>
+    internal static bool IsAlive(TabLog log, Func<int, long?> live) =>
         log is { Pid: { } pid, Exited: false, StartTime: { } start } && live(pid) == start;
 
     public static string DefaultRoot => Path.Combine(

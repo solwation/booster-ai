@@ -103,7 +103,7 @@ public class LauncherTests
             Assert.Contains("(bs_cli 2>/dev/null || true)", script);
             Assert.Contains("(bs_done 0 2>/dev/null || true)", script);
             Assert.Contains("(bs_done $? 2>/dev/null || true)", script);
-            Assert.EndsWith(" && bash", script);
+            Assert.EndsWith(" && bs_shell || bash", script);
         }
     }
 
@@ -404,6 +404,26 @@ public class LinuxCommandsTests
     private const string A = "bash -lic 'cd ~/'\\''alfa'\\'' || true && exec bash'";
     private const string B = "bash -lic 'cd ~/'\\''beta'\\'' || true && exec bash'";
     private const string G = "bash -lic 'cd '\\''/srv/gamma'\\'' || true && exec bash'";
+
+    [Theory]
+    [InlineData("ptyxis")]
+    [InlineData("gnome-terminal")]
+    [InlineData("xfce4-terminal")]
+    [InlineData("konsole")]
+    [InlineData("kitty")]
+    [InlineData("wezterm")]
+    [InlineData("x-terminal-emulator")]
+    [InlineData("xterm")]
+    public void JoinExistingFallsBackWithoutAnIdentifiedSessionWindow(string terminal)
+    {
+        var fresh = Launcher.LinuxCommands(Tabs, terminal, null, NoTracks, 0);
+        var restart = Launcher.LinuxRestartCommands(Tabs, terminal, null, NoTracks, 0);
+        Assert.Equal(fresh.Count, restart.Count);
+        for (var i = 0; i < fresh.Count; i++) Assert.Equal(fresh[i].Args, restart[i].Args);
+        if (terminal == "ptyxis") Assert.Contains("--new-window", restart[0].Args);
+        if (terminal is "gnome-terminal" or "xfce4-terminal") Assert.Equal("--window", restart[0].Args[0]);
+        if (terminal == "konsole") Assert.All(restart, c => Assert.Contains("--separate", c.Args));
+    }
 
     [Fact]
     public void GnomeTerminalIsOneCallWithOneWindowAndThreeTabs()

@@ -27,6 +27,9 @@ internal static class Program
             foreach (var term in new[] { "gnome-terminal", "ptyxis" })
                 foreach (var call in Launcher.LinuxCommands(tabs, term, null, tracks, cfg.ZoomPercent))
                     Console.WriteLine($"linux {term}: {call.Exe} " + string.Join(' ', call.Args.Select(a => a.Contains(' ') ? $"\"{a}\"" : a)));
+            foreach (var term in Launcher.LinuxTerminals.Skip(1))
+                foreach (var call in Launcher.LinuxRestartCommands(tabs, term, null, tracks, cfg.ZoomPercent))
+                    Console.WriteLine($"linux restart {term} (safe new-window fallback): {call.Exe} " + string.Join(' ', call.Args.Select(a => a.Contains(' ') ? $"\"{a}\"" : a)));
             if (tabs.Count > 0)
                 Console.WriteLine("linux ptyxis cold start (no instance yet): restore-session is off until the tabs are open; if it cannot be, the first call uses --tab instead of --tab-with-profile=default --new-window");
             Console.WriteLine($"Windows profile (zoom {cfg.ZoomPercent}%): {Launcher.ZoomFragmentPath}:");

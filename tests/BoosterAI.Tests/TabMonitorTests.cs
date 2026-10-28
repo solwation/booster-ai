@@ -175,7 +175,7 @@ public class TrackedScriptTests
         Assert.Contains("claude --model", script);
         Assert.Contains("/orkester", script);
         Assert.Contains("(bs_done 0 2>/dev/null || true) || (bs_done $? 2>/dev/null || true)", script);
-        Assert.EndsWith("&& bash", script);
+        Assert.EndsWith("&& bs_shell || bash", script);
     }
 
     [Fact]
@@ -764,5 +764,109 @@ public class FindRunningTabsTests
         Assert.Equal(0, vm.ToStartCount);
         Assert.False(vm.CanLaunch);
         Assert.Equal(Loc.Get("launch.allRunning"), vm.LaunchLabel);
+    }
+}
+
+public class ExitedRestartTests
+{
+    [Fact]
+    public void RequiresCapabilityAndMatchingLiveIdentity()
+    {
+        var log = new TabLog(42, 123, true, 0, false, CanRestartExited: true);
+        Assert.True(MainViewModel.CanRestartExited(log, _ => 123));
+        Assert.False(MainViewModel.CanRestartExited(log, _ => 124));
+        Assert.False(MainViewModel.CanRestartExited(log, _ => null));
+        Assert.False(MainViewModel.CanRestartExited(log, null));
+        Assert.False(MainViewModel.CanRestartExited(log with { Exited = true }, _ => 123));
+        Assert.False(MainViewModel.CanRestartExited(log with { CanRestartExited = false }, _ => 123));
+        Assert.False(MainViewModel.CanRestartExited(log with { CliExit = null }, _ => 123));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void MissingOrLegacyLibraryStillLeavesInteractiveShell(bool legacy)
+    {
+        if (!OperatingSystem.IsLinux() || !File.Exists("/usr/bin/script")) return;
+        var root = Directory.CreateTempSubdirectory("booster-legacy-shell").FullName;
+        var lib = Path.Combine(root, "tab-lib.sh");
+        if (legacy) File.WriteAllText(lib, TabSession.Lib.Replace("bs_shell()", "bs_legacy_shell()"));
+        var tab = new TabConfig { Llm = "codex", Directory = root };
+        var body = "codex() { touch cli-ran; }\nexport -f codex\n" + Launcher.TabScript(tab, track: new TabTrack(lib, root, "tab1"));
+        Assert.DoesNotContain(';', Launcher.TabScript(tab, track: new TabTrack(lib, root, "tab1")));
+        var psi = new System.Diagnostics.ProcessStartInfo("script") { RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true };
+        psi.ArgumentList.Add("-qefc");
+        psi.ArgumentList.Add("bash --noprofile --norc -ic '" + body.Replace("'", "'\\''") + "'");
+        psi.ArgumentList.Add("/dev/null");
+        using var process = System.Diagnostics.Process.Start(psi)!;
+        try
+        {
+            if (legacy) Assert.True(SpinWait.SpinUntil(() => File.Exists(Path.Combine(root, "tab1.log"))
+                && TabLog.Parse(File.ReadAllText(Path.Combine(root, "tab1.log"))).CliExit == 0, 5000));
+            process.StandardInput.WriteLine("touch shell-ran && exit");
+            process.StandardInput.Flush();
+            Assert.True(SpinWait.SpinUntil(() => File.Exists(Path.Combine(root, "shell-ran")), 5000));
+            Assert.True(process.WaitForExit(5000));
+            if (legacy) Assert.True(File.Exists(Path.Combine(root, "cli-ran")));
+        }
+        finally
+        {
+            if (!process.HasExited) process.Kill(entireProcessTree: true);
+            Directory.Delete(root, true);
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void RealPtyRestartsExitedCliInOriginalShellAndCanStillClose(bool resume)
+    {
+        if (!OperatingSystem.IsLinux() || !File.Exists("/usr/bin/script")) return;
+        var root = Directory.CreateTempSubdirectory("booster-restart-pty").FullName;
+        var session = new TabSession(root, DateTime.UtcNow);
+        var track = session.NewTrack()!;
+        var tab = new TabConfig { Llm = "codex", Directory = session.Directory };
+        var body = "codex() { printf '%s\\n' \"$*\" >> cli-args; }\nexport -f codex\n" + Launcher.TabScript(tab, track: track);
+        var psi = new System.Diagnostics.ProcessStartInfo("script") { RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true };
+        psi.ArgumentList.Add("-qefc");
+        psi.ArgumentList.Add("bash --noprofile --norc -ic '" + body.Replace("'", "'\\''") + "'");
+        psi.ArgumentList.Add("/dev/null");
+        using var process = System.Diagnostics.Process.Start(psi)!;
+        try
+        {
+            Assert.True(SpinWait.SpinUntil(() => session.ReadLog(track.Id) is { CliExit: 0, CanRestartExited: true }, 5000));
+            var original = session.ReadLog(track.Id)!;
+            var vm = new MainViewModel(new AppConfig { Tabs = [tab] });
+            var row = vm.Tabs[0];
+            row.LaunchedAs = tab;
+            row.Track = track;
+            row.Session = session;
+            row.SetState(TabState.CliExited, 0);
+            row.Llm = "agy"; // Edited selections must not replace the original launched choices.
+            for (var i = 0; i < 2; i++)
+            {
+                vm.Restart(row, resume);
+                Assert.Same(track, row.Track);
+                Assert.Same(session, row.Session);
+                Assert.Same(tab, row.LaunchedAs);
+                Assert.True(SpinWait.SpinUntil(() => File.ReadAllLines(Path.Combine(session.Directory, "cli-args")).Length == i + 2
+                    && session.ReadLog(track.Id)?.CliExit == 0, 5000), File.ReadAllText(Path.Combine(session.Directory, track.Id + ".log")));
+                var log = session.ReadLog(track.Id)!;
+                Assert.Equal(original.Pid, log.Pid);
+                Assert.Equal(original.StartTime, log.StartTime);
+                Assert.False(log.Exited);
+            }
+            var args = File.ReadAllLines(Path.Combine(session.Directory, "cli-args"));
+            Assert.Equal(resume ? "resume --last" : "", args[1]);
+            Assert.Equal(3, File.ReadAllLines(Path.Combine(session.Directory, track.Id + ".log")).Count(l => l.Contains(" cli-start")));
+            Launcher.RunTabControl(Launcher.CloseTabScript(original.Pid!.Value, original.StartTime!.Value, exitCleanly: true), "Ubuntu");
+            Assert.True(process.WaitForExit(5000));
+            Assert.Equal(0, process.ExitCode);
+        }
+        finally
+        {
+            if (!process.HasExited) process.Kill(entireProcessTree: true);
+            Directory.Delete(root, true);
+        }
     }
 }
