@@ -19,15 +19,19 @@ public static class Launcher
     public static string TabScript(TabConfig tab, string? prompt = null, TabTrack? track = null, bool resume = false)
     {
         var cd = Cd(tab);
-        var lib = track is null ? "" : $". {Quote(track.Lib)} {Quote(track.Dir)} {Quote(track.Id)} 2>/dev/null || true && ";
-        var shell = track is null ? "exec bash" : "bash";
-        if (tab.Llm == Catalog.ShellOnly)
-            return track is null ? $"{cd} || true && {shell}"
-                : $"{lib}{cd} || true && {Hook("bs_cli")} && bs_run {Quote("bash")}";
+        if (track is null)
+        {
+            if (tab.Llm == Catalog.ShellOnly) return $"{cd} || true && exec bash";
+            return $"{cd} && {CliCommand(tab, prompt, null, resume && CanContinue(tab))} || true && exec bash";
+        }
         var cli = CliCommand(tab, prompt, track, resume && CanContinue(tab));
-        if (track is null) return $"{cd} && {cli} || true && exec bash";
-        // bs_next runs what an in-place restart queued (see RestartScript) before the shell is left.
-        return $"{lib}{cd} && {Hook("bs_cli")} && {TrackedCommand(cli)} && {Hook("bs_done 0")} || {Hook("bs_done $?")} && {Next} && (type bs_shell >/dev/null 2>&1) && bs_shell || bash";
+        var tracked = tab.Llm == Catalog.ShellOnly
+            ? $"{cd} || true && {Hook("bs_cli")} && bs_run {Quote("bash")}"
+            : $"{cd} && {Hook("bs_cli")} && {TrackedCommand(cli)} && {Hook("bs_done 0")} || {Hook("bs_done $?")} && {Next} && (type bs_shell >/dev/null 2>&1) && bs_shell || bash";
+        // Select before executing: an unsuccessful CLI or a shell's exit code must never run the
+        // fallback a second time. Both bodies are shell-quoted literals; eval keeps the tracked PID.
+        var plain = TabScript(tab, prompt, resume: resume);
+        return $"bs_command={Quote(plain)} && . {Quote(track.Lib)} {Quote(track.Dir)} {Quote(track.Id)} 2>/dev/null && bs_command={Quote(tracked)} || true && eval \"$bs_command\"";
     }
 
     // In the tab's own shell, not a subshell: stopping a restarted CLI's process group must not take bs_next's loop with it.

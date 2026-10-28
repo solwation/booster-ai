@@ -175,14 +175,14 @@ public class TrackedScriptTests
         Assert.Contains("claude --model", script);
         Assert.Contains("/orkester", script);
         Assert.Contains("(bs_done 0 2>/dev/null || true) || (bs_done $? 2>/dev/null || true)", script);
-        Assert.EndsWith("&& bs_shell || bash", script);
+        Assert.Contains("&& bs_shell || bash", script);
     }
 
     [Fact]
     public void ShellOnlyTabIsTrackedToo()
     {
         var script = Launcher.TabScript(new TabConfig { Llm = Catalog.ShellOnly }, null, Track);
-        Assert.Contains("cd ~ || true && (bs_cli 2>/dev/null || true) && bs_run 'bash'", script);
+        Assert.Contains("cd ~ || true && (bs_cli 2>/dev/null || true) && bs_run 'bash'".Replace("'", "'\\''"), script);
     }
 
     [Fact]
@@ -807,7 +807,7 @@ public class ExitedRestartTests
             process.StandardInput.Flush();
             Assert.True(SpinWait.SpinUntil(() => File.Exists(Path.Combine(root, "shell-ran")), 5000));
             Assert.True(process.WaitForExit(5000));
-            if (legacy) Assert.True(File.Exists(Path.Combine(root, "cli-ran")));
+            Assert.True(File.Exists(Path.Combine(root, "cli-ran")));
         }
         finally
         {

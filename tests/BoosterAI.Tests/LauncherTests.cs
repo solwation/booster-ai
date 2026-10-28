@@ -103,7 +103,7 @@ public class LauncherTests
             Assert.Contains("(bs_cli 2>/dev/null || true)", script);
             Assert.Contains("(bs_done 0 2>/dev/null || true)", script);
             Assert.Contains("(bs_done $? 2>/dev/null || true)", script);
-            Assert.EndsWith(" && bs_shell || bash", script);
+            Assert.Contains(" && bs_shell || bash", script);
         }
     }
 
@@ -114,7 +114,7 @@ public class LauncherTests
     public void OneShotWithTrackingShowsLiveProgress(string llm, string expected)
     {
         var script = Launcher.TabScript(Once(llm), null, new TabTrack("/s/lib.sh", "/s", "tab1"));
-        Assert.Contains(expected, script);
+        Assert.Contains(expected.Replace("'", "'\\''"), script);
         Assert.DoesNotContain(';', script);
     }
 
@@ -198,7 +198,7 @@ public class LauncherTests
                 var tab = new TabConfig { Directory = directory, Llm = llm, Model = "model's name", Orkester = true };
                 var restart = Launcher.RestartScript(tab, track, resume);
                 Assert.StartsWith(expectedCd + (llm == Catalog.ShellOnly ? " || true" : " && "), restart);
-                Assert.Contains(expectedCd, Launcher.WindowsTerminalArgs([tab], "Ubuntu", tracks: [track], resume: resume)
+                Assert.Contains(expectedCd.Replace("'", "'\\''"), Launcher.WindowsTerminalArgs([tab], "Ubuntu", tracks: [track], resume: resume)
                     .Single(arg => arg.Contains("bs_cli")));
                 Assert.DoesNotContain(';', restart);
                 if (resume && llm != Catalog.ShellOnly)
