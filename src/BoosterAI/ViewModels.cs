@@ -305,6 +305,7 @@ public sealed class TabViewModel : Observable
         foreach (var n in new[] { nameof(HasStatus), nameof(IsRunning), nameof(IsAlive), nameof(Activity), nameof(StatusText), nameof(StatusTip), nameof(StatusBrush),
             nameof(ShowsOutput), nameof(HasOutput), nameof(OutputNote), nameof(HasOutputNote) }) Raise(n);
         RaiseRestart();
+        if (stateChanged) _owner.RecoveredTabChanged(this);
         return stateChanged;
     }
 
@@ -344,7 +345,37 @@ public sealed class MainViewModel : Observable
     public string Status { get => _status; private set => Set(ref _status, value); }
     public bool StatusIsError { get => _statusIsError; private set => Set(ref _statusIsError, value); }
 
-    public void ShowStatus(string text, bool error) { Status = text; StatusIsError = error; }
+    // Every status publication invalidates pending recovery notices, even when its text is unchanged.
+    internal long StatusRevision { get; private set; }
+    private HashSet<TabViewModel>? _recoveredStatusRows;
+
+    public void ShowStatus(string text, bool error)
+    {
+        StatusRevision++;
+        _recoveredStatusRows = null;
+        Status = text;
+        StatusIsError = error;
+    }
+
+    /// <summary>A startup notice only: a newer status or the first recovered tab's state change retires it.</summary>
+    internal void ShowRecoveredStatus(IEnumerable<TabViewModel> rows, long expectedRevision)
+    {
+        if (StatusRevision != expectedRevision) return;
+        var running = rows.Where(row => row.IsAlive).ToHashSet();
+        if (running.Count == 0) return;
+        ShowStatus(Loc.Format(running.Count == 1 ? "status.foundRunning.one" : "status.foundRunning.many", running.Count), error: false);
+        _recoveredStatusRows = running;
+    }
+
+    internal void RecoveredTabChanged(TabViewModel row)
+    {
+        if (_recoveredStatusRows?.Contains(row) == true) DismissRecoveredStatus();
+    }
+
+    private void DismissRecoveredStatus()
+    {
+        if (_recoveredStatusRows is not null) ShowStatus("", error: false);
+    }
 
     public string WslDistro
     {
@@ -645,6 +676,7 @@ public sealed class MainViewModel : Observable
     /// </summary>
     public void RestartChanged(TabViewModel tab)
     {
+        DismissRecoveredStatus();
         tab.PendingRestart = false;
         if (!tab.IsChanged || tab.LaunchedAs is not { } launched) return;
         var next = tab.ToConfig(forLaunch: true);
@@ -689,6 +721,7 @@ public sealed class MainViewModel : Observable
     /// <summary>Launches with a status log per tab (one session per window) and starts watching.</summary>
     private string Start(AppConfig cfg, IReadOnlyList<(TabViewModel Row, TabConfig Tab)> rows, string? window, bool resume = false)
     {
+        DismissRecoveredStatus();
         try { _session ??= new TabSession(TabSession.DefaultRoot, DateTime.Now, TabSession.Liveness(_cfg.WslDistro)); }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException) { _session = null; }
         var tracks = rows.ToDictionary(r => r.Tab, r => _session?.NewTrack());
@@ -728,12 +761,13 @@ public sealed class MainViewModel : Observable
     /// </summary>
     public void FindRunningTabs()
     {
+        var statusRevision = StatusRevision;
         var distro = _cfg.WslDistro;
         Task.Run(() => TabSession.FindRunning(TabSession.DefaultRoot, TabSession.Liveness(distro))).ContinueWith(t =>
         {
             if (!t.IsCompletedSuccessfully || t.Result.Count == 0) return;
             var sessions = new Dictionary<string, TabSession>();
-            var joined = 0;
+            var joined = new List<TabViewModel>();
             foreach (var found in t.Result)
             {
                 if (Match(found.Tab) is not { } row) continue;
@@ -751,14 +785,14 @@ public sealed class MainViewModel : Observable
                     row.RaiseRestartTip();
                     row.SetState(TabStatus.Evaluate(found.Log, TabStatus.StartTimeout, null), found.Log.CliExit, null,
                         session.ReadActivity(found.Id, found.Log, DateTime.UtcNow), found.Log.WatchingSince);
-                    joined++;
+                    joined.Add(row);
                 }
                 catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }
             }
-            if (joined == 0) return;
+            if (joined.Count == 0) return;
             StartPolling();
             TabsChanged();
-            ShowStatus(Loc.Format(joined == 1 ? "status.foundRunning.one" : "status.foundRunning.many", joined), error: false);
+            ShowRecoveredStatus(joined, statusRevision);
         }, TaskScheduler.FromCurrentSynchronizationContext());
     }
 
