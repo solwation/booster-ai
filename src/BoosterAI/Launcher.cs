@@ -311,12 +311,18 @@ public static class Launcher
             case "ptyxis":
                 // --tab joins the active window; Ptyxis has no zoom option. Each call waits until the instance has
                 // handled the previous one (BusName), so the tabs keep their order and the first call owns the instance.
+                // A new window uses --tab-with-profile=default together with --new-window; without a profile option,
+                // Ptyxis enters single-terminal mode, which hides the tab bar and makes every later --tab invisible.
                 // A cold start normally restores the saved session (restore-session) first; LaunchLinux turns that off
                 // for the start (see SuppressPtyxisRestore). When it cannot, the restored windows take the active window
                 // from the new one, so the first tab also uses --tab: the tabs then at least join a restored window.
                 for (var i = 0; i < tabs.Count; i++)
-                    calls.Add(new TermCall(term, [i == 0 && !ptyxisRestores ? "--new-window" : "--tab", "-T", tabs[i].Name, "-x", Cmd(i)],
-                        i == 0, PtyxisBusName));
+                {
+                    List<string> args = i == 0 && !ptyxisRestores
+                        ? ["--tab-with-profile=default", "--new-window", "-T", tabs[i].Name, "-x", Cmd(i)]
+                        : ["--tab", "-T", tabs[i].Name, "-x", Cmd(i)];
+                    calls.Add(new TermCall(term, args, i == 0, PtyxisBusName));
+                }
                 break;
             default:
                 for (var i = 0; i < tabs.Count; i++)
@@ -350,10 +356,16 @@ public static class Launcher
             var psi = new ProcessStartInfo(call.Exe) { UseShellExecute = false };
             foreach (var a in call.Args) psi.ArgumentList.Add(a);
             var ownedBefore = call.BusName is not null && BusNameOwned(call.BusName) == true;
-            using var proc = Process.Start(psi);
-            if (call.BusName is not null && proc is not null && OnPath("gdbus"))
-                WaitForInstance(() => proc.HasExited, () => BusNameOwned(call.BusName) == true, ownedBefore,
+            using var proc = Process.Start(psi)
+                ?? throw new InvalidOperationException(Loc.Format("err.processFailed", call.Exe));
+            if (call.BusName is not null && OnPath("gdbus"))
+            {
+                var ready = WaitForInstance(() => proc.HasExited, () => BusNameOwned(call.BusName) == true, ownedBefore,
                     TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(100));
+                if (!ready) throw new InvalidOperationException(Loc.Format("err.terminalTimeout", call.Exe));
+                if (proc.HasExited && proc.ExitCode != 0)
+                    throw new InvalidOperationException(Loc.Format("err.tabFailed", call.Exe, proc.ExitCode));
+            }
             else if (call.SettleAfter) Thread.Sleep(600);
         }
         // The new instance reads the setting while it handles the first call; a single call is not waited for that long.

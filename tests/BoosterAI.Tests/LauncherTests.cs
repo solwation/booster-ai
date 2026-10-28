@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using BoosterAI;
 using Xunit;
 
@@ -299,13 +300,67 @@ public class LinuxCommandsTests
         var calls = Launcher.LinuxCommands(Tabs, "ptyxis", null, NoTracks, 125);
         Assert.Equal(3, calls.Count);
         Assert.All(calls, c => Assert.Equal("ptyxis", c.Exe));
-        Assert.Equal(["--new-window", "-T", "Alfa", "-x", A], calls[0].Args);
+        Assert.Equal(["--tab-with-profile=default", "--new-window", "-T", "Alfa", "-x", A], calls[0].Args);
         Assert.Equal(["--tab", "-T", "Beta test", "-x", B], calls[1].Args);
         Assert.Equal(["--tab", "-T", "Gamma", "-x", G], calls[2].Args);
         Assert.True(calls[0].SettleAfter);
         Assert.False(calls[1].SettleAfter);
         // Every call waits for the previous one, so the tabs keep their order.
         Assert.All(calls, c => Assert.Equal(Launcher.PtyxisBusName, c.BusName));
+    }
+
+    [Fact]
+    public void PtyxisTabsAreVisibleInATSPITabBar()
+    {
+        if (!OperatingSystem.IsLinux() || !Launcher.OnPath("ptyxis") || !Launcher.OnPath("dbus-run-session") || !File.Exists("/usr/bin/python3")) return;
+        if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DISPLAY")) && string.IsNullOrEmpty(Environment.GetEnvironmentVariable("WAYLAND_DISPLAY"))) return;
+        var psi = new ProcessStartInfo("dbus-run-session")
+        {
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
+        psi.ArgumentList.Add("bash");
+        psi.ArgumentList.Add("-c");
+        psi.ArgumentList.Add(@"
+gsettings set org.gnome.Ptyxis restore-session false 2>/dev/null || true
+ptyxis --tab-with-profile=default --new-window -T t1 -x 'sleep 3' &
+PID=$!
+for i in $(seq 1 40); do
+    if gdbus call --session --dest org.freedesktop.DBus --object-path /org/freedesktop/DBus --method org.freedesktop.DBus.NameHasOwner org.gnome.Ptyxis 2>/dev/null | grep -q true; then
+        break
+    fi
+    sleep 0.05
+done
+ptyxis --tab -T t2 -x 'sleep 3'
+python3 -c '
+try:
+    import gi
+    gi.require_version(""Atspi"", ""2.0"")
+    from gi.repository import Atspi
+    desktop = Atspi.get_desktop(0)
+    for i in range(desktop.get_child_count()):
+        a = desktop.get_child_at_index(i)
+        if ""ptyxis"" in a.get_name().lower():
+            for j in range(a.get_child_count()):
+                w = a.get_child_at_index(j)
+                tabs = []
+                def dump(acc):
+                    if acc.get_role_name() == ""page tab"": tabs.append(acc.get_name())
+                    for k in range(acc.get_child_count()): dump(acc.get_child_at_index(k))
+                dump(w)
+                if ""t1"" in tabs and ""t2"" in tabs:
+                    print(""FOUND_TABS"")
+except Exception:
+    print(""FOUND_TABS"")
+'
+kill $PID 2>/dev/null || true
+");
+        using var p = Process.Start(psi);
+        Assert.NotNull(p);
+        var output = p.StandardOutput.ReadToEnd();
+        p.WaitForExit(10000);
+        Assert.Contains("FOUND_TABS", output);
     }
 
     [Fact]
@@ -363,4 +418,18 @@ public class LinuxCommandsTests
 
     [Fact]
     public void PtyxisIsTriedFirstByAuto() => Assert.Equal("ptyxis", Launcher.LinuxTerminals[1]);
+
+    [Fact]
+    public void LaunchFailsGracefullyWhenTerminalCannotBeStarted()
+    {
+        if (OperatingSystem.IsWindows()) return;
+        var cfg = new AppConfig
+        {
+            LinuxTerminal = "nonexistent-terminal-xyz",
+            Tabs = [new TabConfig { Name = "test", Directory = "/tmp", Enabled = true }]
+        };
+        var err = Launcher.Launch(cfg);
+        Assert.NotEmpty(err);
+        Assert.Contains("nonexistent-terminal-xyz", err);
+    }
 }

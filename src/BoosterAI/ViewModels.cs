@@ -592,7 +592,11 @@ public sealed class MainViewModel : Observable
         catch (Exception e) when (e is IOException or UnauthorizedAccessException) { _session = null; }
         var tracks = rows.ToDictionary(r => r.Tab, r => _session?.NewTrack());
         var error = Launcher.Launch(cfg, track: t => tracks.GetValueOrDefault(t), window: window ?? _session?.WindowName ?? "new");
-        if (error != "") return error;
+        if (error != "")
+        {
+            if (_cfg.Notifications) Notifier.Show("BoosterAI", error);
+            return error;
+        }
         foreach (var (row, tab) in rows)
         {
             if (tracks[tab] is not { } track) continue;
@@ -790,6 +794,7 @@ public sealed class MainViewModel : Observable
         var error = Launcher.Launch(cfg, Launcher.InstallOrkesterPrompt);
         // The files appear once the agent has worked; reopening BoosterAI or editing the path rechecks.
         ShowStatus(error != "" ? error : Loc.Format("status.installRunning", tab.Name.Trim()), error: error != "");
+        if (error != "" && _cfg.Notifications) Notifier.Show("BoosterAI", error);
     }
 }
 
