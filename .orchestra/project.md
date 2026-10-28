@@ -48,6 +48,13 @@ New issues carry acceptance criteria and a one-line priority rationale. Unrelate
 Development happens in the ext4 checkout `~/booster-ai` (WSL); the Windows clone in
 `Documents\booster-ai` is a synced mirror that is never edited directly. Each worker
 uses its own `git worktree` under `~/booster-ai-wt/<issue>` and its own `dist`/`bin`.
+At conductor startup/resume, before selecting, apply the core's
+[resume unfinished work first](shared/ORCHESTRA.md#resume-unfinished-work-first) to
+`~/booster-ai` and every worktree under `~/booster-ai-wt/`: `git fetch`, then resume work
+that is not on `origin/main`, and discard work another orchestra (also on another machine,
+see #1) already delivered there before taking the next issue. Directories without a
+`.git` (evidence folders) are not work; leave them.
+
 Requires the .NET 10 SDK (WSL: `/usr/lib/dotnet`; Windows: `dotnet` on PATH). If it is missing, install it user-locally using the steps in [Development](../docs/DEVELOPMENT.md#build-from-source), then open a new PowerShell session before Windows tests.
 
 ## Project phase hooks
@@ -77,13 +84,17 @@ the repository; personal tabs live only in the user's local `config.json`.
 
 ## Shared version
 
-Shared release: **v0.4.1**, commit **5e48d8370f051f5a15bbb740881dbf51187316a9**, imported as a
+Shared release: **v0.6.0**, commit **aecd631907c3374800e562c98125d905863ff925**, imported as a
 squashed subtree at `.orchestra/shared`. Improve the core in
 `solwation/dirigenten-och-orkestern`, never in this subtree. At conductor startup and
 resume, check that repository's stable releases/tags against this pin (reuse a
 successful check for 24 hours). If a newer stable release exists, review its release
 notes and full diff, then always import it with the documented `git subtree pull`,
-update this pin and run applicable host checks. This is standing user authorization:
+update this pin and run applicable host checks. This repository has its own `vX.Y.Z`
+app tags that shadow the orchestra's: fetch the tag explicitly
+(`git fetch <orchestra-url> refs/tags/vX.Y.Z`) and run
+`git subtree merge --prefix=.orchestra/shared <fetched sha> --squash`, then check that the
+squash commit names the orchestra's SHA range. This is standing user authorization:
 do not ask or create a proposal issue before updating. Ignore drafts and prereleases.
 
 ## Releasing

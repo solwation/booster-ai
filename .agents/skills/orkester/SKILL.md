@@ -9,6 +9,9 @@ When the user requests orchestration, read and follow [AGENTS.md](../../../AGENT
 [Issueflow authority](../../../.orchestra/shared/ISSUE-WORKFLOW.md) and
 [queue coordination](../../../.orchestra/shared/COORDINATION.md).
 
+First resume unfinished local work under the core's
+[startup rule](../../../.orchestra/shared/ORCHESTRA.md#resume-unfinished-work-first),
+discarding what another orchestra already delivered to `main`.
 Preserve the requested scope. Use the available agent tools with
 [the compact worker brief](../../../.orchestra/shared/WORKER.md).
 The project policy owns capacity, claims, user questions, publication and idle watch.
