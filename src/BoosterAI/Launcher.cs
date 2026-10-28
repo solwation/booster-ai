@@ -59,6 +59,21 @@ public static class Launcher
         var d => "cd " + Quote(d),
     };
 
+    private const string CodexOrkester = "$(test -d .agents/skills/orkester && echo '$orkester' || echo /orkester)";
+
+    /// <summary>
+    /// Appended to the orchestra command of a Run once tab with codex or agy (#49). Those CLIs end when the
+    /// model ends its turn (codex exec at once, agy -p after at most 30 minutes of background tasks), so an
+    /// idle watch left in a background poll loop would be dropped silently. The note asks the session to keep
+    /// polling and idle waiting in the foreground of its turn, with the core's waits of at most 60 seconds.
+    /// claude -p waits for background tasks and is re-invoked when they finish, so it gets no note.
+    /// No ';' (see TabScript), no quote or '$' (it is quoted for bash and read by the model).
+    /// </summary>
+    public const string ForegroundWatchNote =
+        "(BoosterAI Run once host note: this CLI exits as soon as your turn ends and does not keep background tasks or wake you when they finish. "
+        + "Run every queue poll and the whole idle watch in the foreground of this turn, as blocking commands that wait at most 60 seconds each, for example sleep 60, "
+        + "never as a background loop or job. End your turn only when the session is finished.)";
+
     private static string CliCommand(TabConfig tab, string? prompt, TabTrack? track, bool resume)
     {
         var args = new List<string>();
@@ -73,9 +88,10 @@ public static class Launcher
         else if (tab.Orkester)
             args.Add(tab.Llm switch
             {
-                "agy" => (once ? "-p " : "-i ") + Quote("/orkester"),
+                "agy" => once ? "-p " + Quote("/orkester " + ForegroundWatchNote) : "-i " + Quote("/orkester"),
                 // Codex invokes repository skills as $name; repositories without one get the slash text.
-                "codex" => "$(test -d .agents/skills/orkester && echo '$orkester' || echo /orkester)",
+                "codex" when once => "\"" + CodexOrkester + "\"" + Quote(" " + ForegroundWatchNote),
+                "codex" => CodexOrkester,
                 _ when once => "-p " + Quote("/orkester"),
                 _ => Quote("/orkester"),
             });

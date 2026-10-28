@@ -39,13 +39,42 @@ public class LauncherTests
 
     [Fact]
     public void OneShotAgyUsesPrintInsteadOfInteractive() => Assert.Equal(
-        "cd ~/'proj' && agy --model 'x' -p '/orkester' || true && exec bash",
+        "cd ~/'proj' && agy --model 'x' -p '/orkester " + Launcher.ForegroundWatchNote + "' || true && exec bash",
         Launcher.TabScript(Once("agy")));
 
     [Fact]
     public void OneShotCodexUsesExec() => Assert.Equal(
-        "cd ~/'proj' && codex exec --model 'x' $(test -d .agents/skills/orkester && echo '$orkester' || echo /orkester) || true && exec bash",
+        "cd ~/'proj' && codex exec --model 'x' \"$(test -d .agents/skills/orkester && echo '$orkester' || echo /orkester)\"' "
+        + Launcher.ForegroundWatchNote + "' || true && exec bash",
         Launcher.TabScript(Once("codex")));
+
+    [Fact]
+    public void ForegroundWatchNoteIsSafeInATabCommand()
+    {
+        foreach (var c in new[] { ';', '\'', '"', '$', '`', '\\', '\n' })
+            Assert.DoesNotContain(c, Launcher.ForegroundWatchNote);
+    }
+
+    [Theory]
+    [InlineData("claude", true)]
+    [InlineData("codex", false)]
+    [InlineData("agy", false)]
+    public void ForegroundWatchNoteOnlyForOneShotCodexAndAgy(string llm, bool once)
+    {
+        var tab = once ? Once(llm) : new TabConfig { Directory = "~/proj", Llm = llm, Model = "x", Orkester = true };
+        var track = new TabTrack("/s/lib.sh", "/s", "tab1");
+        Assert.DoesNotContain("host note", Launcher.TabScript(tab, null, track));
+        Assert.DoesNotContain("host note", Launcher.TabScript(Once(llm), "install it", track));
+    }
+
+    [Fact]
+    public void InPlaceRestartOfAOneShotTabKeepsTheNote()
+    {
+        var track = new TabTrack("/s/lib.sh", "/s", "tab1");
+        foreach (var llm in new[] { "codex", "agy" })
+            Assert.Contains("host note", Launcher.RestartScript(Once(llm), track, resume: false));
+        Assert.DoesNotContain("host note", Launcher.RestartScript(Once("claude"), track, resume: false));
+    }
 
     [Fact]
     public void OneShotWithoutOrkesterIsIgnored()
@@ -80,7 +109,7 @@ public class LauncherTests
 
     [Theory]
     [InlineData("claude", "bs_stream claude --model 'x' -p '/orkester' --output-format stream-json --verbose && ")]
-    [InlineData("agy", "bs_stream agy --model 'x' -p '/orkester' --output-format stream-json && ")]
+    [InlineData("agy", "finished.)' --output-format stream-json && ")]
     [InlineData("codex", "bs_run 'codex exec --model")]
     public void OneShotWithTrackingShowsLiveProgress(string llm, string expected)
     {
