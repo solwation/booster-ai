@@ -232,10 +232,10 @@ public class ZoomTests
     private static readonly TabConfig[] Tabs = [new() { Name = "a", Directory = "~/a" }, new() { Name = "b", Directory = "~/b" }];
 
     [Fact]
-    public void DefaultZoomLeavesWindowsTerminalArgsUnchanged()
+    public void DefaultZoomStillSelectsThePrivateCloseOnExitProfile()
     {
         var args = Launcher.WindowsTerminalArgs(Tabs, "Ubuntu");
-        Assert.DoesNotContain("-p", args);
+        Assert.Equal(2, args.Count(a => a == "-p"));
         Assert.Equal(args, Launcher.WindowsTerminalArgs(Tabs, "Ubuntu", null, zoomPercent: 0));
     }
 
@@ -250,16 +250,27 @@ public class ZoomTests
     }
 
     [Fact]
-    public void FragmentSetsOnlyTheFontSize()
+    public void FragmentSetsCloseOnExitAndExplicitFontSize()
     {
         using var doc = System.Text.Json.JsonDocument.Parse(Launcher.ZoomFragmentJson(125));
         var profile = doc.RootElement.GetProperty("profiles")[0];
         Assert.Equal("BoosterAI", profile.GetProperty("name").GetString());
         Assert.True(profile.GetProperty("hidden").GetBoolean());
         Assert.Equal(15, profile.GetProperty("font").GetProperty("size").GetDouble());
-        Assert.Equal(["name", "guid", "hidden", "font"], profile.EnumerateObject().Select(p => p.Name));
+        Assert.Equal("always", profile.GetProperty("closeOnExit").GetString());
+        Assert.Equal(["name", "guid", "hidden", "closeOnExit", "font"], profile.EnumerateObject().Select(p => p.Name));
         Assert.Equal(9.6, System.Text.Json.JsonDocument.Parse(Launcher.ZoomFragmentJson(80))
             .RootElement.GetProperty("profiles")[0].GetProperty("font").GetProperty("size").GetDouble());
+    }
+
+    [Fact]
+    public void DefaultZoomProfileClosesOnExitAndInheritsFont()
+    {
+        using var doc = System.Text.Json.JsonDocument.Parse(Launcher.ZoomFragmentJson(0));
+        var profile = doc.RootElement.GetProperty("profiles")[0];
+        Assert.Equal("always", profile.GetProperty("closeOnExit").GetString());
+        Assert.False(profile.TryGetProperty("font", out _));
+        Assert.Equal(["name", "guid", "hidden", "closeOnExit"], profile.EnumerateObject().Select(p => p.Name));
     }
 
     [Fact]

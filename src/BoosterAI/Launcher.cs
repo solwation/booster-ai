@@ -156,7 +156,7 @@ g=${bs_fields[5]}
 """;
 
     /// <summary>Only the recorded shell and its descendants are closed, never the terminal server or another tab.</summary>
-    public static string CloseTabScript(int shellPid, long startTime) => $$"""
+    public static string CloseTabScript(int shellPid, long startTime, bool exitCleanly = false) => $$"""
 bs_close_ids=()
 bs_start() {
   local stat
@@ -182,7 +182,10 @@ do
 done
 if [ "$(bs_start {{shellPid}})" = {{startTime}} ]
 then
-  {{StopTrackedForegroundScript(shellPid, startTime)}} || true
+  {{(exitCleanly ? $"kill -USR1 {shellPid} 2>/dev/null || true" : ":")}}
+  (
+    {{StopTrackedForegroundScript(shellPid, startTime)}}
+  ) || true
 fi
 bs_signal() {
   local item p st
@@ -277,8 +280,8 @@ fi
     public static List<string> WindowsTerminalArgs(IReadOnlyList<TabConfig> tabs, string distro, string? prompt = null,
         IReadOnlyList<TabTrack?>? tracks = null, string window = "new", int zoomPercent = 0, bool resume = false)
     {
-        // wt has no font-size flag: a zoomed run selects the profile from ZoomFragmentJson.
-        string[] profile = zoomPercent > 0 ? ["-p", ZoomProfileName] : [];
+        // The private profile closes BoosterAI's tabs after either normal exit or force; zoom is optional.
+        string[] profile = ["-p", ZoomProfileName];
         var a = new List<string> { "-w", window };
         for (var i = 0; i < tabs.Count; i++)
         {
@@ -301,30 +304,26 @@ fi
 
     private static string Num(double v) => v.ToString("0.##", CultureInfo.InvariantCulture);
 
-    /// <summary>Windows Terminal JSON fragment with a hidden profile that only sets the font size; it inherits the user's defaults.</summary>
+    /// <summary>Only BoosterAI's hidden profile: always close on exit, and override font size only for explicit zoom.</summary>
     public static string ZoomFragmentJson(int zoomPercent) =>
         "{\n  \"profiles\": [\n    {\n      \"name\": \"" + ZoomProfileName + "\",\n      \"guid\": \"" + ZoomProfileGuid +
-        "\",\n      \"hidden\": true,\n      \"font\": { \"size\": " + Num(WtDefaultPoints * zoomPercent / 100) + " }\n    }\n  ]\n}\n";
+        "\",\n      \"hidden\": true,\n      \"closeOnExit\": \"always\""
+        + (zoomPercent > 0 ? ",\n      \"font\": { \"size\": " + Num(WtDefaultPoints * zoomPercent / 100) + " }" : "")
+        + "\n    }\n  ]\n}\n";
 
-    /// <summary>%LOCALAPPDATA%\Microsoft\Windows Terminal\Fragments\BoosterAI\boosterai.json, the only file written for zoom.</summary>
+    /// <summary>%LOCALAPPDATA%\Microsoft\Windows Terminal\Fragments\BoosterAI\boosterai.json, scoped to this app's profile.</summary>
     public static string ZoomFragmentPath { get; } = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "Microsoft", "Windows Terminal", "Fragments", "BoosterAI", "boosterai.json");
 
-    /// <summary>Writes the fragment for a non-default zoom, or removes it for the default; true when the file changed.</summary>
+    /// <summary>Writes the private profile for every launch; default zoom inherits font settings. True when changed.</summary>
     private static bool SyncZoomFragment(int zoomPercent)
     {
         LegacyNames.RemoveOldFragment(LegacyNames.OldFragmentDir);
-        if (zoomPercent > 0)
-        {
-            var json = ZoomFragmentJson(zoomPercent);
-            if (File.Exists(ZoomFragmentPath) && File.ReadAllText(ZoomFragmentPath) == json) return false;
-            Directory.CreateDirectory(Path.GetDirectoryName(ZoomFragmentPath)!);
-            File.WriteAllText(ZoomFragmentPath, json);
-            return true;
-        }
-        if (!File.Exists(ZoomFragmentPath)) return false;
-        File.Delete(ZoomFragmentPath);
+        var json = ZoomFragmentJson(zoomPercent);
+        if (File.Exists(ZoomFragmentPath) && File.ReadAllText(ZoomFragmentPath) == json) return false;
+        Directory.CreateDirectory(Path.GetDirectoryName(ZoomFragmentPath)!);
+        File.WriteAllText(ZoomFragmentPath, json);
         return true;
     }
 

@@ -29,10 +29,10 @@ internal static class Program
                     Console.WriteLine($"linux {term}: {call.Exe} " + string.Join(' ', call.Args.Select(a => a.Contains(' ') ? $"\"{a}\"" : a)));
             if (tabs.Count > 0)
                 Console.WriteLine("linux ptyxis cold start (no instance yet): restore-session is off until the tabs are open; if it cannot be, the first call uses --tab instead of --tab-with-profile=default --new-window");
+            Console.WriteLine($"Windows profile (zoom {cfg.ZoomPercent}%): {Launcher.ZoomFragmentPath}:");
+            Console.Write(Launcher.ZoomFragmentJson(cfg.ZoomPercent));
             if (cfg.ZoomPercent > 0)
             {
-                Console.WriteLine($"zoom {cfg.ZoomPercent}%: Windows writes {Launcher.ZoomFragmentPath}:");
-                Console.Write(Launcher.ZoomFragmentJson(cfg.ZoomPercent));
                 foreach (var term in new[] { "gnome-terminal", "kitty", "wezterm" })
                     Console.WriteLine($"zoom {cfg.ZoomPercent}%: {term} {string.Join(' ', Launcher.LinuxZoomArgs(term, cfg.ZoomPercent))}");
             }
@@ -42,7 +42,7 @@ internal static class Program
         {
             foreach (var llm in new[] { "claude", "codex", "agy" })
                 Console.WriteLine(llm + ": " + Launcher.SaveAndCloseScript(new TabConfig { Llm = llm }, "example-token"));
-            Console.WriteLine("Close recorded tab (example PID/starttime):\n" + Launcher.CloseTabScript(12345, 67890));
+            Console.WriteLine("Close recorded tab (example PID/starttime):\n" + Launcher.CloseTabScript(12345, 67890, exitCleanly: true));
             return;
         }
         var shot = Screenshot.Parse(args);

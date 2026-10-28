@@ -158,7 +158,7 @@ public sealed class CloseAllOperation : Observable
         if (item.Phase == ClosePhase.Closing && !_force) return;
         if (_force)
         {
-            await Close(item, session, id, pid, start);
+            await Close(item, session, id, pid, start, log.CanCloseCleanly);
             return;
         }
         if (!item.Requested)
@@ -166,7 +166,7 @@ public sealed class CloseAllOperation : Observable
             var tab = item.Tab.LaunchedAs;
             if (tab is null) { item.Fail(Loc.Get("close.noTrack")); return; }
             if (!CloseAllLogic.NeedsSave(tab, state, item.Tab.Activity))
-            { await Close(item, session, id, pid, start); return; }
+            { await Close(item, session, id, pid, start, log.CanCloseCleanly); return; }
             // --continue/--last is per directory, so never choose between two open conversations implicitly.
             if (Tabs.Count(t => t.Tab.LaunchedAs is { } other && other.Llm == tab.Llm
                 && t.Phase != ClosePhase.Closed && SameDirectory(other.Directory, tab.Directory)) > 1)
@@ -191,7 +191,7 @@ public sealed class CloseAllOperation : Observable
         {
             if (log.CliExit is not (null or 0) || log.Denied is { Count: > 0 })
             { item.Fail(Loc.Get("close.saveFailed")); return; }
-            await Close(item, session, id, pid, start);
+            await Close(item, session, id, pid, start, log.CanCloseCleanly);
         }
     }
 
@@ -207,7 +207,7 @@ public sealed class CloseAllOperation : Observable
         return string.Equals(Normalize(a), Normalize(b), OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
     }
 
-    private async Task Close(ClosingTab item, TabSession session, string id, int pid, long start)
+    private async Task Close(ClosingTab item, TabSession session, string id, int pid, long start, bool exitCleanly)
     {
         await Task.Run(() =>
         {
@@ -216,7 +216,7 @@ public sealed class CloseAllOperation : Observable
             {
                 if (!Active) return;
                 session.CancelNext(id);
-                control = Launcher.StartTabControl(Launcher.CloseTabScript(pid, start), _distro);
+                control = Launcher.StartTabControl(Launcher.CloseTabScript(pid, start, exitCleanly), _distro);
             }
             using (control) Launcher.WaitTabControl(control);
         });

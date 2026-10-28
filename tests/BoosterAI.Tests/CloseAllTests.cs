@@ -30,6 +30,15 @@ public class CloseAllTests
     }
 
     [Fact]
+    public void OnlyAnAdvertisedHandlerCanReceiveTheCleanCloseSignal()
+    {
+        Assert.False(TabLog.Parse("1 start pid=42 starttime=7\n").CanCloseCleanly);
+        Assert.True(TabLog.Parse("1 start pid=42 starttime=7\n2 close-ready\n").CanCloseCleanly);
+        Assert.DoesNotContain("kill -USR1", Launcher.CloseTabScript(42, 7));
+        Assert.Contains("kill -USR1 42", Launcher.CloseTabScript(42, 7, exitCleanly: true));
+    }
+
+    [Fact]
     public void ClosingAfterAFailureReplacesTheErrorWithProgress()
     {
         var vm = new MainViewModel(new AppConfig { Tabs = [new TabConfig()] });
@@ -174,8 +183,11 @@ public class CloseAllTests
             Assert.True(SpinWait.SpinUntil(() => (log = session.ReadLog(track.Id)) is not null && CloseAllLogic.SaveTurnDone(log, "pty-save"), 10000));
             Assert.Equal(0, log!.CliExit);
             Assert.Equal(["exec", "resume", "--last", Launcher.SaveAndClosePrompt], File.ReadAllLines(Path.Combine(session.Directory, "saved-args")));
-            Launcher.RunTabControl(Launcher.CloseTabScript(pid, start), "Ubuntu");
+            Assert.True(log.CanCloseCleanly);
+            Launcher.RunTabControl(Launcher.CloseTabScript(pid, start, exitCleanly: log.CanCloseCleanly), "Ubuntu");
             Assert.True(process.WaitForExit(5000));
+            Assert.True(process.ExitCode == 0,
+                $"PTY exit={process.ExitCode}, log={File.ReadAllText(Path.Combine(session.Directory, track.Id + ".log"))}");
         }
         finally
         {

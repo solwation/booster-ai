@@ -27,13 +27,13 @@ public enum Activity { Unknown, Busy, Idle, Watching }
 /// restart logs a new cli-start, which starts the CLI's part of the log over.
 /// </summary>
 public sealed record TabLog(int? Pid, long? StartTime, bool CliStarted, int? CliExit, bool Exited, IReadOnlyList<string>? Denied = null,
-    Activity Activity = Activity.Unknown, long? WatchingSince = null, string? CloseSaveToken = null)
+    Activity Activity = Activity.Unknown, long? WatchingSince = null, string? CloseSaveToken = null, bool CanCloseCleanly = false)
 {
     public static TabLog Parse(string text)
     {
         int? pid = null, rc = null;
         long? start = null, watching = null;
-        bool cliStarted = false, exited = false;
+        bool cliStarted = false, exited = false, canClose = false;
         List<string>? denied = null;
         var activity = Activity.Unknown;
         string? closeToken = null;
@@ -51,6 +51,7 @@ public sealed record TabLog(int? Pid, long? StartTime, bool CliStarted, int? Cli
                     start = values.TryGetValue("starttime", out var s) && long.TryParse(s, CultureInfo.InvariantCulture, out var st) ? st : null;
                     break;
                 case "cli-start": closeToken = null; cliStarted = true; rc = null; denied = null; activity = Activity.Unknown; watching = null; break;
+                case "close-ready": canClose = true; break;
                 case "close-save": closeToken = values.GetValueOrDefault("token"); break;
                 case "turn-done": watching = at; break;
                 case "turn-start": watching = null; break;
@@ -61,7 +62,7 @@ public sealed record TabLog(int? Pid, long? StartTime, bool CliStarted, int? Cli
                 case "denied": (denied ??= []).Add(Decode(values.GetValueOrDefault("cmd"))); break;
             }
         }
-        return new TabLog(pid, start, cliStarted, rc, exited, denied, activity, watching, closeToken);
+        return new TabLog(pid, start, cliStarted, rc, exited, denied, activity, watching, closeToken, canClose);
     }
 
     private static string Decode(string? base64)
@@ -148,6 +149,9 @@ bs_ev start pid=$$ starttime=$(cut -d' ' -f22 /proc/$$/stat)
 # The captured output only lives as long as the tab (and is replaced when a new CLI starts).
 bs_rm_out() { rm -f "$bs_out" "$bs_out.1" "$bs_size" 2>/dev/null || true; }
 trap 'bs_rm_out && bs_ev exit' EXIT
+# A requested close returns success to the terminal, even when the foreground CLI had to be stopped.
+trap 'exit 0' HUP USR1
+bs_ev close-ready
 bs_cli() { : > "$bs_timing" 2>/dev/null || true; bs_rm_out; bs_ev cli-start; }
 bs_done() { bs_ev cli-exit rc=$1; }
 # bs_cap [tee]: append stdin to the tab's output capture (tee: also pass it on), which BoosterAI shows while
