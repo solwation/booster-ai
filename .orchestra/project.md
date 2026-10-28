@@ -22,7 +22,7 @@ thin adapters. Reading or improving the instructions does not start an unattende
 | Heartbeat | Swedish issue comment every 30 minutes on long-running work |
 | Session review | Enabled: review all work delivered since the last review when the queue drains (core [session review](shared/COORDINATION.md#review-the-session)); also check README/screenshot and the installed Windows build match `main` |
 | Intake hooks | None |
-| Questions | Comment on the affected issue with options and a recommendation, add `user question`, release active labels, continue other work; never ask in chat |
+| Questions | Comment on the affected issue with options and a recommendation, add `user question`, release active labels, continue other work; never ask in chat. This channel overrides any general instruction to ask in chat (e.g. a user-level CLAUDE.md/AGENTS.md rule to end hand-backs with a question): in this repository decide what the policy authorizes, and when nothing needs the user, say so in one line instead of asking |
 | Publishing | Commit and push directly to `main`; no branches, PRs or force push |
 | Release | Mandatory when the backlog drains: tag a new version without asking (see [When to release](#releasing)); never end a session or enter the idle watch with user-facing commits after the latest tag |
 
