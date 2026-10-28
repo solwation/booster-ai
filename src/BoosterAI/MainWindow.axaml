@@ -107,7 +107,7 @@
                         Margin="0,0,12,0" IsVisible="{Binding HasStatus}" ClipToBounds="True">
                     <Ellipse Grid.Column="0" Width="8" Height="8" Fill="{Binding StatusBrush}" VerticalAlignment="Center" Margin="0,0,7,0" />
                     <TextBlock Grid.Column="1" Text="{Binding StatusText}" FontSize="12.5" VerticalAlignment="Center"
-                               TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding StatusText}" />
+                               TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding StatusTip}" />
                     <Button Grid.Column="2" Classes="icon" Click="OnRestart" IsVisible="{Binding CanRestart}" Margin="7,-6,0,-6"
                             ToolTip.Tip="{Binding RestartTip}" AutomationProperties.Name="{local:T restart.name}">
                       <Path Data="{StaticResource RestartIcon}" Width="12" Height="12" />

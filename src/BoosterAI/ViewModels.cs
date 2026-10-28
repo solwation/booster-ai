@@ -154,6 +154,7 @@ public sealed class TabViewModel : Observable
     private TabState? _state;
     private int? _rc;
     private Activity _activity;
+    private long? _watchingSince;
     private bool _pending;
     private IReadOnlyList<string> _denied = [];
     internal TabConfig? LaunchedAs { get; set; }
@@ -171,8 +172,12 @@ public sealed class TabViewModel : Observable
     /// <summary>Started or running: Start leaves it alone rather than opening a duplicate.</summary>
     public bool IsAlive => _state is TabState.Running or TabState.Starting;
 
-    /// <summary>The CLI is working on a turn; a one-shot run is busy until it exits.</summary>
-    public Activity Activity => LaunchedAs is { NonInteractive: true, Orkester: true } && IsRunning ? Activity.Busy : _activity;
+    /// <summary>
+    /// The CLI is working on a turn; a one-shot run is busy until it exits, except while it watches (a turn
+    /// ended, the CLI lives on and has written nothing since).
+    /// </summary>
+    public Activity Activity => LaunchedAs is { NonInteractive: true, Orkester: true } && IsRunning && _activity != Activity.Watching
+        ? Activity.Busy : _activity;
 
     /// <summary>The LLM or model differs from what the running tab was started with.</summary>
     public bool IsChanged => IsRunning && LaunchedAs is { } l && l.Llm != Catalog.ShellOnly
@@ -219,14 +224,20 @@ public sealed class TabViewModel : Observable
         TabState.Running when IsChanged => Loc.Get("tabstate.changed"),
         TabState.Running when Activity == Activity.Busy => Loc.Get("tabstate.busy"),
         TabState.Running when Activity == Activity.Idle => Loc.Get("tabstate.idle"),
+        TabState.Running when Activity == Activity.Watching => Loc.Format("tabstate.watching", TabStatus.WatchingMinutes(_watchingSince, DateTime.UtcNow)),
         TabState.Running => Loc.Get("tabstate.unknownActivity"),
         TabState.CliExited when _rc == 0 => Loc.Get("tabstate.idle"),
         TabState.CliExited => Loc.Format("tabstate.CliExited", _rc ?? -1),
         TabState.Denied => Loc.Format("tabstate.Denied", _denied.Count > 0 ? string.Join(", ", _denied) : "?"),
         var s => Loc.Get("tabstate." + s),
     };
+    /// <summary>The status tooltip: what Watching means and when the last turn ended; otherwise the status itself.</summary>
+    public string StatusTip => _state is TabState.Running && Activity == Activity.Watching && _watchingSince is { } since
+        ? Loc.Format("tabstate.watching.tip", DateTimeOffset.FromUnixTimeMilliseconds(since).ToLocalTime().ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture))
+        : StatusText;
     public IBrush StatusBrush => new SolidColorBrush(Avalonia.Media.Color.Parse(_state switch
     {
+        TabState.Running when Activity == Activity.Watching => "#3B7DD8",
         TabState.Running => "#2E9E5B",
         TabState.Starting => "#8A8FA0",
         TabState.CliExited when _rc == 0 => "#8A8FA0",
@@ -235,17 +246,24 @@ public sealed class TabViewModel : Observable
     }));
 
     /// <summary>Updates the state; true when it changed.</summary>
-    internal bool SetState(TabState state, int? rc, IReadOnlyList<string>? denied = null, Activity activity = Activity.Unknown)
+    internal bool SetState(TabState state, int? rc, IReadOnlyList<string>? denied = null, Activity activity = Activity.Unknown,
+        long? watchingSince = null)
     {
         denied ??= [];
-        if (_state == state && _rc == rc && _denied.SequenceEqual(denied) && _activity == activity) return false;
+        if (_state == state && _rc == rc && _denied.SequenceEqual(denied) && _activity == activity && _watchingSince == watchingSince)
+        {
+            // The elapsed minutes of Watching move on without a new event.
+            if (activity == Activity.Watching) { Raise(nameof(StatusText)); Raise(nameof(StatusTip)); }
+            return false;
+        }
         var stateChanged = _state != state || _rc != rc || !_denied.SequenceEqual(denied);
         _state = state;
         _rc = rc;
         _denied = denied;
         _activity = activity;
+        _watchingSince = watchingSince;
         if (state != TabState.Running) PendingRestart = false;
-        foreach (var n in new[] { nameof(HasStatus), nameof(IsRunning), nameof(IsAlive), nameof(Activity), nameof(StatusText), nameof(StatusBrush) }) Raise(n);
+        foreach (var n in new[] { nameof(HasStatus), nameof(IsRunning), nameof(IsAlive), nameof(Activity), nameof(StatusText), nameof(StatusTip), nameof(StatusBrush) }) Raise(n);
         RaiseRestart();
         return stateChanged;
     }
@@ -504,7 +522,7 @@ public sealed class MainViewModel : Observable
         (TabState State, int? Rc, Activity Activity)[] samples =
         [
             (TabState.Running, null, Activity.Busy),
-            (TabState.Running, null, Activity.Idle),
+            (TabState.Running, null, Activity.Watching),
             (TabState.CliExited, 0, Activity.Unknown),
             (TabState.Closed, null, Activity.Unknown),
             (TabState.CliExited, 1, Activity.Unknown),
@@ -512,14 +530,15 @@ public sealed class MainViewModel : Observable
         ];
         foreach (var (tab, sample) in Tabs.Where(t => t.Enabled).Zip(samples))
         {
-            if (sample.State == TabState.CliExited && sample.Rc == 0)
+            if (sample.State == TabState.CliExited && sample.Rc == 0 || sample.Activity == Activity.Watching)
             {
                 var launched = tab.ToConfig(forLaunch: true);
                 launched.NonInteractive = true;
                 launched.Orkester = true;
                 tab.LaunchedAs = launched;
             }
-            tab.SetState(sample.State, sample.Rc, activity: sample.Activity);
+            tab.SetState(sample.State, sample.Rc, activity: sample.Activity,
+                watchingSince: sample.Activity == Activity.Watching ? DateTimeOffset.UtcNow.AddMinutes(-12).ToUnixTimeMilliseconds() : null);
         }
     }
 
@@ -649,7 +668,7 @@ public sealed class MainViewModel : Observable
                     row.LaunchedAt = DateTime.UtcNow - TabStatus.StartTimeout;
                     row.RaiseRestartTip();
                     row.SetState(TabStatus.Evaluate(found.Log, TabStatus.StartTimeout, null), found.Log.CliExit, null,
-                        session.ReadActivity(found.Id, found.Log, DateTime.UtcNow));
+                        session.ReadActivity(found.Id, found.Log, DateTime.UtcNow), found.Log.WatchingSince);
                     joined++;
                 }
                 catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }
@@ -683,7 +702,7 @@ public sealed class MainViewModel : Observable
                 var denied = log?.Denied?.SelectMany(AgyPermissions.Programs).Distinct().ToList();
                 var now = DateTime.UtcNow;
                 return (w.Row, w.Id, State: TabStatus.Evaluate(log, now - w.LaunchedAt, live), log?.CliExit, Denied: denied,
-                    log?.Pid, Activity: w.Session.ReadActivity(w.Id, log, now));
+                    log?.Pid, Activity: w.Session.ReadActivity(w.Id, log, now), log?.WatchingSince);
             }).ToList();
             // agy's settings are only read while a tab has a denial to offer rules for.
             var settings = results.Any(r => r.State == TabState.Denied) ? ReadText(settingsPath) : null;
@@ -693,13 +712,13 @@ public sealed class MainViewModel : Observable
             _polling = false;
             if (!t.IsCompletedSuccessfully) return;
             var (results, settings) = t.Result;
-            foreach (var (row, id, state, rc, denied, pid, activity) in results)
+            foreach (var (row, id, state, rc, denied, pid, activity, watchingSince) in results)
             {
                 // Ignore a result for a tab that has been restarted meanwhile.
                 if (row.TrackId != id) continue;
                 row.ShellPid = pid;
                 if (row.PendingRestart && state == TabState.Running && activity == Activity.Idle) RestartChanged(row);
-                if (!row.SetState(state, rc, denied, activity)) continue;
+                if (!row.SetState(state, rc, denied, activity, activity == Activity.Watching ? watchingSince : null)) continue;
                 if (_cfg.Notifications && TabStatus.IsUnexpected(state, rc))
                     Notifier.Show("BoosterAI", Loc.Format("notify.body", row.Name, row.StatusText));
             }

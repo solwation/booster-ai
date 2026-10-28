@@ -278,7 +278,10 @@ public class DeniedCommandTests
         {"type":"result","is_error":false,"num_turns":3,"duration_ms":9000}
         """;
 
-    private static string RunStream(string stream, string? path = null)
+    private static string RunStream(string stream, string? path = null) => RunStreamWithLog(stream, path).Output;
+
+    /// <summary>The formatter's output and the tab log it wrote (turn-done / turn-start events).</summary>
+    private static (string Output, string Log) RunStreamWithLog(string stream, string? path = null)
     {
         var dir = Directory.CreateTempSubdirectory("bs-turns").FullName;
         try
@@ -292,9 +295,36 @@ public class DeniedCommandTests
             using var p = System.Diagnostics.Process.Start(psi)!;
             var output = p.StandardOutput.ReadToEnd();
             p.WaitForExit();
-            return output;
+            var log = Path.Combine(dir, "t.log");
+            return (output, File.Exists(log) ? File.ReadAllText(log) : "");
         }
         finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    private static string[] TurnEvents(string log) => log.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+        .Select(l => l.Split(' ')[1]).Where(e => e.StartsWith("turn-", StringComparison.Ordinal)).ToArray();
+
+    /// <summary>Each turn end is logged for BoosterAI (Watching), and the next output logs that the CLI works again.</summary>
+    [Fact]
+    public void FormatterLogsTurnEndsAndResumedOutput()
+    {
+        if (!OperatingSystem.IsLinux() || !File.Exists("/usr/bin/python3")) return;
+        var (_, log) = RunStreamWithLog(TwoTurns);
+        Assert.Equal(["turn-done", "turn-start", "turn-done"], TurnEvents(log));
+        var parsed = TabLog.Parse(log);
+        Assert.NotNull(parsed.WatchingSince);
+    }
+
+    [Fact]
+    public void FormatterLogsAgyTurnEndsToo()
+    {
+        if (!OperatingSystem.IsLinux() || !File.Exists("/usr/bin/python3")) return;
+        var (_, log) = RunStreamWithLog("""
+            {"event":"result","result":{"status":"SUCCESS","num_turns":2}}
+            {"event":"step_update","step_update":{"text_delta":"again"}}
+            """);
+        Assert.Equal(["turn-done", "turn-start"], TurnEvents(log));
+        Assert.Null(TabLog.Parse(log).WatchingSince);
     }
 
     /// <summary>Every result event ends a turn, not the run: only the CLI's exit prints the final line, with its own code.</summary>
@@ -317,8 +347,10 @@ public class DeniedCommandTests
         {
             foreach (var tool in new[] { "sh", "cat", "grep", "sed", "touch", "seq" })
                 File.CreateSymbolicLink(Path.Combine(bin, tool), "/usr/bin/" + tool);
-            var lines = RunStream(TwoTurns, bin).Split('\n', StringSplitOptions.RemoveEmptyEntries);
+            var (output, log) = RunStreamWithLog(TwoTurns, bin);
+            var lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries);
             Assert.Equal(["first", "== turn done", "second", "== turn done"], lines[..4]);
+            Assert.Equal(["turn-done", "turn-start", "turn-done"], TurnEvents(log));
             Assert.Matches(@"^== exit 3, total \d+ s$", lines[4]);
             Assert.Equal("rc=3", lines[5]);
         }
@@ -392,6 +424,86 @@ public class InPlaceRestartTests
         var target = Tab(to);
         target.NonInteractive = once;
         Assert.Equal(resumes, Launcher.CanResume(Tab(from), target));
+    }
+
+    [Fact]
+    public void TurnEventsTrackWatchingUntilOutputOrANewCli()
+    {
+        Assert.Null(TabLog.Parse("1 start pid=5\n2 cli-start\n").WatchingSince);
+        Assert.Equal(300, TabLog.Parse("1 start pid=5\n2 cli-start\n300 turn-done\n").WatchingSince);
+        Assert.Equal(500, TabLog.Parse("1 start pid=5\n2 cli-start\n300 turn-done\n400 turn-start\n500 turn-done\n").WatchingSince);
+        Assert.Null(TabLog.Parse("1 start pid=5\n2 cli-start\n300 turn-done\n400 turn-start\n").WatchingSince);
+        Assert.Null(TabLog.Parse("1 start pid=5\n2 cli-start\n300 turn-done\n400 cli-exit rc=0\n500 cli-start\n").WatchingSince);
+        // Watching is still a running tab: the CLI lives.
+        Assert.Equal(TabState.Running, TabStatus.Evaluate(TabLog.Parse("1 start pid=5\n2 cli-start\n3 turn-done\n"), TimeSpan.Zero, null));
+    }
+
+    [Fact]
+    public void ReadActivityShowsWatchingUntilOutputResumesOrTheCliExits()
+    {
+        var dir = Directory.CreateTempSubdirectory("bs-watch").FullName;
+        try
+        {
+            var session = TabSession.Open(dir);
+            var now = DateTime.UtcNow;
+            File.WriteAllText(Path.Combine(dir, "tab1.timing"), "");
+            File.SetLastWriteTimeUtc(Path.Combine(dir, "tab1.timing"), now.AddMinutes(-20));
+            var watching = TabLog.Parse("1 start pid=5\n2 cli-start\n3 turn-done\n");
+            Assert.Equal(Activity.Watching, session.ReadActivity("tab1", watching, now));
+            // Output again: back to the output timing (busy while it writes).
+            File.SetLastWriteTimeUtc(Path.Combine(dir, "tab1.timing"), now);
+            Assert.Equal(Activity.Busy, session.ReadActivity("tab1", TabLog.Parse("1 start pid=5\n2 cli-start\n3 turn-done\n4 turn-start\n"), now));
+            // The CLI exited: no longer watching (the state becomes CliExited).
+            var exited = TabLog.Parse("1 start pid=5\n2 cli-start\n3 turn-done\n4 cli-exit rc=0\n");
+            Assert.NotEqual(Activity.Watching, session.ReadActivity("tab1", exited, now));
+            Assert.Equal(TabState.CliExited, TabStatus.Evaluate(exited, TimeSpan.Zero, null));
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [Fact]
+    public void WatchingMinutesCountFromTheTurnEnd()
+    {
+        var now = new DateTime(2026, 10, 28, 10, 0, 0, DateTimeKind.Utc);
+        var ms = new DateTimeOffset(now.AddMinutes(-12).AddSeconds(-30)).ToUnixTimeMilliseconds();
+        Assert.Equal(12, TabStatus.WatchingMinutes(ms, now));
+        Assert.Equal(0, TabStatus.WatchingMinutes(null, now));
+        Assert.Equal(0, TabStatus.WatchingMinutes(new DateTimeOffset(now.AddMinutes(1)).ToUnixTimeMilliseconds(), now));
+    }
+
+    [Fact]
+    public void OneShotTabGoesRunningWatchingRunningIdle()
+    {
+        var vm = new MainViewModel(new AppConfig { Tabs = [new TabConfig()] });
+        var tab = vm.Tabs[0];
+        var launched = tab.ToConfig(forLaunch: true);
+        launched.NonInteractive = true;
+        launched.Orkester = true;
+        tab.LaunchedAs = launched;
+
+        tab.SetState(TabState.Running, null, activity: Activity.Busy);
+        Assert.Equal(Loc.Get("tabstate.busy"), tab.StatusText);
+        var running = ((Avalonia.Media.ISolidColorBrush)tab.StatusBrush).Color;
+
+        var since = DateTimeOffset.UtcNow.AddMinutes(-12).ToUnixTimeMilliseconds();
+        tab.SetState(TabState.Running, null, activity: Activity.Watching, watchingSince: since);
+        Assert.Equal(Activity.Watching, tab.Activity);
+        Assert.Equal(Loc.Format("tabstate.watching", 12), tab.StatusText);
+        Assert.NotEqual(Loc.Get("tabstate.idle"), tab.StatusText);
+        Assert.NotEqual(running, ((Avalonia.Media.ISolidColorBrush)tab.StatusBrush).Color);
+        Assert.NotEqual(tab.StatusText, tab.StatusTip);
+        Assert.False(tab.CanRestart);
+        // A repeated poll changes nothing (no notification) but keeps the minutes current.
+        Assert.False(tab.SetState(TabState.Running, null, activity: Activity.Watching, watchingSince: since));
+
+        // Output again (timing idle after a quiet minute still counts as busy for a one-shot run).
+        tab.SetState(TabState.Running, null, activity: Activity.Idle);
+        Assert.Equal(Loc.Get("tabstate.busy"), tab.StatusText);
+
+        tab.SetState(TabState.Running, null, activity: Activity.Watching, watchingSince: since);
+        tab.SetState(TabState.CliExited, 0);
+        Assert.Equal(Loc.Get("tabstate.idle"), tab.StatusText);
+        Assert.True(tab.CanRestart);
     }
 
     [Fact]

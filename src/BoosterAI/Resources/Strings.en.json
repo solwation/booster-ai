@@ -163,6 +163,8 @@
   "tabstate.idle": "Idle",
   "tabstate.changed": "Running – new choice",
   "tabstate.waitingIdle": "Waiting for idle…",
+  "tabstate.watching": "Watching · {0} min",
+  "tabstate.watching.tip": "The turn is done but the CLI is still alive, waiting for background work (such as the orchestra idle watch). Last turn ended at {0}. Becomes Running when the CLI writes again and Idle when it exits.",
   "restartConfirm.title": "Restart the tab",
   "restartConfirm.heading": "Restart {0}?",
   "restartConfirm.busy": "The CLI is working right now. Restarting now interrupts what it is doing.",

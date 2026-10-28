@@ -11,23 +11,28 @@ public sealed record TabTrack(string Lib, string Dir, string Id);
 
 public enum TabState { Starting, Running, CliExited, CliMissing, NotStarted, Closed, Lost, Denied }
 
-/// <summary>Whether a running CLI is working on a turn; Unknown for CLIs without hooks (codex, agy).</summary>
-public enum Activity { Unknown, Busy, Idle }
+/// <summary>
+/// Whether a running CLI is working on a turn; Unknown for CLIs without hooks (codex, agy). Watching: a one-shot
+/// run (bs_stream) finished a turn but its CLI lives on, e.g. claude -p waiting for an orchestra idle watch.
+/// </summary>
+public enum Activity { Unknown, Busy, Idle, Watching }
 
 /// <summary>
 /// What a tab's log says. One line per event, written by tab-lib.sh:
 /// "&lt;epoch-ms&gt; start pid=N starttime=N", "… cli-start", "… cli-exit rc=N", "… exit", and
 /// "… denied cli=agy cmd=&lt;base64&gt;" when agy refused a command it could not ask about, and "… busy" /
-/// "… idle" from claude's hooks. <paramref name="Denied"/> holds those command lines (null: none). An in-place
+/// "… idle" from claude's hooks, "… turn-done" / "… turn-start" from bs_stream's formatter (a turn ended / output
+/// resumed). <paramref name="WatchingSince"/> is the epoch-ms of a turn-done not yet followed by output (null: none).
+/// <paramref name="Denied"/> holds those command lines (null: none). An in-place
 /// restart logs a new cli-start, which starts the CLI's part of the log over.
 /// </summary>
 public sealed record TabLog(int? Pid, long? StartTime, bool CliStarted, int? CliExit, bool Exited, IReadOnlyList<string>? Denied = null,
-    Activity Activity = Activity.Unknown)
+    Activity Activity = Activity.Unknown, long? WatchingSince = null)
 {
     public static TabLog Parse(string text)
     {
         int? pid = null, rc = null;
-        long? start = null;
+        long? start = null, watching = null;
         bool cliStarted = false, exited = false;
         List<string>? denied = null;
         var activity = Activity.Unknown;
@@ -35,7 +40,7 @@ public sealed record TabLog(int? Pid, long? StartTime, bool CliStarted, int? Cli
         {
             var parts = line.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
             // A line still being written (no event yet) is ignored; the next poll reads it whole.
-            if (parts.Length < 2 || !long.TryParse(parts[0], out _)) continue;
+            if (parts.Length < 2 || !long.TryParse(parts[0], CultureInfo.InvariantCulture, out var at)) continue;
             var values = parts.Skip(2).Select(p => p.Split('=', 2)).Where(kv => kv.Length == 2)
                 .ToDictionary(kv => kv[0], kv => kv[1]);
             switch (parts[1])
@@ -44,7 +49,9 @@ public sealed record TabLog(int? Pid, long? StartTime, bool CliStarted, int? Cli
                     pid = Int(values, "pid");
                     start = values.TryGetValue("starttime", out var s) && long.TryParse(s, CultureInfo.InvariantCulture, out var st) ? st : null;
                     break;
-                case "cli-start": cliStarted = true; rc = null; denied = null; activity = Activity.Unknown; break;
+                case "cli-start": cliStarted = true; rc = null; denied = null; activity = Activity.Unknown; watching = null; break;
+                case "turn-done": watching = at; break;
+                case "turn-start": watching = null; break;
                 case "busy": activity = Activity.Busy; break;
                 case "idle": activity = Activity.Idle; break;
                 case "cli-exit": rc = Int(values, "rc") ?? -1; break;
@@ -52,7 +59,7 @@ public sealed record TabLog(int? Pid, long? StartTime, bool CliStarted, int? Cli
                 case "denied": (denied ??= []).Add(Decode(values.GetValueOrDefault("cmd"))); break;
             }
         }
-        return new TabLog(pid, start, cliStarted, rc, exited, denied, activity);
+        return new TabLog(pid, start, cliStarted, rc, exited, denied, activity, watching);
     }
 
     private static string Decode(string? base64)
@@ -97,6 +104,10 @@ public static class TabStatus
             _ => TabState.CliExited,
         };
     }
+
+    /// <summary>Whole minutes since a turn ended (log epoch-ms), for the Watching status; 0 when unknown or in the future.</summary>
+    public static long WatchingMinutes(long? sinceMs, DateTime nowUtc) =>
+        sinceMs is { } ms ? Math.Max(0, (long)(nowUtc - DateTimeOffset.FromUnixTimeMilliseconds(ms).UtcDateTime).TotalMinutes) : 0;
 
     /// <summary>Whether entering this state deserves a notification; a CLI the user quit (rc 0) does not.</summary>
     public static bool IsUnexpected(TabState state, int? rc) => state switch
@@ -165,6 +176,7 @@ bs_fmt() {
   if command -v python3 >/dev/null 2>&1; then
     BS_LOG="$bs_log" BS_TIMING="$bs_timing" PYTHONIOENCODING=utf-8 python3 -u -c 'import sys, json, os, time, base64, shutil
 last = ""
+watching = False
 def one(v, n=None):
     # Up to three lines of the current terminal width, so a wider window or a smaller zoom shows more.
     n = n or max(110, 3 * shutil.get_terminal_size((110, 24)).columns - 4)
@@ -177,20 +189,35 @@ def args(d):
         if k in d:
             return one(d[k])
     return one(next(iter(d.values())))
-def say(s):
-    print(s, flush=True)
+def ev(s):
+    try:
+        with open(os.environ["BS_LOG"], "a") as f:
+            f.write("%d %s\n" % (time.time() * 1000, s))
+    except (KeyError, OSError):
+        pass
+def alive():
+    # Output after a finished turn: the CLI works again (BoosterAI shows Running instead of Watching).
+    global watching
+    if watching:
+        watching = False
+        ev("turn-start")
     try:
         os.utime(os.environ["BS_TIMING"], None)
     except (KeyError, OSError):
         pass
+def say(s):
+    print(s, flush=True)
+    alive()
+def turn_end(s):
+    # The CLI may live on (claude -p waits for background tasks): BoosterAI shows Watching until it writes again or exits.
+    global watching
+    say(s)
+    watching = True
+    ev("turn-done")
 def denied(cli, cmd):
     # BoosterAI reads this from the tab log and offers an allow-rule (AgyPermissions).
     say("  ! denied without asking: " + one(cmd or "?", 4000))
-    try:
-        with open(os.environ["BS_LOG"], "a") as f:
-            f.write("%d denied cli=%s cmd=%s\n" % (time.time() * 1000, cli, base64.b64encode(cmd.encode()).decode()))
-    except (KeyError, OSError):
-        pass
+    ev("denied cli=%s cmd=%s" % (cli, base64.b64encode(cmd.encode()).decode()))
 for line in sys.stdin:
     try:
         e = json.loads(line)
@@ -217,16 +244,13 @@ for line in sys.stdin:
             if isinstance(r, dict) and r.get("is_error"):
                 say("  ! " + one(r.get("content")))
     elif t == "result":
-        say("== " + ("turn error: " if e.get("is_error") else "turn done: ") + str(e.get("num_turns", "?")) + " turns, " + str(round((e.get("duration_ms") or 0) / 1000)) + " s")
+        turn_end("== " + ("turn error: " if e.get("is_error") else "turn done: ") + str(e.get("num_turns", "?")) + " turns, " + str(round((e.get("duration_ms") or 0) / 1000)) + " s")
     elif e.get("event") == "step_update":
         u = e.get("step_update") or {}
         if u.get("text_delta"):
             sys.stdout.write(u["text_delta"])
             sys.stdout.flush()
-            try:
-                os.utime(os.environ["BS_TIMING"], None)
-            except (KeyError, OSError):
-                pass
+            alive()
         elif u.get("step_type") == "tool" and u.get("state") == "ACTIVE":
             i = u.get("tool_info") or {}
             p = i.get("parameters") or {}
@@ -238,15 +262,18 @@ for line in sys.stdin:
         # A command agy could not ask about ends the turn, so it is the last one started.
         if any(isinstance(d, dict) and d.get("action") == "command" for d in r.get("denied_actions") or []):
             denied("agy", last)
-        say("== turn " + str(r.get("status", "done")).lower() + ", " + str(r.get("num_turns", "?")) + " turns")
+        turn_end("== turn " + str(r.get("status", "done")).lower() + ", " + str(r.get("num_turns", "?")) + " turns")
 '
   else
     # No python3: pull the text and tool names out of each JSON line with grep/sed.
-    local l
+    local l w=
     while IFS= read -r l; do
       case $l in
         '{'*) touch "$bs_timing" 2>/dev/null || true
-          case $l in '{"type":"result"'*) echo "== turn done" ;; esac
+          case $l in
+            '{"type":"result"'*|'{"event":"result"'*) echo "== turn done"; bs_ev turn-done; w=1 ;;
+            *) if [ -n "$w" ]; then w=; bs_ev turn-start; fi ;;
+          esac
           printf '%s\n' "$l" | grep -oE '"(text|text_delta|name)":"([^"\\]|\\.)*"' | sed -e 's/^"[a-z_]*":"//' -e 's/"$//' -e 's/\\n/ /g' -e 's/\\"/"/g' ;;
         *) touch "$bs_timing" 2>/dev/null || true; printf '%s\n' "$l" ;;
       esac
@@ -383,6 +410,7 @@ for line in sys.stdin:
     {
         if (log is null) return Activity.Unknown;
         if (log.Activity != Activity.Unknown) return log.Activity;
+        if (log.WatchingSince is not null && log.CliExit is null) return Activity.Watching;
 
         try
         {
