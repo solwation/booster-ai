@@ -168,6 +168,7 @@ public sealed class TabViewModel : Observable
     internal void RaiseRestartTip() => RaiseRestart();
 
     public bool HasStatus => _state is not null;
+    internal bool HasOpenTerminal => Track is not null && _state is not null and not (TabState.Closed or TabState.Lost);
     public bool IsRunning => _state is TabState.Running;
     /// <summary>Started or running: Start leaves it alone rather than opening a duplicate.</summary>
     public bool IsAlive => _state is TabState.Running or TabState.Starting;
@@ -222,7 +223,14 @@ public sealed class TabViewModel : Observable
     }
     /// <summary>The programs of the commands agy denied (state Denied).</summary>
     internal IReadOnlyList<string> DeniedPrograms => _denied;
-    public string StatusText => _state switch
+    private string? _closeProgress;
+    internal void SetCloseProgress(string? text)
+    {
+        _closeProgress = text;
+        Raise(nameof(StatusText));
+        Raise(nameof(StatusTip));
+    }
+    public string StatusText => _closeProgress ?? (_state switch
     {
         null => "",
         TabState.Running when PendingRestart => Loc.Get("tabstate.waitingIdle"),
@@ -235,7 +243,7 @@ public sealed class TabViewModel : Observable
         TabState.CliExited => Loc.Format("tabstate.CliExited", _rc ?? -1),
         TabState.Denied => Loc.Format("tabstate.Denied", _denied.Count > 0 ? string.Join(", ", _denied) : "?"),
         var s => Loc.Get("tabstate." + s),
-    };
+    });
     /// <summary>The status tooltip: what Watching means and when the last turn ended; otherwise the status itself.</summary>
     public string StatusTip => _state is TabState.Running && Activity == Activity.Watching && _watchingSince is { } since
         ? Loc.Format("tabstate.watching.tip", DateTimeOffset.FromUnixTimeMilliseconds(since).ToLocalTime().ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture))
@@ -318,7 +326,7 @@ public sealed class TabViewModel : Observable
     };
 }
 
-public sealed class MainViewModel : Observable
+public sealed partial class MainViewModel : Observable
 {
     private readonly AppConfig _cfg;
     private string _status = "";
@@ -404,7 +412,7 @@ public sealed class MainViewModel : Observable
     public int EnabledCount => Tabs.Count(t => t.Enabled);
     /// <summary>The chosen tabs Start opens: those not already running.</summary>
     public int ToStartCount => Tabs.Count(t => t.Enabled && !t.IsAlive);
-    public bool CanLaunch => ToStartCount > 0;
+    public bool CanLaunch => !IsClosingAll && ToStartCount > 0;
     public string LaunchLabel => ToStartCount switch
     {
         0 when EnabledCount > 0 => Loc.Get("launch.allRunning"),
@@ -487,6 +495,7 @@ public sealed class MainViewModel : Observable
         Raise(nameof(ToStartCount));
         Raise(nameof(CanLaunch));
         Raise(nameof(LaunchLabel));
+        Raise(nameof(CanCloseAll));
     }
 
     /// <summary>Moves one project tab to a new position and persists its order.</summary>
@@ -574,6 +583,7 @@ public sealed class MainViewModel : Observable
     /// <summary>Saves the choices and opens the chosen tabs that are not already running; true on success.</summary>
     public bool Launch()
     {
+        if (IsClosingAll) return false;
         var all = Snapshot(forLaunch: true);
         var rows = Tabs.Zip(all.Tabs).Where(p => p.Second.Enabled && !p.First.IsAlive).ToList();
         var cfg = new AppConfig
@@ -678,7 +688,7 @@ public sealed class MainViewModel : Observable
     {
         DismissRecoveredStatus();
         tab.PendingRestart = false;
-        if (!tab.IsChanged || tab.LaunchedAs is not { } launched) return;
+        if (IsClosingAll || !tab.IsChanged || tab.LaunchedAs is not { } launched) return;
         var next = tab.ToConfig(forLaunch: true);
         var error = Launcher.Validate([next]);
         if (error == "" && (tab.Session is null || tab.Track is null || tab.ShellPid is null)) error = Loc.Get("err.restartInPlace");
@@ -705,7 +715,7 @@ public sealed class MainViewModel : Observable
     /// <summary>Opens the tab again with the choices it was started with, in the session's window.</summary>
     public void Restart(TabViewModel tab, bool resume = false)
     {
-        if (tab.LaunchedAs is not { } launched || (resume && !tab.CanContinueClosed)) return;
+        if (IsClosingAll || tab.LaunchedAs is not { } launched || (resume && !tab.CanContinueClosed)) return;
         var cfg = new AppConfig { WslDistro = _cfg.WslDistro, LinuxTerminal = _cfg.LinuxTerminal, ZoomPercent = _cfg.ZoomPercent, Tabs = [launched] };
         var error = Start(cfg, [(tab, launched)], _session?.WindowName, resume);
         ShowStatus(error != "" ? error : resume

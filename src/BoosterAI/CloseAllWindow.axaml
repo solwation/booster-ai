@@ -1,0 +1,28 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="using:BoosterAI"
+        x:Class="BoosterAI.CloseAllWindow" x:DataType="local:CloseAllOperation"
+        Title="{local:T close.title}" Icon="avares://BoosterAI/Assets/boosterai.ico"
+        Width="620" Height="450" MinHeight="320" CanResize="True" WindowStartupLocation="CenterOwner">
+  <Grid Margin="28,24,28,22" RowDefinitions="Auto,Auto,*,Auto">
+    <TextBlock Classes="title" FontSize="20" Text="{local:T close.title}" />
+    <TextBlock Grid.Row="1" Text="{Binding Message}" TextWrapping="Wrap" LineHeight="21" Margin="0,14,0,16" />
+    <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Disabled">
+      <ItemsControl ItemsSource="{Binding Tabs}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="local:ClosingTab">
+            <Grid ColumnDefinitions="*,2*" Margin="0,7">
+              <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" Margin="0,0,16,0" />
+              <TextBlock Grid.Column="1" Text="{Binding Text}" TextWrapping="Wrap" />
+            </Grid>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+    <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,18,0,0">
+      <Button Content="{local:T cancel}" Click="OnCancel" IsCancel="True" Padding="18,8" />
+      <Button Content="{local:T close.force}" Click="OnForce" IsVisible="{Binding CanForce}" Padding="18,8" />
+      <Button Classes="accent" Content="{local:T close.start}" Click="OnStart" IsVisible="{Binding NotStarted}" Padding="18,8" />
+    </StackPanel>
+  </Grid>
+</Window>

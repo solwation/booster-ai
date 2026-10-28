@@ -130,6 +130,108 @@ public static class Launcher
         p?.WaitForExit(10000);
     }
 
+    public const string SaveAndClosePrompt = "Stop now. Save your work, commit and push what is complete as quickly as possible, then end this turn. Start no new work. Respect repository policy and report anything you could not save or push.";
+
+    /// <summary>A distinct turn after stopping the old CLI; the token prevents an old exit/idle from completing it.</summary>
+    public static string SaveAndCloseScript(TabConfig tab, string token)
+    {
+        var model = tab.Model == Catalog.StandardModel ? "" : " --model " + Quote(tab.Model);
+        var command = tab.Llm switch
+        {
+            "claude" => "bs_stream claude --continue" + model + " -p " + Quote(SaveAndClosePrompt) + " --output-format stream-json --verbose",
+            "agy" => "bs_stream agy --continue" + model + " -p " + Quote(SaveAndClosePrompt) + " --output-format stream-json",
+            "codex" => "bs_run " + Quote("codex exec resume --last" + model + " " + Quote(SaveAndClosePrompt)),
+            _ => throw new ArgumentException("A save turn requires an AI CLI."),
+        };
+        return $"{Cd(InWsl(tab))} && bs_cli && bs_ev close-save token={Quote(token)} && {command} && bs_done 0 || bs_done $?";
+    }
+
+    internal static string StopTrackedForegroundScript(int pid, long startTime) => $$"""
+bs_stat=$(cat /proc/{{pid}}/stat 2>/dev/null) || exit 0
+bs_stat=${bs_stat##*) }
+read -ra bs_fields <<< "$bs_stat"
+[ "${bs_fields[19]}" = {{startTime}} ] || exit 0
+g=${bs_fields[5]}
+[ "$g" -gt 0 ] && [ "$g" != {{pid}} ] && kill -TERM -- -$g
+""";
+
+    /// <summary>Only the recorded shell and its descendants are closed, never the terminal server or another tab.</summary>
+    public static string CloseTabScript(int shellPid, long startTime) => $$"""
+bs_close_ids=()
+bs_start() {
+  local stat
+  local -a fields
+  stat=$(cat /proc/$1/stat 2>/dev/null) || return 1
+  stat=${stat##*) }
+  read -ra fields <<< "$stat"
+  printf '%s' "${fields[19]}"
+}
+[ "$(bs_start {{shellPid}})" = {{startTime}} ] || exit 0
+bs_collect() {
+  local c st
+  for c in $(cat /proc/$1/task/$1/children 2>/dev/null)
+  do
+    bs_collect "$c"
+  done
+  st=$(bs_start "$1")
+  [ -z "$st" ] || bs_close_ids+=("$1:$st")
+}
+for c in $(cat /proc/{{shellPid}}/task/{{shellPid}}/children 2>/dev/null)
+do
+  bs_collect "$c"
+done
+if [ "$(bs_start {{shellPid}})" = {{startTime}} ]
+then
+  {{StopTrackedForegroundScript(shellPid, startTime)}} || true
+fi
+bs_signal() {
+  local item p st
+  for item in "${bs_close_ids[@]}"
+  do
+    p=${item%:*}
+    st=${item#*:}
+    if [ "$(bs_start "$p")" = "$st" ]
+    then
+      kill -"$1" "$p" 2>/dev/null || true
+    fi
+  done
+}
+bs_signal TERM
+sleep 0.2
+bs_signal KILL
+if [ "$(bs_start {{shellPid}})" = {{startTime}} ]
+then
+  kill -HUP {{shellPid}} 2>/dev/null || true
+fi
+sleep 0.2
+if [ "$(bs_start {{shellPid}})" = {{startTime}} ]
+then
+  kill -KILL {{shellPid}} 2>/dev/null || true
+fi
+""";
+
+    internal static Process StartTabControl(string script, string wslDistro)
+    {
+        var psi = OperatingSystem.IsWindows()
+            ? new ProcessStartInfo("wsl.exe") { ArgumentList = { "-d", wslDistro, "-e", "bash", "-c", script } }
+            : new ProcessStartInfo("bash") { ArgumentList = { "-c", script } };
+        psi.UseShellExecute = false;
+        psi.CreateNoWindow = true;
+        return Process.Start(psi) ?? throw new IOException("Could not start tab control.");
+    }
+
+    internal static void WaitTabControl(Process p)
+    {
+        if (!p.WaitForExit(10000)) { p.Kill(); throw new IOException("Tab control timed out."); }
+        if (p.ExitCode != 0) throw new IOException("Tab control failed.");
+    }
+
+    internal static void RunTabControl(string script, string wslDistro)
+    {
+        using var p = StartTabControl(script, wslDistro);
+        WaitTabControl(p);
+    }
+
     /// <summary>A logging call that can neither fail the chain nor print "command not found".</summary>
     private static string Hook(string call) => $"({call} 2>/dev/null || true)";
 

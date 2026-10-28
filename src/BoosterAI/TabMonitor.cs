@@ -27,7 +27,7 @@ public enum Activity { Unknown, Busy, Idle, Watching }
 /// restart logs a new cli-start, which starts the CLI's part of the log over.
 /// </summary>
 public sealed record TabLog(int? Pid, long? StartTime, bool CliStarted, int? CliExit, bool Exited, IReadOnlyList<string>? Denied = null,
-    Activity Activity = Activity.Unknown, long? WatchingSince = null)
+    Activity Activity = Activity.Unknown, long? WatchingSince = null, string? CloseSaveToken = null)
 {
     public static TabLog Parse(string text)
     {
@@ -36,6 +36,7 @@ public sealed record TabLog(int? Pid, long? StartTime, bool CliStarted, int? Cli
         bool cliStarted = false, exited = false;
         List<string>? denied = null;
         var activity = Activity.Unknown;
+        string? closeToken = null;
         foreach (var line in text.Split('\n'))
         {
             var parts = line.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -49,7 +50,8 @@ public sealed record TabLog(int? Pid, long? StartTime, bool CliStarted, int? Cli
                     pid = Int(values, "pid");
                     start = values.TryGetValue("starttime", out var s) && long.TryParse(s, CultureInfo.InvariantCulture, out var st) ? st : null;
                     break;
-                case "cli-start": cliStarted = true; rc = null; denied = null; activity = Activity.Unknown; watching = null; break;
+                case "cli-start": closeToken = null; cliStarted = true; rc = null; denied = null; activity = Activity.Unknown; watching = null; break;
+                case "close-save": closeToken = values.GetValueOrDefault("token"); break;
                 case "turn-done": watching = at; break;
                 case "turn-start": watching = null; break;
                 case "busy": activity = Activity.Busy; break;
@@ -59,7 +61,7 @@ public sealed record TabLog(int? Pid, long? StartTime, bool CliStarted, int? Cli
                 case "denied": (denied ??= []).Add(Decode(values.GetValueOrDefault("cmd"))); break;
             }
         }
-        return new TabLog(pid, start, cliStarted, rc, exited, denied, activity, watching);
+        return new TabLog(pid, start, cliStarted, rc, exited, denied, activity, watching, closeToken);
     }
 
     private static string Decode(string? base64)
@@ -430,8 +432,19 @@ for line in sys.stdin:
     }
 
     /// <summary>Queues <paramref name="script"/> for the tab's bs_next (an in-place restart).</summary>
-    public void QueueNext(string id, string script) =>
-        File.WriteAllText(Path.Combine(Directory, id + ".next"), script.Replace("\r\n", "\n") + "\n");
+    public void QueueNext(string id, string script)
+    {
+        var path = Path.Combine(Directory, id + ".next");
+        var temporary = path + "." + Guid.NewGuid().ToString("N");
+        try
+        {
+            File.WriteAllText(temporary, script.Replace("\r\n", "\n") + "\n");
+            File.Move(temporary, path, overwrite: true);
+        }
+        finally { File.Delete(temporary); }
+    }
+
+    public void CancelNext(string id) => File.Delete(Path.Combine(Directory, id + ".next"));
 
     public TabLog? ReadLog(string id)
     {

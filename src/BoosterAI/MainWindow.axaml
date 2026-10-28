@@ -178,7 +178,7 @@
       </Panel>
     </ScrollViewer>
 
-    <Grid Grid.Row="4" ColumnDefinitions="*,Auto" Margin="0,16,0,0">
+    <Grid Grid.Row="4" ColumnDefinitions="*,Auto,Auto" Margin="0,16,0,0">
       <!-- The running version sits under the status, bottom left, so a report always says which build it was. -->
       <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,20,0" Spacing="4">
         <TextBlock Text="{Binding Status}" TextWrapping="Wrap" IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
@@ -186,7 +186,8 @@
                    Foreground="{Binding StatusIsError, Converter={x:Static local:Converters.ErrorBrush}}" />
         <TextBlock Classes="muted" Text="{Binding VersionText}" FontSize="11.5" ToolTip.Tip="{local:T version.tip}" />
       </StackPanel>
-      <Button Grid.Column="1" Classes="boost" Click="OnLaunch" AutomationProperties.Name="{Binding LaunchLabel}" IsDefault="True" IsEnabled="{Binding CanLaunch}">
+      <Button Grid.Column="1" Content="{local:T close.title}" Click="OnCloseAll" IsEnabled="{Binding CanCloseAll}" Margin="0,0,12,0" Padding="16,8" />
+      <Button Grid.Column="2" Classes="boost" Click="OnLaunch" AutomationProperties.Name="{Binding LaunchLabel}" IsDefault="True" IsEnabled="{Binding CanLaunch}">
         <StackPanel Orientation="Horizontal" Spacing="9">
           <Path Data="{StaticResource BoltIcon}" Fill="White" Width="12" Height="15" Stretch="Uniform"
                 VerticalAlignment="Center" />

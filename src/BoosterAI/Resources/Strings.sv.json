@@ -181,5 +181,21 @@
   "err.restartInPlace": "Fliken kan inte startas om på plats (ingen statuslogg). Stäng den och tryck Starta.",
   "launch.allRunning": "Alla valda flikar körs",
   "status.foundRunning.one": "1 flik från förra körningen körs fortfarande och bevakas igen.",
-  "status.foundRunning.many": "{0} flikar från förra körningen körs fortfarande och bevakas igen."
+  "status.foundRunning.many": "{0} flikar från förra körningen körs fortfarande och bevakas igen.",
+  "close.title": "Stäng alla",
+  "close.confirm": "Pågående AI-turer avbryts. Varje AI återupptar sedan senaste samtalet i sin katalog för att spara, committa och pusha färdigt arbete. Tabbarna stängs efter den turen. Behörigheter kan hindra sparandet. Skal och avslutade engångskörningar stängs direkt. Vill du fortsätta?",
+  "close.start": "Spara och stäng",
+  "close.force": "Tvångsstäng",
+  "close.waiting": "Agenterna sparar sitt arbete. Tvångsstäng avbryter direkt och kan förlora osparat arbete. Avbryt stoppar vidare stängning; redan startade sparturer får fortsätta.",
+  "close.timeout": "10 minuter har gått. Några tabbar är fortfarande öppna. Du kan tvångsstänga dem nu eller avbryta och kontrollera dem i terminalen.",
+  "close.finished": "Alla övervakade tabbar är stängda.",
+  "close.phase.Waiting": "Väntar…",
+  "close.phase.Saving": "Sparar…",
+  "close.phase.Closing": "Stänger…",
+  "close.phase.Closed": "Stängd",
+  "close.phase.Failed": "Kunde inte stänga",
+  "close.noTrack": "Kan inte verifiera tabbens process. Kontrollera terminalen manuellt.",
+  "close.ambiguous": "Flera tabbar delar AI och katalog. Senaste samtalet är tvetydigt. Spara manuellt, avbryt eller tvångsstäng.",
+  "close.saveFailed": "Sparturen misslyckades eller nekades. Kontrollera terminalen innan du tvångsstänger.",
+  "close.error": "Kunde inte stänga: {0}"
 }

@@ -181,5 +181,21 @@
   "err.restartInPlace": "The tab cannot be restarted in place (no status log). Close it and press Start.",
   "launch.allRunning": "All chosen tabs are running",
   "status.foundRunning.one": "1 tab from the last run is still running and is watched again.",
-  "status.foundRunning.many": "{0} tabs from the last run are still running and are watched again."
+  "status.foundRunning.many": "{0} tabs from the last run are still running and are watched again.",
+  "close.title": "Close all",
+  "close.confirm": "Active AI turns will be interrupted. Each AI then continues the latest conversation in its directory to save, commit and push completed work. Tabs close after that turn. Permissions can prevent saving. Shells and finished one-shot runs close immediately. Continue?",
+  "close.start": "Save and close",
+  "close.force": "Force close",
+  "close.waiting": "Agents are saving their work. Force close stops them immediately and can lose unsaved work. Cancel stops further closing; save turns already started may continue.",
+  "close.timeout": "10 minutes have passed. Some tabs are still open. Force close them now, or cancel and check them in the terminal.",
+  "close.finished": "All watched tabs are closed.",
+  "close.phase.Waiting": "Waiting…",
+  "close.phase.Saving": "Saving…",
+  "close.phase.Closing": "Closing…",
+  "close.phase.Closed": "Closed",
+  "close.phase.Failed": "Could not close",
+  "close.noTrack": "Cannot verify this tab’s process. Check the terminal manually.",
+  "close.ambiguous": "Multiple tabs share this AI and directory. The latest conversation is ambiguous. Save manually, cancel or force close.",
+  "close.saveFailed": "The save turn failed or was denied. Check the terminal before forcing it closed.",
+  "close.error": "Could not close: {0}"
 }

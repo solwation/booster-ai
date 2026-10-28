@@ -69,6 +69,7 @@ internal static class Screenshot
         Window window = o.Window switch
         {
             "main" => new MainWindow(vm),
+            "close" => new CloseAllWindow(vm.PrepareCloseAll(sample: true)),
             "settings" => new SettingsWindow(vm),
             "install" => new ConfirmInstallWindow(vm.Tabs.First()),
             "import" => new ImportProjectsWindow(SampleImport()),

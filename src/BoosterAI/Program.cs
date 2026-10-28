@@ -38,6 +38,13 @@ internal static class Program
             }
             return;
         }
+        if (args.Contains("--dry-run-close"))
+        {
+            foreach (var llm in new[] { "claude", "codex", "agy" })
+                Console.WriteLine(llm + ": " + Launcher.SaveAndCloseScript(new TabConfig { Llm = llm }, "example-token"));
+            Console.WriteLine("Close recorded tab (example PID/starttime):\n" + Launcher.CloseTabScript(12345, 67890));
+            return;
+        }
         var shot = Screenshot.Parse(args);
         if (shot is not null)
         {

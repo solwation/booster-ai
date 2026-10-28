@@ -145,12 +145,17 @@ public partial class MainWindow : Window
 
     private void OnContinue(object? sender, RoutedEventArgs e)
     {
-        if ((sender as Control)?.DataContext is TabViewModel tab) _vm.Restart(tab, resume: true);
+        if (!_vm.IsClosingAll && (sender as Control)?.DataContext is TabViewModel tab) _vm.Restart(tab, resume: true);
+    }
+
+    private async void OnCloseAll(object? sender, RoutedEventArgs e)
+    {
+        if (_vm.CanCloseAll) await new CloseAllWindow(_vm.PrepareCloseAll()).ShowDialog(this);
     }
 
     private async void OnRestart(object? sender, RoutedEventArgs e)
     {
-        if ((sender as Control)?.DataContext is not TabViewModel tab) return;
+        if (_vm.IsClosingAll || (sender as Control)?.DataContext is not TabViewModel tab) return;
         if (!tab.IsChanged) { _vm.Restart(tab); return; }
         // A changed running tab: a second click cancels the wait; an idle CLI restarts at once; otherwise ask.
         if (tab.PendingRestart) { tab.PendingRestart = false; return; }
