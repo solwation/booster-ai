@@ -158,7 +158,9 @@ bs_next() {
 # apply it explicitly, as a typed command would.
 bs_stream() {
   if [ -n "${BASH_ALIASES[$1]+x}" ]; then eval "set -- ${BASH_ALIASES[$1]}"' "${@:2}"'; fi
-  "$@" | bs_fmt; return "${PIPESTATUS[0]}"; }
+  local t0=$SECONDS rc
+  "$@" | bs_fmt; rc=${PIPESTATUS[0]}
+  echo "== exit $rc, total $((SECONDS - t0)) s"; return "$rc"; }
 bs_fmt() {
   if command -v python3 >/dev/null 2>&1; then
     BS_LOG="$bs_log" BS_TIMING="$bs_timing" PYTHONIOENCODING=utf-8 python3 -u -c 'import sys, json, os, time, base64, shutil
@@ -215,7 +217,7 @@ for line in sys.stdin:
             if isinstance(r, dict) and r.get("is_error"):
                 say("  ! " + one(r.get("content")))
     elif t == "result":
-        say("== " + ("error: " if e.get("is_error") else "done ") + str(e.get("num_turns", "?")) + " turns, " + str(round((e.get("duration_ms") or 0) / 1000)) + " s")
+        say("== " + ("turn error: " if e.get("is_error") else "turn done: ") + str(e.get("num_turns", "?")) + " turns, " + str(round((e.get("duration_ms") or 0) / 1000)) + " s")
     elif e.get("event") == "step_update":
         u = e.get("step_update") or {}
         if u.get("text_delta"):
@@ -236,14 +238,16 @@ for line in sys.stdin:
         # A command agy could not ask about ends the turn, so it is the last one started.
         if any(isinstance(d, dict) and d.get("action") == "command" for d in r.get("denied_actions") or []):
             denied("agy", last)
-        say("== " + str(r.get("status", "done")).lower() + ", " + str(r.get("num_turns", "?")) + " turns")
+        say("== turn " + str(r.get("status", "done")).lower() + ", " + str(r.get("num_turns", "?")) + " turns")
 '
   else
     # No python3: pull the text and tool names out of each JSON line with grep/sed.
     local l
     while IFS= read -r l; do
       case $l in
-        '{'*) touch "$bs_timing" 2>/dev/null || true; printf '%s\n' "$l" | grep -oE '"(text|text_delta|name)":"([^"\\]|\\.)*"' | sed -e 's/^"[a-z_]*":"//' -e 's/"$//' -e 's/\\n/ /g' -e 's/\\"/"/g' ;;
+        '{'*) touch "$bs_timing" 2>/dev/null || true
+          case $l in '{"type":"result"'*) echo "== turn done" ;; esac
+          printf '%s\n' "$l" | grep -oE '"(text|text_delta|name)":"([^"\\]|\\.)*"' | sed -e 's/^"[a-z_]*":"//' -e 's/"$//' -e 's/\\n/ /g' -e 's/\\"/"/g' ;;
         *) touch "$bs_timing" 2>/dev/null || true; printf '%s\n' "$l" ;;
       esac
     done

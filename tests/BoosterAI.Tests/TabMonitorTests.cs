@@ -271,6 +271,60 @@ public class DeniedCommandTests
         finally { Directory.Delete(dir, recursive: true); }
     }
 
+    private const string TwoTurns = """
+        {"type":"assistant","message":{"content":[{"type":"text","text":"first"}]}}
+        {"type":"result","is_error":false,"num_turns":11,"duration_ms":62000}
+        {"type":"assistant","message":{"content":[{"type":"text","text":"second"}]}}
+        {"type":"result","is_error":false,"num_turns":3,"duration_ms":9000}
+        """;
+
+    private static string RunStream(string stream, string? path = null)
+    {
+        var dir = Directory.CreateTempSubdirectory("bs-turns").FullName;
+        try
+        {
+            File.WriteAllText(Path.Combine(dir, "tab-lib.sh"), TabSession.Lib);
+            File.WriteAllText(Path.Combine(dir, "stream.jsonl"), stream + "\n");
+            var psi = new System.Diagnostics.ProcessStartInfo("/bin/bash") { RedirectStandardOutput = true, WorkingDirectory = dir };
+            if (path != null) psi.Environment["PATH"] = path;
+            psi.ArgumentList.Add("-c");
+            psi.ArgumentList.Add(". ./tab-lib.sh . t && bs_stream sh -c 'cat stream.jsonl; exit 3'; echo \"rc=$?\"");
+            using var p = System.Diagnostics.Process.Start(psi)!;
+            var output = p.StandardOutput.ReadToEnd();
+            p.WaitForExit();
+            return output;
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    /// <summary>Every result event ends a turn, not the run: only the CLI's exit prints the final line, with its own code.</summary>
+    [Fact]
+    public void FormatterSeparatesTurnEndsFromTheRunExit()
+    {
+        if (!OperatingSystem.IsLinux() || !File.Exists("/usr/bin/python3")) return;
+        var lines = RunStream(TwoTurns).Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        Assert.Equal(["first", "== turn done: 11 turns, 62 s", "second", "== turn done: 3 turns, 9 s"], lines[..4]);
+        Assert.Matches(@"^== exit 3, total \d+ s$", lines[4]);
+        Assert.Equal("rc=3", lines[5]);
+    }
+
+    [Fact]
+    public void FallbackFormatterFollowsTheSamePrinciple()
+    {
+        if (!OperatingSystem.IsLinux()) return;
+        var bin = Directory.CreateTempSubdirectory("bs-nopy").FullName;
+        try
+        {
+            foreach (var tool in new[] { "sh", "cat", "grep", "sed", "touch", "seq" })
+                File.CreateSymbolicLink(Path.Combine(bin, tool), "/usr/bin/" + tool);
+            var lines = RunStream(TwoTurns, bin).Split('\n', StringSplitOptions.RemoveEmptyEntries);
+            Assert.Equal(["first", "== turn done", "second", "== turn done"], lines[..4]);
+            Assert.Matches(@"^== exit 3, total \d+ s$", lines[4]);
+            Assert.Equal("rc=3", lines[5]);
+        }
+        finally { Directory.Delete(bin, recursive: true); }
+    }
+
     /// <summary>bs_stream applies the user's alias for the CLI (agy='agy --dangerously-skip-permissions'), which bash itself skips for an argument.</summary>
     [Fact]
     public void StreamAppliesTheCliAlias()
@@ -286,7 +340,7 @@ public class DeniedCommandTests
             using var p = System.Diagnostics.Process.Start(psi)!;
             var output = p.StandardOutput.ReadToEnd();
             p.WaitForExit();
-            Assert.Equal("--skip,two words,x", output.Trim());
+            Assert.StartsWith("--skip,two words,x", output.Trim());
         }
         finally { Directory.Delete(dir, recursive: true); }
     }
