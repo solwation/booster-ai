@@ -125,6 +125,64 @@ public class LauncherTests
         Assert.DoesNotContain("stream-json", Launcher.TabScript(Once("agy")));
     }
 
+    [Theory]
+    [InlineData("claude", "claude --continue --model")]
+    [InlineData("codex", "codex resume --last --model")]
+    [InlineData("agy", "agy --continue --model")]
+    public void ReopeningCanExplicitlyContinueWithoutAnInitialPrompt(string llm, string command)
+    {
+        var tab = new TabConfig { Directory = "~/project's folder", Llm = llm, Model = "x", Orkester = true };
+        var resumed = Launcher.TabScript(tab, prompt: "do not send me", resume: true);
+        Assert.Contains(command, resumed);
+        Assert.DoesNotContain("do not send me", resumed);
+        Assert.DoesNotContain("orkester", resumed);
+        Assert.DoesNotContain(';', resumed);
+        var fresh = Launcher.TabScript(tab);
+        Assert.DoesNotContain("--continue", fresh);
+        Assert.DoesNotContain("resume --last", fresh);
+        Assert.Contains("orkester", fresh);
+        // Both native terminal paths must forward the choice through their quoting layers.
+        Assert.Contains(command, Launcher.WindowsTerminalArgs([tab], "Ubuntu", resume: true).Last(a => a.Contains("bash") && a.Contains("cd ")));
+        foreach (var term in Launcher.LinuxTerminals.Skip(1))
+            Assert.Contains(command, string.Join(" ", Launcher.LinuxCommands([tab], term, null, [null], 0, resume: true).Single().Args));
+    }
+
+    [Theory]
+    [InlineData("claude", "--continue")]
+    [InlineData("codex", "resume\n--last")]
+    [InlineData("agy", "--continue")]
+    public void ContinuationArgumentsSurviveBashQuoting(string llm, string expected)
+    {
+        if (OperatingSystem.IsWindows()) return; // The actual scripts run in Linux/WSL.
+        var psi = new ProcessStartInfo("bash")
+        {
+            RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true,
+            UseShellExecute = false
+        };
+        psi.ArgumentList.Add("-c");
+        var tab = new TabConfig { Directory = Path.GetTempPath(), Llm = llm, Model = "model's name", Orkester = true };
+        psi.ArgumentList.Add(llm + "() { printf '%s\\n' \"$@\"; }\n" + Launcher.TabScript(tab, resume: true));
+        using var process = Process.Start(psi)!;
+        process.StandardInput.Close();
+        var output = process.StandardOutput.ReadToEnd();
+        Assert.True(process.WaitForExit(5000));
+        Assert.Equal(0, process.ExitCode);
+        Assert.Equal(expected + "\n--model\nmodel's name\n", output);
+    }
+
+    [Theory]
+    [InlineData("claude")]
+    [InlineData("codex")]
+    [InlineData("agy")]
+    public void OneShotRestartAlwaysStartsANewPass(string llm)
+    {
+        Assert.False(Launcher.CanContinue(Once(llm)));
+        Assert.Equal(Launcher.TabScript(Once(llm)), Launcher.TabScript(Once(llm), resume: true));
+        var shell = new TabConfig { Llm = Catalog.ShellOnly };
+        Assert.False(Launcher.CanContinue(shell));
+        Assert.Equal(Launcher.TabScript(shell), Launcher.TabScript(shell, resume: true));
+    }
+
     [Fact]
     public void RejectsUnsafeModelAndDirectory()
     {

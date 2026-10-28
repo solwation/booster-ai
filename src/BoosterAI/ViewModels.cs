@@ -197,12 +197,17 @@ public sealed class TabViewModel : Observable
     public string RestartTip =>
         PendingRestart ? Loc.Get("restart.pending.tip")
         : IsChanged ? Loc.Format(RestartResumes ? "restart.changed.resume.tip" : "restart.changed.tip", Llm, ModelLabel)
-        : Loc.Get(LaunchedAs is { NonInteractive: true, Orkester: true } ? "restart.once.tip" : "restart.tip");
+        : Loc.Get(LaunchedAs is { NonInteractive: true, Orkester: true } ? "restart.once.tip"
+            : LaunchedAs is { Llm: Catalog.ShellOnly } ? "restart.shell.tip" : "restart.tip");
 
     private string ModelLabel => string.IsNullOrWhiteSpace(Model) || Model == Catalog.StandardModel ? Loc.Get("restart.standardModel") : Model;
 
     public bool CanRestart => IsChanged || _state is TabState.Closed or TabState.CliExited or TabState.CliMissing
         or TabState.NotStarted or TabState.Lost or TabState.Denied;
+
+    /// <summary>A separate action: reopen an ended interactive session with the latest conversation in its directory.</summary>
+    public bool CanContinueClosed => CanRestart && !IsAlive && LaunchedAs is { } launched && Launcher.CanContinue(launched);
+    public string ContinueTip => Loc.Get("restart.continue.tip");
 
     private void ChoiceChanged()
     {
@@ -213,7 +218,7 @@ public sealed class TabViewModel : Observable
 
     private void RaiseRestart()
     {
-        foreach (var n in new[] { nameof(IsChanged), nameof(CanRestart), nameof(RestartTip), nameof(PendingRestart) }) Raise(n);
+        foreach (var n in new[] { nameof(IsChanged), nameof(CanRestart), nameof(RestartTip), nameof(PendingRestart), nameof(CanContinueClosed) }) Raise(n);
     }
     /// <summary>The programs of the commands agy denied (state Denied).</summary>
     internal IReadOnlyList<string> DeniedPrograms => _denied;
@@ -572,6 +577,7 @@ public sealed class MainViewModel : Observable
                 launched.Orkester = true;
                 tab.LaunchedAs = launched;
             }
+            tab.LaunchedAs ??= tab.ToConfig(forLaunch: true);
             tab.SetState(sample.State, sample.Rc, activity: sample.Activity,
                 watchingSince: sample.Activity == Activity.Watching ? DateTimeOffset.UtcNow.AddMinutes(-12).ToUnixTimeMilliseconds() : null);
         }
@@ -665,12 +671,15 @@ public sealed class MainViewModel : Observable
     }
 
     /// <summary>Opens the tab again with the choices it was started with, in the session's window.</summary>
-    public void Restart(TabViewModel tab)
+    public void Restart(TabViewModel tab, bool resume = false)
     {
-        if (tab.LaunchedAs is not { } launched) return;
+        if (tab.LaunchedAs is not { } launched || (resume && !tab.CanContinueClosed)) return;
         var cfg = new AppConfig { WslDistro = _cfg.WslDistro, LinuxTerminal = _cfg.LinuxTerminal, ZoomPercent = _cfg.ZoomPercent, Tabs = [launched] };
-        var error = Start(cfg, [(tab, launched)], _session?.WindowName);
-        ShowStatus(error, error: error != "");
+        var error = Start(cfg, [(tab, launched)], _session?.WindowName, resume);
+        ShowStatus(error != "" ? error : resume
+            ? Loc.Format("status.restartedResume", tab.Name.Trim(), launched.Llm,
+                launched.Model == Catalog.StandardModel ? Loc.Get("restart.standardModel") : launched.Model)
+            : "", error: error != "");
     }
 
     private TabSession? _session;
@@ -678,12 +687,12 @@ public sealed class MainViewModel : Observable
     private bool _polling;
 
     /// <summary>Launches with a status log per tab (one session per window) and starts watching.</summary>
-    private string Start(AppConfig cfg, IReadOnlyList<(TabViewModel Row, TabConfig Tab)> rows, string? window)
+    private string Start(AppConfig cfg, IReadOnlyList<(TabViewModel Row, TabConfig Tab)> rows, string? window, bool resume = false)
     {
         try { _session ??= new TabSession(TabSession.DefaultRoot, DateTime.Now, TabSession.Liveness(_cfg.WslDistro)); }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException) { _session = null; }
         var tracks = rows.ToDictionary(r => r.Tab, r => _session?.NewTrack());
-        var error = Launcher.Launch(cfg, track: t => tracks.GetValueOrDefault(t), window: window ?? _session?.WindowName ?? "new");
+        var error = Launcher.Launch(cfg, track: t => tracks.GetValueOrDefault(t), window: window ?? _session?.WindowName ?? "new", resume: resume);
         if (error != "")
         {
             if (_cfg.Notifications) Notifier.Show("BoosterAI", error);

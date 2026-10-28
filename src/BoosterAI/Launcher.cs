@@ -16,7 +16,7 @@ public static class Launcher
     /// child instead of exec so that the exit trap still fires when the tab is closed. Every logging
     /// step is "|| true", so a missing lib never stops the CLI.
     /// </summary>
-    public static string TabScript(TabConfig tab, string? prompt = null, TabTrack? track = null)
+    public static string TabScript(TabConfig tab, string? prompt = null, TabTrack? track = null, bool resume = false)
     {
         var cd = Cd(tab);
         var lib = track is null ? "" : $". {Quote(track.Lib)} {Quote(track.Dir)} {Quote(track.Id)} 2>/dev/null || true && ";
@@ -24,7 +24,7 @@ public static class Launcher
         if (tab.Llm == Catalog.ShellOnly)
             return track is null ? $"{cd} || true && {shell}"
                 : $"{lib}{cd} || true && {Hook("bs_cli")} && bs_run {Quote("bash")}";
-        var cli = CliCommand(tab, prompt, track, resume: false);
+        var cli = CliCommand(tab, prompt, track, resume && CanContinue(tab));
         if (track is null) return $"{cd} && {cli} || true && exec bash";
         // bs_next runs what an in-place restart queued (see RestartScript) before the shell is left.
         return $"{lib}{cd} && {Hook("bs_cli")} && {TrackedCommand(cli)} && {Hook("bs_done 0")} || {Hook("bs_done $?")} && {Next} && bash";
@@ -48,6 +48,10 @@ public static class Launcher
     /// <summary>A model change on claude or codex restarts with the same conversation; anything else starts fresh.</summary>
     public static bool CanResume(TabConfig from, TabConfig to) =>
         from.Llm == to.Llm && to.Llm is "claude" or "codex" && !(to.NonInteractive && to.Orkester);
+
+    /// <summary>Explicit continuation is interactive; Run once always starts a new orchestra pass.</summary>
+    public static bool CanContinue(TabConfig tab) =>
+        tab.Llm is "claude" or "codex" or "agy" && !(tab.NonInteractive && tab.Orkester);
 
     /// <summary>The settings file whose hooks log busy/idle for an interactive claude tab (written by TabSession.NewTrack).</summary>
     public static string HooksFile(TabTrack track) => $"{track.Dir}/{track.Id}.claude.json";
@@ -77,7 +81,7 @@ public static class Launcher
     private static string CliCommand(TabConfig tab, string? prompt, TabTrack? track, bool resume)
     {
         var args = new List<string>();
-        if (resume && tab.Llm == "claude") args.Add("--continue");
+        if (resume && tab.Llm is "claude" or "agy") args.Add("--continue");
         if (tab.Model != Catalog.StandardModel) args.Add("--model " + Quote(tab.Model));
         // One-shot mode applies to the orchestra command only; a given prompt (the install) stays interactive.
         var once = tab.NonInteractive && tab.Orkester && prompt is null && !resume;
@@ -148,7 +152,7 @@ public static class Launcher
     /// <paramref name="track"/> gives each tab its status log; <paramref name="window"/> is the
     /// Windows Terminal window to open in ("new", or a session's name so restarts join it).
     /// </summary>
-    public static string Launch(AppConfig cfg, string? prompt = null, Func<TabConfig, TabTrack?>? track = null, string window = "new")
+    public static string Launch(AppConfig cfg, string? prompt = null, Func<TabConfig, TabTrack?>? track = null, string window = "new", bool resume = false)
     {
         var tabs = cfg.Tabs.Where(t => t.Enabled).ToList();
         if (tabs.Count == 0) return Loc.Get("err.noTab");
@@ -157,8 +161,8 @@ public static class Launcher
         try
         {
             var tracks = tabs.Select(t => track?.Invoke(t)).ToList();
-            if (OperatingSystem.IsWindows()) LaunchWindowsTerminal(tabs, cfg.WslDistro, prompt, tracks, window, cfg.ZoomPercent);
-            else LaunchLinux(tabs, cfg.LinuxTerminal, prompt, tracks, cfg.ZoomPercent);
+            if (OperatingSystem.IsWindows()) LaunchWindowsTerminal(tabs, cfg.WslDistro, prompt, tracks, window, cfg.ZoomPercent, resume);
+            else LaunchLinux(tabs, cfg.LinuxTerminal, prompt, tracks, cfg.ZoomPercent, resume);
             return "";
         }
         catch (Exception e)
@@ -169,7 +173,7 @@ public static class Launcher
 
     /// <summary>The wt.exe arguments, exposed for --dry-run.</summary>
     public static List<string> WindowsTerminalArgs(IReadOnlyList<TabConfig> tabs, string distro, string? prompt = null,
-        IReadOnlyList<TabTrack?>? tracks = null, string window = "new", int zoomPercent = 0)
+        IReadOnlyList<TabTrack?>? tracks = null, string window = "new", int zoomPercent = 0, bool resume = false)
     {
         // wt has no font-size flag: a zoomed run selects the profile from ZoomFragmentJson.
         string[] profile = zoomPercent > 0 ? ["-p", ZoomProfileName] : [];
@@ -179,7 +183,7 @@ public static class Launcher
             var t = tabs[i];
             if (a.Count > 2) a.Add(";");
             a.AddRange(["new-tab", .. profile, "--title", t.Name, "--tabColor", t.Color, "--suppressApplicationTitle",
-                "wsl.exe", "-d", distro, "--exec", "bash", "-lic", TabScript(InWsl(t), prompt, tracks?[i])]);
+                "wsl.exe", "-d", distro, "--exec", "bash", "-lic", TabScript(InWsl(t), prompt, tracks?[i], resume)]);
         }
         a.AddRange([";", "focus-tab", "-t", "0"]);
         return a;
@@ -279,11 +283,11 @@ public static class Launcher
     };
 
     private static void LaunchWindowsTerminal(IReadOnlyList<TabConfig> tabs, string distro, string? prompt,
-        IReadOnlyList<TabTrack?> tracks, string window, int zoomPercent)
+        IReadOnlyList<TabTrack?> tracks, string window, int zoomPercent, bool resume)
     {
         if (SyncZoomFragment(zoomPercent)) ReloadRunningWindowsTerminal();
         var psi = new ProcessStartInfo("wt.exe") { UseShellExecute = false };
-        foreach (var arg in WindowsTerminalArgs(tabs, distro, prompt, tracks, window, zoomPercent)) psi.ArgumentList.Add(arg);
+        foreach (var arg in WindowsTerminalArgs(tabs, distro, prompt, tracks, window, zoomPercent, resume)) psi.ArgumentList.Add(arg);
         Process.Start(psi);
     }
 
@@ -308,11 +312,11 @@ public static class Launcher
     /// <paramref name="ptyxisRestores"/> true means these calls start Ptyxis and it restores its saved session, see the ptyxis case.
     /// </summary>
     public static List<TermCall> LinuxCommands(IReadOnlyList<TabConfig> tabs, string term, string? prompt,
-        IReadOnlyList<TabTrack?> tracks, int zoomPercent, bool ptyxisRestores = false)
+        IReadOnlyList<TabTrack?> tracks, int zoomPercent, bool ptyxisRestores = false, bool resume = false)
     {
         var zoom = LinuxZoomArgs(term, zoomPercent);
         // --command / -e take ONE string that the terminal splits like a shell.
-        string Cmd(int i) => "bash -lic " + Quote(TabScript(tabs[i], prompt, tracks[i]));
+        string Cmd(int i) => "bash -lic " + Quote(TabScript(tabs[i], prompt, tracks[i], resume));
         var calls = new List<TermCall>();
         switch (term)
         {
@@ -343,7 +347,7 @@ public static class Launcher
             default:
                 for (var i = 0; i < tabs.Count; i++)
                 {
-                    string[] shell = ["bash", "-lic", TabScript(tabs[i], prompt, tracks[i])];
+                    string[] shell = ["bash", "-lic", TabScript(tabs[i], prompt, tracks[i], resume)];
                     string[] args = term switch
                     {
                         "konsole" => ["--new-tab", "-p", $"tabtitle={tabs[i].Name}", "-e", .. shell],
@@ -359,7 +363,7 @@ public static class Launcher
     }
 
     private static void LaunchLinux(IReadOnlyList<TabConfig> tabs, string preferred, string? prompt,
-        IReadOnlyList<TabTrack?> tracks, int zoomPercent)
+        IReadOnlyList<TabTrack?> tracks, int zoomPercent, bool resume)
     {
         var term = preferred != "auto" ? preferred
             : LinuxTerminals.Skip(1).FirstOrDefault(OnPath)
@@ -367,7 +371,7 @@ public static class Launcher
         // Without gdbus the state is unknown: assume a running instance, the --new-window behaviour.
         var coldPtyxis = term == "ptyxis" && BusNameOwned(PtyxisBusName) == false;
         using var restore = coldPtyxis ? SuppressPtyxisRestore() : null;
-        foreach (var call in LinuxCommands(tabs, term, prompt, tracks, zoomPercent, coldPtyxis && restore is null))
+        foreach (var call in LinuxCommands(tabs, term, prompt, tracks, zoomPercent, coldPtyxis && restore is null, resume))
         {
             var psi = new ProcessStartInfo(call.Exe) { UseShellExecute = false };
             foreach (var a in call.Args) psi.ArgumentList.Add(a);

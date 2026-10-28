@@ -143,6 +143,11 @@ public partial class MainWindow : Window
 
     private void OnDismissDenied(object? sender, RoutedEventArgs e) => _vm.DismissDenied();
 
+    private void OnContinue(object? sender, RoutedEventArgs e)
+    {
+        if ((sender as Control)?.DataContext is TabViewModel tab) _vm.Restart(tab, resume: true);
+    }
+
     private async void OnRestart(object? sender, RoutedEventArgs e)
     {
         if ((sender as Control)?.DataContext is not TabViewModel tab) return;

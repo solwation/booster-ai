@@ -11,7 +11,7 @@
   <!--
     Today's choices only: which tabs, and the AI, model and /orkester for each.
     Names and directories are edited in Settings. The header and the rows share
-    one column layout (stripe 4 · drag handle 20 · check 36 · name * · status 165 · llm 132 · model 195 · orkester 110 · once 130)
+    one column layout (stripe 4 · drag handle 20 · check 36 · name * · status 200 · llm 132 · model 195 · orkester 110 · once 130)
     inside the same padding, so labels sit exactly over their fields.
   -->
   <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" Margin="28,22,28,20">
@@ -66,7 +66,7 @@
     </Border>
     </StackPanel>
 
-    <Grid Grid.Row="2" ColumnDefinitions="4,20,36,*,165,132,195,110,130" Margin="0,0,0,6" IsVisible="{Binding HasTabs}">
+    <Grid Grid.Row="2" ColumnDefinitions="4,20,36,*,200,132,195,110,130" Margin="0,0,0,6" IsVisible="{Binding HasTabs}">
       <TextBlock Grid.Column="2" Classes="colhead" Text="{local:T col.with}" />
       <TextBlock Grid.Column="3" Classes="colhead" Text="{local:T col.project}" />
       <TextBlock Grid.Column="4" Classes="colhead" Text="{local:T col.status}" />
@@ -83,7 +83,7 @@
             <DataTemplate x:DataType="local:TabViewModel">
               <Border Classes="row" DragDrop.AllowDrop="True" DragDrop.DragOver="OnTabDragOver"
                       DragDrop.DragLeave="OnTabDragLeave" DragDrop.Drop="OnTabDrop">
-                <Grid ColumnDefinitions="4,20,36,*,165,132,195,110,130">
+                <Grid ColumnDefinitions="4,20,36,*,200,132,195,110,130">
                   <Border Grid.Column="0" Background="{Binding ColorBrush}" CornerRadius="2" />
                   <TextBlock Grid.Column="1" Text="⋮" Foreground="{DynamicResource FaintBrush}" FontSize="16"
                              HorizontalAlignment="Center" VerticalAlignment="Center" PointerPressed="OnTabDragStart"
@@ -103,7 +103,7 @@
                     </Button>
                   </Grid>
 
-                  <Grid Grid.Column="4" ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center"
+                  <Grid Grid.Column="4" ColumnDefinitions="Auto,*,Auto,Auto" VerticalAlignment="Center"
                         Margin="0,0,12,0" IsVisible="{Binding HasStatus}" ClipToBounds="True">
                     <!-- Hovering the dot or text opens the status popup: the status tip and, while the CLI lives,
                          the tab's last lines, read every second while it is open (MainViewModel.WatchOutput). -->
@@ -126,6 +126,10 @@
                     <Button Grid.Column="2" Classes="icon" Click="OnRestart" IsVisible="{Binding CanRestart}" Margin="7,-6,0,-6"
                             ToolTip.Tip="{Binding RestartTip}" AutomationProperties.Name="{local:T restart.name}">
                       <Path Data="{StaticResource RestartIcon}" Width="12" Height="12" />
+                    </Button>
+                    <Button Grid.Column="3" Classes="icon" Click="OnContinue" IsVisible="{Binding CanContinueClosed}" Margin="4,-6,0,-6"
+                            ToolTip.Tip="{Binding ContinueTip}" AutomationProperties.Name="{local:T restart.continue.name}">
+                      <Path Data="M3,2 L13,8 L3,14 Z M1,2 L1,14" Width="12" Height="12" />
                     </Button>
                   </Grid>
 

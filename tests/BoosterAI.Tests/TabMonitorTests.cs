@@ -506,6 +506,34 @@ public class InPlaceRestartTests
         Assert.True(tab.CanRestart);
     }
 
+    [Theory]
+    [InlineData("claude", true)]
+    [InlineData("codex", true)]
+    [InlineData("agy", true)]
+    [InlineData(Catalog.ShellOnly, false)]
+    public void ExplicitContinueIsOfferedOnlyAfterAnInteractiveTabEnds(string llm, bool supported)
+    {
+        var vm = new MainViewModel(new AppConfig { Tabs = [new TabConfig { Llm = llm }] });
+        var tab = vm.Tabs[0];
+        tab.LaunchedAs = tab.ToConfig(forLaunch: true);
+        Assert.False(tab.CanContinueClosed);
+        var raised = new List<string?>();
+        tab.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+        tab.SetState(TabState.Running, null, activity: Activity.Idle);
+        Assert.False(tab.CanContinueClosed);
+        tab.SetState(TabState.CliExited, 0);
+        Assert.Equal(supported, tab.CanContinueClosed);
+        Assert.Contains(nameof(TabViewModel.CanContinueClosed), raised);
+        tab.SetState(TabState.Closed, null);
+        Assert.Equal(supported, tab.CanContinueClosed);
+        tab.SetState(TabState.Starting, null);
+        Assert.False(tab.CanContinueClosed);
+        tab.LaunchedAs.NonInteractive = true;
+        tab.LaunchedAs.Orkester = true;
+        tab.SetState(TabState.CliExited, 0);
+        Assert.False(tab.CanContinueClosed);
+    }
+
     [Fact]
     public void ActivityFollowsTheHooksAndANewCliStartsOver()
     {
