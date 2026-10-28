@@ -173,11 +173,15 @@
     <Setter Property="Background" Value="{DynamicResource RowHoverBrush}" />
   </Style>
 
+  <!-- Main-window actions share their shape; only boost gets the launch gradient. -->
+  <Style Selector="Button.boost, Button.main-action">
+    <Setter Property="CornerRadius" Value="10" />
+  </Style>
+
   <!-- The one loud element: the launch button in the icon's gradient. -->
   <Style Selector="Button.boost">
     <Setter Property="Background" Value="{StaticResource BoostBrush}" />
     <Setter Property="Foreground" Value="White" />
-    <Setter Property="CornerRadius" Value="10" />
     <Setter Property="Padding" Value="22,11" />
     <Setter Property="FontSize" Value="15" />
     <Setter Property="FontWeight" Value="SemiBold" />

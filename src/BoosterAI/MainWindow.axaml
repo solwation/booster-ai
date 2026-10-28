@@ -23,7 +23,7 @@
         <TextBlock Classes="title" Text="BoosterAI" />
         <TextBlock Classes="muted" Text="{local:T main.subtitle}" />
       </StackPanel>
-      <Button Grid.Column="2" Click="OnSettings" Padding="12,8" AutomationProperties.Name="{local:T settings.button}" VerticalAlignment="Center"
+      <Button Grid.Column="2" Classes="main-action" Click="OnSettings" Padding="12,8" AutomationProperties.Name="{local:T settings.button}" VerticalAlignment="Center"
               ToolTip.Tip="{local:T settings.tip}">
         <StackPanel Orientation="Horizontal" Spacing="8">
           <Path Data="{StaticResource GearIcon}" Width="15" Height="15" Stretch="Uniform" StrokeThickness="1.5"
@@ -186,8 +186,8 @@
                    Foreground="{Binding StatusIsError, Converter={x:Static local:Converters.ErrorBrush}}" />
         <TextBlock Classes="muted" Text="{Binding VersionText}" FontSize="11.5" ToolTip.Tip="{local:T version.tip}" />
       </StackPanel>
-      <Button Grid.Column="1" Content="{local:T close.title}" Click="OnCloseAll" IsEnabled="{Binding CanCloseAll}" Margin="0,0,12,0" Padding="16,8" />
-      <Button Grid.Column="2" Classes="boost" Click="OnLaunch" AutomationProperties.Name="{Binding LaunchLabel}" IsDefault="True" IsEnabled="{Binding CanLaunch}">
+      <Button Grid.Column="1" Classes="main-action" Height="{Binding #LaunchButton.Bounds.Height}" Content="{local:T close.title}" Click="OnCloseAll" IsEnabled="{Binding CanCloseAll}" Margin="0,0,12,0" Padding="16,8" />
+      <Button x:Name="LaunchButton" Grid.Column="2" Classes="boost" Click="OnLaunch" AutomationProperties.Name="{Binding LaunchLabel}" IsDefault="True" IsEnabled="{Binding CanLaunch}">
         <StackPanel Orientation="Horizontal" Spacing="9">
           <Path Data="{StaticResource BoltIcon}" Fill="White" Width="12" Height="15" Stretch="Uniform"
                 VerticalAlignment="Center" />
