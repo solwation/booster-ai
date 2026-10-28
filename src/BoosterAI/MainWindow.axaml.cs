@@ -37,6 +37,16 @@ public partial class MainWindow : Window
         if (await new ConfirmInstallWindow(tab).ShowDialog<bool>(this)) _vm.InstallOrkester(tab);
     }
 
+    private void OnStatusTipOpening(object? sender, CancelRoutedEventArgs e)
+    {
+        if ((sender as Control)?.DataContext is TabViewModel tab) _vm.WatchOutput(tab, open: true);
+    }
+
+    private void OnStatusTipClosing(object? sender, RoutedEventArgs e)
+    {
+        if ((sender as Control)?.DataContext is TabViewModel tab) _vm.WatchOutput(tab, open: false);
+    }
+
     private void OnOpenFolder(object? sender, RoutedEventArgs e)
     {
         if ((sender as Control)?.DataContext is TabViewModel tab) _vm.OpenFolder(tab);

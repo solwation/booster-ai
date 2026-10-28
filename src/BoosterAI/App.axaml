@@ -24,6 +24,7 @@
         <SolidColorBrush x:Key="MutedBrush" Color="#A9ADBC" />
         <SolidColorBrush x:Key="FaintBrush" Color="#7C8091" />
         <SolidColorBrush x:Key="RowHoverBrush" Color="#14FFFFFF" />
+        <SolidColorBrush x:Key="OutputBackgroundBrush" Color="#33000000" />
         <SolidColorBrush x:Key="LinkBrush" Color="#9A9DFF" />
         <SolidColorBrush x:Key="LinkHoverBrush" Color="#BDBFFF" />
       </ResourceDictionary>
@@ -32,6 +33,7 @@
         <SolidColorBrush x:Key="MutedBrush" Color="#5A5E6E" />
         <SolidColorBrush x:Key="FaintBrush" Color="#7F8394" />
         <SolidColorBrush x:Key="RowHoverBrush" Color="#0C000000" />
+        <SolidColorBrush x:Key="OutputBackgroundBrush" Color="#0A000000" />
         <SolidColorBrush x:Key="LinkBrush" Color="#3B3FCF" />
         <SolidColorBrush x:Key="LinkHoverBrush" Color="#2A2DA8" />
       </ResourceDictionary>

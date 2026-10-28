@@ -165,6 +165,8 @@
   "tabstate.waitingIdle": "Väntar på ledig…",
   "tabstate.watching": "Bevakar · {0} min",
   "tabstate.watching.tip": "Turen är klar men CLI:t lever kvar och väntar på bakgrundsarbete (t.ex. orkesterns tomgångsbevakning). Senaste tur klar {0}. Blir Körs när CLI:t skriver igen och Ledig när det avslutas.",
+  "output.none": "Ingen utdata sparad än. Flikar som startades av en äldre BoosterAI sparar ingen.",
+  "output.notRunning": "Ingen utdata visas här: CLI:t körs inte.",
   "restartConfirm.title": "Starta om fliken",
   "restartConfirm.heading": "Starta om {0}?",
   "restartConfirm.busy": "CLI:n arbetar just nu. Startar du om nu avbryts det den håller på med.",

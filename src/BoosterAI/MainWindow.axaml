@@ -105,9 +105,24 @@
 
                   <Grid Grid.Column="4" ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center"
                         Margin="0,0,12,0" IsVisible="{Binding HasStatus}" ClipToBounds="True">
-                    <Ellipse Grid.Column="0" Width="8" Height="8" Fill="{Binding StatusBrush}" VerticalAlignment="Center" Margin="0,0,7,0" />
-                    <TextBlock Grid.Column="1" Text="{Binding StatusText}" FontSize="12.5" VerticalAlignment="Center"
-                               TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding StatusTip}" />
+                    <!-- Hovering the dot or text opens the status popup: the status tip and, while the CLI lives,
+                         the tab's last lines, read every second while it is open (MainViewModel.WatchOutput). -->
+                    <Grid Grid.Column="0" Grid.ColumnSpan="2" ColumnDefinitions="Auto,*" Background="Transparent"
+                          ToolTip.ToolTipOpening="OnStatusTipOpening" ToolTip.ToolTipClosing="OnStatusTipClosing">
+                      <ToolTip.Tip>
+                        <ToolTip Classes="output">
+                          <StackPanel Spacing="8">
+                            <TextBlock Text="{Binding StatusTip}" TextWrapping="Wrap" MaxWidth="{x:Static local:TabOutputView.PopupWidth}" HorizontalAlignment="Left" />
+                            <local:TabOutputView IsVisible="{Binding HasOutput}" />
+                            <TextBlock Classes="muted" Text="{Binding OutputNote}" IsVisible="{Binding HasOutputNote}" FontSize="12"
+                                       TextWrapping="Wrap" MaxWidth="{x:Static local:TabOutputView.PopupWidth}" HorizontalAlignment="Left" />
+                          </StackPanel>
+                        </ToolTip>
+                      </ToolTip.Tip>
+                      <Ellipse Grid.Column="0" Width="8" Height="8" Fill="{Binding StatusBrush}" VerticalAlignment="Center" Margin="0,0,7,0" />
+                      <TextBlock Grid.Column="1" Text="{Binding StatusText}" FontSize="12.5" VerticalAlignment="Center"
+                                 TextTrimming="CharacterEllipsis" />
+                    </Grid>
                     <Button Grid.Column="2" Classes="icon" Click="OnRestart" IsVisible="{Binding CanRestart}" Margin="7,-6,0,-6"
                             ToolTip.Tip="{Binding RestartTip}" AutomationProperties.Name="{local:T restart.name}">
                       <Path Data="{StaticResource RestartIcon}" Width="12" Height="12" />

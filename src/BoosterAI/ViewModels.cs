@@ -235,6 +235,40 @@ public sealed class TabViewModel : Observable
     public string StatusTip => _state is TabState.Running && Activity == Activity.Watching && _watchingSince is { } since
         ? Loc.Format("tabstate.watching.tip", DateTimeOffset.FromUnixTimeMilliseconds(since).ToLocalTime().ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture))
         : StatusText;
+    /// <summary>Widest line the output popup shows; longer ones end in "…" so the popup keeps its size.</summary>
+    public const int OutputColumns = 100;
+
+    private string _outputText = "";
+    private bool _hasOutput;
+
+    /// <summary>The status popup shows the tab's last lines only while its CLI lives (Running, whatever the activity).</summary>
+    public bool ShowsOutput => _state is TabState.Running;
+
+    /// <summary>The tab's last lines (see TabSession.ReadOutput), read only while the popup is open.</summary>
+    public string OutputText { get => _outputText; private set => Set(ref _outputText, value); }
+
+    /// <summary>Why the popup shows no output: nothing captured yet, or the CLI does not run; null when output is shown.</summary>
+    public string? OutputNote => _state switch
+    {
+        TabState.Running => _hasOutput ? null : Loc.Get("output.none"),
+        null or TabState.Starting => null,
+        _ => Loc.Get("output.notRunning"),
+    };
+
+    public bool HasOutputNote => OutputNote is not null;
+
+    /// <summary>The output box is shown: the CLI lives and something was captured.</summary>
+    public bool HasOutput => ShowsOutput && _hasOutput;
+
+    /// <summary>The popup's text; null lines: nothing captured.</summary>
+    internal void SetOutput(IReadOnlyList<string>? lines)
+    {
+        var had = _hasOutput;
+        _hasOutput = lines is { Count: > 0 };
+        OutputText = lines is null ? "" : string.Join('\n', lines.Select(l => l.Length > OutputColumns ? l[..(OutputColumns - 1)] + "…" : l));
+        if (had != _hasOutput) { Raise(nameof(OutputNote)); Raise(nameof(HasOutputNote)); Raise(nameof(HasOutput)); }
+    }
+
     public IBrush StatusBrush => new SolidColorBrush(Avalonia.Media.Color.Parse(_state switch
     {
         TabState.Running when Activity == Activity.Watching => "#3B7DD8",
@@ -263,7 +297,8 @@ public sealed class TabViewModel : Observable
         _activity = activity;
         _watchingSince = watchingSince;
         if (state != TabState.Running) PendingRestart = false;
-        foreach (var n in new[] { nameof(HasStatus), nameof(IsRunning), nameof(IsAlive), nameof(Activity), nameof(StatusText), nameof(StatusTip), nameof(StatusBrush) }) Raise(n);
+        foreach (var n in new[] { nameof(HasStatus), nameof(IsRunning), nameof(IsAlive), nameof(Activity), nameof(StatusText), nameof(StatusTip), nameof(StatusBrush),
+            nameof(ShowsOutput), nameof(HasOutput), nameof(OutputNote), nameof(HasOutputNote) }) Raise(n);
         RaiseRestart();
         return stateChanged;
     }
@@ -552,6 +587,44 @@ public sealed class MainViewModel : Observable
         tab.SetState(TabState.Running, null, activity: Activity.Busy);
     }
 
+    /// <summary>
+    /// For --screenshot --fake-output: the first running tab's popup text, replayed like a captured claude screen
+    /// (static lines, then a live area redrawn in place); returns that tab.
+    /// </summary>
+    public TabViewModel? ShowSampleOutput(int index = 0)
+    {
+        if (Tabs.Where(t => t.ShowsOutput).ElementAtOrDefault(index) is not { } tab) return null;
+        if (tab.LaunchedAs is { NonInteractive: true })
+        {
+            // A Run once tab shows bs_stream's formatter lines.
+            tab.SetOutput(TerminalText.Render(string.Join('\n',
+                "Picking up #31 (priority: medium): rate limiter returns 500 instead of 429.",
+                "> Read src/middleware/limit.go",
+                "> Bash go test ./middleware/...",
+                "The handler panics when the bucket is empty, so the recover middleware turns it into a 500.",
+                "> Edit src/middleware/limit.go",
+                "> Bash go test ./... && git commit -am 'Return 429 when the bucket is empty (Fixes #31)'",
+                "Delivered #31. No eligible issues remain, entering the idle watch (polls every 5 min).",
+                "> Bash sleep 300 && gh issue list --state open --label priority",
+                "== turn done: 38 turns, 412 s") + "\n", 40, 100, TabSession.OutputLines));
+            return tab;
+        }
+        var bar = new string('─', 96);
+        var screen = new System.Text.StringBuilder()
+            .Append("\x1b[1m●\x1b[0m Picking up #12 (priority: high): the export button ignores the date filter.\r\n\r\n")
+            .Append("\x1b[32m●\x1b[0m Read(src/export/csv.ts)\r\n  ⎿  Read 142 lines\r\n\r\n")
+            .Append("\x1b[32m●\x1b[0m Bash(npm test -- export)\r\n  ⎿  Tests: 1 failed, 23 passed, 24 total\r\n\r\n")
+            .Append("● The filter is applied after paging, so rows outside the range leak into page 2.\r\n  Moving it into the query.\r\n\r\n")
+            .Append("\x1b[32m●\x1b[0m Update(src/export/csv.ts)\r\n  ⎿  Updated src/export/csv.ts with 6 additions and 3 removals\r\n\r\n");
+        // Two frames of the live area: the second overwrites the first, as Ink does.
+        foreach (var (seconds, tokens) in new[] { (41, "1.9k"), (44, "2.3k") })
+            screen.Append(seconds == 41 ? "" : string.Concat(Enumerable.Repeat("\x1b[2K\x1b[1A", 5)) + "\x1b[2K\r")
+                .Append($"\x1b[38;5;174m✻ Running tests… ({seconds}s · ↓ {tokens} tokens · esc to interrupt)\x1b[0m\r\n\r\n")
+                .Append(bar).Append("\r\n> \r\n").Append(bar).Append("\r\n");
+        tab.SetOutput(TerminalText.Render(screen.ToString(), 40, 100, TabSession.OutputLines));
+        return tab;
+    }
+
     /// <summary>For --screenshot --fake-denied: the first enabled tab had "git status &amp;&amp; gh auth status" denied.</summary>
     public void ShowSampleDenial()
     {
@@ -680,6 +753,41 @@ public sealed class MainViewModel : Observable
         }, TaskScheduler.FromCurrentSynchronizationContext());
     }
 
+    private TabViewModel? _outputTab;
+    private DispatcherTimer? _outputTimer;
+    private bool _readingOutput;
+
+    /// <summary>
+    /// While a tab's status popup is open (<paramref name="open"/>), reads its output tail every second and
+    /// updates the popup; nothing is read while no popup is open.
+    /// </summary>
+    public void WatchOutput(TabViewModel tab, bool open)
+    {
+        if (!open)
+        {
+            if (_outputTab != tab) return;
+            _outputTab = null;
+            _outputTimer?.Stop();
+            return;
+        }
+        _outputTab = tab;
+        _outputTimer ??= new DispatcherTimer(TimeSpan.FromSeconds(1), DispatcherPriority.Background, (_, _) => ReadOutput());
+        _outputTimer.Start();
+        ReadOutput();
+    }
+
+    private void ReadOutput()
+    {
+        if (_readingOutput || _outputTab is not { ShowsOutput: true, Session: { } session, TrackId: { } id } tab) return;
+        _readingOutput = true;
+        Task.Run(() => session.ReadOutput(id)).ContinueWith(t =>
+        {
+            _readingOutput = false;
+            // Skip a result for a tab restarted meanwhile; an unchanged text leaves the popup as it is.
+            if (t.IsCompletedSuccessfully && tab.TrackId == id) tab.SetOutput(t.Result);
+        }, TaskScheduler.FromCurrentSynchronizationContext());
+    }
+
     /// <summary>The configured tab a running one belongs to: same name and directory, not already watched.</summary>
     internal TabViewModel? Match(TabConfig running) =>
         Tabs.FirstOrDefault(t => t.LaunchedAs is null && t.Name.Trim() == running.Name.Trim() && t.Directory.Trim() == running.Directory.Trim());
@@ -701,7 +809,10 @@ public sealed class MainViewModel : Observable
                 var log = w.Session.ReadLog(w.Id);
                 var denied = log?.Denied?.SelectMany(AgyPermissions.Programs).Distinct().ToList();
                 var now = DateTime.UtcNow;
-                return (w.Row, w.Id, State: TabStatus.Evaluate(log, now - w.LaunchedAt, live), log?.CliExit, Denied: denied,
+                var state = TabStatus.Evaluate(log, now - w.LaunchedAt, live);
+                // A shell killed without its exit trap (wsl --shutdown) leaves its output capture behind.
+                if (state == TabState.Lost) w.Session.DeleteOutput(w.Id);
+                return (w.Row, w.Id, State: state, log?.CliExit, Denied: denied,
                     log?.Pid, Activity: w.Session.ReadActivity(w.Id, log, now), log?.WatchingSince);
             }).ToList();
             // agy's settings are only read while a tab has a denial to offer rules for.

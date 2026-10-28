@@ -11,7 +11,7 @@ public static class Launcher
     /// interactive login shell (so ~/.bashrc aliases and PATH apply), then leave a shell.
     /// It contains no ';' because Windows Terminal splits its command line on it.
     /// With a <paramref name="track"/>, the shell first sources tab-lib.sh, which logs start, CLI
-    /// start and exit code, tracks terminal output timing (bs_run), formats the run-once event stream
+    /// start and exit code, tracks terminal output timing and captures a bounded output tail (bs_run, bs_cap), formats the run-once event stream
     /// (bs_stream), and logs the shell's own exit (see TabSession); the closing shell is then a
     /// child instead of exec so that the exit trap still fires when the tab is closed. Every logging
     /// step is "|| true", so a missing lib never stops the CLI.
