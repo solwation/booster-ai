@@ -42,8 +42,8 @@ public static class Launcher
     /// (claude --continue, codex resume --last) for a model change.
     /// </summary>
     public static string RestartScript(TabConfig tab, TabTrack track, bool resume) =>
-        tab.Llm == Catalog.ShellOnly ? $"{Cd(tab)} || true"
-            : $"{Cd(tab)} && {Hook("bs_cli")} && {TrackedCommand(CliCommand(tab, null, track, resume))} && {Hook("bs_done 0")} || {Hook("bs_done $?")}";
+        tab.Llm == Catalog.ShellOnly ? $"{Cd(InWsl(tab))} || true"
+            : $"{Cd(InWsl(tab))} && {Hook("bs_cli")} && {TrackedCommand(CliCommand(tab, null, track, resume))} && {Hook("bs_done 0")} || {Hook("bs_done $?")}";
 
     /// <summary>A model change on claude or codex restarts with the same conversation; anything else starts fresh.</summary>
     public static bool CanResume(TabConfig from, TabConfig to) =>

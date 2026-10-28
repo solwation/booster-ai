@@ -183,6 +183,41 @@ public class LauncherTests
         Assert.Equal(Launcher.TabScript(shell), Launcher.TabScript(shell, resume: true));
     }
 
+    [Theory]
+    [InlineData(@"C:\Work\it's here", @"cd '/mnt/c/Work/it'\''s here'")]
+    [InlineData(@"\\wsl.localhost\Ubuntu\home\me\it's here", @"cd '/home/me/it'\''s here'")]
+    [InlineData(@"\\wsl$\Ubuntu\home\me\it's here", @"cd '/home/me/it'\''s here'")]
+    [InlineData("~/it's here", @"cd ~/'it'\''s here'")]
+    [InlineData("/srv/it's here", @"cd '/srv/it'\''s here'")]
+    public void InPlaceRestartUsesTheSameWslDirectoryAsTheFirstLaunch(string directory, string expectedCd)
+    {
+        var track = new TabTrack("/s/lib.sh", "/s", "tab1");
+        foreach (var llm in Catalog.Llms)
+            foreach (var resume in new[] { false, true })
+            {
+                var tab = new TabConfig { Directory = directory, Llm = llm, Model = "model's name", Orkester = true };
+                var restart = Launcher.RestartScript(tab, track, resume);
+                Assert.StartsWith(expectedCd + (llm == Catalog.ShellOnly ? " || true" : " && "), restart);
+                Assert.Contains(expectedCd, Launcher.WindowsTerminalArgs([tab], "Ubuntu", tracks: [track], resume: resume)
+                    .Single(arg => arg.Contains("bs_cli")));
+                Assert.DoesNotContain(';', restart);
+                if (resume && llm != Catalog.ShellOnly)
+                {
+                    Assert.Contains(llm == "codex" ? "codex resume --last" : llm + " --continue", restart);
+                    Assert.DoesNotContain("orkester", restart);
+                }
+                if (!OperatingSystem.IsLinux()) continue;
+                var psi = new ProcessStartInfo("bash") { UseShellExecute = false, RedirectStandardError = true };
+                psi.ArgumentList.Add("-n");
+                psi.ArgumentList.Add("-c");
+                psi.ArgumentList.Add(restart);
+                using var process = Process.Start(psi)!;
+                Assert.True(process.WaitForExit(5000));
+                Assert.Equal("", process.StandardError.ReadToEnd());
+                Assert.Equal(0, process.ExitCode);
+            }
+    }
+
     [Fact]
     public void RejectsUnsafeModelAndDirectory()
     {
