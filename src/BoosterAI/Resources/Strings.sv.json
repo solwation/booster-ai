@@ -54,7 +54,7 @@
   "zoom.name": "Teckenstorlek i flikarna",
   "zoom.default": "Standard",
   "zoom.percent": "{0} %",
-  "zoom.hint": "Gäller alla flikar vid nästa Starta (Windows Terminal, gnome-terminal, kitty, wezterm).",
+  "zoom.hint": "Windows Terminal: direkt, även i öppna flikar. gnome-terminal, kitty, wezterm: vid nästa Starta.",
   "confirm.title": "Installera orkestern",
   "confirm.heading": "Installera orkestern i {0}?",
   "confirm.intro": "Orkestern låter AI-agenter jobba igenom projektets GitHub-issues åt dig. En dirigent väljer issues efter prioritet, ger dem till agenter som arbetar parallellt i egna kopior, granskar resultatet och levererar det. Frågor som bara du kan svara på hamnar på issuet, inte i chatten.",

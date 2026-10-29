@@ -330,6 +330,8 @@ public sealed class TabViewModel : Observable
 public sealed partial class MainViewModel : Observable
 {
     private readonly AppConfig _cfg;
+    /// <summary>The config as this instance last loaded or saved it; see ConfigMerge.</summary>
+    private AppConfig _saved;
     private string _status = "";
     private bool _statusIsError;
     private string? _wslHome;
@@ -337,6 +339,7 @@ public sealed partial class MainViewModel : Observable
     public MainViewModel(AppConfig cfg)
     {
         _cfg = cfg;
+        _saved = ConfigStore.Copy(cfg);
         Tabs = new ObservableCollection<TabViewModel>(cfg.Tabs.Select((t, i) => new TabViewModel(t, this, i)));
         Tabs.CollectionChanged += (_, _) => TabsChanged();
         Update = new UpdateViewModel(cfg, Save);
@@ -476,7 +479,8 @@ public sealed partial class MainViewModel : Observable
         }
     }
 
-    /// <summary>Global CLI zoom shown in Settings; applies on the next start.</summary>
+    /// <summary>Global CLI zoom shown in Settings: saved at once (a killed app or a second instance must not lose it,
+    /// #61); Windows Terminal applies it to open BoosterAI tabs too, other terminals on the next start.</summary>
     public IReadOnlyList<ZoomChoice> ZoomChoices { get; } = [.. Launcher.ZoomChoices.Select(p => new ZoomChoice(p))];
 
     public ZoomChoice SelectedZoom
@@ -487,6 +491,8 @@ public sealed partial class MainViewModel : Observable
             if (value is null || value.Percent == _cfg.ZoomPercent) return;
             _cfg.ZoomPercent = value.Percent;
             Raise();
+            Save();
+            Launcher.ApplyZoom(value.Percent);
         }
     }
 
@@ -586,8 +592,24 @@ public sealed partial class MainViewModel : Observable
 
     public void Save()
     {
-        try { ConfigStore.Save(Snapshot(forLaunch: false)); }
+        try
+        {
+            if (ConfigStore.TryRead() is { } disk && ConfigMerge.TakeOthers(_cfg, _saved, disk)) SettingsTakenOver();
+            var cfg = Snapshot(forLaunch: false);
+            ConfigStore.Save(cfg);
+            _saved = ConfigStore.Copy(cfg);
+        }
         catch (Exception e) { ShowStatus(Loc.Format("status.saveFailed", e.Message), error: true); }
+    }
+
+    /// <summary>Shows the settings another instance saved (ConfigMerge) in this one's windows.</summary>
+    private void SettingsTakenOver()
+    {
+        foreach (var name in new[] { nameof(WslDistro), nameof(LinuxTerminal), nameof(Theme), nameof(SelectedTheme), nameof(SelectedLanguage),
+            nameof(SelectedAppearance), nameof(CloseAfterLaunch), nameof(Notifications), nameof(SelectedZoom), nameof(AutoUpdateClis), nameof(CheckForUpdates) })
+            Raise(name);
+        foreach (var t in Tabs) t.RaiseColor();
+        (Avalonia.Application.Current as App)?.ApplyTheme();
     }
 
     /// <summary>Saves the choices and opens the chosen tabs that are not already running; true on success.</summary>
@@ -1080,7 +1102,7 @@ public sealed partial class MainViewModel : Observable
     {
         var cfg = new AppConfig
         {
-            WslDistro = _cfg.WslDistro, LinuxTerminal = _cfg.LinuxTerminal,
+            WslDistro = _cfg.WslDistro, LinuxTerminal = _cfg.LinuxTerminal, ZoomPercent = _cfg.ZoomPercent,
             Tabs = [tab.ToConfig(forLaunch: false)],
         };
         cfg.Tabs[0].Enabled = true;

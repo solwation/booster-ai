@@ -375,6 +375,28 @@ fi
         return true;
     }
 
+    // Serializes fragment writes and reloads between a launch and ApplyZoom; _wantedZoom is the latest choice.
+    private static readonly object ZoomLock = new();
+    private static int _wantedZoom;
+
+    /// <summary>
+    /// Windows: writes the profile for a zoom chosen in Settings at once and makes a running Windows Terminal reload
+    /// it, so the open BoosterAI tabs and the CLIs restarted in them follow without a new Start (#61). In the background.
+    /// </summary>
+    public static void ApplyZoom(int zoomPercent)
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        Volatile.Write(ref _wantedZoom, zoomPercent);
+        Task.Run(() =>
+        {
+            lock (ZoomLock)
+            {
+                try { if (SyncZoomFragment(Volatile.Read(ref _wantedZoom))) ReloadRunningWindowsTerminal(); }
+                catch (Exception e) when (e is IOException or UnauthorizedAccessException) { /* the next Start writes it again */ }
+            }
+        });
+    }
+
     /// <summary>settings.json of Windows Terminal (Store, Preview and unpackaged installs).</summary>
     private static IEnumerable<string> WtSettingsFiles()
     {
@@ -434,7 +456,7 @@ fi
     private static void LaunchWindowsTerminal(IReadOnlyList<TabConfig> tabs, string distro, string? prompt,
         IReadOnlyList<TabTrack?> tracks, string window, int zoomPercent, bool resume)
     {
-        if (SyncZoomFragment(zoomPercent)) ReloadRunningWindowsTerminal();
+        lock (ZoomLock) if (SyncZoomFragment(zoomPercent)) ReloadRunningWindowsTerminal();
         var psi = new ProcessStartInfo("wt.exe") { UseShellExecute = false };
         foreach (var arg in WindowsTerminalArgs(tabs, distro, prompt, tracks, window, zoomPercent, resume)) psi.ArgumentList.Add(arg);
         Process.Start(psi);

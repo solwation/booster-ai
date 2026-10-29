@@ -89,6 +89,20 @@ public static class ConfigStore
         return Defaults();
     }
 
+    /// <summary>The config as it is on disk now, or null when there is none or it cannot be read; never migrates.</summary>
+    public static AppConfig? TryRead()
+    {
+        try
+        {
+            return File.Exists(PathOnDisk) ? JsonSerializer.Deserialize(File.ReadAllText(PathOnDisk), ConfigJsonContext.Default.AppConfig) : null;
+        }
+        catch (Exception e) when (e is IOException or JsonException or UnauthorizedAccessException) { return null; }
+    }
+
+    /// <summary>A detached copy, e.g. the baseline <see cref="ConfigMerge"/> compares against.</summary>
+    public static AppConfig Copy(AppConfig cfg) =>
+        JsonSerializer.Deserialize(JsonSerializer.Serialize(cfg, ConfigJsonContext.Default.AppConfig), ConfigJsonContext.Default.AppConfig)!;
+
     public static void Save(AppConfig cfg)
     {
         System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(PathOnDisk)!);
@@ -99,4 +113,53 @@ public static class ConfigStore
 
     /// <summary>First start: no projects; the start window asks for them.</summary>
     private static AppConfig Defaults() => new();
+}
+
+/// <summary>
+/// Every running BoosterAI keeps the config it loaded and saves all of it (update checks every few minutes,
+/// tab moves, Start, closing), and nothing stops a second instance (e.g. one started from the shortcut while
+/// another waits in the tray). Before a save, settings that another instance changed on disk while this one
+/// left them alone are taken over instead of being written back with the old value (#61: a zoom choice
+/// reverted to 0). Tabs are not merged.
+/// </summary>
+public static class ConfigMerge
+{
+    private sealed record Setting(Func<AppConfig, object?> Get, Action<AppConfig, AppConfig> Take);
+
+    private static Setting S<T>(Func<AppConfig, T> get, Action<AppConfig, T> set) => new(c => get(c), (to, from) => set(to, get(from)));
+
+    private static readonly Setting[] Settings =
+    [
+        S(c => c.WslDistro, (c, v) => c.WslDistro = v),
+        S(c => c.LinuxTerminal, (c, v) => c.LinuxTerminal = v),
+        S(c => c.ColorTheme, (c, v) => c.ColorTheme = v),
+        S(c => c.Language, (c, v) => c.Language = v),
+        S(c => c.AppTheme, (c, v) => c.AppTheme = v),
+        S(c => c.CloseAfterLaunch, (c, v) => c.CloseAfterLaunch = v),
+        S(c => c.Notifications, (c, v) => c.Notifications = v),
+        S(c => c.ZoomPercent, (c, v) => c.ZoomPercent = v),
+        S(c => c.AutoUpdateClis, (c, v) => c.AutoUpdateClis = v),
+        S(c => c.CheckForUpdates, (c, v) => c.CheckForUpdates = v),
+        S(c => c.SkippedVersion, (c, v) => c.SkippedVersion = v),
+        S(c => c.LastUpdateCheck, (c, v) => c.LastUpdateCheck = v),
+    ];
+
+    /// <summary>
+    /// Copies into <paramref name="mine"/> each setting (not the tabs) that <paramref name="disk"/> changed since
+    /// <paramref name="baseline"/> (what this instance last loaded or saved) while <paramref name="mine"/> still
+    /// has the baseline value. True when anything was taken.
+    /// </summary>
+    public static bool TakeOthers(AppConfig mine, AppConfig baseline, AppConfig disk)
+    {
+        var taken = false;
+        foreach (var s in Settings)
+        {
+            if (Equals(s.Get(mine), s.Get(baseline)) && !Equals(s.Get(disk), s.Get(baseline)))
+            {
+                s.Take(mine, disk);
+                taken = true;
+            }
+        }
+        return taken;
+    }
 }

@@ -698,6 +698,7 @@ public class TabActivityStatusTests
     }
 }
 
+[Collection(ConfigFileCollection.Name)]
 public class TabOrderTests
 {
     [Fact]
