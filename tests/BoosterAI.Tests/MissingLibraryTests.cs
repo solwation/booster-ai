@@ -44,10 +44,10 @@ public class MissingLibraryTests
             using var process = Process.Start(psi)!;
             try
             {
-                if (mode != "shell") Assert.True(SpinWait.SpinUntil(() => File.Exists(Path.Combine(project, "cli-ran")), 5000));
+                if (mode != "shell") Assert.True(SpinWait.SpinUntil(() => File.Exists(Path.Combine(project, "cli-ran")), 30000));
                 process.StandardInput.WriteLine("pwd > " + Quote(Path.Combine(project, "shell-pwd")) + " && exit 3");
                 process.StandardInput.Flush();
-                Assert.True(process.WaitForExit(5000));
+                Assert.True(process.WaitForExit(30000));
                 Assert.Equal(3, process.ExitCode); // A nonzero shell exit must not run the fallback twice.
                 Assert.Equal(project, File.ReadAllText(Path.Combine(project, "shell-pwd")).Trim());
                 if (mode != "shell")

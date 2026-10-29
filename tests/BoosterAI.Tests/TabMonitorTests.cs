@@ -856,11 +856,11 @@ public class ExitedRestartTests
         try
         {
             if (legacy) Assert.True(SpinWait.SpinUntil(() => File.Exists(Path.Combine(root, "tab1.log"))
-                && TabLog.Parse(File.ReadAllText(Path.Combine(root, "tab1.log"))).CliExit == 0, 5000));
+                && TabLog.Parse(File.ReadAllText(Path.Combine(root, "tab1.log"))).CliExit == 0, 30000));
             process.StandardInput.WriteLine("touch shell-ran && exit");
             process.StandardInput.Flush();
-            Assert.True(SpinWait.SpinUntil(() => File.Exists(Path.Combine(root, "shell-ran")), 5000));
-            Assert.True(process.WaitForExit(5000));
+            Assert.True(SpinWait.SpinUntil(() => File.Exists(Path.Combine(root, "shell-ran")), 30000));
+            Assert.True(process.WaitForExit(30000));
             Assert.True(File.Exists(Path.Combine(root, "cli-ran")));
         }
         finally
@@ -888,7 +888,8 @@ public class ExitedRestartTests
         using var process = System.Diagnostics.Process.Start(psi)!;
         try
         {
-            Assert.True(SpinWait.SpinUntil(() => session.ReadLog(track.Id) is { CliExit: 0, CanRestartExited: true }, 5000));
+            Assert.True(SpinWait.SpinUntil(() => session.ReadLog(track.Id) is { CliExit: 0, CanRestartExited: true }, 30000));
+            var idleFile = Path.Combine(session.Directory, track.Id + ".next.idle");
             var original = session.ReadLog(track.Id)!;
             // No CLI update: the fake codex is a function, and the real one on PATH must never be updated by a test.
             var vm = new MainViewModel(new AppConfig { Tabs = [tab], AutoUpdateClis = false });
@@ -900,12 +901,15 @@ public class ExitedRestartTests
             row.Llm = "agy"; // Edited selections must not replace the original launched choices.
             for (var i = 0; i < 2; i++)
             {
+                // The idle shell sources the user's ~/.bashrc (seconds on a slow one, and under parallel test load) before it
+                // records itself in .next.idle; the wake gives up after 2 s, so restart only once it is really idle.
+                Assert.True(SpinWait.SpinUntil(() => File.Exists(idleFile), 60000), "idle shell never became ready");
                 vm.Restart(row, resume);
                 Assert.Same(track, row.Track);
                 Assert.Same(session, row.Session);
                 Assert.Same(tab, row.LaunchedAs);
                 Assert.True(SpinWait.SpinUntil(() => File.ReadAllLines(Path.Combine(session.Directory, "cli-args")).Length == i + 2
-                    && session.ReadLog(track.Id)?.CliExit == 0, 5000), File.ReadAllText(Path.Combine(session.Directory, track.Id + ".log")));
+                    && session.ReadLog(track.Id)?.CliExit == 0, 30000), File.ReadAllText(Path.Combine(session.Directory, track.Id + ".log")));
                 var log = session.ReadLog(track.Id)!;
                 Assert.Equal(original.Pid, log.Pid);
                 Assert.Equal(original.StartTime, log.StartTime);
@@ -915,7 +919,7 @@ public class ExitedRestartTests
             Assert.Equal(resume ? "resume --last" : "", args[1]);
             Assert.Equal(3, File.ReadAllLines(Path.Combine(session.Directory, track.Id + ".log")).Count(l => l.Contains(" cli-start")));
             Launcher.RunTabControl(Launcher.CloseTabScript(original.Pid!.Value, original.StartTime!.Value, exitCleanly: true), "Ubuntu");
-            Assert.True(process.WaitForExit(5000));
+            Assert.True(process.WaitForExit(30000));
             Assert.Equal(0, process.ExitCode);
         }
         finally

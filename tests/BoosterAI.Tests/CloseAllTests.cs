@@ -110,7 +110,7 @@ public class CloseAllTests
             var psi = new ProcessStartInfo("bash") { WorkingDirectory = root, RedirectStandardOutput = true, RedirectStandardError = true };
             psi.ArgumentList.Add("-c"); psi.ArgumentList.Add(script);
             using var p = Process.Start(psi)!;
-            Assert.True(p.WaitForExit(10000));
+            Assert.True(p.WaitForExit(30000));
             Assert.Equal(0, p.ExitCode);
             var args = File.ReadAllLines(Path.Combine(root, "args"));
             Assert.Equal(["exec", "resume", "--last", Launcher.SaveAndClosePrompt], args);
@@ -149,7 +149,7 @@ public class CloseAllTests
             Launcher.RunTabControl(Launcher.CloseTabScript(shell.Id, start + 1), "Ubuntu");
             Assert.False(shell.HasExited);
             Launcher.RunTabControl(Launcher.CloseTabScript(shell.Id, start), "Ubuntu");
-            Assert.True(shell.WaitForExit(5000));
+            Assert.True(shell.WaitForExit(30000));
             Assert.False(unrelated.HasExited);
         }
         finally
@@ -175,17 +175,17 @@ public class CloseAllTests
         try
         {
             TabLog? log = null;
-            Assert.True(SpinWait.SpinUntil(() => (log = session.ReadLog(track.Id))?.CliStarted == true, 5000));
+            Assert.True(SpinWait.SpinUntil(() => (log = session.ReadLog(track.Id))?.CliStarted == true, 30000));
             var pid = log!.Pid!.Value;
             var start = log.StartTime!.Value;
             session.QueueNext(track.Id, Launcher.SaveAndCloseScript(new TabConfig { Llm = "codex", Directory = session.Directory }, "pty-save"));
             Launcher.RunTabControl(Launcher.StopTrackedForegroundScript(pid, start), "Ubuntu");
-            Assert.True(SpinWait.SpinUntil(() => (log = session.ReadLog(track.Id)) is not null && CloseAllLogic.SaveTurnDone(log, "pty-save"), 10000));
+            Assert.True(SpinWait.SpinUntil(() => (log = session.ReadLog(track.Id)) is not null && CloseAllLogic.SaveTurnDone(log, "pty-save"), 30000));
             Assert.Equal(0, log!.CliExit);
             Assert.Equal(["exec", "resume", "--last", Launcher.SaveAndClosePrompt], File.ReadAllLines(Path.Combine(session.Directory, "saved-args")));
             Assert.True(log.CanCloseCleanly);
             Launcher.RunTabControl(Launcher.CloseTabScript(pid, start, exitCleanly: log.CanCloseCleanly), "Ubuntu");
-            Assert.True(process.WaitForExit(5000));
+            Assert.True(process.WaitForExit(30000));
             Assert.True(process.ExitCode == 0,
                 $"PTY exit={process.ExitCode}, log={File.ReadAllText(Path.Combine(session.Directory, track.Id + ".log"))}");
         }

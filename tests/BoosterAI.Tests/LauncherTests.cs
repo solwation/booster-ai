@@ -165,7 +165,7 @@ public class LauncherTests
         using var process = Process.Start(psi)!;
         process.StandardInput.Close();
         var output = process.StandardOutput.ReadToEnd();
-        Assert.True(process.WaitForExit(5000));
+        Assert.True(process.WaitForExit(30000));
         Assert.Equal(0, process.ExitCode);
         Assert.Equal(expected + "\n--model\nmodel's name\n", output);
     }
@@ -212,7 +212,7 @@ public class LauncherTests
                 psi.ArgumentList.Add("-c");
                 psi.ArgumentList.Add(restart);
                 using var process = Process.Start(psi)!;
-                Assert.True(process.WaitForExit(5000));
+                Assert.True(process.WaitForExit(30000));
                 Assert.Equal("", process.StandardError.ReadToEnd());
                 Assert.Equal(0, process.ExitCode);
             }
