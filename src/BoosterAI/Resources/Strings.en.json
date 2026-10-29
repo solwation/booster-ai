@@ -54,7 +54,7 @@
   "zoom.name": "Font size in the tabs",
   "zoom.default": "Default",
   "zoom.percent": "{0} %",
-  "zoom.hint": "Windows Terminal: at once, open tabs too. gnome-terminal, kitty, wezterm: on the next Start.",
+  "zoom.hint": "Windows Terminal: at once for new tabs. gnome-terminal, kitty, wezterm: on the next Start.",
   "confirm.title": "Install the orchestra",
   "confirm.heading": "Install the orchestra in {0}?",
   "confirm.intro": "The orchestra lets AI agents work through the project's GitHub issues for you. A conductor picks issues by priority, hands them to agents working in parallel in their own copies, reviews the result and delivers it. Questions only you can answer land on the issue, not in the chat.",
