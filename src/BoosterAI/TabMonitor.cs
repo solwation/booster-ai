@@ -176,7 +176,9 @@ bs_trim() {
   done
 }
 bs_cap() {
-  bs_trim "$BASHPID" </dev/null >/dev/null 2>&1 &
+  # Take the PID first: on the & line $BASHPID expands in the background child, so the loop would watch itself.
+  local me=$BASHPID
+  bs_trim "$me" </dev/null >/dev/null 2>&1 &
   if [ "$1" = tee ]; then tee -a "$bs_out" 2>/dev/null || cat; else cat >> "$bs_out" 2>/dev/null || cat >/dev/null; fi
 }
 # Run interactive commands under a nested PTY so util-linux script can record output timing and

@@ -301,6 +301,36 @@ public class DeniedCommandTests
         finally { Directory.Delete(dir, recursive: true); }
     }
 
+    /// <summary>bs_cap's trim loop stops with the capture: a finished bs_stream leaves no process behind.</summary>
+    [Fact]
+    public void StreamLeavesNoTrimLoopBehind()
+    {
+        if (!OperatingSystem.IsLinux()) return;
+        var dir = Directory.CreateTempSubdirectory("bs-trim").FullName;
+        try
+        {
+            File.WriteAllText(Path.Combine(dir, "tab-lib.sh"), TabSession.Lib);
+            File.WriteAllText(Path.Combine(dir, "stream.jsonl"), TwoTurns + "\n");
+            var psi = new System.Diagnostics.ProcessStartInfo("/bin/bash") { RedirectStandardOutput = true, WorkingDirectory = dir };
+            psi.ArgumentList.Add("-c");
+            psi.ArgumentList.Add(". ./tab-lib.sh . t && bs_stream sh -c 'cat stream.jsonl; exit 3'");
+            using var p = System.Diagnostics.Process.Start(psi)!;
+            p.StandardOutput.ReadToEnd();
+            Assert.True(p.WaitForExit(30000));
+            // The loop checks once a second; give it time to notice before looking.
+            var left = InDirectory(dir);
+            for (var i = 0; i < 30 && left.Length > 0; i++) { Thread.Sleep(100); left = InDirectory(dir); }
+            foreach (var pid in left) try { System.Diagnostics.Process.GetProcessById(pid).Kill(); } catch (ArgumentException) { }
+            Assert.Empty(left);
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    private static int[] InDirectory(string dir) => Directory.GetDirectories("/proc")
+        .Select(d => (Pid: int.TryParse(Path.GetFileName(d), out var n) ? n : 0, Dir: d)).Where(x => x.Pid > 0)
+        .Where(x => { try { return new DirectoryInfo(Path.Combine(x.Dir, "cwd")).LinkTarget == dir; } catch (IOException) { return false; } catch (UnauthorizedAccessException) { return false; } })
+        .Select(x => x.Pid).ToArray();
+
     private static string[] TurnEvents(string log) => log.Split('\n', StringSplitOptions.RemoveEmptyEntries)
         .Select(l => l.Split(' ')[1]).Where(e => e.StartsWith("turn-", StringComparison.Ordinal)).ToArray();
 

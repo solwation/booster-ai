@@ -10,6 +10,9 @@ Read and follow [.orchestra/project.md](.orchestra/project.md): issues, labels,
 verification, Windows install and delivery to `main`. For Windows SDK setup and
 test prerequisites, see [Development](docs/DEVELOPMENT.md#build-from-source). At conductor startup,
 always review and import a newer stable Orchestra release per the project policy without asking.
+Tests that start shells or tab scripts must leave no process behind: wait for them, kill
+leftovers with `Kill(entireProcessTree: true)` in `finally`, and in tab-lib.sh never pass
+`$BASHPID` on a line ending in `&` (it expands in the background child, not the caller).
 The user writes Swedish; reply in Swedish. Code, comments and docs are English; UI text is Swedish.
 
 When the user writes `/orkester` or `$orkester`, run the orchestra for the requested
