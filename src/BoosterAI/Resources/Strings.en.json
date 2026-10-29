@@ -181,6 +181,7 @@
   "status.restarted": "{0} restarts with {1} / {2}.",
   "status.restartedResume": "{0} restarts with {1} / {2}, keeping the conversation.",
   "err.restartInPlace": "The tab cannot be restarted in place (no status log). Close it and press Start.",
+  "err.restartUndelivered": "The restart of {0} did not get through: the shell in the tab did not become ready. Try again.",
   "launch.allRunning": "All chosen tabs are running",
   "status.foundRunning.one": "1 tab from the last run is still running and is watched again.",
   "status.foundRunning.many": "{0} tabs from the last run are still running and are watched again.",

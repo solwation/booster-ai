@@ -836,6 +836,49 @@ public class ExitedRestartTests
         Assert.False(MainViewModel.CanRestartExited(log with { CliExit = null }, _ => 123));
     }
 
+    [Fact]
+    public void WakeTakesBackARestartNoIdleShellCanReceive()
+    {
+        if (!OperatingSystem.IsLinux()) return;
+        var root = Directory.CreateTempSubdirectory("booster-wake").FullName;
+        try
+        {
+            var track = new TabTrack(Path.Combine(root, "tab-lib.sh"), root, "tab1");
+            var next = Path.Combine(root, "tab1.next");
+            Assert.True(Launcher.WakeIdleShell(track, "Ubuntu", seconds: 1)); // nothing queued: nothing to deliver
+            File.WriteAllText(next, "touch ran\n");
+            Assert.False(Launcher.WakeIdleShell(track, "Ubuntu", seconds: 1));
+            Assert.Empty(Directory.GetFiles(root, "tab1.next*")); // taken back, so it can never run later by surprise
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public async Task WakeWaitsForASlowIdleShell()
+    {
+        if (!OperatingSystem.IsLinux()) return;
+        var root = Directory.CreateTempSubdirectory("booster-wake").FullName;
+        using var idle = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("setsid") { ArgumentList = { "sleep", "60" } })!;
+        try
+        {
+            var track = new TabTrack(Path.Combine(root, "tab-lib.sh"), root, "tab1");
+            File.WriteAllText(Path.Combine(root, "tab1.next"), "touch ran\n");
+            var wake = Task.Run(() => Launcher.WakeIdleShell(track, "Ubuntu"));
+            await Task.Delay(2500); // longer than the old 2 s wait
+            Assert.False(wake.IsCompleted);
+            var start = File.ReadAllText($"/proc/{idle.Id}/stat").Split(") ")[1].Split(' ')[19];
+            File.WriteAllText(Path.Combine(root, "tab1.next.idle"), $"{idle.Id} {start}\n");
+            Assert.True(await wake.WaitAsync(TimeSpan.FromSeconds(10)));
+            Assert.True(idle.WaitForExit(10000)); // woken with HUP
+            Assert.True(File.Exists(Path.Combine(root, "tab1.next"))); // left for bs_next
+        }
+        finally
+        {
+            if (!idle.HasExited) idle.Kill();
+            Directory.Delete(root, true);
+        }
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -871,12 +914,18 @@ public class ExitedRestartTests
     }
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void RealPtyRestartsExitedCliInOriginalShellAndCanStillClose(bool resume)
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public void RealPtyRestartsExitedCliInOriginalShellAndCanStillClose(bool resume, bool slowRcRestartAtOnce)
     {
         if (!OperatingSystem.IsLinux() || !File.Exists("/usr/bin/script")) return;
         var root = Directory.CreateTempSubdirectory("booster-restart-pty").FullName;
+        // #63: a ~/.bashrc slower than the old 2 s wake, and restarts right after cli-exit, while the idle shell still starts.
+        var home = Path.Combine(root, "home");
+        Directory.CreateDirectory(home);
+        File.WriteAllText(Path.Combine(home, ".bashrc"), "sleep 4\n");
         var session = new TabSession(root, DateTime.UtcNow);
         var track = session.NewTrack()!;
         var tab = new TabConfig { Llm = "codex", Directory = session.Directory };
@@ -885,6 +934,7 @@ public class ExitedRestartTests
         psi.ArgumentList.Add("-qefc");
         psi.ArgumentList.Add("bash --noprofile --norc -ic '" + body.Replace("'", "'\\''") + "'");
         psi.ArgumentList.Add("/dev/null");
+        if (slowRcRestartAtOnce) psi.Environment["HOME"] = home;
         using var process = System.Diagnostics.Process.Start(psi)!;
         try
         {
@@ -901,9 +951,10 @@ public class ExitedRestartTests
             row.Llm = "agy"; // Edited selections must not replace the original launched choices.
             for (var i = 0; i < 2; i++)
             {
-                // The idle shell sources the user's ~/.bashrc (seconds on a slow one, and under parallel test load) before it
-                // records itself in .next.idle; the wake gives up after 2 s, so restart only once it is really idle.
-                Assert.True(SpinWait.SpinUntil(() => File.Exists(idleFile), 60000), "idle shell never became ready");
+                // One variant restarts only once the idle shell is really idle (it was woken with HUP), the other right
+                // after cli-exit, while the idle shell still sources the slow ~/.bashrc (it then runs the queue itself).
+                if (slowRcRestartAtOnce) Assert.False(File.Exists(idleFile), "the slow idle shell was already ready");
+                else Assert.True(SpinWait.SpinUntil(() => File.Exists(idleFile), 60000), "idle shell never became ready");
                 vm.Restart(row, resume);
                 Assert.Same(track, row.Track);
                 Assert.Same(session, row.Session);
@@ -915,7 +966,11 @@ public class ExitedRestartTests
                 Assert.Equal(original.StartTime, log.StartTime);
                 Assert.False(log.Exited);
             }
+            // The queue is empty and the tab idle again: each restart started exactly one CLI.
+            Assert.True(SpinWait.SpinUntil(() => File.Exists(idleFile), 60000), "idle shell never became ready");
+            Assert.False(File.Exists(Path.Combine(session.Directory, track.Id + ".next")));
             var args = File.ReadAllLines(Path.Combine(session.Directory, "cli-args"));
+            Assert.Equal(3, args.Length);
             Assert.Equal(resume ? "resume --last" : "", args[1]);
             Assert.Equal(3, File.ReadAllLines(Path.Combine(session.Directory, track.Id + ".log")).Count(l => l.Contains(" cli-start")));
             Launcher.RunTabControl(Launcher.CloseTabScript(original.Pid!.Value, original.StartTime!.Value, exitCleanly: true), "Ubuntu");

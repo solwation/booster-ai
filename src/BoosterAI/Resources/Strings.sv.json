@@ -181,6 +181,7 @@
   "status.restarted": "{0} startas om med {1} / {2}.",
   "status.restartedResume": "{0} startas om med {1} / {2}, samtalet behålls.",
   "err.restartInPlace": "Fliken kan inte startas om på plats (ingen statuslogg). Stäng den och tryck Starta.",
+  "err.restartUndelivered": "Omstarten av {0} nådde inte fram: skalet i fliken blev inte redo. Försök igen.",
   "launch.allRunning": "Alla valda flikar körs",
   "status.foundRunning.one": "1 flik från förra körningen körs fortfarande och bevakas igen.",
   "status.foundRunning.many": "{0} flikar från förra körningen körs fortfarande och bevakas igen.",

@@ -174,12 +174,25 @@ g=${bs_fields[5]}
 [ "$g" -gt 0 ] && [ "$g" != {{pid}} ] && kill -TERM -- -$g
 """;
 
-    /// <summary>Wake only the idle child recorded by bs_shell, never a CLI that consumed the queue meanwhile.</summary>
-    internal static string WakeIdleShellScript(TabTrack track) => $$"""
-for ((i=0; i<40; i++))
+    /// <summary>How long <see cref="WakeIdleShellScript"/> waits for the idle child shell before it takes the restart back.</summary>
+    internal const int WakeIdleSeconds = 30;
+
+    /// <summary>Exit code of <see cref="WakeIdleShellScript"/> when it took an undelivered restart back.</summary>
+    internal const int WakeUndelivered = 3;
+
+    /// <summary>
+    /// Wake only the idle child recorded by bs_shell, never a CLI that consumed the queue meanwhile. The child sources
+    /// ~/.bashrc before it records itself (seconds on a slow one); a current tab-lib.sh's child also runs a restart
+    /// queued meanwhile on its own, and this wait covers tabs of older builds. When the child never becomes idle the
+    /// queued command is renamed away (atomic: bs_next either already took it or never will) and the script exits
+    /// <see cref="WakeUndelivered"/>, so the restart is reported instead of silently lost or run late.
+    /// </summary>
+    internal static string WakeIdleShellScript(TabTrack track, int seconds = WakeIdleSeconds) => $$"""
+bs_next_f={{Quote(track.Dir + "/" + track.Id + ".next")}}
+for ((i=0; i<{{seconds * 20}}; i++))
 do
-  [ -f {{Quote(track.Dir + "/" + track.Id + ".next")}} ] || exit 0
-  if read -r bs_idle_pid bs_idle_start 2>/dev/null < {{Quote(track.Dir + "/" + track.Id + ".next.idle")}}
+  [ -f "$bs_next_f" ] || exit 0
+  if read -r bs_idle_pid bs_idle_start 2>/dev/null < "$bs_next_f.idle"
   then
     bs_stat=$(cat /proc/$bs_idle_pid/stat 2>/dev/null) || exit 0
     bs_stat=${bs_stat##*) }
@@ -190,8 +203,20 @@ do
   fi
   sleep 0.05
 done
-exit 1
+mv -f "$bs_next_f" "$bs_next_f.undelivered" 2>/dev/null || exit 0
+rm -f "$bs_next_f.undelivered"
+exit {{WakeUndelivered}}
 """;
+
+    /// <summary>Runs <see cref="WakeIdleShellScript"/>; false when the restart was not delivered and has been taken back.</summary>
+    internal static bool WakeIdleShell(TabTrack track, string wslDistro, int seconds = WakeIdleSeconds)
+    {
+        using var p = StartTabControl(WakeIdleShellScript(track, seconds), wslDistro);
+        if (!p.WaitForExit((seconds + 15) * 1000)) { p.Kill(); throw new IOException("Tab control timed out."); }
+        if (p.ExitCode == WakeUndelivered) return false;
+        if (p.ExitCode != 0) throw new IOException("Tab control failed.");
+        return true;
+    }
 
     /// <summary>Only the recorded shell and its descendants are closed, never the terminal server or another tab.</summary>
     public static string CloseTabScript(int shellPid, long startTime, bool exitCleanly = false) => $$"""

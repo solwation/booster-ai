@@ -817,12 +817,17 @@ public sealed partial class MainViewModel : Observable
             {
                 session.QueueNext(track.Id, Launcher.RestartScript(launched, track with { UpdateClis = _cfg.AutoUpdateClis }, resume));
                 var distro = _cfg.WslDistro;
-                // The idle child may still be starting after cli-exit. Its own PID/start time
-                // prevents a delayed wake from interrupting the newly restarted CLI.
-                var wake = Launcher.WakeIdleShellScript(track);
+                var name = tab.Name.Trim();
+                // The idle child may still be starting after cli-exit (it sources ~/.bashrc first). Its own PID/start
+                // time prevents a delayed wake from interrupting the newly restarted CLI; a restart it cannot deliver
+                // is taken back and reported, never run later by surprise.
                 Task.Run(() =>
                 {
-                    try { Launcher.RunTabControl(wake, distro); }
+                    try
+                    {
+                        if (!Launcher.WakeIdleShell(track, distro))
+                            Dispatcher.UIThread.Post(() => ShowStatus(Loc.Format("err.restartUndelivered", name), error: true));
+                    }
                     catch (Exception e) when (e is IOException or System.ComponentModel.Win32Exception)
                     {
                         Dispatcher.UIThread.Post(() => ShowStatus(Loc.Format("err.launch", e.Message), error: true));

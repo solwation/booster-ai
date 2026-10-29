@@ -199,13 +199,15 @@ bs_next() {
   while [ -f "$bs_next_f" ]; do c=$(cat "$bs_next_f") && rm -f "$bs_next_f" && eval "$c"; done
   return 0; }
 # Keep the parent chain available after the CLI exits. Restart wakes the idle child shell,
-# then this loop consumes its queued command in the original tracked shell.
+# then this loop consumes its queued command in the original tracked shell. The child records
+# itself only after ~/.bashrc (seconds on a slow one), then looks for a restart queued meanwhile and
+# hands it to this loop at once: BoosterAI queues before it looks for .idle, so one side always sees the other.
 bs_shell() {
   bs_ev restart-ready
   while true; do
     rm -f "$bs_next_f.idle"
     bs_next
-    BS_IDLE_FILE="$bs_next_f.idle" bash --rcfile <(printf '%s\n' '[ ! -f ~/.bashrc ] || . ~/.bashrc' 'printf "%s %s\n" "$$" "$(cut -d" " -f22 /proc/$$/stat)" > "$BS_IDLE_FILE"')
+    BS_IDLE_FILE="$bs_next_f.idle" bash --rcfile <(printf '%s\n' '[ ! -f ~/.bashrc ] || . ~/.bashrc' 'printf "%s %s\n" "$$" "$(cut -d" " -f22 /proc/$$/stat)" > "$BS_IDLE_FILE"' '[ ! -f "${BS_IDLE_FILE%.idle}" ] || exit 0')
     rm -f "$bs_next_f.idle"
     [ -f "$bs_next_f" ] || break
   done
