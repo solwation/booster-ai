@@ -8,12 +8,12 @@ using Avalonia.Threading;
 namespace BoosterAI;
 
 /// <summary>
-/// <c>--screenshot file.png [--window main|settings|install|import|restart] [--theme light|dark] [--config file.json] [--fake-update [manual:]0.3.0] [--fake-status [error:]text] [--fake-denied] [--fake-changed] [--fake-output [N]]</c>:
+/// <c>--screenshot file.png [--window main|settings|install|import|restart] [--theme light|dark] [--config file.json] [--fake-update [manual:]0.3.0] [--fake-status [error:]text] [--fake-denied] [--fake-changed] [--fake-restartable N] [--fake-output [N]]</c>:
 /// renders a window with Avalonia's headless Skia platform. Nothing is shown on the desktop and no
 /// focus changes. The window frame (title bar) is not drawn; only the client area.
 /// </summary>
 internal sealed record ScreenshotOptions(string File, string Window, string? FakeUpdate, string? FakeStatus, bool FakeDenied, bool FakeChanged,
-    int? FakeOutput = null);
+    int? FakeOutput = null, int FakeRestartable = 0);
 
 internal static class Screenshot
 {
@@ -26,7 +26,8 @@ internal static class Screenshot
         if (Value(args, "--config") is { } cfg) ConfigStore.UseFile(cfg);
         Active = true;
         return new ScreenshotOptions(file, Value(args, "--window") ?? "main", Value(args, "--fake-update"), Value(args, "--fake-status"), args.Contains("--fake-denied"),
-            args.Contains("--fake-changed") || Value(args, "--window") == "restart", FakeOutputIndex(args));
+            args.Contains("--fake-changed") || Value(args, "--window") == "restart", FakeOutputIndex(args),
+            int.TryParse(Value(args, "--fake-restartable"), out var r) ? r : 0);
     }
 
     /// <summary>--fake-output [N]: the popup of the Nth running sample tab (0: the first, interactive; 1: Watching).</summary>
@@ -63,6 +64,8 @@ internal static class Screenshot
         if (o.FakeDenied) vm.ShowSampleDenial();
         // --fake-changed: the first AI tab runs a turn with another model than the chosen one (--window restart implies it).
         if (o.FakeChanged) vm.ShowSampleChange();
+        // --fake-restartable N: the first N AI tabs have ended, so "Restart all" shows beside Start.
+        if (o.FakeRestartable > 0) vm.ShowSampleRestartable(o.FakeRestartable);
         // --fake-status "text" shows a status line message as normal, error:text as an error (screenshots only).
         if (o.FakeStatus is { } st)
             vm.ShowStatus(st.StartsWith("error:") ? st[6..] : st, st.StartsWith("error:"));

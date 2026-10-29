@@ -220,6 +220,7 @@ public sealed class TabViewModel : Observable
     private void RaiseRestart()
     {
         foreach (var n in new[] { nameof(IsChanged), nameof(CanRestart), nameof(RestartTip), nameof(PendingRestart), nameof(CanContinueClosed) }) Raise(n);
+        _owner.RestartableChanged();
     }
     /// <summary>The programs of the commands agy denied (state Denied).</summary>
     internal IReadOnlyList<string> DeniedPrograms => _denied;
@@ -496,6 +497,14 @@ public sealed partial class MainViewModel : Observable
         Raise(nameof(CanLaunch));
         Raise(nameof(LaunchLabel));
         Raise(nameof(CanCloseAll));
+        RestartableChanged();
+    }
+
+    internal void RestartableChanged()
+    {
+        Raise(nameof(RestartableCount));
+        Raise(nameof(CanRestartAll));
+        Raise(nameof(RestartAllLabel));
     }
 
     /// <summary>Moves one project tab to a new position and persists its order.</summary>
@@ -709,6 +718,48 @@ public sealed partial class MainViewModel : Observable
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.ComponentModel.Win32Exception)
         {
             ShowStatus(Loc.Format("err.launch", e.Message), error: true);
+        }
+    }
+
+    /// <summary>Tabs the per-tab restart button is offered on.</summary>
+    public int RestartableCount => Tabs.Count(t => t.CanRestart);
+    /// <summary>Start's "Restart all" sits beside it from two restartable tabs (one has its own button).</summary>
+    public bool CanRestartAll => !IsClosingAll && RestartableCount >= 2;
+    public string RestartAllLabel => Loc.Format("restartAll.label", RestartableCount);
+
+    /// <summary>
+    /// What "Restart all" does: tabs that restart without interrupting anything (ended or unchanged ones, and changed ones
+    /// whose CLI is idle) and changed tabs that work on a turn, which need one combined question. A changed tab already
+    /// waiting for idle stays queued.
+    /// </summary>
+    internal (List<TabViewModel> Now, List<TabViewModel> Busy) PlanRestartAll()
+    {
+        List<TabViewModel> now = [], busy = [];
+        foreach (var t in Tabs.Where(t => t.CanRestart))
+        {
+            if (!t.IsChanged || t.Activity == Activity.Idle) now.Add(t);
+            else if (!t.PendingRestart) busy.Add(t);
+        }
+        return (now, busy);
+    }
+
+    /// <summary>Restarts the planned tabs like their own buttons; busy ones per the answer to the combined question.</summary>
+    internal void RestartAll((List<TabViewModel> Now, List<TabViewModel> Busy) plan, RestartChoice busy)
+    {
+        if (IsClosingAll || busy == RestartChoice.Cancel && plan.Busy.Count > 0) return;
+        foreach (var t in plan.Now)
+            if (t.IsChanged) RestartChanged(t); else Restart(t);
+        foreach (var t in plan.Busy)
+            if (busy == RestartChoice.WhenIdle) t.PendingRestart = true; else RestartChanged(t);
+    }
+
+    /// <summary>For --screenshot --fake-restartable: the first AI tabs have ended, so the tab buttons offer a restart.</summary>
+    public void ShowSampleRestartable(int count)
+    {
+        foreach (var tab in Tabs.Where(t => t.Enabled && t.IsAi).Take(count))
+        {
+            tab.LaunchedAs ??= tab.ToConfig(forLaunch: true);
+            tab.SetState(TabState.CliExited, 0);
         }
     }
 

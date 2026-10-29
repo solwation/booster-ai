@@ -166,4 +166,14 @@ public partial class MainWindow : Window
             case RestartChoice.WhenIdle: tab.PendingRestart = true; break;
         }
     }
+
+    private async void OnRestartAll(object? sender, RoutedEventArgs e)
+    {
+        if (!_vm.CanRestartAll) return;
+        var plan = _vm.PlanRestartAll();
+        var choice = RestartChoice.Now;
+        // Busy changed tabs are never interrupted silently: one question for all of them.
+        if (plan.Busy.Count > 0) choice = await new ConfirmRestartWindow(plan.Busy).ShowDialog<RestartChoice>(this);
+        _vm.RestartAll(plan, choice);
+    }
 }

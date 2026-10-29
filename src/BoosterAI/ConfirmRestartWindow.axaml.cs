@@ -26,6 +26,17 @@ public partial class ConfirmRestartWindow : Window
         InitializeComponent();
     }
 
+    /// <summary>One question for several busy changed tabs ("Restart all"); waiting is offered when each can wait.</summary>
+    public ConfirmRestartWindow(IReadOnlyList<TabViewModel> tabs)
+    {
+        CanWait = tabs.All(t => t.Activity == Activity.Busy && t.LaunchedAs is not { NonInteractive: true, Orkester: true });
+        Heading = Loc.Format("restartConfirm.headingMany", tabs.Count);
+        Body = Loc.Get(CanWait ? "restartConfirm.busyMany" : "restartConfirm.unknownMany");
+        Detail = string.Join(", ", tabs.Select(t => t.Name.Trim()));
+        DataContext = this;
+        InitializeComponent();
+    }
+
     public string Heading { get; }
     public string Body { get; }
     public string Detail { get; }

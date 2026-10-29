@@ -581,6 +581,59 @@ public class InPlaceRestartTests
         Assert.False(tab.IsChanged);
     }
 
+    private static MainViewModel Rows(params TabState[] states)
+    {
+        var vm = new MainViewModel(new AppConfig { Tabs = states.Select(_ => new TabConfig { Llm = "claude", Model = "claude-opus-5-5" }).ToList() });
+        for (var i = 0; i < states.Length; i++)
+        {
+            vm.Tabs[i].LaunchedAs = vm.Tabs[i].ToConfig(forLaunch: true);
+            vm.Tabs[i].SetState(states[i], states[i] == TabState.CliExited ? 0 : null, activity: states[i] == TabState.Running ? Activity.Busy : Activity.Unknown);
+        }
+        return vm;
+    }
+
+    [Fact]
+    public void RestartAllIsOfferedFromTwoRestartableTabs()
+    {
+        var vm = Rows(TabState.Running, TabState.Running, TabState.CliExited);
+        Assert.Equal(1, vm.RestartableCount);
+        Assert.False(vm.CanRestartAll);
+        vm.Tabs[1].SetState(TabState.CliExited, 0);
+        Assert.Equal(2, vm.RestartableCount);
+        Assert.True(vm.CanRestartAll);
+        Assert.Equal(Loc.Format("restartAll.label", 2), vm.RestartAllLabel);
+        vm.Tabs[0].Model = "claude-sonnet-5-5";
+        Assert.Equal(3, vm.RestartableCount);
+        Assert.False(Rows().CanRestartAll);
+    }
+
+    [Fact]
+    public void RestartAllSeparatesBusyChangedTabsFromThoseThatRestartAtOnce()
+    {
+        var vm = Rows(TabState.Running, TabState.Running, TabState.Running, TabState.CliExited, TabState.Running);
+        vm.Tabs[0].Model = "claude-sonnet-5-5";                        // changed, busy: asked about
+        vm.Tabs[1].Model = "claude-sonnet-5-5";                        // changed, idle: at once
+        vm.Tabs[1].SetState(TabState.Running, null, activity: Activity.Idle);
+        vm.Tabs[2].Model = "claude-sonnet-5-5";                        // changed, busy, already waiting: left queued
+        vm.Tabs[2].PendingRestart = true;
+        // Tab 4 is unchanged and running: not restartable.
+        var (now, busy) = vm.PlanRestartAll();
+        Assert.Equal([vm.Tabs[1], vm.Tabs[3]], now);
+        Assert.Equal([vm.Tabs[0]], busy);
+    }
+
+    [Fact]
+    public void RestartAllQueuesOrCancelsTheBusyTabs()
+    {
+        var vm = Rows(TabState.Running, TabState.CliExited, TabState.CliExited);
+        vm.Tabs[0].Model = "claude-sonnet-5-5";
+        var plan = vm.PlanRestartAll();
+        vm.RestartAll(plan, RestartChoice.Cancel);
+        Assert.False(vm.Tabs[0].PendingRestart);
+        vm.RestartAll(plan, RestartChoice.WhenIdle);
+        Assert.True(vm.Tabs[0].PendingRestart);
+    }
+
     [Fact]
     public void WaitingForIdleEndsWhenTheChoiceIsUndoneOrTheTabStops()
     {
