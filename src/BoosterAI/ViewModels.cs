@@ -430,6 +430,7 @@ public sealed partial class MainViewModel : Observable
         [new(Loc.Auto), new("sv"), new("en")];
 
     public bool CloseAfterLaunch { get => _cfg.CloseAfterLaunch; set { _cfg.CloseAfterLaunch = value; Raise(); } }
+    public bool MinimizeToTray { get => _cfg.MinimizeToTray; set { _cfg.MinimizeToTray = value; Raise(); } }
     public bool Notifications { get => _cfg.Notifications; set { _cfg.Notifications = value; Raise(); } }
     public bool AutoUpdateClis { get => _cfg.AutoUpdateClis; set { _cfg.AutoUpdateClis = value; Raise(); } }
 
@@ -606,7 +607,7 @@ public sealed partial class MainViewModel : Observable
     private void SettingsTakenOver()
     {
         foreach (var name in new[] { nameof(WslDistro), nameof(LinuxTerminal), nameof(Theme), nameof(SelectedTheme), nameof(SelectedLanguage),
-            nameof(SelectedAppearance), nameof(CloseAfterLaunch), nameof(Notifications), nameof(SelectedZoom), nameof(AutoUpdateClis), nameof(CheckForUpdates) })
+            nameof(SelectedAppearance), nameof(CloseAfterLaunch), nameof(MinimizeToTray), nameof(Notifications), nameof(SelectedZoom), nameof(AutoUpdateClis), nameof(CheckForUpdates) })
             Raise(name);
         foreach (var t in Tabs) t.RaiseColor();
         (Avalonia.Application.Current as App)?.ApplyTheme();

@@ -121,6 +121,8 @@
   "tray.show": "Show BoosterAI",
   "tray.quit": "Quit",
   "settings.closeAfterLaunch": "Close after Start",
+  "settings.minimizeToTray": "Close and minimize to the system tray",
+  "settings.minimizeToTray.tip": "The close button and Minimize put BoosterAI in the system tray (Windows) instead of quitting or staying in the taskbar. Quit from the icon's menu",
   "settings.closeAfterLaunch.tip": "Close BoosterAI after Start instead of watching the tabs from the tray",
   "settings.notifications": "Notifications",
   "settings.notifications.tip": "Notify when a tab closes, does not start or its CLI fails",

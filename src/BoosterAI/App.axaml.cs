@@ -48,7 +48,7 @@ public partial class App : Application
         // --screenshot builds its window itself (Screenshot.Run), headless and never shown.
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop && !Screenshot.Active)
         {
-            // A minimized window keeps the app running; closing it (or Quit in the tray) ends it.
+            // A minimized or tray-hidden window keeps the app running; closing it (with Minimize to tray off), or Quit in the tray, ends it.
             desktop.ShutdownMode = ShutdownMode.OnMainWindowClose;
             var vm = new MainViewModel(_config);
             desktop.MainWindow = new MainWindow(vm);
@@ -73,13 +73,22 @@ public partial class App : Application
                 _tray = new TrayIcon { Icon = new WindowIcon(icon), ToolTipText = Loc.Get("tray.tip"), Menu = [show, quit] };
                 _tray.Clicked += (_, _) => Restore(window);
                 show.Click += (_, _) => Restore(window);
-                quit.Click += (_, _) => window.Close();
+                quit.Click += (_, _) => Quit();
                 TrayIcon.SetIcons(this, [_tray]);
             }
             _tray.IsVisible = true;
             return true;
         }
         catch (Exception) { return false; }
+    }
+
+    /// <summary>Set by the tray's Quit so the close it causes is not turned into hide-to-tray.</summary>
+    public static bool QuitRequested { get; private set; }
+
+    private void Quit()
+    {
+        QuitRequested = true;
+        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) desktop.Shutdown();
     }
 
     private static void Restore(Window window)

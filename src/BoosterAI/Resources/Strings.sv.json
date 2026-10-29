@@ -121,6 +121,8 @@
   "tray.show": "Visa BoosterAI",
   "tray.quit": "Avsluta",
   "settings.closeAfterLaunch": "Stäng efter Starta",
+  "settings.minimizeToTray": "Stäng och minimera till meddelandefältet",
+  "settings.minimizeToTray.tip": "Stäng-knappen och Minimera lägger BoosterAI i meddelandefältet (Windows) i stället för att avsluta eller ligga kvar i aktivitetsfältet. Avsluta via ikonens meny",
   "settings.closeAfterLaunch.tip": "Stäng BoosterAI efter Starta i stället för att bevaka flikarna från systemfältet",
   "settings.notifications": "Aviseringar",
   "settings.notifications.tip": "Avisera när en flik stängs, inte startar eller dess CLI fallerar",

@@ -78,7 +78,7 @@ public class ConfigMergeTests
         var disk = new AppConfig
         {
             WslDistro = "Debian", LinuxTerminal = "kitty", ColorTheme = "Other", Language = "en", AppTheme = "dark",
-            CloseAfterLaunch = true, Notifications = false, ZoomPercent = 80, AutoUpdateClis = false, CheckForUpdates = false,
+            CloseAfterLaunch = true, MinimizeToTray = false, Notifications = false, ZoomPercent = 80, AutoUpdateClis = false, CheckForUpdates = false,
             SkippedVersion = "9.9.9", LastUpdateCheck = new DateTime(2026, 10, 29, 9, 18, 39, DateTimeKind.Utc),
         };
         var mine = new AppConfig();

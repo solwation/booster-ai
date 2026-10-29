@@ -18,9 +18,29 @@ public partial class MainWindow : Window
         _vm = vm;
         DataContext = vm;
         InitializeComponent();
-        Closing += (_, _) => _vm.Save();
+        Closing += OnClosing;
+        PropertyChanged += (_, e) =>
+        {
+            if (e.Property == WindowStateProperty && WindowState == WindowState.Minimized
+                && TrayPolicy.HideOnMinimize(_vm.MinimizeToTray, TrayAvailable())) Hide();
+        };
         Activated += (_, _) => _vm.Update.WindowActive(true);
         Deactivated += (_, _) => _vm.Update.WindowActive(false);
+    }
+
+    /// <summary>Windows only (Linux trays need a StatusNotifierItem host, missing on plain GNOME); shows the tray icon as a side effect.</summary>
+    private bool TrayAvailable() => OperatingSystem.IsWindows() && Application.Current is App app && app.ShowTray(this);
+
+    private void OnClosing(object? sender, WindowClosingEventArgs e)
+    {
+        _vm.Save();
+        // Only the user's own close can hide; probe the tray only then, so no icon appears for a real exit.
+        if (_vm.MinimizeToTray && !e.IsProgrammatic && e.CloseReason == WindowCloseReason.WindowClosing
+            && TrayPolicy.HideOnClose(_vm.MinimizeToTray, TrayAvailable(), e.CloseReason, e.IsProgrammatic, App.QuitRequested))
+        {
+            e.Cancel = true;
+            Hide();
+        }
     }
 
     private async void OnSettings(object? sender, RoutedEventArgs e)
@@ -114,8 +134,8 @@ public partial class MainWindow : Window
         if (_vm.CloseAfterLaunch) Close();
         else
         {
-            // Minimize rather than hide: the taskbar button stays, so the status is one click away.
-            // Windows also gets a tray icon; Linux trays need a StatusNotifierItem host (missing on plain GNOME).
+            // With the tray setting on (and a tray), minimizing hides the window to the tray icon; otherwise the
+            // taskbar button stays, so the status is one click away. Windows also gets a tray icon either way.
             if (OperatingSystem.IsWindows() && Application.Current is App app) app.ShowTray(this);
             WindowState = WindowState.Minimized;
         }

@@ -5,7 +5,7 @@
         x:DataType="local:MainViewModel"
         Title="{local:T settings.title}"
         Icon="avares://BoosterAI/Assets/boosterai.ico"
-        Width="820" Height="620" MinWidth="640" MinHeight="360"
+        Width="820" Height="650" MinWidth="640" MinHeight="360"
         WindowStartupLocation="CenterOwner">
 
   <!-- Columns: stripe 4 · gap 14 · name 220 · directory * · remove 36. -->
@@ -124,6 +124,8 @@
     <WrapPanel Grid.Row="5" Orientation="Horizontal" Margin="0,12,0,0">
       <CheckBox IsChecked="{Binding CloseAfterLaunch}" Content="{local:T settings.closeAfterLaunch}" Margin="0,0,24,0"
                 ToolTip.Tip="{local:T settings.closeAfterLaunch.tip}" />
+      <CheckBox IsChecked="{Binding MinimizeToTray}" Content="{local:T settings.minimizeToTray}" Margin="0,0,24,0"
+                ToolTip.Tip="{local:T settings.minimizeToTray.tip}" />
       <CheckBox IsChecked="{Binding Notifications}" Content="{local:T settings.notifications}" Margin="0,0,24,0"
                 ToolTip.Tip="{local:T settings.notifications.tip}" />
       <CheckBox IsChecked="{Binding CheckForUpdates}" Content="{local:T settings.updates}" Margin="0,0,24,0"

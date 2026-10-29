@@ -36,6 +36,8 @@ public sealed class AppConfig
     public string AppTheme { get; set; } = "auto";
     /// <summary>Close after Start (the behaviour before tab monitoring) instead of watching the tabs from the tray.</summary>
     public bool CloseAfterLaunch { get; set; }
+    /// <summary>Windows: the close button and Minimize hide the window to the tray icon, where the tabs stay watched. Needs a working tray; Close after Start wins.</summary>
+    public bool MinimizeToTray { get; set; } = true;
     /// <summary>System notification when a watched tab closes, fails to start or its CLI fails.</summary>
     public bool Notifications { get; set; } = true;
     /// <summary>Global CLI zoom in percent of the terminal's default font size; 0 = terminal default (nothing is changed).</summary>
@@ -136,6 +138,7 @@ public static class ConfigMerge
         S(c => c.Language, (c, v) => c.Language = v),
         S(c => c.AppTheme, (c, v) => c.AppTheme = v),
         S(c => c.CloseAfterLaunch, (c, v) => c.CloseAfterLaunch = v),
+        S(c => c.MinimizeToTray, (c, v) => c.MinimizeToTray = v),
         S(c => c.Notifications, (c, v) => c.Notifications = v),
         S(c => c.ZoomPercent, (c, v) => c.ZoomPercent = v),
         S(c => c.AutoUpdateClis, (c, v) => c.AutoUpdateClis = v),
