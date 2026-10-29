@@ -6,8 +6,9 @@ namespace BoosterAI;
 /// <summary>
 /// Where a tab writes its status log, as the tab's shell sees the paths (see Launcher.TabScript).
 /// Lib is the sourced script, Dir the session directory, Id the tab's file name in it.
+/// <paramref name="UpdateClis"/>: the tab updates its AI CLI before starting it (AppConfig.AutoUpdateClis, tab-lib.sh's bs_update).
 /// </summary>
-public sealed record TabTrack(string Lib, string Dir, string Id);
+public sealed record TabTrack(string Lib, string Dir, string Id, bool UpdateClis = false);
 
 public enum TabState { Starting, Running, CliExited, CliMissing, NotStarted, Closed, Lost, Denied }
 
@@ -209,6 +210,81 @@ bs_shell() {
     [ -f "$bs_next_f" ] || break
   done
 }
+# bs_update <cli>: before claude, codex or agy starts, update it when a newer version exists (Launcher.UpdateHook).
+# At most once per bs_up_every seconds per CLI (the stamp's time) and one tab at a time (flock: a tab that waited
+# finds the fresh stamp and starts). Every failure prints one line and the installed version starts. The state lives
+# in the Linux home next to the CLIs it describes (on Windows the session folder is on /mnt/c, where flock is unreliable).
+bs_up_dir="$HOME/.local/share/BoosterAI/cli-update"
+bs_up_every=21600
+# Seconds a registry query and an update may take.
+bs_up_net=20
+bs_up_limit=300
+bs_up_ver() { "$@" --version </dev/null 2>/dev/null | grep -oE '[0-9]+(\.[0-9]+)+([-+][0-9A-Za-z.]+)?' | head -n 1; }
+bs_up_due() {
+  local t n
+  t=$(stat -c %Y "$1" 2>/dev/null) || return 0
+  n=$(date +%s)
+  [ $((n - t)) -ge "$bs_up_every" ] || [ "$t" -gt "$n" ]
+}
+# The reason a command failed: timeout's 124, or the last line it logged.
+bs_up_why() {
+  if [ "$1" = 124 ]; then echo "timed out"; return; fi
+  local l
+  l=$(grep -v '^[[:space:]]*$' "$2" 2>/dev/null | tail -n 1 | tr -s ' \t' ' ')
+  echo "${l:0:120}" | grep . || echo "exit code $1"
+}
+bs_update() (
+  cli=$1
+  case $cli in claude|codex|agy) ;; *) exit 0 ;; esac
+  # Only a CLI on PATH: a shell function or alias is not something BoosterAI can update.
+  exe=$(type -P "$cli") || exit 0
+  bs_up_due "$bs_up_dir/$cli.checked" || exit 0
+  say() { printf 'BoosterAI: %s\n' "$*"; }
+  if ! command -v flock >/dev/null 2>&1 || ! command -v timeout >/dev/null 2>&1; then say "$cli update skipped: flock or timeout is missing"; exit 0; fi
+  if ! mkdir -p "$bs_up_dir" 2>/dev/null || [ ! -w "$bs_up_dir" ] || ! exec 8>"$bs_up_dir/$cli.lock"; then say "$cli update skipped: cannot write $bs_up_dir"; exit 0; fi
+  pid= stamp=
+  # Stamped when the check ends, also after a failure (offline, no rights): it is retried after the interval, not on
+  # every start. Until then a tab started meanwhile waits for the lock instead of starting a CLI being replaced.
+  trap '[ -z "$stamp" ] || touch "$bs_up_dir/$cli.checked" 2>/dev/null' EXIT
+  trap 'stamp=
+    [ -z "$pid" ] || kill -TERM "$pid" 2>/dev/null
+    printf "\nBoosterAI: %s update stopped, starting the installed version\n" "$cli"
+    exit 0' INT TERM HUP
+  if ! flock -n 8; then
+    say "waiting for another tab's $cli update..."
+    flock -w 45 8 || { say "$cli update skipped: another tab is still updating it"; exit 0; }
+  fi
+  # Another tab may have checked while this one waited.
+  bs_up_due "$bs_up_dir/$cli.checked" || exit 0
+  stamp=1
+  log="$bs_up_dir/$cli.log"
+  : > "$log" 2>/dev/null || log=/dev/null
+  cur=$(bs_up_ver "$exe")
+  printf 'BoosterAI: checking for a newer %s %s... ' "$cli" "$cur"
+  # codex installed with npm: compare with the registry and install only a newer version. Everything else uses the
+  # CLI's own updater, which checks first (claude update also handles package-manager installs).
+  root=
+  [ "$cli" != codex ] || ! command -v npm >/dev/null 2>&1 || root=$(timeout 10 npm root -g 2>/dev/null </dev/null) || root=
+  if [ -n "$root" ] && [[ $(readlink -f "$exe") == "$root"/* ]]; then
+    latest=$(timeout "$bs_up_net" npm view @openai/codex version 2>>"$log" </dev/null)
+    rc=$?
+    if [ $rc != 0 ] || [ -z "$latest" ]; then echo "skipped: npm view @openai/codex failed ($(bs_up_why $rc "$log"))"; exit 0; fi
+    if [ -n "$cur" ] && [ "$(printf '%s\n%s\n' "$cur" "$latest" | sort -V | tail -n 1)" = "$cur" ]; then echo "up to date"; exit 0; fi
+    what="npm install -g @openai/codex@$latest"
+    set -- npm install -g "@openai/codex@$latest"
+  else
+    what="$cli update"
+    set -- "$exe" update
+  fi
+  timeout "$bs_up_limit" "$@" </dev/null >>"$log" 2>&1 &
+  pid=$!
+  wait "$pid"
+  rc=$?
+  pid=
+  if [ $rc != 0 ]; then echo "skipped: $what failed ($(bs_up_why $rc "$log"))"; exit 0; fi
+  new=$(bs_up_ver "$(type -P "$cli" || echo "$exe")")
+  if [ "$new" != "$cur" ]; then echo "updated to $new"; else echo "up to date"; fi
+)
 # bs_stream <cli> <args>: run a CLI that emits stream-json (claude, agy), show it as readable
 # progress, and return the CLI's own exit code (not the formatter's). The CLI is an argument
 # here, so bash does not expand the user's alias for it (agy='agy --dangerously-skip-permissions'):
@@ -424,11 +500,11 @@ for line in sys.stdin:
     /// A new log id and the paths the tab's shell uses; null when the path cannot go into a tab script.
     /// Also writes the claude settings whose hooks log busy (prompt sent) and idle (turn done).
     /// </summary>
-    public TabTrack? NewTrack()
+    public TabTrack? NewTrack(bool updateClis = false)
     {
         var dir = OperatingSystem.IsWindows() ? PathMapping.ToWslPath(Directory) : Directory;
         if (dir.IndexOfAny([';', '\n', '\r']) >= 0) return null;
-        var track = new TabTrack(dir + "/tab-lib.sh", dir, "tab" + Interlocked.Increment(ref _next));
+        var track = new TabTrack(dir + "/tab-lib.sh", dir, "tab" + Interlocked.Increment(ref _next), updateClis);
         try { File.WriteAllText(Path.Combine(Directory, track.Id + ".claude.json"), HooksJson($"{dir}/{track.Id}.log")); }
         catch (IOException) { /* no hooks: the tab's activity stays unknown */ }
         return track;

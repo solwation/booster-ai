@@ -428,6 +428,7 @@ public sealed partial class MainViewModel : Observable
 
     public bool CloseAfterLaunch { get => _cfg.CloseAfterLaunch; set { _cfg.CloseAfterLaunch = value; Raise(); } }
     public bool Notifications { get => _cfg.Notifications; set { _cfg.Notifications = value; Raise(); } }
+    public bool AutoUpdateClis { get => _cfg.AutoUpdateClis; set { _cfg.AutoUpdateClis = value; Raise(); } }
 
     /// <summary>The update prompt in the main window.</summary>
     public UpdateViewModel Update { get; }
@@ -705,7 +706,7 @@ public sealed partial class MainViewModel : Observable
         try
         {
             var resume = Launcher.CanResume(launched, next);
-            tab.Session!.QueueNext(tab.Track!.Id, Launcher.RestartScript(next, tab.Track, resume));
+            tab.Session!.QueueNext(tab.Track!.Id, Launcher.RestartScript(next, tab.Track with { UpdateClis = _cfg.AutoUpdateClis }, resume));
             var pid = tab.ShellPid!.Value;
             var distro = _cfg.WslDistro;
             Task.Run(() => Launcher.StopForeground(pid, distro));
@@ -792,7 +793,7 @@ public sealed partial class MainViewModel : Observable
         {
             if (error == "")
             {
-                session.QueueNext(track.Id, Launcher.RestartScript(launched, track, resume));
+                session.QueueNext(track.Id, Launcher.RestartScript(launched, track with { UpdateClis = _cfg.AutoUpdateClis }, resume));
                 var distro = _cfg.WslDistro;
                 // The idle child may still be starting after cli-exit. Its own PID/start time
                 // prevents a delayed wake from interrupting the newly restarted CLI.
@@ -841,7 +842,7 @@ public sealed partial class MainViewModel : Observable
         DismissRecoveredStatus();
         try { _session ??= new TabSession(TabSession.DefaultRoot, DateTime.Now, TabSession.Liveness(_cfg.WslDistro)); }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException) { _session = null; }
-        var tracks = rows.ToDictionary(r => r.Tab, r => _session?.NewTrack());
+        var tracks = rows.ToDictionary(r => r.Tab, r => _session?.NewTrack(_cfg.AutoUpdateClis));
         var error = Launcher.Launch(cfg, track: t => tracks.GetValueOrDefault(t), window: window ?? _session?.WindowName ?? "new", resume: resume);
         if (error != "")
         {

@@ -26,6 +26,7 @@ Start your whole working day with one click: BoosterAI opens every project you w
 - **Font size.** One setting zooms the CLI text in all tabs.
 - **Themes and language.** Five tab colour themes, an Appearance setting (Auto, Light or Dark, applied at once), in Swedish or English.
 - **Stays up to date.** At start, when its window gets focus and every five minutes while it is active, BoosterAI asks GitHub for a newer release and offers it in a quiet bar: *Update* downloads it, checks it against `SHA256SUMS` and restarts into the new version; *Later* (hides that version for a day) or *Skip this version* (turn the check off in Settings).
+- **Current AI CLIs.** Before a tab starts claude, codex or agy (also on an in-place restart), it updates the CLI when a newer version exists, at most every six hours per CLI and one tab at a time; a failure only prints one line and the installed version starts. Turn it off with *Update AI CLIs automatically* in Settings ([details](docs/DETAILS.md#ai-cli-updates)).
 - **Windows and Linux.** Windows Terminal with WSL on Windows; Ptyxis, gnome-terminal, konsole, xfce4-terminal, kitty, wezterm or xterm on Linux.
 
 ![The BoosterAI settings window](docs/settings.png)

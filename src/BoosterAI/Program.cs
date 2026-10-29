@@ -17,8 +17,14 @@ internal static class Program
             // Each Start gets a session directory with a status log per tab; shown here with a placeholder.
             var root = OperatingSystem.IsWindows() ? PathMapping.ToWslPath(TabSession.DefaultRoot) : TabSession.DefaultRoot;
             var dir = root.Replace('\\', '/') + "/<session>";
-            var tracks = tabs.Select((_, i) => (TabTrack?)new TabTrack(dir + "/tab-lib.sh", dir, "tab" + (i + 1))).ToList();
+            var tracks = tabs.Select((_, i) => (TabTrack?)new TabTrack(dir + "/tab-lib.sh", dir, "tab" + (i + 1), cfg.AutoUpdateClis)).ToList();
             for (var i = 0; i < tabs.Count; i++) Console.WriteLine($"{tabs[i].Name}: bash -lic {Launcher.TabScript(tabs[i], null, tracks[i])}");
+            // bs_update in tab-lib.sh, before the CLI and before each in-place restart.
+            Console.WriteLine(cfg.AutoUpdateClis
+                ? "cli update (bs_update, at most every 6 h per CLI, state in ~/.local/share/BoosterAI/cli-update of the tab's Linux):"
+                : "cli update: off (AutoUpdateClis false)");
+            if (cfg.AutoUpdateClis)
+                foreach (var (llm, how) in Launcher.CliUpdateCommands) Console.WriteLine($"  {llm}: {how}");
             Console.WriteLine("wt.exe " + string.Join(' ', Launcher.WindowsTerminalArgs(tabs, cfg.WslDistro, null, tracks, "BoosterAI-<session>", cfg.ZoomPercent)
                 .Select(a => a.Contains(' ') ? $"\"{a}\"" : a)));
             if (!OperatingSystem.IsWindows())

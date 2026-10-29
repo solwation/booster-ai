@@ -27,7 +27,7 @@ public static class Launcher
         var cli = CliCommand(tab, prompt, track, resume && CanContinue(tab));
         var tracked = tab.Llm == Catalog.ShellOnly
             ? $"{cd} || true && {Hook("bs_cli")} && bs_run {Quote("bash")}"
-            : $"{cd} && {Hook("bs_cli")} && {TrackedCommand(cli)} && {Hook("bs_done 0")} || {Hook("bs_done $?")} && {Next} && (type bs_shell >/dev/null 2>&1) && bs_shell || bash";
+            : $"{cd} && {UpdateHook(tab, track)}{Hook("bs_cli")} && {TrackedCommand(cli)} && {Hook("bs_done 0")} || {Hook("bs_done $?")} && {Next} && (type bs_shell >/dev/null 2>&1) && bs_shell || bash";
         // Select before executing: an unsuccessful CLI or a shell's exit code must never run the
         // fallback a second time. Both bodies are shell-quoted literals; eval keeps the tracked PID.
         var plain = TabScript(tab, prompt, resume: resume);
@@ -47,7 +47,22 @@ public static class Launcher
     /// </summary>
     public static string RestartScript(TabConfig tab, TabTrack track, bool resume) =>
         tab.Llm == Catalog.ShellOnly ? $"{Cd(InWsl(tab))} || true"
-            : $"{Cd(InWsl(tab))} && {Hook("bs_cli")} && {TrackedCommand(CliCommand(tab, null, track, resume))} && {Hook("bs_done 0")} || {Hook("bs_done $?")}";
+            : $"{Cd(InWsl(tab))} && {UpdateHook(tab, track)}{Hook("bs_cli")} && {TrackedCommand(CliCommand(tab, null, track, resume))} && {Hook("bs_done 0")} || {Hook("bs_done $?")}";
+
+    /// <summary>
+    /// The step that updates the tab's AI CLI before it starts (tab-lib.sh's bs_update, #60), or "" when the setting is off
+    /// or the tab is a shell. It never fails the chain: the CLI starts as installed when the update cannot run.
+    /// </summary>
+    private static string UpdateHook(TabConfig tab, TabTrack track) =>
+        track.UpdateClis && tab.Llm is "claude" or "codex" or "agy" ? Hook("bs_update " + tab.Llm) + " && " : "";
+
+    /// <summary>How tab-lib.sh's bs_update updates each CLI, for --dry-run and the docs.</summary>
+    public static readonly IReadOnlyList<(string Llm, string How)> CliUpdateCommands =
+    [
+        ("claude", "claude update (its own check; also updates npm/package-manager installs)"),
+        ("codex", "npm install -g @openai/codex@<latest> when npm view @openai/codex version is newer than codex --version and codex lives under npm root -g, otherwise codex update"),
+        ("agy", "agy update (its own check)"),
+    ];
 
     /// <summary>A model change on claude or codex restarts with the same conversation; anything else starts fresh.</summary>
     public static bool CanResume(TabConfig from, TabConfig to) =>

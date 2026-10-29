@@ -42,6 +42,8 @@ public sealed class AppConfig
     public int ZoomPercent { get; set; }
     /// <summary>Ask GitHub at start and then at most once a day whether a newer release exists.</summary>
     public bool CheckForUpdates { get; set; } = true;
+    /// <summary>Update claude, codex and agy in the tab before they start, at most every 6 hours per CLI (tab-lib.sh's bs_update).</summary>
+    public bool AutoUpdateClis { get; set; } = true;
     /// <summary>A version the user chose to skip ("Hoppa över den här versionen"); it is not offered again.</summary>
     public string? SkippedVersion { get; set; }
     /// <summary>When the last update check finished (UTC); drives the once-a-day check.</summary>

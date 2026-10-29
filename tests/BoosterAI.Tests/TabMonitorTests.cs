@@ -889,7 +889,8 @@ public class ExitedRestartTests
         {
             Assert.True(SpinWait.SpinUntil(() => session.ReadLog(track.Id) is { CliExit: 0, CanRestartExited: true }, 5000));
             var original = session.ReadLog(track.Id)!;
-            var vm = new MainViewModel(new AppConfig { Tabs = [tab] });
+            // No CLI update: the fake codex is a function, and the real one on PATH must never be updated by a test.
+            var vm = new MainViewModel(new AppConfig { Tabs = [tab], AutoUpdateClis = false });
             var row = vm.Tabs[0];
             row.LaunchedAs = tab;
             row.Track = track;

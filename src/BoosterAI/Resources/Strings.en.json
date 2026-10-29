@@ -126,6 +126,8 @@
   "settings.notifications.tip": "Notify when a tab closes, does not start or its CLI fails",
   "settings.updates": "Check for updates",
   "settings.updates.tip": "Ask GitHub at start, when the window gets focus and every five minutes while it is active whether a newer version exists (now {0})",
+  "settings.cliUpdates": "Update AI CLIs automatically",
+  "settings.cliUpdates.tip": "Update claude, codex and agy in the tab before they start when a newer version exists, at most every six hours per CLI. A failure never stops the start.",
   "update.available": "Version {0} is available.",
   "update.manual": "Version {0} is available – this copy cannot update itself.",
   "update.install": "Update",
