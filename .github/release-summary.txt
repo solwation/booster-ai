@@ -1,5 +1,5 @@
 # One-line summary of the next release, shown in the app's update bar. Update it before tagging.
 # `version` must equal the tag being released (it stops a stale summary from shipping again).
-version: 0.14.0
-sv: Uppdateringsraden visar en kort sammanfattning av vad som är nytt, med en länk till alla ändringar.
-en: The update bar shows a short summary of what is new, with a link to every change.
+version: 0.15.0
+sv: Valfri auto-clear skickar /clear till lediga claude-flikar efter vald tid; stängda flikar lämnar inga processer kvar.
+en: Optional auto-clear sends /clear to idle claude tabs after a set time; closed tabs leave no processes behind.
