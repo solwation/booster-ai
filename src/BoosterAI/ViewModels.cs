@@ -155,6 +155,7 @@ public sealed class TabViewModel : Observable
     private int? _rc;
     private Activity _activity;
     private long? _watchingSince;
+    private long? _clearedAt;
     private bool _pending;
     private IReadOnlyList<string> _denied = [];
     internal TabConfig? LaunchedAs { get; set; }
@@ -225,6 +226,10 @@ public sealed class TabViewModel : Observable
     /// <summary>The programs of the commands agy denied (state Denied).</summary>
     internal IReadOnlyList<string> DeniedPrograms => _denied;
     private string? _closeProgress;
+    /// <summary>Close all is saving and closing this tab.</summary>
+    internal bool IsClosing => _closeProgress is not null;
+    /// <summary>The idle period (epoch-ms of its "idle") auto-clear already asked this tab to clear.</summary>
+    internal long? AutoClearRequestedFor { get; set; }
     internal void SetCloseProgress(string? text)
     {
         _closeProgress = text;
@@ -237,6 +242,7 @@ public sealed class TabViewModel : Observable
         TabState.Running when PendingRestart => Loc.Get("tabstate.waitingIdle"),
         TabState.Running when IsChanged => Loc.Get("tabstate.changed"),
         TabState.Running when Activity == Activity.Busy => Loc.Get("tabstate.busy"),
+        TabState.Running when Activity == Activity.Idle && _clearedAt is { } cleared => Loc.Format("tabstate.idleCleared", LocalTime(cleared)),
         TabState.Running when Activity == Activity.Idle => Loc.Get("tabstate.idle"),
         TabState.Running when Activity == Activity.Watching => Loc.Format("tabstate.watching", TabStatus.WatchingMinutes(_watchingSince, DateTime.UtcNow)),
         TabState.Running => Loc.Get("tabstate.unknownActivity"),
@@ -247,8 +253,13 @@ public sealed class TabViewModel : Observable
     });
     /// <summary>The status tooltip: what Watching means and when the last turn ended; otherwise the status itself.</summary>
     public string StatusTip => _state is TabState.Running && Activity == Activity.Watching && _watchingSince is { } since
-        ? Loc.Format("tabstate.watching.tip", DateTimeOffset.FromUnixTimeMilliseconds(since).ToLocalTime().ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture))
+        ? Loc.Format("tabstate.watching.tip", LocalTime(since))
+        : _state is TabState.Running && Activity == Activity.Idle && _clearedAt is { } cleared && _closeProgress is null
+        ? Loc.Format("tabstate.idleCleared.tip", LocalTime(cleared))
         : StatusText;
+
+    private static string LocalTime(long epochMs) =>
+        DateTimeOffset.FromUnixTimeMilliseconds(epochMs).ToLocalTime().ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture);
     /// <summary>Widest line the output popup shows; longer ones end in "…" so the popup keeps its size.</summary>
     public const int OutputColumns = 100;
 
@@ -294,11 +305,12 @@ public sealed class TabViewModel : Observable
     }));
 
     /// <summary>Updates the state; true when it changed.</summary>
+    /// <param name="clearedAt">When auto-clear typed /clear in the current idle period (AutoClear.ClearedAt); shown in the status.</param>
     internal bool SetState(TabState state, int? rc, IReadOnlyList<string>? denied = null, Activity activity = Activity.Unknown,
-        long? watchingSince = null)
+        long? watchingSince = null, long? clearedAt = null)
     {
         denied ??= [];
-        if (_state == state && _rc == rc && _denied.SequenceEqual(denied) && _activity == activity && _watchingSince == watchingSince)
+        if (_state == state && _rc == rc && _denied.SequenceEqual(denied) && _activity == activity && _watchingSince == watchingSince && _clearedAt == clearedAt)
         {
             // The elapsed minutes of Watching move on without a new event.
             if (activity == Activity.Watching) { Raise(nameof(StatusText)); Raise(nameof(StatusTip)); }
@@ -310,6 +322,7 @@ public sealed class TabViewModel : Observable
         _denied = denied;
         _activity = activity;
         _watchingSince = watchingSince;
+        _clearedAt = clearedAt;
         if (state != TabState.Running) PendingRestart = false;
         foreach (var n in new[] { nameof(HasStatus), nameof(IsRunning), nameof(IsAlive), nameof(Activity), nameof(StatusText), nameof(StatusTip), nameof(StatusBrush),
             nameof(ShowsOutput), nameof(HasOutput), nameof(OutputNote), nameof(HasOutputNote) }) Raise(n);
@@ -433,6 +446,13 @@ public sealed partial class MainViewModel : Observable
     public bool MinimizeToTray { get => _cfg.MinimizeToTray; set { _cfg.MinimizeToTray = value; Raise(); } }
     public bool Notifications { get => _cfg.Notifications; set { _cfg.Notifications = value; Raise(); } }
     public bool AutoUpdateClis { get => _cfg.AutoUpdateClis; set { _cfg.AutoUpdateClis = value; Raise(); } }
+    public bool AutoClearIdle { get => _cfg.AutoClearIdle; set { _cfg.AutoClearIdle = value; Raise(); } }
+    /// <summary>The auto-clear minutes for the number box (decimal? is what it binds); an empty box keeps the last value.</summary>
+    public decimal? AutoClearMinutes
+    {
+        get => AutoClear.Minutes(_cfg.AutoClearMinutes);
+        set { if (value is { } v) { _cfg.AutoClearMinutes = AutoClear.Minutes((int)Math.Round(v)); } Raise(); }
+    }
 
     /// <summary>The update prompt in the main window.</summary>
     public UpdateViewModel Update { get; }
@@ -607,7 +627,7 @@ public sealed partial class MainViewModel : Observable
     private void SettingsTakenOver()
     {
         foreach (var name in new[] { nameof(WslDistro), nameof(LinuxTerminal), nameof(Theme), nameof(SelectedTheme), nameof(SelectedLanguage),
-            nameof(SelectedAppearance), nameof(CloseAfterLaunch), nameof(MinimizeToTray), nameof(Notifications), nameof(SelectedZoom), nameof(AutoUpdateClis), nameof(CheckForUpdates) })
+            nameof(SelectedAppearance), nameof(CloseAfterLaunch), nameof(MinimizeToTray), nameof(Notifications), nameof(SelectedZoom), nameof(AutoUpdateClis), nameof(AutoClearIdle), nameof(AutoClearMinutes), nameof(CheckForUpdates) })
             Raise(name);
         foreach (var t in Tabs) t.RaiseColor();
         (Avalonia.Application.Current as App)?.ApplyTheme();
@@ -729,7 +749,7 @@ public sealed partial class MainViewModel : Observable
         try
         {
             var resume = Launcher.CanResume(launched, next);
-            tab.Session!.QueueNext(tab.Track!.Id, Launcher.RestartScript(next, tab.Track with { UpdateClis = _cfg.AutoUpdateClis }, resume));
+            tab.Session!.QueueNext(tab.Track!.Id, Launcher.RestartScript(next, tab.Track with { UpdateClis = _cfg.AutoUpdateClis, AutoClear = _cfg.AutoClearIdle }, resume));
             var pid = tab.ShellPid!.Value;
             var distro = _cfg.WslDistro;
             Task.Run(() => Launcher.StopForeground(pid, distro));
@@ -822,7 +842,7 @@ public sealed partial class MainViewModel : Observable
         {
             if (error == "")
             {
-                session.QueueNext(track.Id, Launcher.RestartScript(launched, track with { UpdateClis = _cfg.AutoUpdateClis }, resume));
+                session.QueueNext(track.Id, Launcher.RestartScript(launched, track with { UpdateClis = _cfg.AutoUpdateClis, AutoClear = _cfg.AutoClearIdle }, resume));
                 var distro = _cfg.WslDistro;
                 var name = tab.Name.Trim();
                 // The idle child may still be starting after cli-exit (it sources ~/.bashrc first). Its own PID/start
@@ -876,7 +896,7 @@ public sealed partial class MainViewModel : Observable
         DismissRecoveredStatus();
         try { _session ??= new TabSession(TabSession.DefaultRoot, DateTime.Now, TabSession.Liveness(_cfg.WslDistro)); }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException) { _session = null; }
-        var tracks = rows.ToDictionary(r => r.Tab, r => _session?.NewTrack(_cfg.AutoUpdateClis));
+        var tracks = rows.ToDictionary(r => r.Tab, r => _session?.NewTrack(_cfg.AutoUpdateClis, _cfg.AutoClearIdle));
         var error = Launcher.Launch(cfg, track: t => tracks.GetValueOrDefault(t), window: window ?? _session?.WindowName ?? "new", resume: resume);
         if (error != "")
         {
@@ -1008,7 +1028,7 @@ public sealed partial class MainViewModel : Observable
                 // A shell killed without its exit trap (wsl --shutdown) leaves its output capture behind.
                 if (state == TabState.Lost) w.Session.DeleteOutput(w.Id);
                 return (w.Row, w.Id, State: state, log?.CliExit, Denied: denied,
-                    log?.Pid, Activity: w.Session.ReadActivity(w.Id, log, now), log?.WatchingSince);
+                    log?.Pid, Activity: w.Session.ReadActivity(w.Id, log, now), log?.WatchingSince, Log: log);
             }).ToList();
             // agy's settings are only read while a tab has a denial to offer rules for.
             var settings = results.Any(r => r.State == TabState.Denied) ? ReadText(settingsPath) : null;
@@ -1018,13 +1038,15 @@ public sealed partial class MainViewModel : Observable
             _polling = false;
             if (!t.IsCompletedSuccessfully) return;
             var (results, settings) = t.Result;
-            foreach (var (row, id, state, rc, denied, pid, activity, watchingSince) in results)
+            foreach (var (row, id, state, rc, denied, pid, activity, watchingSince, log) in results)
             {
                 // Ignore a result for a tab that has been restarted meanwhile.
                 if (row.TrackId != id) continue;
                 row.ShellPid = pid;
                 if (row.PendingRestart && state == TabState.Running && activity == Activity.Idle) RestartChanged(row);
-                if (!row.SetState(state, rc, denied, activity, activity == Activity.Watching ? watchingSince : null)) continue;
+                var changed = row.SetState(state, rc, denied, activity, activity == Activity.Watching ? watchingSince : null, AutoClear.ClearedAt(log));
+                RequestAutoClear(row, id, state, log);
+                if (!changed) continue;
                 if (_cfg.Notifications && TabStatus.IsUnexpected(state, rc))
                     Notifier.Show("BoosterAI", Loc.Format("notify.body", row.Name, row.StatusText));
             }
@@ -1032,6 +1054,21 @@ public sealed partial class MainViewModel : Observable
             TabsChanged();
             OfferRules(settings);
         }, TaskScheduler.FromCurrentSynchronizationContext());
+    }
+
+    /// <summary>
+    /// Types /clear into a tab whose claude has been idle for the configured time (AutoClear.Due), once per idle period.
+    /// The tab's bs_pty picks the request up within a second and logs whether it typed it; the status then says so.
+    /// </summary>
+    private void RequestAutoClear(TabViewModel row, string id, TabState state, TabLog? log)
+    {
+        if (row.Session is not { } session) return;
+        if (AutoClear.Due(_cfg.AutoClearIdle, _cfg.AutoClearMinutes, row.LaunchedAs, state, row.Activity, row.PendingRestart,
+                IsClosingAll || row.IsClosing, log, row.AutoClearRequestedFor, DateTime.UtcNow) is not { } due) return;
+        // Asked once per idle period even when the write fails: a tab that cannot take it is not asked every poll.
+        row.AutoClearRequestedFor = due.IdleAt;
+        try { session.RequestInput(id, due.Since, AutoClear.Command); }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }
     }
 
     /// <summary>agy's settings.json as this process can read it; null until the WSL home is known.</summary>

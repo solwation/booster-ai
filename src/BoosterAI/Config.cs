@@ -46,6 +46,13 @@ public sealed class AppConfig
     public bool CheckForUpdates { get; set; } = true;
     /// <summary>Update claude, codex and agy in the tab before they start, at most every 6 hours per CLI (tab-lib.sh's bs_update).</summary>
     public bool AutoUpdateClis { get; set; } = true;
+    /// <summary>
+    /// Type /clear into an interactive claude tab once it has been idle for <see cref="AutoClearMinutes"/> (#69), once per idle
+    /// period. Off by default; read when a tab starts or restarts (its CLI must run under tab-lib.sh's bs_pty).
+    /// </summary>
+    public bool AutoClearIdle { get; set; }
+    /// <summary>Idle minutes before auto-clear; clamped to AutoClear.MinMinutes..MaxMinutes.</summary>
+    public int AutoClearMinutes { get; set; } = AutoClear.DefaultMinutes;
     /// <summary>A version the user chose to skip ("Hoppa över den här versionen"); it is not offered again.</summary>
     public string? SkippedVersion { get; set; }
     /// <summary>When the last update check finished (UTC); drives the once-a-day check.</summary>
@@ -142,6 +149,8 @@ public static class ConfigMerge
         S(c => c.Notifications, (c, v) => c.Notifications = v),
         S(c => c.ZoomPercent, (c, v) => c.ZoomPercent = v),
         S(c => c.AutoUpdateClis, (c, v) => c.AutoUpdateClis = v),
+        S(c => c.AutoClearIdle, (c, v) => c.AutoClearIdle = v),
+        S(c => c.AutoClearMinutes, (c, v) => c.AutoClearMinutes = v),
         S(c => c.CheckForUpdates, (c, v) => c.CheckForUpdates = v),
         S(c => c.SkippedVersion, (c, v) => c.SkippedVersion = v),
         S(c => c.LastUpdateCheck, (c, v) => c.LastUpdateCheck = v),

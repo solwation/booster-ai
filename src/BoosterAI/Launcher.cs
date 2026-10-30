@@ -27,7 +27,7 @@ public static class Launcher
         var cli = CliCommand(tab, prompt, track, resume && CanContinue(tab));
         var tracked = tab.Llm == Catalog.ShellOnly
             ? $"{cd} || true && {Hook("bs_reset")} && {Hook("bs_cli")} && bs_run {Quote("bash")}"
-            : $"{cd} && {Hook("bs_reset")} && {UpdateHook(tab, track)}{Hook("bs_cli")} && {TrackedCommand(cli)} && {Hook("bs_done 0")} || {Hook("bs_done $?")} && {Next} && (type bs_shell >/dev/null 2>&1) && bs_shell || bash";
+            : $"{cd} && {Hook("bs_reset")} && {UpdateHook(tab, track)}{Hook("bs_cli")} && {TrackedCommand(cli, tab, track)} && {Hook("bs_done 0")} || {Hook("bs_done $?")} && {Next} && (type bs_shell >/dev/null 2>&1) && bs_shell || bash";
         // Select before executing: an unsuccessful CLI or a shell's exit code must never run the
         // fallback a second time. Both bodies are shell-quoted literals; eval keeps the tracked PID.
         var plain = TabScript(tab, prompt, resume: resume);
@@ -37,8 +37,13 @@ public static class Launcher
     // In the tab's own shell, not a subshell: stopping a restarted CLI's process group must not take bs_next's loop with it.
     private const string Next = "(type bs_next >/dev/null 2>&1) && bs_next || true";
 
-    private static string TrackedCommand(string command) =>
-        command.StartsWith("bs_stream ", StringComparison.Ordinal) ? command : "bs_run " + Quote(command);
+    /// <summary>
+    /// The CLI under tab-lib.sh's bs_run; an interactive claude with auto-clear on (#69) runs under bs_pty ("input"), which
+    /// lets BoosterAI type /clear into it. One-shot runs (bs_stream) and other CLIs never do.
+    /// </summary>
+    private static string TrackedCommand(string command, TabConfig tab, TabTrack track) =>
+        command.StartsWith("bs_stream ", StringComparison.Ordinal) ? command
+            : "bs_run " + Quote(command) + (track.AutoClear && AutoClear.Supports(tab.Llm) ? " input" : "");
 
     /// <summary>
     /// What tab-lib.sh's bs_next runs in a tab whose CLI BoosterAI stopped for an in-place restart: the CLI
@@ -47,7 +52,7 @@ public static class Launcher
     /// </summary>
     public static string RestartScript(TabConfig tab, TabTrack track, bool resume) =>
         tab.Llm == Catalog.ShellOnly ? $"{Cd(InWsl(tab))} || true && {Hook("bs_reset")}"
-            : $"{Cd(InWsl(tab))} && {Hook("bs_reset")} && {UpdateHook(tab, track)}{Hook("bs_cli")} && {TrackedCommand(CliCommand(tab, null, track, resume))} && {Hook("bs_done 0")} || {Hook("bs_done $?")}";
+            : $"{Cd(InWsl(tab))} && {Hook("bs_reset")} && {UpdateHook(tab, track)}{Hook("bs_cli")} && {TrackedCommand(CliCommand(tab, null, track, resume), tab, track)} && {Hook("bs_done 0")} || {Hook("bs_done $?")}";
 
     /// <summary>
     /// The step that updates the tab's AI CLI before it starts (tab-lib.sh's bs_update, #60), or "" when the setting is off

@@ -5,7 +5,7 @@
         x:DataType="local:MainViewModel"
         Title="{local:T settings.title}"
         Icon="avares://BoosterAI/Assets/boosterai.ico"
-        Width="820" Height="650" MinWidth="640" MinHeight="360"
+        Width="820" Height="690" MinWidth="640" MinHeight="360"
         WindowStartupLocation="CenterOwner">
 
   <!-- Columns: stripe 4 · gap 14 · name 220 · directory * · remove 36. -->
@@ -133,6 +133,14 @@
       <CheckBox IsChecked="{Binding AutoUpdateClis}" Content="{local:T settings.cliUpdates}"
                 ToolTip.Tip="{local:T settings.cliUpdates.tip}" />
     </WrapPanel>
+
+    <StackPanel Grid.Row="6" Orientation="Horizontal" Spacing="8" Margin="0,8,0,0" ToolTip.Tip="{local:T settings.autoClear.tip}">
+      <CheckBox IsChecked="{Binding AutoClearIdle}" Content="{local:T settings.autoClear}" VerticalAlignment="Center" />
+      <NumericUpDown Value="{Binding AutoClearMinutes}" Minimum="1" Maximum="240" Increment="1" FormatString="0"
+                     Width="110" IsEnabled="{Binding AutoClearIdle}" VerticalAlignment="Center"
+                     AutomationProperties.Name="{local:T settings.autoClear.name}" />
+      <TextBlock Text="{local:T settings.autoClear.minutes}" VerticalAlignment="Center" />
+    </StackPanel>
 
     <Grid Grid.Row="7" ColumnDefinitions="Auto,Auto,*,Auto" Margin="0,16,0,0">
       <Button Grid.Column="0" Click="OnAddTab" Padding="12,8" AutomationProperties.Name="{local:T project.add}" VerticalAlignment="Center">

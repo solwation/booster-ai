@@ -7,8 +7,9 @@ namespace BoosterAI;
 /// Where a tab writes its status log, as the tab's shell sees the paths (see Launcher.TabScript).
 /// Lib is the sourced script, Dir the session directory, Id the tab's file name in it.
 /// <paramref name="UpdateClis"/>: the tab updates its AI CLI before starting it (AppConfig.AutoUpdateClis, tab-lib.sh's bs_update).
+/// <paramref name="AutoClear"/>: an interactive claude runs under bs_pty so BoosterAI can type /clear into it (AppConfig.AutoClearIdle, #69).
 /// </summary>
-public sealed record TabTrack(string Lib, string Dir, string Id, bool UpdateClis = false);
+public sealed record TabTrack(string Lib, string Dir, string Id, bool UpdateClis = false, bool AutoClear = false);
 
 public enum TabState { Starting, Running, CliExited, CliMissing, NotStarted, Closed, Lost, Denied }
 
@@ -22,7 +23,7 @@ public enum Activity { Unknown, Busy, Idle, Watching }
 /// What a tab's log says. One line per event, written by tab-lib.sh:
 /// "&lt;epoch-ms&gt; start pid=N starttime=N", "… cli-start", "… cli-exit rc=N", "… exit", and
 /// "… denied cli=agy cmd=&lt;base64&gt;" when agy refused a command it could not ask about, and "… busy" /
-/// "… idle" from claude's hooks, "… turn-done" / "… turn-start" from bs_stream's formatter (a turn ended / output
+/// "… idle" from claude's hooks, "… input-ready" / "… input-sent" / "… input-skipped reason=…" from bs_pty, "… turn-done" / "… turn-start" from bs_stream's formatter (a turn ended / output
 /// resumed). <paramref name="WatchingSince"/> is the epoch-ms of a turn-done not yet followed by output (null: none).
 /// <paramref name="Denied"/> holds those command lines (null: none). An in-place
 /// restart logs a new cli-start, which starts the CLI's part of the log over.
@@ -30,11 +31,20 @@ public enum Activity { Unknown, Busy, Idle, Watching }
 public sealed record TabLog(int? Pid, long? StartTime, bool CliStarted, int? CliExit, bool Exited, IReadOnlyList<string>? Denied = null,
     Activity Activity = Activity.Unknown, long? WatchingSince = null, string? CloseSaveToken = null, bool CanCloseCleanly = false, bool CanRestartExited = false)
 {
+    /// <summary>Epoch-ms of the last "busy" / "idle" from claude's hooks since the CLI started (null: none).</summary>
+    public long? BusyAt { get; init; }
+    public long? IdleAt { get; init; }
+    /// <summary>The CLI runs under tab-lib.sh's bs_pty, which types what BoosterAI writes to tabN.input ("input-ready").</summary>
+    public bool InputReady { get; init; }
+    /// <summary>Epoch-ms of the last request bs_pty handled ("input-sent" / "input-skipped"); <see cref="InputSent"/>: it was typed.</summary>
+    public long? InputAt { get; init; }
+    public bool InputSent { get; init; }
+
     public static TabLog Parse(string text)
     {
         int? pid = null, rc = null;
-        long? start = null, watching = null;
-        bool cliStarted = false, exited = false, canClose = false, canRestart = false;
+        long? start = null, watching = null, busyAt = null, idleAt = null, inputAt = null;
+        bool cliStarted = false, exited = false, canClose = false, canRestart = false, inputReady = false, inputSent = false;
         List<string>? denied = null;
         var activity = Activity.Unknown;
         string? closeToken = null;
@@ -51,20 +61,29 @@ public sealed record TabLog(int? Pid, long? StartTime, bool CliStarted, int? Cli
                     pid = Int(values, "pid");
                     start = values.TryGetValue("starttime", out var s) && long.TryParse(s, CultureInfo.InvariantCulture, out var st) ? st : null;
                     break;
-                case "cli-start": closeToken = null; cliStarted = true; rc = null; denied = null; activity = Activity.Unknown; watching = null; break;
+                case "cli-start":
+                    closeToken = null; cliStarted = true; rc = null; denied = null; activity = Activity.Unknown; watching = null;
+                    busyAt = idleAt = inputAt = null; inputReady = inputSent = false;
+                    break;
+                case "input-ready": inputReady = true; break;
+                case "input-sent": inputAt = at; inputSent = true; break;
+                case "input-skipped": inputAt = at; inputSent = false; break;
                 case "close-ready": canClose = true; break;
                 case "restart-ready": canRestart = true; break;
                 case "close-save": closeToken = values.GetValueOrDefault("token"); break;
                 case "turn-done": watching = at; break;
                 case "turn-start": watching = null; break;
-                case "busy": activity = Activity.Busy; break;
-                case "idle": activity = Activity.Idle; break;
-                case "cli-exit": rc = Int(values, "rc") ?? -1; break;
+                case "busy": activity = Activity.Busy; busyAt = at; break;
+                case "idle": activity = Activity.Idle; idleAt = at; break;
+                case "cli-exit": rc = Int(values, "rc") ?? -1; inputReady = false; break;
                 case "exit": exited = true; break;
                 case "denied": (denied ??= []).Add(Decode(values.GetValueOrDefault("cmd"))); break;
             }
         }
-        return new TabLog(pid, start, cliStarted, rc, exited, denied, activity, watching, closeToken, canClose, canRestart);
+        return new TabLog(pid, start, cliStarted, rc, exited, denied, activity, watching, closeToken, canClose, canRestart)
+        {
+            BusyAt = busyAt, IdleAt = idleAt, InputReady = inputReady, InputAt = inputAt, InputSent = inputSent,
+        };
     }
 
     private static string Decode(string? base64)
@@ -147,9 +166,10 @@ bs_timing="$1/$2.timing"
 bs_ev() { printf '%s %s\n' "$(date +%s%3N)" "$*" >> "$bs_log" 2>/dev/null; }
 bs_out="$1/$2.out"
 bs_size="$1/$2.size"
+bs_input="$1/$2.input"
 bs_ev start pid=$$ starttime=$(cut -d' ' -f22 /proc/$$/stat)
 # The captured output only lives as long as the tab (and is replaced when a new CLI starts).
-bs_rm_out() { rm -f "$bs_out" "$bs_out.1" "$bs_size" 2>/dev/null || true; }
+bs_rm_out() { rm -f "$bs_out" "$bs_out.1" "$bs_size" "$bs_input" 2>/dev/null || true; }
 trap 'bs_rm_out && bs_ev exit' EXIT
 # A requested close returns success to the terminal, even when the foreground CLI had to be stopped.
 trap 'exit 0' HUP USR1
@@ -218,7 +238,146 @@ bs_run() {
   if [ -n "${BASH_ALIASES[$name]+x}" ]; then cmd="${BASH_ALIASES[$name]}${cmd#"$name"}"; fi
   if declare -F "$name" >/dev/null; then export -f "$name"; fi
   if ! command -v script >/dev/null 2>&1; then rm -f "$bs_timing"; bs_fg eval "$cmd"; return $?; fi
+  if [ "$2" = input ] && [ -t 0 ] && command -v python3 >/dev/null 2>&1; then
+    BS_COMMAND="$cmd" bs_fg bs_pty script --quiet --flush --return --log-out >(bs_cap) --log-timing "$bs_timing" --command 'eval "$BS_COMMAND"'
+    return $?
+  fi
   BS_COMMAND="$cmd" bs_fg script --quiet --flush --return --log-out >(bs_cap) --log-timing "$bs_timing" --command 'eval "$BS_COMMAND"'
+}
+# bs_pty <command>: run it on a pseudo-terminal of its own and pass the tab's keyboard and screen through unchanged
+# (raw bytes, so raw mode, bracketed paste and mouse/focus reports reach the CLI as before; window size changes are
+# copied). It is BoosterAI's only way to type into a running CLI (auto-clear, #69): it polls for the tab's request
+# file "<since-epoch-ms> <base64 text>", deletes it, and types the text, a final CR separately 0.3 s later so the CLI
+# sees a typed command, not a paste. A request is skipped (logged input-skipped) when a key was pressed after <since>,
+# so a draft in the prompt is never sent along. No TIOCSTI (disabled on current kernels), no window. TERM, INT and
+# QUIT are passed on; a hangup of the tab stops the command with HUP and TERM (script ignores a hangup it does not see
+# on its own terminal) instead of leaving it behind. Logs input-ready while it accepts requests.
+bs_pty() {
+  BS_INPUT="$bs_input" BS_LOG="$bs_log" python3 -c 'import os, sys, pty, tty, termios, fcntl, signal, select, time, base64
+cmd = sys.argv[1:]
+req = os.environ["BS_INPUT"]
+def ev(s):
+    try:
+        with open(os.environ["BS_LOG"], "a") as f:
+            f.write("%d %s\n" % (time.time() * 1000, s))
+    except (KeyError, OSError):
+        pass
+def drop():
+    try:
+        os.unlink(req)
+    except OSError:
+        pass
+def size(fd):
+    return fcntl.ioctl(fd, termios.TIOCGWINSZ, b"\0" * 8)
+if not os.isatty(0):
+    os.execvp(cmd[0], cmd)
+attrs = termios.tcgetattr(0)
+ws = size(0)
+drop()
+pid, master = pty.fork()
+if pid == 0:
+    termios.tcsetattr(0, termios.TCSANOW, attrs)
+    fcntl.ioctl(0, termios.TIOCSWINSZ, ws)
+    os.execvp(cmd[0], cmd)
+def winch(*_):
+    try:
+        fcntl.ioctl(master, termios.TIOCSWINSZ, size(0))
+    except OSError:
+        pass
+def forward(sig, _=None):
+    try:
+        os.kill(pid, sig)
+    except OSError:
+        pass
+def hangup(*_):
+    forward(signal.SIGHUP)
+    forward(signal.SIGTERM)
+signal.signal(signal.SIGWINCH, winch)
+for s in (signal.SIGTERM, signal.SIGINT, signal.SIGQUIT):
+    signal.signal(s, forward)
+signal.signal(signal.SIGHUP, hangup)
+def put(b):
+    while b:
+        b = b[os.write(master, b):]
+typed = 0.0
+due = []
+checked = 0.0
+fds = [0, master]
+ev("input-ready")
+try:
+    tty.setraw(0)
+    while True:
+        r = select.select(fds, [], [], 0.25)[0]
+        if master in r:
+            try:
+                b = os.read(master, 65536)
+            except OSError:
+                b = b""
+            if not b:
+                break
+            o = memoryview(b)
+            try:
+                while o:
+                    o = o[os.write(1, o):]
+            except OSError:
+                hangup()
+        if 0 in r:
+            try:
+                b = os.read(0, 65536)
+            except OSError:
+                b = b""
+            if not b:
+                fds = [master]
+                hangup()
+            else:
+                # Focus reports are the terminal, not the user typing.
+                if b.replace(b"\x1b[I", b"").replace(b"\x1b[O", b""):
+                    typed = time.time()
+                put(b)
+        now = time.time()
+        if due and now >= due[0][0]:
+            put(due.pop(0)[1])
+        if now - checked >= 1:
+            checked = now
+            try:
+                with open(req) as f:
+                    text = f.read()
+                drop()
+            except OSError:
+                text = None
+            if text is not None:
+                try:
+                    since, data = text.split()
+                    since = int(since) / 1000
+                    data = base64.b64decode(data, validate=True)
+                except ValueError:
+                    since, data = now, b""
+                if not data:
+                    ev("input-skipped reason=invalid")
+                elif typed > since:
+                    ev("input-skipped reason=typed")
+                else:
+                    put(data.rstrip(b"\r"))
+                    if data.endswith(b"\r"):
+                        due.append((now + 0.3, b"\r"))
+                    ev("input-sent")
+except OSError:
+    hangup()
+finally:
+    try:
+        termios.tcsetattr(0, termios.TCSAFLUSH, attrs)
+    except termios.error:
+        pass
+    drop()
+while True:
+    try:
+        rc = os.waitstatus_to_exitcode(os.waitpid(pid, 0)[1])
+        break
+    except ChildProcessError:
+        rc = 1
+        break
+sys.exit(rc if rc >= 0 else 128 - rc)
+' "$@"
 }
 # bs_next: run what BoosterAI queued for an in-place restart (it then stops the CLI), until nothing is queued.
 bs_next_f="$1/$2.next"
@@ -538,11 +697,11 @@ for line in sys.stdin:
     /// A new log id and the paths the tab's shell uses; null when the path cannot go into a tab script.
     /// Also writes the claude settings whose hooks log busy (prompt sent) and idle (turn done).
     /// </summary>
-    public TabTrack? NewTrack(bool updateClis = false)
+    public TabTrack? NewTrack(bool updateClis = false, bool autoClear = false)
     {
         var dir = OperatingSystem.IsWindows() ? PathMapping.ToWslPath(Directory) : Directory;
         if (dir.IndexOfAny([';', '\n', '\r']) >= 0) return null;
-        var track = new TabTrack(dir + "/tab-lib.sh", dir, "tab" + Interlocked.Increment(ref _next), updateClis);
+        var track = new TabTrack(dir + "/tab-lib.sh", dir, "tab" + Interlocked.Increment(ref _next), updateClis, autoClear);
         try { File.WriteAllText(Path.Combine(Directory, track.Id + ".claude.json"), HooksJson($"{dir}/{track.Id}.log")); }
         catch (IOException) { /* no hooks: the tab's activity stays unknown */ }
         return track;
@@ -570,6 +729,22 @@ for line in sys.stdin:
         try
         {
             File.WriteAllText(temporary, script.Replace("\r\n", "\n") + "\n");
+            File.Move(temporary, path, overwrite: true);
+        }
+        finally { File.Delete(temporary); }
+    }
+
+    /// <summary>
+    /// Asks the tab's bs_pty to type <paramref name="text"/> into its CLI (within about a second), unless a key was pressed
+    /// in the tab after <paramref name="sinceMs"/> (epoch-ms). The tab logs input-sent or input-skipped.
+    /// </summary>
+    public void RequestInput(string id, long sinceMs, string text)
+    {
+        var path = Path.Combine(Directory, id + ".input");
+        var temporary = path + "." + Guid.NewGuid().ToString("N");
+        try
+        {
+            File.WriteAllText(temporary, sinceMs.ToString(CultureInfo.InvariantCulture) + " " + Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(text)) + "\n");
             File.Move(temporary, path, overwrite: true);
         }
         finally { File.Delete(temporary); }

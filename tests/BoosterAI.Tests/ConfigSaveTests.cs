@@ -79,6 +79,7 @@ public class ConfigMergeTests
         {
             WslDistro = "Debian", LinuxTerminal = "kitty", ColorTheme = "Other", Language = "en", AppTheme = "dark",
             CloseAfterLaunch = true, MinimizeToTray = false, Notifications = false, ZoomPercent = 80, AutoUpdateClis = false, CheckForUpdates = false,
+            AutoClearIdle = true, AutoClearMinutes = 10,
             SkippedVersion = "9.9.9", LastUpdateCheck = new DateTime(2026, 10, 29, 9, 18, 39, DateTimeKind.Utc),
         };
         var mine = new AppConfig();
