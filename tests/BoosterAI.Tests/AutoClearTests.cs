@@ -278,8 +278,52 @@ public class AutoClearPtyTests
         }
     }
 
+    /// <summary>
+    /// A hangup of the tab's terminal (the window or tab is closed, #70) ends script and the CLI under it, with and
+    /// without bs_pty, and nothing of the tab is left: killing the outer script closes the pty master, like a terminal that exits.
+    /// </summary>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void HangingUpTheTabLeavesNoProcesses(bool autoClear)
+    {
+        if (!OperatingSystem.IsLinux() || !File.Exists("/usr/bin/script") || !OnPath("python3")) return;
+        var root = Directory.CreateTempSubdirectory("booster-hangup").FullName;
+        var session = new TabSession(root, DateTime.UtcNow);
+        var track = session.NewTrack(autoClear: autoClear)!;
+        var tab = new TabConfig { Llm = "claude", Directory = session.Directory };
+        var body = "claude() { sleep 600; }\nexport -f claude\n" + Launcher.TabScript(tab, track: track);
+        var psi = new System.Diagnostics.ProcessStartInfo("script") { RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true };
+        psi.ArgumentList.Add("-qefc");
+        psi.ArgumentList.Add("bash --noprofile --norc -ic '" + body.Replace("'", "'\\''") + "'");
+        psi.ArgumentList.Add("/dev/null");
+        using var process = System.Diagnostics.Process.Start(psi)!;
+        try
+        {
+            Assert.True(SpinWait.SpinUntil(() => session.ReadLog(track.Id) is { CliStarted: true, Pid: not null } log && log.InputReady == autoClear
+                && Sleeping(session.Directory) && Running(session.Directory, "script"), 30000));
+            process.Kill();
+            Assert.True(process.WaitForExit(10000));
+            Assert.True(SpinWait.SpinUntil(() => InDirectory(session.Directory).Length == 0, 15000),
+                string.Join("\n", InDirectory(session.Directory).Select(pid => { try { return pid + " " + File.ReadAllText($"/proc/{pid}/cmdline").Replace('\0', ' '); } catch (IOException) { return pid + " gone"; } })));
+            Assert.Contains(" exit\n", File.ReadAllText(Path.Combine(session.Directory, track.Id + ".log")));
+        }
+        finally
+        {
+            if (!process.HasExited) process.Kill(entireProcessTree: true);
+            process.WaitForExit(5000);
+            foreach (var pid in InDirectory(session.Directory))
+                try { System.Diagnostics.Process.GetProcessById(pid).Kill(entireProcessTree: true); } catch (ArgumentException) { }
+            Directory.Delete(root, true);
+        }
+    }
+
+    /// <summary>The fake claude's "sleep 600" runs (not a helper's "sleep 1").</summary>
     private static bool Sleeping(string dir) =>
-        InDirectory(dir).Any(pid => { try { return File.ReadAllText($"/proc/{pid}/comm").Trim() == "sleep"; } catch (IOException) { return false; } });
+        InDirectory(dir).Any(pid => { try { return File.ReadAllText($"/proc/{pid}/cmdline") == "sleep\0600\0"; } catch (IOException) { return false; } });
+
+    private static bool Running(string dir, string comm) =>
+        InDirectory(dir).Any(pid => { try { return File.ReadAllText($"/proc/{pid}/comm").Trim() == comm; } catch (IOException) { return false; } });
 
     private static bool OnPath(string exe) =>
         (Environment.GetEnvironmentVariable("PATH") ?? "").Split(':').Any(d => File.Exists(Path.Combine(d, exe)));

@@ -192,8 +192,34 @@ bs_done() { bs_ev cli-exit rc=$1; bs_title; }
 # bs_fg <command>: run it with a bash as the leader of the terminal's foreground process group. Ptyxis appends the
 # foreground program's command line to the tab name ("name — script --quiet ..."), except for a shell (#66). The
 # subshell waits for the command when BoosterAI stops it (TERM) instead of letting the chain go on early; the
-# command itself gets the default signal handling again.
-bs_fg() ( trap : INT TERM; "$@"; exit $? )
+# command itself gets the default signal handling again. bs_hup_watch stops the command when the tab hangs up.
+bs_fg() (
+  trap : INT TERM
+  bs_me=$BASHPID
+  bs_hup_watch "$bs_me" &
+  bs_w=$!
+  "$@"
+  bs_rc=$?
+  kill "$bs_w" 2>/dev/null
+  exit $bs_rc
+)
+# bs_hup_watch <pid>: while bs_fg's subshell <pid> leads the terminal's foreground group, stop that group with TERM (as
+# BoosterAI's StopForeground does) once the tab hangs up, i.e. the window or tab is closed (#70). The kernel only sends
+# SIGHUP to the tab's shell, whose HUP trap waits for the foreground command, and util-linux script blocks SIGHUP and
+# outlives the end of its input, so script and the CLI under it would live on. After a hangup the session has no
+# controlling terminal any more and /dev/tty no longer opens. Nothing to watch without a terminal or job control.
+bs_hup_watch() {
+  local s
+  { : </dev/tty; } 2>/dev/null || return 0
+  s=$(cat "/proc/$1/stat" 2>/dev/null) || return 0
+  s=${s##*) }
+  s=${s#* * }
+  [ "${s%% *}" = "$1" ] || return 0
+  while kill -0 "$1" 2>/dev/null; do
+    sleep 1
+    { : </dev/tty; } 2>/dev/null || { kill -TERM -- "-$1" 2>/dev/null; return 0; }
+  done
+}
 # bs_reset: put the terminal in a clean state before a CLI starts (#67). A TUI that was stopped or killed can leave
 # the alternate screen, mouse reporting, bracketed paste, a hidden cursor or odd attributes behind, and the next CLI
 # then draws wrongly. Soft on purpose: no full reset (ESC c), which would also drop the tab title. Only on a terminal.
