@@ -156,6 +156,14 @@ trap 'exit 0' HUP USR1
 bs_ev close-ready
 bs_cli() { : > "$bs_timing" 2>/dev/null || true; bs_rm_out; bs_ev cli-start; }
 bs_done() { bs_ev cli-exit rc=$1; }
+# bs_reset: put the terminal in a clean state before a CLI starts (#67). A TUI that was stopped or killed can leave
+# the alternate screen, mouse reporting, bracketed paste, a hidden cursor or odd attributes behind, and the next CLI
+# then draws wrongly. Soft on purpose: no full reset (ESC c), which would also drop the tab title. Only on a terminal.
+bs_reset() {
+  [ -t 1 ] || return 0
+  stty sane 2>/dev/null || true
+  printf '\033[?1049l\033[?1000l\033[?1002l\033[?1003l\033[?1006l\033[?2004l\033[?25h\033[!p\033[0m\033[H\033[2J\033[3J'
+}
 # bs_cap [tee]: append stdin to the tab's output capture (tee: also pass it on), which BoosterAI shows while
 # the status is hovered. bs_trim keeps it bounded: past bs_cap_max bytes the file's last bs_cap_max bytes move
 # to .1 and the file is emptied (the writer appends, so it continues at the new start); only these two stay. It also notes

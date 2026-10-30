@@ -182,7 +182,7 @@ public class TrackedScriptTests
     public void ShellOnlyTabIsTrackedToo()
     {
         var script = Launcher.TabScript(new TabConfig { Llm = Catalog.ShellOnly }, null, Track);
-        Assert.Contains("cd ~ || true && (bs_cli 2>/dev/null || true) && bs_run 'bash'".Replace("'", "'\\''"), script);
+        Assert.Contains("cd ~ || true && (bs_reset 2>/dev/null || true) && (bs_cli 2>/dev/null || true) && bs_run 'bash'".Replace("'", "'\\''"), script);
     }
 
     [Fact]

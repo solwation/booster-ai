@@ -16,7 +16,7 @@ public class CliUpdateTests
         var tab = new TabConfig { Llm = llm, Directory = "~/proj" };
         foreach (var script in new[] { Launcher.TabScript(tab, null, Track), Launcher.RestartScript(tab, Track, resume: false) })
         {
-            Assert.Contains($"~/'proj' && (bs_update {llm} 2>/dev/null || true) && (bs_cli 2>/dev/null || true) && ", script.Replace(@"'\''", "'"));
+            Assert.Contains($"~/'proj' && (bs_reset 2>/dev/null || true) && (bs_update {llm} 2>/dev/null || true) && (bs_cli 2>/dev/null || true) && ", script.Replace(@"'\''", "'"));
             Assert.DoesNotContain(';', script);
         }
     }

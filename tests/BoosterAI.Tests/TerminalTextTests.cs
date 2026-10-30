@@ -224,4 +224,45 @@ public class TabOutputTests
         }
         finally { if (Directory.Exists(root)) Directory.Delete(root, recursive: true); }
     }
+
+    /// <summary>
+    /// #67: a restart queued for the tab's shell (bs_next, as RestartExited queues it) resets the terminal before the CLI
+    /// starts. A fake claude on PATH stands in for the CLI; both run in a terminal from script -qec, as in a tab.
+    /// </summary>
+    [Fact]
+    public void RestartResetsTheTerminalBeforeTheCliStarts()
+    {
+        if (!OperatingSystem.IsLinux() || !File.Exists("/usr/bin/script")) return;
+        var root = Path.Combine(Path.GetTempPath(), "bs-reset-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var session = new TabSession(root, DateTime.UtcNow);
+            var dir = session.Directory;
+            var bin = Path.Combine(dir, "bin");
+            Directory.CreateDirectory(bin);
+            var fake = Path.Combine(bin, "claude");
+            File.WriteAllText(fake, "#!/bin/sh\nprintf 'CLI-STARTED\\n'\n");
+            File.SetUnixFileMode(fake, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+            var track = new TabTrack(dir + "/tab-lib.sh", dir, "tab1", UpdateClis: false);
+            session.QueueNext("tab1", Launcher.RestartScript(new TabConfig { Llm = "claude", Directory = dir }, track, resume: false));
+            var psi = new System.Diagnostics.ProcessStartInfo("script") { RedirectStandardOutput = true, WorkingDirectory = dir };
+            psi.Environment["PATH"] = bin + ":" + Environment.GetEnvironmentVariable("PATH");
+            foreach (var a in new[] { "-qec", ". ./tab-lib.sh . tab1 && bs_next && exit", "/dev/null" }) psi.ArgumentList.Add(a);
+            using var p = System.Diagnostics.Process.Start(psi)!;
+            try
+            {
+                var output = p.StandardOutput.ReadToEnd();
+                Assert.True(p.WaitForExit(30000));
+                var reset = output.IndexOf("\x1b[?1049l", StringComparison.Ordinal);
+                var cli = output.IndexOf("CLI-STARTED", StringComparison.Ordinal);
+                Assert.True(reset >= 0, "no reset sequence in the output");
+                Assert.True(cli > reset, "the CLI started before the terminal was reset");
+                // Mouse, bracketed paste, cursor and the screen are all restored before the CLI draws.
+                foreach (var seq in new[] { "\x1b[?1000l", "\x1b[?2004l", "\x1b[?25h", "\x1b[2J", "\x1b[3J" })
+                    Assert.InRange(output.IndexOf(seq, StringComparison.Ordinal), 0, cli);
+            }
+            finally { if (!p.HasExited) p.Kill(entireProcessTree: true); }
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, recursive: true); }
+    }
 }
