@@ -12,9 +12,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x
+      - name: Release notes (fails without a current one-line summary)
+        run: tools/release-notes.sh "$GITHUB_REF_NAME" > release-notes.md
       - name: Test
         run: dotnet test tests/BoosterAI.Tests -c Release
       - name: Package (win-x64 cross-published from Linux, linux-x64)
@@ -27,4 +31,4 @@ jobs:
           case "$GITHUB_REF_NAME" in *-*) prerelease=(--prerelease) ;; esac
           gh release create "$GITHUB_REF_NAME" dist/release/* \
             --title "BoosterAI ${GITHUB_REF_NAME#v}" \
-            --generate-notes "${prerelease[@]}"
+            --notes-file release-notes.md "${prerelease[@]}"

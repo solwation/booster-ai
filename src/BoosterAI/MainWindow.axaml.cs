@@ -155,6 +155,12 @@ public partial class MainWindow : Window
         catch (Exception ex) { _vm.ShowStatus(Loc.Format("status.openFailed", ex.Message), error: true); }
     }
 
+    private async void OnUpdateMore(object? sender, RoutedEventArgs e)
+    {
+        try { if (TopLevel.GetTopLevel(this)?.Launcher is { } l) await l.LaunchUriAsync(new Uri(_vm.Update.MoreUrl)); }
+        catch (Exception ex) { _vm.ShowStatus(Loc.Format("status.openFailed", ex.Message), error: true); }
+    }
+
     private void OnUpdateLater(object? sender, RoutedEventArgs e) => _vm.Update.Later();
 
     private void OnUpdateSkip(object? sender, RoutedEventArgs e) => _vm.Update.Skip();

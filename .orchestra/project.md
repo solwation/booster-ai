@@ -99,7 +99,9 @@ do not ask or create a proposal issue before updating. Ignore drafts and prerele
 
 ## Releasing
 
-Pushing a tag `vX.Y.Z` runs `.github/workflows/release.yml`: `dotnet test`, then `tools/package.sh` (win-x64 zip, linux-x64 tar.gz, `SHA256SUMS`), then a GitHub Release with generated notes (a tag with a `-suffix` becomes a pre-release). The tag sets the version (`-p:Version=${tag#v}` at publish); the `<Version>` in `BoosterAI.csproj` is only the default for local builds, so bump it to the released version afterwards. Try it locally with `tools/package.sh v0.0.0-test` (output in `dist/release/`). Release with `git tag v0.2.0 && git push origin v0.2.0`.
+Pushing a tag `vX.Y.Z` runs `.github/workflows/release.yml`: `dotnet test`, then `tools/package.sh` (win-x64 zip, linux-x64 tar.gz, `SHA256SUMS`), then a GitHub Release whose notes `tools/release-notes.sh` writes (a tag with a `-suffix` becomes a pre-release). The tag sets the version (`-p:Version=${tag#v}` at publish); the `<Version>` in `BoosterAI.csproj` is only the default for local builds, so bump it to the released version afterwards. Try it locally with `tools/package.sh v0.0.0-test` (output in `dist/release/`). Release with `git tag v0.2.0 && git push origin v0.2.0`.
+
+**Before tagging**, update `.github/release-summary.txt` (`version:` equal to the new version, plus one `sv:` and one `en:` line of about 100 characters on what is new for the user) and commit it; the workflow fails clearly when it is missing, stale or empty (a pre-release may omit it). The notes get the summary as `<!-- summary:sv|en: … -->` markers that the app's update bar shows, a list of the commit subjects since the previous release tag (the "Version X after the vX release" bumps left out) and the compare link. Try it with `tools/release-notes.sh vX.Y.Z [previous-tag]` against an existing tag.
 
 **When to release:** whoever empties the backlog releases, without asking. That is the
 conductor after the session review, and equally any other agent or chat session that

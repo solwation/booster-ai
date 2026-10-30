@@ -135,6 +135,8 @@
   "update.install": "Uppdatera",
   "update.install.tip": "Laddar ned {0}, kontrollerar den mot SHA256SUMS och startar om BoosterAI. Öppna flikar fortsätter men bevakas inte längre.",
   "update.page": "Öppna releasesidan",
+  "update.more": "Visa mer",
+  "update.more.name": "Visa alla ändringar i den nya versionen på GitHub",
   "update.later": "Senare",
   "update.skip": "Hoppa över den här versionen",
   "update.downloading": "Laddar ned version {0} …",

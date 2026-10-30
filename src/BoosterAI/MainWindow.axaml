@@ -39,8 +39,17 @@
       <Grid ColumnDefinitions="Auto,*,Auto">
         <Path Grid.Column="0" Data="{StaticResource DownloadIcon}" Width="14" Height="14" Stretch="Uniform" StrokeThickness="1.5"
               StrokeLineCap="Round" StrokeJoin="Round" Stroke="{DynamicResource LinkBrush}" VerticalAlignment="Center" Margin="0,0,10,0" />
-        <TextBlock Grid.Column="1" Text="{Binding Update.Text}" TextWrapping="Wrap" VerticalAlignment="Center" FontSize="13.5"
-                   Classes.failed="{Binding Update.Failed}" />
+        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+          <TextBlock Text="{Binding Update.Text}" TextWrapping="Wrap" FontSize="13.5" Classes.failed="{Binding Update.Failed}" />
+          <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding Update.HasSummary}">
+            <TextBlock Text="{Binding Update.Summary}" TextTrimming="CharacterEllipsis" MaxLines="1" FontSize="12.5"
+                       Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" ToolTip.Tip="{Binding Update.Summary}" />
+            <Button Grid.Column="1" Classes="link" Click="OnUpdateMore" Margin="10,0,0,0" Padding="0"
+                    ToolTip.Tip="{Binding Update.MoreUrl}" AutomationProperties.Name="{local:T update.more.name}">
+              <TextBlock Text="{local:T update.more}" FontSize="12.5" />
+            </Button>
+          </Grid>
+        </StackPanel>
         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" Margin="16,0,0,0" VerticalAlignment="Center">
           <Button Classes="accent" Content="{local:T update.install}" Click="OnUpdateInstall" IsVisible="{Binding Update.ShowInstall}"
                   ToolTip.Tip="{Binding Update.InstallTip}" Padding="14,6" />

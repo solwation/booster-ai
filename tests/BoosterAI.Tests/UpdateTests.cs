@@ -401,4 +401,67 @@ public class UpdateTests
         File.WriteAllText(Path.Combine(scratch, "e2e-result.txt"),
             $"release {latest.Tag}\nasset {asset.Name}\nsha256 {inArchive}\nlog:\n{File.ReadAllText(log)}\ndry-run:\n{output}");
     }
+
+    private const string Body = "<!-- summary:sv: Nya flikar behåller namnet. -->\n<!-- summary:en: Tabs keep their names. -->\n\n## Changes";
+
+    [Fact]
+    public void SummaryIsReadPerLanguage()
+    {
+        Assert.Equal("Nya flikar behåller namnet.", UpdateLogic.ParseSummary(Body, "sv"));
+        Assert.Equal("Tabs keep their names.", UpdateLogic.ParseSummary(Body, "en"));
+    }
+
+    [Fact]
+    public void SummaryFallsBackToTheOtherLanguage()
+    {
+        var r = UpdateLogic.ParseRelease("""{"tag_name":"v0.3.0","body":"<!-- summary:en: Only English -->"}""")!;
+        Assert.Equal("Only English", r.SummaryFor("sv"));
+        Assert.Equal("Only English", r.SummaryFor("en"));
+        var sv = UpdateLogic.ParseRelease("""{"tag_name":"v0.3.0","body":"<!-- summary:sv: Bara svenska -->"}""")!;
+        Assert.Equal("Bara svenska", sv.SummaryFor("en"));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("**Full Changelog**: https://github.com/x/y/compare/v1...v2")]
+    [InlineData("<!-- summary:sv:    -->")]
+    [InlineData("<!-- summary:sv: <b></b> -->")]
+    public void MissingSummaryIsNull(string? body)
+    {
+        Assert.Null(UpdateLogic.ParseSummary(body, "sv"));
+        Assert.Null(UpdateLogic.ParseSummary(body, "en"));
+    }
+
+    [Fact]
+    public void ReleaseWithoutBodyHasNoSummary()
+    {
+        var r = UpdateLogic.ParseRelease("""{"tag_name":"v0.3.0","body":null}""")!;
+        Assert.Null(r.SummaryFor("sv"));
+        Assert.Null(UpdateLogic.ParseRelease("""{"tag_name":"v0.3.0"}""")!.SummaryFor("en"));
+    }
+
+    [Fact]
+    public void LongSummaryIsCutWithEllipsis()
+    {
+        var s = UpdateLogic.ParseSummary("<!-- summary:en: " + new string('a', 500) + " -->", "en")!;
+        Assert.Equal(UpdateLogic.MaxSummary, s.Length);
+        Assert.EndsWith("…", s);
+    }
+
+    [Fact]
+    public void SummaryJunkIsStripped()
+    {
+        var s = UpdateLogic.ParseSummary("<!-- summary:en: <script>alert(1)</script>Fast\u0007 \r\n  and <b>safe</b> -->", "en");
+        Assert.Equal("alert(1) Fast and safe", s);
+    }
+
+    [Fact]
+    public void MoreUrlComparesFromInstalledVersion()
+    {
+        var r = new ReleaseInfo("v0.14.0", V("0.14.0"), false, "https://github.com/solwation/booster-ai/releases/tag/v0.14.0", []);
+        Assert.Equal("https://github.com/solwation/booster-ai/compare/v0.13.2...v0.14.0", UpdateLogic.MoreUrl(r, V("0.13.2")));
+        Assert.Equal(r.PageUrl, UpdateLogic.MoreUrl(r, V("0.0.0")));
+        Assert.Equal(r.PageUrl, UpdateLogic.MoreUrl(r, V("0.14.0")));
+    }
 }

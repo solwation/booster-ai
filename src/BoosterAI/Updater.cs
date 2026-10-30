@@ -65,7 +65,12 @@ public sealed record AppVersion(int Major, int Minor, int Patch, string Suffix) 
 public sealed record ReleaseAsset(string Name, string Url);
 
 /// <summary>What GitHub's releases/latest returned, reduced to what the update needs.</summary>
-public sealed record ReleaseInfo(string Tag, AppVersion Version, bool PreRelease, string PageUrl, IReadOnlyList<ReleaseAsset> Assets);
+public sealed record ReleaseInfo(string Tag, AppVersion Version, bool PreRelease, string PageUrl, IReadOnlyList<ReleaseAsset> Assets,
+    string? SummarySv = null, string? SummaryEn = null)
+{
+    /// <summary>The one-line summary in the given language ("sv"/"en"), falling back to the other; null when the release has none.</summary>
+    public string? SummaryFor(string language) => language == "sv" ? SummarySv ?? SummaryEn : SummaryEn ?? SummarySv;
+}
 
 /// <summary>The pure decisions of the update check, separate from network and UI so they can be tested.</summary>
 public static class UpdateLogic
@@ -173,8 +178,45 @@ public static class UpdateLogic
                     && n.GetString() is { } name && d.GetString() is { } url
                     && url.StartsWith("https://github.com/" + Repository + "/releases/download/", StringComparison.Ordinal))
                     assets.Add(new ReleaseAsset(name, url));
-        return new ReleaseInfo(tag, version, Flag("prerelease") || Flag("draft"), page, assets);
+        var body = r.TryGetProperty("body", out var b) && b.ValueKind == JsonValueKind.String ? b.GetString() : null;
+        return new ReleaseInfo(tag, version, Flag("prerelease") || Flag("draft"), page, assets,
+            ParseSummary(body, "sv"), ParseSummary(body, "en"));
     }
+
+    /// <summary>Longest summary kept; the release workflow writes about 100 characters.</summary>
+    public const int MaxSummary = 200;
+
+    private static readonly System.Text.RegularExpressions.Regex SummaryMarker =
+        new(@"<!--\s*summary:(?<lang>[a-z]{2})\s*:(?<text>.*?)-->", System.Text.RegularExpressions.RegexOptions.Singleline | System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+    /// <summary>
+    /// Reads the <c>&lt;!-- summary:sv: … --&gt;</c> marker of a language from a release body. The text is
+    /// stripped of tags and control characters, whitespace is collapsed and it is cut at <see cref="MaxSummary"/>
+    /// with an ellipsis. Null when the marker is missing or nothing readable remains.
+    /// </summary>
+    public static string? ParseSummary(string? body, string language)
+    {
+        if (string.IsNullOrEmpty(body)) return null;
+        foreach (System.Text.RegularExpressions.Match m in SummaryMarker.Matches(body))
+        {
+            if (!m.Groups["lang"].Value.Equals(language, StringComparison.OrdinalIgnoreCase)) continue;
+            var t = System.Text.RegularExpressions.Regex.Replace(m.Groups["text"].Value, "<[^>]*>", " ");
+            t = new string([.. t.Select(c => char.IsControl(c) ? ' ' : c)]);
+            t = System.Text.RegularExpressions.Regex.Replace(t, @"\s+", " ").Trim();
+            if (t.Length == 0) continue;
+            return t.Length <= MaxSummary ? t : t[..(MaxSummary - 1)].TrimEnd() + "…";
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// The "Show more" target: GitHub's compare page from the installed version to the new tag, or the
+    /// release page when the installed version is unknown (0.0.0) or not older than the release.
+    /// </summary>
+    public static string MoreUrl(ReleaseInfo release, AppVersion current) =>
+        current.CompareTo(new AppVersion(0, 0, 0, "")) > 0 && current.CompareTo(release.Version) < 0
+            ? $"https://github.com/{Repository}/compare/v{current}...{release.Tag}"
+            : release.PageUrl;
 
     /// <summary>Single-quoted PowerShell literal.</summary>
     public static string PsQuote(string s) => "'" + s.Replace("'", "''") + "'";

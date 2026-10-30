@@ -1203,6 +1203,11 @@ public sealed class UpdateViewModel : Observable
     public bool ShowPage => (!CanInstall || Failed) && !IsBusy;
     public bool ShowDismiss => !IsBusy;
     public string PageUrl => _release?.PageUrl ?? UpdateLogic.ReleasesPage;
+    /// <summary>The release's one-line summary in the app language; null (nothing shown) for releases without one.</summary>
+    public string? Summary => _release?.SummaryFor(Loc.Language);
+    public bool HasSummary => Summary is not null && !IsBusy && !Failed;
+    /// <summary>"Show more": the compare page from the installed version to the new release.</summary>
+    public string MoreUrl => _release is null ? UpdateLogic.ReleasesPage : UpdateLogic.MoreUrl(_release, UpdateLogic.Current);
     public string InstallTip => Loc.Format("update.install.tip", _release?.Version.ToString() ?? "");
 
     private void RaiseButtons()
@@ -1210,6 +1215,7 @@ public sealed class UpdateViewModel : Observable
         Raise(nameof(ShowInstall));
         Raise(nameof(ShowPage));
         Raise(nameof(ShowDismiss));
+        Raise(nameof(HasSummary));
     }
 
     private string InstalledPath => UpdateLogic.InstallPath(_windows,
@@ -1283,19 +1289,26 @@ public sealed class UpdateViewModel : Observable
         Text = Loc.Format(CanInstall ? "update.available" : "update.manual", release.Version);
         Raise(nameof(PageUrl));
         Raise(nameof(InstallTip));
+        Raise(nameof(Summary));
+        Raise(nameof(MoreUrl));
+        RaiseButtons();
         IsVisible = true;
     }
 
     /// <summary>For --screenshot --fake-update 0.3.0: shows the bar as an installed copy would, without any network;
-    /// "manual:0.3.0" shows it as a copy that cannot update itself (releases link).</summary>
+    /// "manual:0.3.0" shows it as a copy that cannot update itself (releases link); "plain:" leaves out the sample summary.</summary>
     public void ShowFake(string version)
     {
         var manual = version.StartsWith("manual:", StringComparison.Ordinal);
         if (manual) version = version["manual:".Length..];
+        var plain = version.StartsWith("plain:", StringComparison.Ordinal);
+        if (plain) version = version["plain:".Length..];
         var v = AppVersion.Parse(version) ?? new AppVersion(9, 9, 9, "");
         var rid = UpdateLogic.RuntimeId(_windows, RuntimeInformation.OSArchitecture) ?? "linux-x64";
         var name = $"BoosterAI-{v}-{rid}{(rid.StartsWith("win-") ? ".zip" : ".tar.gz")}";
-        Offer(new ReleaseInfo("v" + v, v, false, UpdateLogic.ReleasesPage, [new(name, ""), new(UpdateLogic.SumsName, "")]), installedCopy: !manual);
+        Offer(new ReleaseInfo("v" + v, v, false, UpdateLogic.ReleasesPage, [new(name, ""), new(UpdateLogic.SumsName, "")],
+            plain ? null : "Nya flikar behåller sitt namn och en omstartad CLI ritas om rätt.",
+            plain ? null : "Tabs keep their names and a restarted CLI redraws correctly."), installedCopy: !manual);
     }
 
     /// <summary>"Senare": this version stays hidden for UpdateLogic.Snooze (until the app restarts); a newer one shows at once.</summary>

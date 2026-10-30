@@ -1,0 +1,5 @@
+# One-line summary of the next release, shown in the app's update bar. Update it before tagging.
+# `version` must equal the tag being released (it stops a stale summary from shipping again).
+version: 0.14.0
+sv: Uppdateringsraden visar vad som är nytt; flikar behåller sina namn och en omstartad CLI ritas om rätt.
+en: The update bar shows what's new; tabs keep their names and a restarted CLI redraws correctly.
