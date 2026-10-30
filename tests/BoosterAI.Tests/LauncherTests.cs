@@ -465,6 +465,8 @@ public class LinuxCommandsTests
     [Fact]
     public void PtyxisTabsAreVisibleInATSPITabBar()
     {
+        // Opens real Ptyxis windows on the desktop: only on request (BOOSTERAI_REAL_TERMINAL_TESTS=1), never in a plain test run.
+        if (Environment.GetEnvironmentVariable("BOOSTERAI_REAL_TERMINAL_TESTS") != "1") return;
         if (!OperatingSystem.IsLinux() || !Launcher.OnPath("ptyxis") || !Launcher.OnPath("dbus-run-session") || !File.Exists("/usr/bin/python3")) return;
         if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DISPLAY")) && string.IsNullOrEmpty(Environment.GetEnvironmentVariable("WAYLAND_DISPLAY"))) return;
         var psi = new ProcessStartInfo("dbus-run-session")
@@ -581,8 +583,21 @@ kill $PID 2>/dev/null || true
             LinuxTerminal = "nonexistent-terminal-xyz",
             Tabs = [new TabConfig { Name = "test", Directory = "/tmp", Enabled = true }]
         };
-        var err = Launcher.Launch(cfg);
+        // The real opener, which the test assembly otherwise replaces; this terminal cannot open any window.
+        var err = Launcher.Launch(cfg, Launcher.OpenRealTerminal);
         Assert.NotEmpty(err);
         Assert.Contains("nonexistent-terminal-xyz", err);
+    }
+
+    [Fact]
+    public void TestsRecordLaunchesInsteadOfOpeningTerminalWindows()
+    {
+        // A view-model test once reached Restart and opened two real Ptyxis windows running claude (#65).
+        Assert.NotEqual(nameof(Launcher.OpenRealTerminal), Launcher.OpenTerminal.Method.Name);
+        var name = "recorded-" + Guid.NewGuid().ToString("N");
+        var err = Launcher.Launch(new AppConfig { LinuxTerminal = "ptyxis", Tabs = [new TabConfig { Name = name, Directory = "/tmp" }] });
+        Assert.Equal("", err);
+        Assert.Equal([name], Assert.Single(TestTerminal.For(name)).Tabs.Select(t => t.Name));
+        Assert.StartsWith(Path.GetTempPath(), TabSession.DefaultRoot);
     }
 }

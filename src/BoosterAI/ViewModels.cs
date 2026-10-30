@@ -771,8 +771,14 @@ public sealed partial class MainViewModel : Observable
     internal void RestartAll((List<TabViewModel> Now, List<TabViewModel> Busy) plan, RestartChoice busy)
     {
         if (IsClosingAll || busy == RestartChoice.Cancel && plan.Busy.Count > 0) return;
+        var closed = new List<(TabViewModel Row, TabConfig Tab)>();
         foreach (var t in plan.Now)
-            if (t.IsChanged) RestartChanged(t); else Restart(t);
+        {
+            if (t.IsChanged) RestartChanged(t);
+            else if (t.LaunchedAs is { } launched && !RestartExited(t, launched, resume: false)) closed.Add((t, launched));
+        }
+        // Closed tabs open again together, in one new window, instead of one window per tab.
+        RestartClosed(closed);
         foreach (var t in plan.Busy)
             if (busy == RestartChoice.WhenIdle) t.PendingRestart = true; else RestartChanged(t);
     }

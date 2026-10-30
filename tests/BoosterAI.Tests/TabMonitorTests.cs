@@ -653,6 +653,29 @@ public class InPlaceRestartTests
     }
 
     [Fact]
+    public void RestartAllOpensClosedTabsTogetherInOneWindow()
+    {
+        var names = new[] { "closed-a-" + Guid.NewGuid().ToString("N"), "closed-b-" + Guid.NewGuid().ToString("N") };
+        var vm = new MainViewModel(new AppConfig
+        {
+            LinuxTerminal = "ptyxis",
+            Tabs = names.Select(n => new TabConfig { Name = n, Llm = "claude", Model = "claude-opus-5-5" }).ToList(),
+        });
+        foreach (var row in vm.Tabs)
+        {
+            row.LaunchedAs = row.ToConfig(forLaunch: true);
+            row.SetState(TabState.CliExited, 0);
+        }
+        var plan = vm.PlanRestartAll();
+        Assert.Equal(2, plan.Now.Count);
+        vm.RestartAll(plan, RestartChoice.WhenIdle);
+        // One terminal start with both tabs (one window), not one start (and window) per tab.
+        var start = Assert.Single(TestTerminal.For(names[0]));
+        Assert.Equal(names, start.Tabs.Select(t => t.Name));
+        Assert.DoesNotContain(TestTerminal.For(names[1]), r => r != start);
+    }
+
+    [Fact]
     public void RestartAllQueuesOrCancelsTheBusyTabs()
     {
         var vm = Rows(TabState.Running, TabState.CliExited, TabState.CliExited);

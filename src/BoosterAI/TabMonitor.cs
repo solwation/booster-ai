@@ -431,7 +431,7 @@ for line in sys.stdin:
         : this(Path.Combine(root, now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture)))
     {
         CleanUp(root, now, live);
-        if (root == DefaultRoot) LegacyNames.RemoveOldLocalData(LegacyNames.OldLocalAppDir);
+        if (_defaultRoot is null && root == DefaultRoot) LegacyNames.RemoveOldLocalData(LegacyNames.OldLocalAppDir);
     }
 
     /// <summary>
@@ -497,8 +497,15 @@ for line in sys.stdin:
     internal static bool IsAlive(TabLog log, Func<int, long?> live) =>
         log is { Pid: { } pid, Exited: false, StartTime: { } start } && live(pid) == start;
 
-    public static string DefaultRoot => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData, Environment.SpecialFolderOption.Create), "BoosterAI", "sessions");
+    /// <summary>Where sessions live; the test assembly points it at a temporary folder, away from the real tabs.</summary>
+    public static string DefaultRoot
+    {
+        get => _defaultRoot ?? Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData, Environment.SpecialFolderOption.Create), "BoosterAI", "sessions");
+        internal set => _defaultRoot = value;
+    }
+
+    private static string? _defaultRoot;
 
     /// <summary>
     /// A new log id and the paths the tab's shell uses; null when the path cannot go into a tab script.

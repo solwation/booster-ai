@@ -34,6 +34,8 @@ dotnet test tests/BoosterAI.Tests
 
 On Windows, run `dotnet test tests\BoosterAI.Tests` from the Windows mirror after it has synced the revision under test.
 
+A test run never opens terminal windows: the test assembly records every launch instead (`tests/BoosterAI.Tests/TestTerminal.cs`) and keeps sessions in a temporary folder, away from the real `sessions` folder BoosterAI watches. The one test that drives real Ptyxis windows (`PtyxisTabsAreVisibleInATSPITabBar`) only runs with `BOOSTERAI_REAL_TERMINAL_TESTS=1`.
+
 ## UI strings
 
 To add a string: add the same key to both `src/BoosterAI/Resources/Strings.sv.json` and `Strings.en.json` (a test fails if they differ), then use `{local:T some.key}` in XAML or `Loc.Get("some.key")` / `Loc.Format("some.key", args)` in code.

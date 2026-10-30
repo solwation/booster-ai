@@ -330,7 +330,27 @@ fi
     /// <paramref name="track"/> gives each tab its status log; <paramref name="window"/> is the
     /// Windows Terminal window to open in ("new", or a session's name so restarts join it).
     /// </summary>
-    public static string Launch(AppConfig cfg, string? prompt = null, Func<TabConfig, TabTrack?>? track = null, string window = "new", bool resume = false)
+    public static string Launch(AppConfig cfg, string? prompt = null, Func<TabConfig, TabTrack?>? track = null, string window = "new", bool resume = false) =>
+        Launch(cfg, OpenTerminal, prompt, track, window, resume);
+
+    /// <summary>One terminal start: the enabled tabs and how to open them.</summary>
+    internal sealed record TerminalRequest(AppConfig Config, IReadOnlyList<TabConfig> Tabs, string? Prompt,
+        IReadOnlyList<TabTrack?> Tracks, string Window, bool Resume);
+
+    /// <summary>
+    /// Opens the terminal for every Launch. The test assembly replaces it with a recorder, so a test that reaches
+    /// Start or Restart never opens real terminal windows (each one running a CLI) on the developer's desktop.
+    /// </summary>
+    internal static Action<TerminalRequest> OpenTerminal { get; set; } = OpenRealTerminal;
+
+    internal static void OpenRealTerminal(TerminalRequest r)
+    {
+        if (OperatingSystem.IsWindows()) LaunchWindowsTerminal(r.Tabs, r.Config.WslDistro, r.Prompt, r.Tracks, r.Window, r.Config.ZoomPercent, r.Resume);
+        else LaunchLinux(r.Tabs, r.Config.LinuxTerminal, r.Prompt, r.Tracks, r.Config.ZoomPercent, r.Resume, r.Window != "new");
+    }
+
+    internal static string Launch(AppConfig cfg, Action<TerminalRequest> open, string? prompt = null,
+        Func<TabConfig, TabTrack?>? track = null, string window = "new", bool resume = false)
     {
         var tabs = cfg.Tabs.Where(t => t.Enabled).ToList();
         if (tabs.Count == 0) return Loc.Get("err.noTab");
@@ -339,8 +359,7 @@ fi
         try
         {
             var tracks = tabs.Select(t => track?.Invoke(t)).ToList();
-            if (OperatingSystem.IsWindows()) LaunchWindowsTerminal(tabs, cfg.WslDistro, prompt, tracks, window, cfg.ZoomPercent, resume);
-            else LaunchLinux(tabs, cfg.LinuxTerminal, prompt, tracks, cfg.ZoomPercent, resume, window != "new");
+            open(new TerminalRequest(cfg, tabs, prompt, tracks, window, resume));
             return "";
         }
         catch (Exception e)
