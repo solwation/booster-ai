@@ -10,7 +10,7 @@ public static class Launcher
     /// The bash command a tab runs: cd into its directory, start the CLI through an
     /// interactive login shell (so ~/.bashrc aliases and PATH apply), then leave a shell.
     /// It contains no ';' because Windows Terminal splits its command line on it.
-    /// With a <paramref name="track"/>, the shell first sources tab-lib.sh, which logs start, CLI
+    /// With a <paramref name="track"/>, the shell first sources tab-lib.sh with the tab's name (its title, #66), which logs start, CLI
     /// start and exit code, tracks terminal output timing and captures a bounded output tail (bs_run, bs_cap), formats the run-once event stream
     /// (bs_stream), and logs the shell's own exit (see TabSession); the closing shell is then a
     /// child instead of exec so that the exit trap still fires when the tab is closed. Every logging
@@ -31,7 +31,7 @@ public static class Launcher
         // Select before executing: an unsuccessful CLI or a shell's exit code must never run the
         // fallback a second time. Both bodies are shell-quoted literals; eval keeps the tracked PID.
         var plain = TabScript(tab, prompt, resume: resume);
-        return $"bs_command={Quote(plain)} && . {Quote(track.Lib)} {Quote(track.Dir)} {Quote(track.Id)} 2>/dev/null && bs_command={Quote(tracked)} || true && eval \"$bs_command\"";
+        return $"bs_command={Quote(plain)} && . {Quote(track.Lib)} {Quote(track.Dir)} {Quote(track.Id)} {Quote(tab.Name)} 2>/dev/null && bs_command={Quote(tracked)} || true && eval \"$bs_command\"";
     }
 
     // In the tab's own shell, not a subshell: stopping a restarted CLI's process group must not take bs_next's loop with it.

@@ -154,8 +154,26 @@ trap 'bs_rm_out && bs_ev exit' EXIT
 # A requested close returns success to the terminal, even when the foreground CLI had to be stopped.
 trap 'exit 0' HUP USR1
 bs_ev close-ready
-bs_cli() { : > "$bs_timing" 2>/dev/null || true; bs_rm_out; bs_ev cli-start; }
-bs_done() { bs_ev cli-exit rc=$1; }
+# The tab's configured name (third argument, #66), without control characters. bs_title sets it as the terminal title
+# whenever a CLI starts or exits, and the idle shell's prompt repeats it, so a title an application set is replaced.
+# Claude Code does not set titles in these tabs; codex and agy may, until the next start, exit or prompt.
+bs_name=${3//[$'\001'-$'\037'$'\177']/}
+if [ -n "$bs_name" ]; then
+  export CLAUDE_CODE_DISABLE_TERMINAL_TITLE="${CLAUDE_CODE_DISABLE_TERMINAL_TITLE:-1}"
+  bs_t=${bs_name//\\/\\\\}
+  bs_t=${bs_t//\$/\\\$}
+  bs_t=${bs_t//\`/\\\`}
+  export BS_PS1_TITLE="\[\e]0;$bs_t\a\]"
+  unset bs_t
+fi
+bs_title() { [ -n "$bs_name" ] && [ -t 1 ] || return 0; printf '\033]0;%s\007' "$bs_name"; }
+bs_cli() { : > "$bs_timing" 2>/dev/null || true; bs_rm_out; bs_ev cli-start; bs_title; }
+bs_done() { bs_ev cli-exit rc=$1; bs_title; }
+# bs_fg <command>: run it with a bash as the leader of the terminal's foreground process group. Ptyxis appends the
+# foreground program's command line to the tab name ("name — script --quiet ..."), except for a shell (#66). The
+# subshell waits for the command when BoosterAI stops it (TERM) instead of letting the chain go on early; the
+# command itself gets the default signal handling again.
+bs_fg() ( trap : INT TERM; "$@"; exit $? )
 # bs_reset: put the terminal in a clean state before a CLI starts (#67). A TUI that was stopped or killed can leave
 # the alternate screen, mouse reporting, bracketed paste, a hidden cursor or odd attributes behind, and the next CLI
 # then draws wrongly. Soft on purpose: no full reset (ESC c), which would also drop the tab title. Only on a terminal.
@@ -199,8 +217,8 @@ bs_run() {
   local name="${cmd%% *}"
   if [ -n "${BASH_ALIASES[$name]+x}" ]; then cmd="${BASH_ALIASES[$name]}${cmd#"$name"}"; fi
   if declare -F "$name" >/dev/null; then export -f "$name"; fi
-  if ! command -v script >/dev/null 2>&1; then rm -f "$bs_timing"; eval "$cmd"; return $?; fi
-  BS_COMMAND="$cmd" script --quiet --flush --return --log-out >(bs_cap) --log-timing "$bs_timing" --command 'eval "$BS_COMMAND"'
+  if ! command -v script >/dev/null 2>&1; then rm -f "$bs_timing"; bs_fg eval "$cmd"; return $?; fi
+  BS_COMMAND="$cmd" bs_fg script --quiet --flush --return --log-out >(bs_cap) --log-timing "$bs_timing" --command 'eval "$BS_COMMAND"'
 }
 # bs_next: run what BoosterAI queued for an in-place restart (it then stops the CLI), until nothing is queued.
 bs_next_f="$1/$2.next"
@@ -217,7 +235,7 @@ bs_shell() {
   while true; do
     rm -f "$bs_next_f.idle"
     bs_next
-    BS_IDLE_FILE="$bs_next_f.idle" bash --rcfile <(printf '%s\n' '[ ! -f ~/.bashrc ] || . ~/.bashrc' 'printf "%s %s\n" "$$" "$(cut -d" " -f22 /proc/$$/stat)" > "$BS_IDLE_FILE"' '[ ! -f "${BS_IDLE_FILE%.idle}" ] || exit 0')
+    BS_IDLE_FILE="$bs_next_f.idle" bash --rcfile <(printf '%s\n' '[ ! -f ~/.bashrc ] || . ~/.bashrc' '[ -z "$BS_PS1_TITLE" ] || PS1="$PS1$BS_PS1_TITLE"' 'printf "%s %s\n" "$$" "$(cut -d" " -f22 /proc/$$/stat)" > "$BS_IDLE_FILE"' '[ ! -f "${BS_IDLE_FILE%.idle}" ] || exit 0')
     rm -f "$bs_next_f.idle"
     [ -f "$bs_next_f" ] || break
   done
@@ -304,11 +322,12 @@ bs_update() (
 bs_stream() {
   if [ -n "${BASH_ALIASES[$1]+x}" ]; then eval "set -- ${BASH_ALIASES[$1]}"' "${@:2}"'; fi
   local t0=$SECONDS rc
-  # The group runs in this shell (rc stays set); its output also goes to the capture.
-  { "$@" | bs_fmt; rc=${PIPESTATUS[0]}; echo "== exit $rc, total $((SECONDS - t0)) s"; } > >(bs_cap tee)
+  # The group runs in this shell (rc stays set); its output also goes to the capture. bs_fg: see there.
+  { bs_fg bs_pipe "$@"; rc=$?; echo "== exit $rc, total $((SECONDS - t0)) s"; } > >(bs_cap tee)
   # Let the capture print its last line before the shell goes on (bash 5.1+ waits for a process substitution).
   wait "$!" 2>/dev/null
   return "$rc"; }
+bs_pipe() { "$@" | bs_fmt; return "${PIPESTATUS[0]}"; }
 bs_fmt() {
   if command -v python3 >/dev/null 2>&1; then
     BS_LOG="$bs_log" BS_TIMING="$bs_timing" PYTHONIOENCODING=utf-8 python3 -u -c 'import sys, json, os, time, base64, shutil
