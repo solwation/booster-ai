@@ -131,14 +131,12 @@ public partial class MainWindow : Window
     private void OnLaunch(object? sender, RoutedEventArgs e)
     {
         if (!_vm.Launch()) return;
-        if (_vm.CloseAfterLaunch) Close();
-        else
-        {
-            // With the tray setting on (and a tray), minimizing hides the window to the tray icon; otherwise the
-            // taskbar button stays, so the status is one click away. Windows also gets a tray icon either way.
-            if (OperatingSystem.IsWindows() && Application.Current is App app) app.ShowTray(this);
-            WindowState = WindowState.Minimized;
-        }
+        var (close, showTray, minimize) = AfterLaunchPolicy.Decide(_vm.AfterLaunch, OperatingSystem.IsWindows());
+        if (close) { Close(); return; }
+        // Windows gets the tray icon whether the window stays open or is minimized. With the tray setting on (and a
+        // tray), minimizing hides the window to the tray icon; otherwise the taskbar button stays.
+        if (showTray && Application.Current is App app) app.ShowTray(this);
+        if (minimize) WindowState = WindowState.Minimized;
     }
 
     private async void OnUpdateInstall(object? sender, RoutedEventArgs e)

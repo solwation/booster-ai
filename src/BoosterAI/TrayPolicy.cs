@@ -15,3 +15,20 @@ public static class TrayPolicy
     /// <summary>True when minimizing should hide the window from the taskbar and leave only the tray icon.</summary>
     public static bool HideOnMinimize(bool minimizeToTray, bool trayAvailable) => minimizeToTray && trayAvailable;
 }
+
+/// <summary>The "After Start" setting: what the main window does once Start has opened the tabs.</summary>
+public static class AfterLaunchPolicy
+{
+    public const string Keep = "keep", Minimize = "minimize", Close = "close";
+    public static readonly string[] All = [Keep, Minimize, Close];
+
+    /// <summary>An unknown or missing value reads as <see cref="Keep"/>.</summary>
+    public static string Normalize(string? mode) => mode is Minimize or Close ? mode : Keep;
+
+    /// <summary>The window actions after Start. Windows shows the tray icon unless the app closes.</summary>
+    public static (bool Close, bool ShowTray, bool Minimize) Decide(string? mode, bool windows)
+    {
+        mode = Normalize(mode);
+        return (mode == Close, windows && mode != Close, mode == Minimize);
+    }
+}

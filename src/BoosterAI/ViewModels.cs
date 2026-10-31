@@ -442,7 +442,20 @@ public sealed partial class MainViewModel : Observable
     public IReadOnlyList<LanguageChoice> LanguageChoices { get; } =
         [new(Loc.Auto), new("sv"), new("en")];
 
-    public bool CloseAfterLaunch { get => _cfg.CloseAfterLaunch; set { _cfg.CloseAfterLaunch = value; Raise(); } }
+    /// <summary>"After Start" setting: keep the window open, minimize it, or close it.</summary>
+    public IReadOnlyList<AfterLaunchChoice> AfterLaunchChoices { get; } = [.. AfterLaunchPolicy.All.Select(m => new AfterLaunchChoice(m))];
+    public string AfterLaunch => AfterLaunchPolicy.Normalize(_cfg.AfterLaunch);
+
+    public AfterLaunchChoice SelectedAfterLaunch
+    {
+        get => AfterLaunchChoices.First(c => c.Id == AfterLaunch);
+        set
+        {
+            if (value is null || value.Id == AfterLaunch) return;
+            _cfg.AfterLaunch = value.Id;
+            Raise();
+        }
+    }
     public bool MinimizeToTray { get => _cfg.MinimizeToTray; set { _cfg.MinimizeToTray = value; Raise(); } }
     public bool Notifications { get => _cfg.Notifications; set { _cfg.Notifications = value; Raise(); } }
     public bool AutoUpdateClis { get => _cfg.AutoUpdateClis; set { _cfg.AutoUpdateClis = value; Raise(); } }
@@ -627,7 +640,7 @@ public sealed partial class MainViewModel : Observable
     private void SettingsTakenOver()
     {
         foreach (var name in new[] { nameof(WslDistro), nameof(LinuxTerminal), nameof(Theme), nameof(SelectedTheme), nameof(SelectedLanguage),
-            nameof(SelectedAppearance), nameof(CloseAfterLaunch), nameof(MinimizeToTray), nameof(Notifications), nameof(SelectedZoom), nameof(AutoUpdateClis), nameof(AutoClearIdle), nameof(AutoClearMinutes), nameof(CheckForUpdates) })
+            nameof(SelectedAppearance), nameof(SelectedAfterLaunch), nameof(MinimizeToTray), nameof(Notifications), nameof(SelectedZoom), nameof(AutoUpdateClis), nameof(AutoClearIdle), nameof(AutoClearMinutes), nameof(CheckForUpdates) })
             Raise(name);
         foreach (var t in Tabs) t.RaiseColor();
         (Avalonia.Application.Current as App)?.ApplyTheme();
@@ -1196,6 +1209,12 @@ public sealed record LanguageChoice(string Id)
 public sealed record ThemeChoice(string Id)
 {
     public string Label => Loc.Get("theme." + Id);
+}
+
+/// <summary>One entry of the "After Start" picker: "keep", "minimize" or "close".</summary>
+public sealed record AfterLaunchChoice(string Id)
+{
+    public string Label => Loc.Get("afterLaunch." + Id);
 }
 
 /// <summary>One entry of the zoom picker; 0 means the terminal's default size.</summary>

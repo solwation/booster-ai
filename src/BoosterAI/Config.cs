@@ -34,9 +34,10 @@ public sealed class AppConfig
     public string Language { get; set; } = Loc.Auto;
     /// <summary>App appearance: "auto" (follow the system), "light" or "dark". Applied live. Not the tab colour themes.</summary>
     public string AppTheme { get; set; } = "auto";
-    /// <summary>Close after Start (the behaviour before tab monitoring) instead of watching the tabs from the tray.</summary>
-    public bool CloseAfterLaunch { get; set; }
-    /// <summary>Windows: the close button and Minimize hide the window to the tray icon, where the tabs stay watched. Needs a working tray; Close after Start wins.</summary>
+    /// <summary>What the window does after Start: "keep" (stays open, default), "minimize" or "close", see <see cref="AfterLaunchPolicy"/>.
+    /// An old config with <c>"CloseAfterLaunch": true</c> and no value here reads as "close" (<see cref="ConfigStore.Parse"/>).</summary>
+    public string AfterLaunch { get; set; } = AfterLaunchPolicy.Keep;
+    /// <summary>Windows: the close button and Minimize hide the window to the tray icon, where the tabs stay watched. Needs a working tray; "close after Start" closes the app regardless.</summary>
     public bool MinimizeToTray { get; set; } = true;
     /// <summary>System notification when a watched tab closes, fails to start or its CLI fails.</summary>
     public bool Notifications { get; set; } = true;
@@ -87,7 +88,7 @@ public static class ConfigStore
         {
             if (File.Exists(PathOnDisk))
             {
-                var cfg = JsonSerializer.Deserialize(File.ReadAllText(PathOnDisk), ConfigJsonContext.Default.AppConfig);
+                var cfg = Parse(File.ReadAllText(PathOnDisk));
                 if (cfg is not null) return cfg;
             }
         }
@@ -98,12 +99,26 @@ public static class ConfigStore
         return Defaults();
     }
 
+    /// <summary>Deserializes a config file and migrates old settings: no "AfterLaunch" but <c>"CloseAfterLaunch": true</c> means close.</summary>
+    public static AppConfig? Parse(string json)
+    {
+        var cfg = JsonSerializer.Deserialize(json, ConfigJsonContext.Default.AppConfig);
+        if (cfg is null) return null;
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
+        if (root.ValueKind == JsonValueKind.Object && !root.TryGetProperty(nameof(AppConfig.AfterLaunch), out _)
+            && root.TryGetProperty("CloseAfterLaunch", out var old) && old.ValueKind == JsonValueKind.True)
+            cfg.AfterLaunch = AfterLaunchPolicy.Close;
+        cfg.AfterLaunch = AfterLaunchPolicy.Normalize(cfg.AfterLaunch);
+        return cfg;
+    }
+
     /// <summary>The config as it is on disk now, or null when there is none or it cannot be read; never migrates.</summary>
     public static AppConfig? TryRead()
     {
         try
         {
-            return File.Exists(PathOnDisk) ? JsonSerializer.Deserialize(File.ReadAllText(PathOnDisk), ConfigJsonContext.Default.AppConfig) : null;
+            return File.Exists(PathOnDisk) ? Parse(File.ReadAllText(PathOnDisk)) : null;
         }
         catch (Exception e) when (e is IOException or JsonException or UnauthorizedAccessException) { return null; }
     }
@@ -144,7 +159,7 @@ public static class ConfigMerge
         S(c => c.ColorTheme, (c, v) => c.ColorTheme = v),
         S(c => c.Language, (c, v) => c.Language = v),
         S(c => c.AppTheme, (c, v) => c.AppTheme = v),
-        S(c => c.CloseAfterLaunch, (c, v) => c.CloseAfterLaunch = v),
+        S(c => c.AfterLaunch, (c, v) => c.AfterLaunch = v),
         S(c => c.MinimizeToTray, (c, v) => c.MinimizeToTray = v),
         S(c => c.Notifications, (c, v) => c.Notifications = v),
         S(c => c.ZoomPercent, (c, v) => c.ZoomPercent = v),
