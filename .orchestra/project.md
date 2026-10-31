@@ -18,12 +18,14 @@ thin adapters. Reading or improving the instructions does not start an unattende
 | Capacity | At most 2 workers including helpers, at least 1 while startable work exists |
 | Mode | `/orkester`, with or without scope, starts a queue session; a single bounded pass only when explicitly asked |
 | Queue poll | Every 300 seconds during active work and idle; also before every new selection |
+| Wait mechanism | Interactive Claude Code: a background timer (Bash `run_in_background` running `sleep 300`, which re-invokes the conductor) or the Monitor tool with an until-loop; a finishing worker also wakes the conductor. Codex and others: their own interruptible wait. A runtime that cannot wait (`claude -p`, one-shot cloud runs) runs a bounded pass and says that no poll or idle watch ran |
 | Idle watch | 60 minutes after the latest resolved issue (first idle entry if none) |
 | Heartbeat | Swedish issue comment every 30 minutes on long-running work |
 | Session review | Enabled: review all work delivered since the last review when the queue drains (core [session review](shared/COORDINATION.md#review-the-session)); also check README/screenshot and the installed Windows build match `main` |
 | Intake hooks | None |
 | Questions | Comment on the affected issue with options and a recommendation, add `user question`, release active labels, continue other work; never ask in chat. This channel overrides any general instruction to ask in chat (e.g. a user-level CLAUDE.md/AGENTS.md rule to end hand-backs with a question): in this repository decide what the policy authorizes, and when nothing needs the user, say so in one line instead of asking |
 | Publishing | Commit and push directly to `main`; no branches, PRs or force push |
+| Delivery mode | Direct to `main` (see Publishing) |
 | Release | Mandatory when the backlog drains: tag a new version without asking (see [When to release](#releasing)); never end a session or enter the idle watch with user-facing commits after the latest tag |
 
 New issues carry acceptance criteria and a one-line priority rationale. Unrelated defects found on the way become their own issues.
@@ -84,7 +86,7 @@ the repository; personal tabs live only in the user's local `config.json`.
 
 ## Shared version
 
-Shared release: **v0.6.1**, commit **432e1879416a91215b4e174699c7af705fd0359d**, imported as a
+Shared release: **v0.7.0**, commit **2bd00217aa1704134c6e2a3d5c9614c6b7fdbfbe**, imported as a
 squashed subtree at `.orchestra/shared`. Improve the core in
 `solwation/dirigenten-och-orkestern`, never in this subtree. At conductor startup and
 resume, check that repository's stable releases/tags against this pin (reuse a
