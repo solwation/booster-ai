@@ -1,5 +1,5 @@
 # One-line summary of the next release, shown in the app's update bar. Update it before tagging.
 # `version` must equal the tag being released (it stops a stale summary from shipping again).
-version: 0.16.0
-sv: Fönstret ligger nu kvar öppet efter Starta; välj Låt vara öppet, Minimera eller Stäng under Efter Starta.
-en: The window now stays open after Start; choose Keep open, Minimize or Close under After Start in Settings.
+version: 0.17.0
+sv: BoosterAI hjälper nu till att installera WSL, claude, codex och agy om de saknas, och kan lägga till full-auto-alias.
+en: BoosterAI now helps install WSL, claude, codex and agy when they are missing, and can add optional full-auto aliases.
