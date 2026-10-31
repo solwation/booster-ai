@@ -1,5 +1,5 @@
 # One-line summary of the next release, shown in the app's update bar. Update it before tagging.
 # `version` must equal the tag being released (it stops a stale summary from shipping again).
-version: 0.15.1
-sv: Auto-clear rensar inte längre claude-flikar som väntar på bakgrundsagenter, bakgrundskommandon eller loopar.
-en: Auto-clear no longer clears claude tabs that wait for background agents, background commands or loops.
+version: 0.16.0
+sv: Fönstret ligger nu kvar öppet efter Starta; välj Låt vara öppet, Minimera eller Stäng under Efter Starta.
+en: The window now stays open after Start; choose Keep open, Minimize or Close under After Start in Settings.
