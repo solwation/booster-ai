@@ -23,7 +23,7 @@ public enum Activity { Unknown, Busy, Idle, Watching }
 /// What a tab's log says. One line per event, written by tab-lib.sh:
 /// "&lt;epoch-ms&gt; start pid=N starttime=N", "… cli-start", "… cli-exit rc=N", "… exit", and
 /// "… denied cli=agy cmd=&lt;base64&gt;" when agy refused a command it could not ask about, and "… busy" /
-/// "… idle" from claude's hooks, "… input-ready" / "… input-sent" / "… input-skipped reason=…" from bs_pty, "… turn-done" / "… turn-start" from bs_stream's formatter (a turn ended / output
+/// "… idle" / "… waiting" (turn done, background work still running) from claude's hooks, "… input-ready" / "… input-sent" / "… input-skipped reason=…" from bs_pty, "… turn-done" / "… turn-start" from bs_stream's formatter (a turn ended / output
 /// resumed). <paramref name="WatchingSince"/> is the epoch-ms of a turn-done not yet followed by output (null: none).
 /// <paramref name="Denied"/> holds those command lines (null: none). An in-place
 /// restart logs a new cli-start, which starts the CLI's part of the log over.
@@ -75,6 +75,8 @@ public sealed record TabLog(int? Pid, long? StartTime, bool CliStarted, int? Cli
                 case "turn-start": watching = null; break;
                 case "busy": activity = Activity.Busy; busyAt = at; break;
                 case "idle": activity = Activity.Idle; idleAt = at; break;
+                // The turn ended but background work runs on and will start the next one (#71): still working.
+                case "waiting": activity = Activity.Busy; break;
                 case "cli-exit": rc = Int(values, "rc") ?? -1; inputReady = false; break;
                 case "exit": exited = true; break;
                 case "denied": (denied ??= []).Add(Decode(values.GetValueOrDefault("cmd"))); break;
@@ -735,14 +737,20 @@ for line in sys.stdin:
 
     public static string HooksJson(string log)
     {
-        object Hook(string ev) => new[] { new { hooks = new[] { new { type = "command",
-            command = $"printf '%s {ev}\\n' \"$(date +%s%3N)\" >> '{log.Replace("'", "'\\''")}'" } } } };
+        var to = "'" + log.Replace("'", "'\\''") + "'";
+        object Hook(string command) => new[] { new { hooks = new[] { new { type = "command", command } } } };
         return JsonSerializer.Serialize(new
         {
             hooks = new Dictionary<string, object>
             {
-                // Not Notification: it also fires for a permission prompt in the middle of a turn.
-                ["UserPromptSubmit"] = Hook("busy"), ["Stop"] = Hook("idle"),
+                // Not Notification: it also fires for a permission prompt in the middle of a turn. UserPromptSubmit also
+                // fires for the turns that task notifications and wakeups start, without anyone typing.
+                ["UserPromptSubmit"] = Hook($"printf '%s busy\\n' \"$(date +%s%3N)\" >> {to}"),
+                // Stop comes when the main turn ends, also while background agents, background commands, Monitor or a
+                // scheduled wakeup/loop still run and will start the next turn (#71). Claude then lists them in the hook
+                // input's background_tasks and session_crons (compact JSON): any entry logs "waiting" instead of "idle".
+                ["Stop"] = Hook("if grep -Eq '\"(background_tasks|session_crons)\" *: *\\[ *[^] ]'; then e=waiting; else e=idle; fi; "
+                    + $"printf '%s %s\\n' \"$(date +%s%3N)\" \"$e\" >> {to}"),
             },
         });
     }
@@ -794,16 +802,24 @@ for line in sys.stdin:
         if (log is null) return Activity.Unknown;
         if (log.Activity != Activity.Unknown) return log.Activity;
         if (log.WatchingSince is not null && log.CliExit is null) return Activity.Watching;
+        return LastOutput(id) is { } lastOutput
+            ? nowUtc - lastOutput < TabStatus.OutputIdleTimeout ? Activity.Busy : Activity.Idle
+            : Activity.Unknown;
+    }
 
+    /// <summary>
+    /// When the tab's CLI last wrote to its terminal: the time util-linux script last appended to tabN.timing (it flushes
+    /// every write; bs_cli empties it when a CLI starts). Null: not recorded (no script) or unreadable.
+    /// </summary>
+    public DateTime? LastOutput(string id)
+    {
         try
         {
             var timing = Path.Combine(Directory, id + ".timing");
-            if (!File.Exists(timing)) return Activity.Unknown;
-            var lastOutput = File.GetLastWriteTimeUtc(timing);
-            return nowUtc - lastOutput < TabStatus.OutputIdleTimeout ? Activity.Busy : Activity.Idle;
+            return File.Exists(timing) ? File.GetLastWriteTimeUtc(timing) : null;
         }
-        catch (IOException) { return Activity.Unknown; }
-        catch (UnauthorizedAccessException) { return Activity.Unknown; }
+        catch (IOException) { return null; }
+        catch (UnauthorizedAccessException) { return null; }
     }
 
     /// <summary>How many lines of a tab's output the status popup shows.</summary>

@@ -14,11 +14,12 @@ public class AutoClearDecisionTests
         BusyAt = Busy, IdleAt = Idle, InputReady = true,
     };
 
+    /// <summary><paramref name="output"/>: the terminal's last output (default: when the turn ended); <paramref name="noOutput"/>: none recorded.</summary>
     private static AutoClear.Request? Due(TabLog? log = null, DateTime? now = null, bool enabled = true, int minutes = 5,
         TabConfig? tab = null, TabState state = TabState.Running, Activity activity = Activity.Idle, bool pendingRestart = false,
-        bool closing = false, long? requestedFor = null) =>
-        AutoClear.Due(enabled, minutes, tab ?? Claude, state, activity, pendingRestart, closing, log ?? IdleLog, requestedFor,
-            now ?? IdleTime.AddMinutes(5));
+        bool closing = false, long? requestedFor = null, DateTime? output = null, bool noOutput = false) =>
+        AutoClear.Due(enabled, minutes, tab ?? Claude, state, activity, pendingRestart, closing, log ?? IdleLog,
+            noOutput ? null : output ?? IdleTime, requestedFor, now ?? IdleTime.AddMinutes(5));
 
     [Fact]
     public void FiresOnceTheTabHasBeenIdleForTheTimeout()
@@ -71,11 +72,78 @@ public class AutoClearDecisionTests
         // CLIs without a supported clear, and shells.
         foreach (var llm in new[] { "codex", "agy", Catalog.ShellOnly }) Assert.Null(Due(tab: new TabConfig { Llm = llm }));
         // Not started from this BoosterAI, or the CLI does not run under bs_pty (setting off at start, no python3, older lib).
-        Assert.Null(AutoClear.Due(true, 5, null, TabState.Running, Activity.Idle, false, false, IdleLog, null, IdleTime.AddHours(1)));
+        Assert.Null(AutoClear.Due(true, 5, null, TabState.Running, Activity.Idle, false, false, IdleLog, IdleTime, null, IdleTime.AddHours(1)));
         Assert.Null(Due(IdleLog with { InputReady = false }));
-        Assert.Null(AutoClear.Due(true, 5, Claude, TabState.Running, Activity.Idle, false, false, null, null, IdleTime.AddHours(1)));
+        Assert.Null(AutoClear.Due(true, 5, Claude, TabState.Running, Activity.Idle, false, false, null, IdleTime, null, IdleTime.AddHours(1)));
         // Idle without a hook "idle" (timing-based): no turn has ended.
         Assert.Null(Due(IdleLog with { IdleAt = null, Activity = Activity.Unknown }));
+    }
+
+    [Fact]
+    public void IdleTimeCountsFromTheLastTerminalOutput()
+    {
+        // Output after the turn ended (a background agent's timer, a redraw, a key echo) moves the start of the idle time.
+        Assert.Null(Due(output: IdleTime.AddMinutes(1), now: IdleTime.AddMinutes(5)));
+        Assert.Null(Due(output: IdleTime.AddMinutes(1), now: IdleTime.AddMinutes(6).AddSeconds(-1)));
+        Assert.Equal(new AutoClear.Request(Idle, Busy), Due(output: IdleTime.AddMinutes(1), now: IdleTime.AddMinutes(6)));
+        // Output from before the turn ended does not shorten it.
+        Assert.NotNull(Due(output: IdleTime.AddMinutes(-30)));
+        Assert.Null(Due(output: IdleTime.AddMinutes(-30), now: IdleTime.AddMinutes(4)));
+        // Fail-safe: nothing recorded about the terminal's output, no clear.
+        Assert.Null(Due(noOutput: true, now: IdleTime.AddHours(3)));
+    }
+
+    /// <summary>
+    /// Issue #71, tab "lunden-3d-apartment" (5 minute timeout): a conductor whose turns end while its background workers
+    /// run on. The old hook logged "idle" and BoosterAI typed /clear four times into the running orchestra.
+    /// </summary>
+    private const string Issue71Log = """
+        1793434519684 start pid=812 starttime=1373
+        1793434529495 cli-start
+        1793434529500 input-ready
+        1793437802876 busy
+        1793437828374 {0}
+        1793437895399 busy
+        1793437972629 {0}
+        1793438112458 busy
+        1793438127791 {0}
+        """;
+
+    private static DateTime At(long ms) => DateTimeOffset.FromUnixTimeMilliseconds(ms).UtcDateTime;
+
+    [Fact]
+    public void Issue71TurnsThatLeaveBackgroundWorkRunningAreNotIdle()
+    {
+        // The Stop hook sees the workers in background_tasks and logs "waiting": the tab works, however long it takes.
+        var log = TabLog.Parse(string.Format(System.Globalization.CultureInfo.InvariantCulture, Issue71Log, "waiting"));
+        Assert.Equal(Activity.Busy, log.Activity);
+        var turnEnded = At(1793438127791);
+        foreach (var after in new[] { 5, 17, 60, 240 })
+            Assert.Null(AutoClear.Due(true, 5, Claude, TabState.Running, log.Activity, false, false, log, turnEnded, null, turnEnded.AddMinutes(after)));
+        // A worker's task notification starts a turn (busy); when it ends with nothing left in the background, it is idle.
+        var done = TabLog.Parse(string.Format(System.Globalization.CultureInfo.InvariantCulture, Issue71Log, "waiting")
+            + "\n1793440256698 busy\n1793440304756 idle\n");
+        Assert.Equal(new AutoClear.Request(1793440304756, 1793440256698),
+            AutoClear.Due(true, 5, Claude, TabState.Running, done.Activity, false, false, done, At(1793440304756), null, At(1793440304756).AddMinutes(5)));
+    }
+
+    [Fact]
+    public void Issue71OutputWhileWorkersRunHoldsOffAClaudeThatOnlyLogsIdle()
+    {
+        // A claude (or hooks file) without background_tasks logs "idle" as before. The workers' footer timer redraws the
+        // screen every second (tab2.timing: at most 4 s without output between 10:15:27 and 10:20:29), so no clear.
+        var log = TabLog.Parse(string.Format(System.Globalization.CultureInfo.InvariantCulture, Issue71Log, "idle"));
+        var turnEnded = At(1793438127791);
+        Assert.Equal(Activity.Idle, log.Activity);
+        foreach (var after in new[] { 5, 17, 24, 36 })
+        {
+            var now = turnEnded.AddMinutes(after);
+            Assert.Null(AutoClear.Due(true, 5, Claude, TabState.Running, log.Activity, false, false, log, now.AddSeconds(-3), null, now));
+        }
+        // The output stops (the workers are done): five quiet minutes later it is cleared.
+        var quiet = turnEnded.AddMinutes(40);
+        Assert.Null(AutoClear.Due(true, 5, Claude, TabState.Running, log.Activity, false, false, log, quiet, null, quiet.AddMinutes(4)));
+        Assert.NotNull(AutoClear.Due(true, 5, Claude, TabState.Running, log.Activity, false, false, log, quiet, null, quiet.AddMinutes(5)));
     }
 
     [Fact]
@@ -103,6 +171,10 @@ public class AutoClearDecisionTests
         Assert.Null(AutoClear.ClearedAt(TabLog.Parse("2 cli-start\n3 input-ready\n5 idle\n6 input-sent\n7 busy\n")));
         Assert.Null(AutoClear.ClearedAt(TabLog.Parse("2 cli-start\n3 input-ready\n5 idle\n6 input-sent\n7 busy\n8 idle\n")));
         Assert.False(TabLog.Parse("2 cli-start\n3 input-ready\n4 cli-exit rc=0\n").InputReady);
+        // A turn that ended with background work left ("waiting") is no idle period and hides nothing new.
+        var waiting = TabLog.Parse("2 cli-start\n3 input-ready\n4 busy\n5 idle\n6 input-sent\n7 busy\n8 waiting\n");
+        Assert.Equal((Activity.Busy, 7L, 5L), (waiting.Activity, waiting.BusyAt!.Value, waiting.IdleAt!.Value));
+        Assert.Null(AutoClear.ClearedAt(waiting));
         var fresh = TabLog.Parse("2 cli-start\n3 input-ready\n4 busy\n5 idle\n6 input-sent\n7 cli-start\n");
         Assert.Equal((false, (long?)null, (long?)null, (long?)null), (fresh.InputReady, fresh.BusyAt, fresh.IdleAt, fresh.InputAt));
     }
@@ -122,6 +194,49 @@ public class AutoClearDecisionTests
         Assert.Equal(Loc.Format("tabstate.idleCleared.tip", local), tab.StatusTip);
         tab.SetState(TabState.Running, null, activity: Activity.Busy);
         Assert.Equal(Loc.Get("tabstate.busy"), tab.StatusText);
+    }
+}
+
+/// <summary>The Stop hook's command (#71) on real hook input: "waiting" while claude lists background work, else "idle".</summary>
+public class AutoClearStopHookTests
+{
+    [Theory]
+    // Captured from claude 2.1.316 (trimmed): a background shell and agent still running, then nothing left.
+    [InlineData("""{"hook_event_name":"Stop","stop_hook_active":false,"last_assistant_message":"started","background_tasks":[{"id":"b85wgpx2k","type":"shell","status":"running","command":"sleep 20"},{"id":"af0f00c9582d29d52","type":"subagent","status":"running"}],"session_crons":[]}""", "waiting")]
+    [InlineData("""{"hook_event_name":"Stop","stop_hook_active":false,"last_assistant_message":"noted","background_tasks":[],"session_crons":[]}""", "idle")]
+    // A scheduled wakeup or /loop.
+    [InlineData("""{"hook_event_name":"Stop","background_tasks":[],"session_crons":[{"id":"w1","prompt":"/loop"}]}""", "waiting")]
+    [InlineData("""{"hook_event_name": "Stop", "background_tasks": [ ], "session_crons": [ {"id": "w1"} ]}""", "waiting")]
+    // Only quoted inside a message: not a field.
+    [InlineData("""{"hook_event_name":"Stop","last_assistant_message":"\"background_tasks\":[1]","background_tasks":[],"session_crons":[]}""", "idle")]
+    // An older claude without the fields: as before (the output check still holds off a running agent).
+    [InlineData("""{"hook_event_name":"Stop","stop_hook_active":false}""", "idle")]
+    public void StopHookLogsWaitingWhileBackgroundWorkRuns(string input, string expected)
+    {
+        if (!OperatingSystem.IsLinux()) return;
+        var dir = Directory.CreateTempSubdirectory("bs-stop-hook").FullName;
+        try
+        {
+            var log = Path.Combine(dir, "it's.log");
+            var hook = JsonDocument.Parse(TabSession.HooksJson(log)).RootElement.GetProperty("hooks").GetProperty("Stop")[0]
+                .GetProperty("hooks")[0].GetProperty("command").GetString()!;
+            var psi = new System.Diagnostics.ProcessStartInfo("sh") { RedirectStandardInput = true, WorkingDirectory = dir };
+            psi.ArgumentList.Add("-c");
+            psi.ArgumentList.Add(hook);
+            using var p = System.Diagnostics.Process.Start(psi)!;
+            try
+            {
+                p.StandardInput.Write(input);
+                p.StandardInput.Close();
+                Assert.True(p.WaitForExit(10000));
+            }
+            finally { if (!p.HasExited) p.Kill(entireProcessTree: true); }
+            var line = File.ReadAllText(log).Split(' ', '\n');
+            Assert.True(long.TryParse(line[0], out _), line[0]);
+            Assert.Equal(expected, line[1]);
+            Assert.Equal(expected == "waiting" ? Activity.Busy : Activity.Idle, TabLog.Parse("1 cli-start\n" + File.ReadAllText(log)).Activity);
+        }
+        finally { Directory.Delete(dir, recursive: true); }
     }
 }
 

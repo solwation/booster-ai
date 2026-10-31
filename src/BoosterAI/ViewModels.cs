@@ -1028,7 +1028,7 @@ public sealed partial class MainViewModel : Observable
                 // A shell killed without its exit trap (wsl --shutdown) leaves its output capture behind.
                 if (state == TabState.Lost) w.Session.DeleteOutput(w.Id);
                 return (w.Row, w.Id, State: state, log?.CliExit, Denied: denied,
-                    log?.Pid, Activity: w.Session.ReadActivity(w.Id, log, now), log?.WatchingSince, Log: log);
+                    log?.Pid, Activity: w.Session.ReadActivity(w.Id, log, now), log?.WatchingSince, Log: log, LastOutput: w.Session.LastOutput(w.Id));
             }).ToList();
             // agy's settings are only read while a tab has a denial to offer rules for.
             var settings = results.Any(r => r.State == TabState.Denied) ? ReadText(settingsPath) : null;
@@ -1038,14 +1038,14 @@ public sealed partial class MainViewModel : Observable
             _polling = false;
             if (!t.IsCompletedSuccessfully) return;
             var (results, settings) = t.Result;
-            foreach (var (row, id, state, rc, denied, pid, activity, watchingSince, log) in results)
+            foreach (var (row, id, state, rc, denied, pid, activity, watchingSince, log, lastOutput) in results)
             {
                 // Ignore a result for a tab that has been restarted meanwhile.
                 if (row.TrackId != id) continue;
                 row.ShellPid = pid;
                 if (row.PendingRestart && state == TabState.Running && activity == Activity.Idle) RestartChanged(row);
                 var changed = row.SetState(state, rc, denied, activity, activity == Activity.Watching ? watchingSince : null, AutoClear.ClearedAt(log));
-                RequestAutoClear(row, id, state, log);
+                RequestAutoClear(row, id, state, log, lastOutput);
                 if (!changed) continue;
                 if (_cfg.Notifications && TabStatus.IsUnexpected(state, rc))
                     Notifier.Show("BoosterAI", Loc.Format("notify.body", row.Name, row.StatusText));
@@ -1060,11 +1060,11 @@ public sealed partial class MainViewModel : Observable
     /// Types /clear into a tab whose claude has been idle for the configured time (AutoClear.Due), once per idle period.
     /// The tab's bs_pty picks the request up within a second and logs whether it typed it; the status then says so.
     /// </summary>
-    private void RequestAutoClear(TabViewModel row, string id, TabState state, TabLog? log)
+    private void RequestAutoClear(TabViewModel row, string id, TabState state, TabLog? log, DateTime? lastOutput)
     {
         if (row.Session is not { } session) return;
         if (AutoClear.Due(_cfg.AutoClearIdle, _cfg.AutoClearMinutes, row.LaunchedAs, state, row.Activity, row.PendingRestart,
-                IsClosingAll || row.IsClosing, log, row.AutoClearRequestedFor, DateTime.UtcNow) is not { } due) return;
+                IsClosingAll || row.IsClosing, log, lastOutput, row.AutoClearRequestedFor, DateTime.UtcNow) is not { } due) return;
         // Asked once per idle period even when the write fails: a tab that cannot take it is not asked every poll.
         row.AutoClearRequestedFor = due.IdleAt;
         try { session.RequestInput(id, due.Since, AutoClear.Command); }
