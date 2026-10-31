@@ -39,6 +39,8 @@ public partial class SettingsWindow : Window
 
     private void OnDone(object? sender, RoutedEventArgs e) => Close();
 
+    private void OnCheckSetup(object? sender, RoutedEventArgs e) => _vm.CheckSetupNow();
+
     private async void OnBrowse(object? sender, RoutedEventArgs e)
     {
         if ((sender as Control)?.DataContext is not TabViewModel tab) return;

@@ -18,6 +18,7 @@ public static class Launcher
     /// </summary>
     public static string TabScript(TabConfig tab, string? prompt = null, TabTrack? track = null, bool resume = false)
     {
+        if (tab.Script is { } script) return script;
         var cd = Cd(tab);
         if (track is null)
         {
@@ -499,7 +500,7 @@ fi
     private static TabConfig InWsl(TabConfig t) => new()
     {
         Name = t.Name, Color = t.Color, ColorIndex = t.ColorIndex, Enabled = t.Enabled,
-        Llm = t.Llm, Model = t.Model, Orkester = t.Orkester, NonInteractive = t.NonInteractive, Directory = PathMapping.ToWslPath(t.Directory),
+        Llm = t.Llm, Model = t.Model, Orkester = t.Orkester, NonInteractive = t.NonInteractive, Directory = PathMapping.ToWslPath(t.Directory), Script = t.Script,
     };
 
     private static void LaunchWindowsTerminal(IReadOnlyList<TabConfig> tabs, string distro, string? prompt,

@@ -24,7 +24,7 @@ public partial class MainWindow : Window
             if (e.Property == WindowStateProperty && WindowState == WindowState.Minimized
                 && TrayPolicy.HideOnMinimize(_vm.MinimizeToTray, TrayAvailable())) Hide();
         };
-        Activated += (_, _) => _vm.Update.WindowActive(true);
+        Activated += (_, _) => { _vm.Update.WindowActive(true); _vm.SetupWindowActive(); };
         Deactivated += (_, _) => _vm.Update.WindowActive(false);
     }
 
@@ -166,6 +166,25 @@ public partial class MainWindow : Window
     private void OnAllowDenied(object? sender, RoutedEventArgs e) => _vm.AllowDenied();
 
     private void OnDismissDenied(object? sender, RoutedEventArgs e) => _vm.DismissDenied();
+
+    private void OnInstallCli(object? sender, RoutedEventArgs e)
+    {
+        if ((sender as Control)?.DataContext is CliOffer offer) _vm.InstallCli(offer.Cli);
+    }
+
+    private void OnDismissMissing(object? sender, RoutedEventArgs e) => _vm.Setup.DismissMissing();
+
+    private async void OnInstallWsl(object? sender, RoutedEventArgs e)
+    {
+        if (await ConfirmSetupWindow.Wsl().ShowDialog<bool>(this)) _vm.InstallWsl();
+    }
+
+    private async void OnAddAliases(object? sender, RoutedEventArgs e)
+    {
+        if (await ConfirmSetupWindow.Aliases(_vm.Setup.Aliases).ShowDialog<bool>(this)) _vm.AddAliases();
+    }
+
+    private void OnDismissAliases(object? sender, RoutedEventArgs e) => _vm.Setup.DismissAliases();
 
     private void OnContinue(object? sender, RoutedEventArgs e)
     {

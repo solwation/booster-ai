@@ -73,6 +73,52 @@
         </StackPanel>
       </Grid>
     </Border>
+
+    <!-- Setup (#74): WSL or AI CLIs missing where the tabs run, and the full-auto alias offer (see SetupViewModel). -->
+    <Border Classes="update" IsVisible="{Binding Setup.WslVisible}" Margin="0,0,0,14">
+      <Grid ColumnDefinitions="Auto,*,Auto">
+        <Path Grid.Column="0" Data="{StaticResource DownloadIcon}" Width="14" Height="14" Stretch="Uniform" StrokeThickness="1.5"
+              StrokeLineCap="Round" StrokeJoin="Round" Stroke="{DynamicResource LinkBrush}" VerticalAlignment="Center" Margin="0,0,10,0" />
+        <TextBlock Grid.Column="1" Text="{Binding Setup.WslText}" TextWrapping="Wrap" VerticalAlignment="Center" FontSize="13.5" />
+        <Button Grid.Column="2" Classes="accent" Content="{local:T setup.wsl.install}" Click="OnInstallWsl" IsVisible="{Binding Setup.CanInstallWsl}"
+                ToolTip.Tip="{local:T setup.wsl.install.tip}" Padding="14,6" Margin="16,0,0,0" VerticalAlignment="Center" />
+      </Grid>
+    </Border>
+
+    <Border Classes="update" IsVisible="{Binding Setup.MissingVisible}" Margin="0,0,0,14">
+      <Grid ColumnDefinitions="Auto,*,Auto">
+        <Path Grid.Column="0" Data="{StaticResource DownloadIcon}" Width="14" Height="14" Stretch="Uniform" StrokeThickness="1.5"
+              StrokeLineCap="Round" StrokeJoin="Round" Stroke="{DynamicResource LinkBrush}" VerticalAlignment="Center" Margin="0,0,10,0" />
+        <TextBlock Grid.Column="1" Text="{Binding Setup.MissingText}" TextWrapping="Wrap" VerticalAlignment="Center" FontSize="13.5" />
+        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" Margin="16,0,0,0" VerticalAlignment="Center">
+          <ItemsControl ItemsSource="{Binding Setup.Missing}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <StackPanel Orientation="Horizontal" Spacing="6" />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="local:CliOffer">
+                <Button Classes="accent" Content="{Binding Label}" Click="OnInstallCli" ToolTip.Tip="{Binding Tip}" Padding="14,6" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <Button Content="{local:T setup.dismiss}" Click="OnDismissMissing" Padding="14,6" />
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <Border Classes="update" IsVisible="{Binding Setup.AliasVisible}" Margin="0,0,0,14">
+      <Grid ColumnDefinitions="Auto,*,Auto">
+        <Path Grid.Column="0" Data="{StaticResource ShieldIcon}" Width="14" Height="14" Stretch="Uniform" StrokeThickness="1.5"
+              StrokeLineCap="Round" StrokeJoin="Round" Stroke="{DynamicResource LinkBrush}" VerticalAlignment="Center" Margin="0,0,10,0" />
+        <TextBlock Grid.Column="1" Text="{Binding Setup.AliasText}" TextWrapping="Wrap" VerticalAlignment="Center" FontSize="13.5" />
+        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" Margin="16,0,0,0" VerticalAlignment="Center">
+          <Button Classes="accent" Content="{local:T setup.alias.add}" Click="OnAddAliases" ToolTip.Tip="{Binding Setup.AliasTip}" Padding="14,6" />
+          <Button Content="{local:T setup.dismiss}" Click="OnDismissAliases" Padding="14,6" />
+        </StackPanel>
+      </Grid>
+    </Border>
     </StackPanel>
 
     <Grid Grid.Row="2" ColumnDefinitions="4,20,36,*,200,132,195,110,130" Margin="0,0,0,6" IsVisible="{Binding HasTabs}">

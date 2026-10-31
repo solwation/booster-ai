@@ -41,6 +41,7 @@ internal static class Program
                     Console.WriteLine($"linux restart {term} (safe new-window fallback): {call.Exe} " + string.Join(' ', call.Args.Select(a => a.Contains(' ') ? $"\"{a}\"" : a)));
             if (tabs.Count > 0)
                 Console.WriteLine("linux ptyxis cold start (no instance yet): restore-session is off until the tabs are open; if it cannot be, the first call uses --tab instead of --tab-with-profile=default --new-window");
+            PrintSetup(cfg, tabs);
             Console.WriteLine($"Windows profile (zoom {cfg.ZoomPercent}%): {Launcher.ZoomFragmentPath}:");
             Console.Write(Launcher.ZoomFragmentJson(cfg.ZoomPercent));
             if (cfg.ZoomPercent > 0)
@@ -64,6 +65,24 @@ internal static class Program
             return;
         }
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+    }
+
+    /// <summary>The setup check and the install and alias commands it can offer (#74); nothing is run.</summary>
+    private static void PrintSetup(AppConfig cfg, List<TabConfig> tabs)
+    {
+        Console.WriteLine("setup check (background, no window): Windows: wsl.exe -l -q (WSL_UTF8=1), then wsl.exe -d " + cfg.WslDistro
+            + " --exec bash -lic <check>; Linux: bash -lic <check>; <check> = " + Prerequisites.DetectScript);
+        Console.WriteLine("setup install WSL (Windows, after confirmation, elevated and visible): " + Prerequisites.WslInstall.Exe + " "
+            + string.Join(' ', Prerequisites.WslInstall.Args.Select(a => a.Contains(' ') ? $"\"{a}\"" : a)));
+        foreach (var cli in Prerequisites.Clis)
+        {
+            var tab = new TabConfig { Name = "Install " + cli, Directory = "~", Llm = Catalog.ShellOnly, Script = Prerequisites.InstallScript(cli) };
+            Console.WriteLine($"setup install {cli} (visible tab): bash -lic {tab.Script}");
+            Console.WriteLine($"setup install {cli} (Windows): wt.exe " + string.Join(' ', Launcher.WindowsTerminalArgs([tab], cfg.WslDistro, null, null, "new", cfg.ZoomPercent)
+                .Select(a => a.Contains(' ') ? $"\"{a}\"" : a)));
+        }
+        Console.WriteLine("setup full-auto aliases (after confirmation, only for installed CLIs without an alias or function; block appended to ~/.bashrc):");
+        Console.Write(Prerequisites.AddAliases(null, Prerequisites.Clis).Replace("\n", "\n  ").Insert(0, "  ").TrimEnd(' '));
     }
 
     public static AppBuilder BuildAvaloniaApp() =>

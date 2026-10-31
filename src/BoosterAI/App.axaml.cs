@@ -54,6 +54,7 @@ public partial class App : Application
             desktop.MainWindow = new MainWindow(vm);
             vm.Update.Start();
             vm.FindRunningTabs();
+            vm.StartSetupChecks();
         }
         base.OnFrameworkInitializationCompleted();
     }

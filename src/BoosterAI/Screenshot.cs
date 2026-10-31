@@ -8,12 +8,12 @@ using Avalonia.Threading;
 namespace BoosterAI;
 
 /// <summary>
-/// <c>--screenshot file.png [--window main|settings|install|import|restart] [--theme light|dark] [--config file.json] [--fake-update [manual:]0.3.0] [--fake-status [error:]text] [--fake-denied] [--fake-changed] [--fake-restartable N] [--fake-output [N]]</c>:
+/// <c>--screenshot file.png [--window main|settings|install|import|restart] [--theme light|dark] [--config file.json] [--fake-update [manual:]0.3.0] [--fake-status [error:]text] [--fake-denied] [--fake-changed] [--fake-restartable N] [--fake-output [N]] [--fake-setup [cli|wsl|alias]]</c>:
 /// renders a window with Avalonia's headless Skia platform. Nothing is shown on the desktop and no
 /// focus changes. The window frame (title bar) is not drawn; only the client area.
 /// </summary>
 internal sealed record ScreenshotOptions(string File, string Window, string? FakeUpdate, string? FakeStatus, bool FakeDenied, bool FakeChanged,
-    int? FakeOutput = null, int FakeRestartable = 0);
+    int? FakeOutput = null, int FakeRestartable = 0, string? FakeSetup = null);
 
 internal static class Screenshot
 {
@@ -27,7 +27,8 @@ internal static class Screenshot
         Active = true;
         return new ScreenshotOptions(file, Value(args, "--window") ?? "main", Value(args, "--fake-update"), Value(args, "--fake-status"), args.Contains("--fake-denied"),
             args.Contains("--fake-changed") || Value(args, "--window") == "restart", FakeOutputIndex(args),
-            int.TryParse(Value(args, "--fake-restartable"), out var r) ? r : 0);
+            int.TryParse(Value(args, "--fake-restartable"), out var r) ? r : 0,
+            args.Contains("--fake-setup") ? (Value(args, "--fake-setup") is "wsl" or "alias" ? Value(args, "--fake-setup") : "cli") : null);
     }
 
     /// <summary>--fake-output [N]: the popup of the Nth running sample tab (0: the first, interactive; 1: Watching).</summary>
@@ -66,6 +67,9 @@ internal static class Screenshot
         if (o.FakeChanged) vm.ShowSampleChange();
         // --fake-restartable N: the first N AI tabs have ended, so "Restart all" shows beside Start.
         if (o.FakeRestartable > 0) vm.ShowSampleRestartable(o.FakeRestartable);
+        // --fake-setup [cli|wsl|alias]: the setup bar with codex and agy missing, WSL missing, or the full-auto alias offer.
+        if (o.FakeSetup == "alias") vm.ShowSampleAlias();
+        else if (o.FakeSetup is { } setup) vm.ShowSampleSetup(wslMissing: setup == "wsl");
         // --fake-status "text" shows a status line message as normal, error:text as an error (screenshots only).
         if (o.FakeStatus is { } st)
             vm.ShowStatus(st.StartsWith("error:") ? st[6..] : st, st.StartsWith("error:"));
@@ -77,7 +81,9 @@ internal static class Screenshot
             "install" => new ConfirmInstallWindow(vm.Tabs.First()),
             "import" => new ImportProjectsWindow(SampleImport()),
             "restart" => new ConfirmRestartWindow(vm.Tabs.First(t => t.IsChanged)),
-            _ => throw new ArgumentException($"Unknown --window '{o.Window}' (main, settings, install, import or restart)"),
+            "alias" => ConfirmSetupWindow.Aliases(["claude", "codex"]),
+            "wsl" => ConfirmSetupWindow.Wsl(),
+            _ => throw new ArgumentException($"Unknown --window '{o.Window}' (main, settings, install, import, restart, alias or wsl)"),
         };
         // Room below the first rows for the status popup.
         if (o.FakeOutput is not null) window.Height = 820;

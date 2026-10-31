@@ -74,6 +74,38 @@ When a newer release exists, a bar above the projects says *Version X is availab
 
 Only a copy in the location the installers use updates itself: `%LOCALAPPDATA%\Programs\BoosterAI\BoosterAI.exe` on Windows, `~/.local/bin/BoosterAI` on Linux. Anything else (a development build, `dotnet run`, another folder, a non-x64 machine) shows the bar with **Open the releases page** instead, as does a failed update. The Linux self-update replaces only the binary; the menu entry and icons from `install-linux.sh` stay as they are. The checksum comes from the same release as the archive, so it protects against corrupt or truncated downloads, not against a compromised GitHub release.
 
+## Setup: WSL and AI CLIs
+
+BoosterAI checks what the tabs need when it starts, when its main window is activated (at most every 30 seconds) and when you press **Check WSL and AI CLIs** in Settings, which also shows the result (*claude: installed, with alias · codex: missing · …*). The check runs in the background with hidden processes, so no window opens and focus stays where it is, and the window stays usable meanwhile.
+
+- **WSL (Windows only).** `wsl.exe -l -q` lists the distributions. Without `wsl.exe` or without any distribution a bar explains that BoosterAI runs the tabs in WSL and offers **Install WSL …**; a dialog first says that it needs administrator rights and usually a restart, then `powershell.exe -NoExit -Command "wsl.exe --install"` runs elevated (UAC prompt) in its own visible window. Afterwards: restart, open Ubuntu once to create the Linux user, then start BoosterAI again. When other distributions exist but not the one under *WSL* in Settings, the bar names them instead of offering an install. Everything else works as before while WSL is missing.
+- **AI CLIs.** In the tabs' own login shell (`wsl.exe -d <distro> --exec bash -lic …` on Windows, `bash -lic …` on Linux), so PATH, nvm and aliases match a tab, BoosterAI runs `type -t` and `type -P` for `claude`, `codex`, `agy` and `npm`, with a 30-second limit after which the shell is stopped. A CLI counts as installed when an executable is on PATH; an alias alone does not count. Each missing CLI that a project row uses gets **Install &lt;cli&gt;** in a bar (all three when none is installed at all, so a new user can start). *Not now* hides the bar until BoosterAI restarts.
+
+The install runs in a new, visible tab through the same launcher as the orchestra's *Install* link, never silently: it prints what it runs, the installer's own output and questions, then either *done* with the next step (log in: `claude`, `codex login` or `agy`) or *the install did not finish*, and leaves a login shell (which already has the new PATH). A failure stays in that tab and BoosterAI keeps working. Nothing is installed before you press the button.
+
+| CLI | Install command (Linux and WSL) |
+| --- | --- |
+| claude | `curl -fsSL https://claude.ai/install.sh \| bash`, the native installer from the [Claude Code setup docs](https://code.claude.com/docs/en/setup) (to `~/.local/bin/claude`) |
+| codex | `npm install -g @openai/codex`. Without npm the tab explains that it comes with Node.js and suggests [nvm](https://github.com/nvm-sh/nvm) (`nvm install --lts`), and the bar says so too; on `EACCES` it suggests a Node.js from nvm instead of `sudo` |
+| agy | `curl -fsSL https://antigravity.google/cli/install.sh \| bash`, from the [Antigravity CLI getting-started docs](https://antigravity.google/docs/getting-started?tab=cli) (to `~/.local/bin/agy`) |
+
+After an install BoosterAI checks again every 15 seconds (for up to 20 minutes) until the CLI is found, then says so in the status line and removes the button. New tabs start a new login shell, so they find the CLI without restarting BoosterAI; *CLI not found* is a state of a tab that already ran, and its restart button runs the installed CLI.
+
+**Full-auto aliases.** For each installed CLI that the shell has no alias or function for, a bar offers **Add aliases …** (and *Not now*, which hides it until BoosterAI restarts). A confirmation dialog warns that with the alias the AI runs commands and changes, creates and deletes files without asking, in every tab and terminal, and shows the exact lines. Confirming appends them to a marked block at the end of `~/.bashrc` (the WSL home on Windows):
+
+```sh
+# >>> BoosterAI full-auto aliases >>>
+# Added by BoosterAI: these CLIs run commands and edit files without asking. Delete this block to undo.
+alias claude='claude --dangerously-skip-permissions'
+alias codex='codex --dangerously-bypass-approvals-and-sandbox'
+alias agy='agy --dangerously-skip-permissions'
+# <<< BoosterAI full-auto aliases <<<
+```
+
+Only the lines for the offered CLIs are written; a later CLI joins the same block. An alias or function the user already has (detected in the shell, and checked again in the file text) is never overwritten or duplicated, so an alias such as `alias claude='claude --permission-mode auto'` stays as it is and no offer is made for it. Delete the block to undo. The aliases apply to new tabs, including Run once (see [Run once](#run-once-non-interactive)). Tabs read `~/.bashrc` through the login shell's `~/.profile`, as Ubuntu's default does; a profile that does not source it would not see the aliases, and BoosterAI offers them again after a restart (without writing them twice).
+
+`--dry-run` prints the check, the WSL install command, each CLI's install script (also as the `wt.exe` arguments of its tab) and the alias block.
+
 ## AI CLI updates
 
 With **Update AI CLIs automatically** on (the default, `"AutoUpdateClis": true` in `config.json`), a tab that starts claude, codex or agy first runs `bs_update <cli>` from its `tab-lib.sh`, in the tab's own login shell (WSL on Windows, the local shell on Linux), so it uses the same PATH, nvm and installation as the CLI. An in-place restart (new model or AI, or restarting an exited CLI) runs it again before the new CLI; shell-only tabs, the *Install* link and a tab whose session library is unavailable skip it. `--dry-run` shows the `bs_update` step in each tab script and lists the commands below. The setting is read at each start and restart.

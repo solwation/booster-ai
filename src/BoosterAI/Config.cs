@@ -19,6 +19,9 @@ public sealed class TabConfig
     public bool Orkester { get; set; }
     /// <summary>Run the orchestra command once non-interactively, then leave a shell. Ignored while Orkester is off.</summary>
     public bool NonInteractive { get; set; }
+    /// <summary>A one-off tab's own bash command instead of a CLI (the setup installs, #74); never saved.</summary>
+    [JsonIgnore]
+    public string? Script { get; set; }
 }
 
 public sealed class AppConfig

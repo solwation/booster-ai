@@ -134,6 +134,7 @@ public sealed class TabViewModel : Observable
             Raise(nameof(CanOrkester));
             Raise(nameof(CanNonInteractive));
             Raise(nameof(CanInstallOrkester));
+            _owner.SetupRowsChanged();
             // Another CLI's model id rarely fits; fall back to its default.
             if (!Catalog.ModelsFor(value).Contains(Model)) Model = Catalog.StandardModel;
             ChoiceChanged();
@@ -539,6 +540,7 @@ public sealed partial class MainViewModel : Observable
         Raise(nameof(LaunchLabel));
         Raise(nameof(CanCloseAll));
         RestartableChanged();
+        SetupRowsChanged();
     }
 
     internal void RestartableChanged()
@@ -586,6 +588,7 @@ public sealed partial class MainViewModel : Observable
     {
         if (OperatingSystem.IsWindows()) _wslHome = await Task.Run(() => QueryWslHome(_cfg.WslDistro));
         foreach (var t in Tabs) CheckOrkester(t);
+        CheckSetup();
     }
 
     public void CheckOrkester(TabViewModel tab)

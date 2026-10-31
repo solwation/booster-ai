@@ -1,0 +1,25 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="using:BoosterAI"
+        x:Class="BoosterAI.ConfirmSetupWindow"
+        x:DataType="local:ConfirmSetupWindow"
+        Title="{Binding Heading}"
+        Icon="avares://BoosterAI/Assets/boosterai.ico"
+        Width="560" SizeToContent="Height" CanResize="False"
+        WindowStartupLocation="CenterOwner">
+  <StackPanel Margin="28,24,28,22" Spacing="14">
+    <TextBlock Classes="title" FontSize="20" TextWrapping="Wrap" Text="{Binding Heading}" />
+    <TextBlock TextWrapping="Wrap" LineHeight="21" Text="{Binding Body}" />
+    <StackPanel Spacing="6">
+      <TextBlock Classes="muted" TextWrapping="Wrap" Text="{Binding CodeLabel}" />
+      <Border Background="{DynamicResource RowHoverBrush}" CornerRadius="6" Padding="10,7">
+        <TextBlock Classes="path" Text="{Binding Code}" TextWrapping="Wrap" Foreground="{DynamicResource TextBrush}" />
+      </Border>
+    </StackPanel>
+    <TextBlock Classes="muted" TextWrapping="Wrap" LineHeight="20" Text="{Binding Detail}" />
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,6,0,0">
+      <Button Content="{Binding CancelText}" Click="OnCancel" IsCancel="True" IsDefault="True" Padding="18,8" />
+      <Button Classes="accent" Click="OnConfirm" Padding="18,8" Content="{Binding Button}" />
+    </StackPanel>
+  </StackPanel>
+</Window>
