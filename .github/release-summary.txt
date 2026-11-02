@@ -1,5 +1,5 @@
 # One-line summary of the next release, shown in the app's update bar. Update it before tagging.
 # `version` must equal the tag being released (it stops a stale summary from shipping again).
-version: 0.18.0
-sv: Inställningar är nu uppdelat i tre flikar (Projekt, Allmänt, Utseende) med grupperade sektioner och mer utrymme för projektlistan.
-en: Settings is now structured into three tabs (Projects, General, Appearance) with grouped sections and full room for projects.
+version: 0.19.0
+sv: WSL-resursoptimering: ny flik i Inställningar med minnesslider, hårdvarurekommendation och optimeringsnotis.
+en: WSL resource optimization: new Settings tab with memory slider, hardware recommendations, and main prompt.
