@@ -17,6 +17,23 @@
     <Setter Property="Foreground" Value="{DynamicResource FaintBrush}" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
+  <Style Selector="TextBlock.sectionhead">
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+  </Style>
+
+  <!-- Settings tab navigation -->
+  <Style Selector="TabControl.settings-tabs">
+    <Setter Property="Padding" Value="0,16,0,0" />
+  </Style>
+  <Style Selector="TabControl.settings-tabs TabItem">
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="MinHeight" Value="34" />
+    <Setter Property="Padding" Value="14,6" />
+    <Setter Property="Margin" Value="0,0,8,0" />
+  </Style>
   <Style Selector="TextBlock.name">
     <Setter Property="FontSize" Value="15" />
     <Setter Property="FontWeight" Value="SemiBold" />

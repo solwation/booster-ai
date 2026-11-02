@@ -13,7 +13,7 @@ namespace BoosterAI;
 /// focus changes. The window frame (title bar) is not drawn; only the client area.
 /// </summary>
 internal sealed record ScreenshotOptions(string File, string Window, string? FakeUpdate, string? FakeStatus, bool FakeDenied, bool FakeChanged,
-    int? FakeOutput = null, int FakeRestartable = 0, string? FakeSetup = null);
+    int? FakeOutput = null, int FakeRestartable = 0, string? FakeSetup = null, string? Tab = null);
 
 internal static class Screenshot
 {
@@ -28,7 +28,8 @@ internal static class Screenshot
         return new ScreenshotOptions(file, Value(args, "--window") ?? "main", Value(args, "--fake-update"), Value(args, "--fake-status"), args.Contains("--fake-denied"),
             args.Contains("--fake-changed") || Value(args, "--window") == "restart", FakeOutputIndex(args),
             int.TryParse(Value(args, "--fake-restartable"), out var r) ? r : 0,
-            args.Contains("--fake-setup") ? (Value(args, "--fake-setup") is "wsl" or "alias" ? Value(args, "--fake-setup") : "cli") : null);
+            args.Contains("--fake-setup") ? (Value(args, "--fake-setup") is "wsl" or "alias" ? Value(args, "--fake-setup") : "cli") : null,
+            Value(args, "--tab"));
     }
 
     /// <summary>--fake-output [N]: the popup of the Nth running sample tab (0: the first, interactive; 1: Watching).</summary>
@@ -85,6 +86,13 @@ internal static class Screenshot
             "wsl" => ConfirmSetupWindow.Wsl(),
             _ => throw new ArgumentException($"Unknown --window '{o.Window}' (main, settings, install, import, restart, alias or wsl)"),
         };
+        if (window is SettingsWindow sw)
+        {
+            if (o.Tab is "general" or "allmant") sw.SelectedTabIndex = 1;
+            else if (o.Tab is "appearance" or "utseende") sw.SelectedTabIndex = 2;
+            else if (o.Tab is "projects" or "projekt") sw.SelectedTabIndex = 0;
+            else if (o.FakeSetup is not null && o.Tab is null) sw.SelectedTabIndex = 1;
+        }
         // Room below the first rows for the status popup.
         if (o.FakeOutput is not null) window.Height = 820;
         window.Show();

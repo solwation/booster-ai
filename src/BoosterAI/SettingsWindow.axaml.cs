@@ -20,6 +20,12 @@ public partial class SettingsWindow : Window
         Closing += (_, _) => _vm.Save();
     }
 
+    public int SelectedTabIndex
+    {
+        get => TabsControl.SelectedIndex;
+        set => TabsControl.SelectedIndex = value;
+    }
+
     private void OnAddTab(object? sender, RoutedEventArgs e) => _vm.AddTab();
 
     private async void OnFindProjects(object? sender, RoutedEventArgs e) => await ImportProjectsWindow.FindProjects(this, _vm);
