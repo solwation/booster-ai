@@ -1,5 +1,5 @@
 # One-line summary of the next release, shown in the app's update bar. Update it before tagging.
 # `version` must equal the tag being released (it stops a stale summary from shipping again).
-version: 0.17.0
-sv: BoosterAI hjälper nu till att installera WSL, claude, codex och agy om de saknas, och kan lägga till full-auto-alias.
-en: BoosterAI now helps install WSL, claude, codex and agy when they are missing, and can add optional full-auto aliases.
+version: 0.18.0
+sv: Inställningar är nu uppdelat i tre flikar (Projekt, Allmänt, Utseende) med grupperade sektioner och mer utrymme för projektlistan.
+en: Settings is now structured into three tabs (Projects, General, Appearance) with grouped sections and full room for projects.
