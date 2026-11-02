@@ -277,6 +277,7 @@
   "settings.optimization.defaultUnset": "Standard (ej konfigurerad)",
   "settings.optimization.memorySlider": "Tilldela minne till WSL:",
   "settings.optimization.recommendation": "Rekommendation för dina {0} GB RAM: {1} GB till WSL ({2} GB sparas till Windows).",
+  "settings.optimization.recommendedMarker": "Rekommenderat",
   "settings.optimization.useRecommendation": "Använd rekommendation",
   "settings.optimization.save": "Spara till .wslconfig",
   "settings.optimization.saved": "Inställningarna sparades till .wslconfig. Starta om WSL för att ändringarna ska gälla.",

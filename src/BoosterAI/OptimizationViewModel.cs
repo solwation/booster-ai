@@ -54,6 +54,10 @@ public sealed class OptimizationViewModel : Observable
     public string RecommendationText => Loc.Format("settings.optimization.recommendation",
         _totalSystemMemoryGb, RecommendedGb, Math.Max(0, _totalSystemMemoryGb - RecommendedGb));
 
+    /// <summary>Where the recommended value sits on the slider, 0 = minimum, 1 = maximum (#77).</summary>
+    public double RecommendationFraction =>
+        WslOptimization.SliderFraction(RecommendedGb, MinMemoryGb, MaxMemoryGb);
+
     public bool IsWindows => _fakeWindows || OperatingSystem.IsWindows();
     public bool IsLinux => !_fakeWindows && !OperatingSystem.IsWindows();
 
@@ -101,6 +105,7 @@ public sealed class OptimizationViewModel : Observable
         Raise(nameof(SliderMemoryText));
         Raise(nameof(RecommendedGb));
         Raise(nameof(RecommendationText));
+        Raise(nameof(RecommendationFraction));
         Raise(nameof(MinMemoryGb));
         Raise(nameof(MaxMemoryGb));
         Raise(nameof(BannerVisible));
@@ -165,7 +170,7 @@ public sealed class OptimizationViewModel : Observable
         _fakeWindows = true;
         _totalSystemMemoryGb = 32;
         _currentAllocatedGb = null;
-        _sliderMemoryGb = 22;
+        _sliderMemoryGb = 16;
         _bannerVisible = true;
         Raise(nameof(IsWindows));
         Raise(nameof(IsLinux));
@@ -179,6 +184,7 @@ public sealed class OptimizationViewModel : Observable
         Raise(nameof(SliderMemoryText));
         Raise(nameof(RecommendedGb));
         Raise(nameof(RecommendationText));
+        Raise(nameof(RecommendationFraction));
         Raise(nameof(BannerVisible));
     }
 }

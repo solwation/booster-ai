@@ -102,6 +102,13 @@ public static partial class WslOptimization
         return (minGb, maxGb);
     }
 
+    /// <summary>Position of <paramref name="valueGb"/> between the slider bounds, clamped to 0..1.</summary>
+    public static double SliderFraction(int valueGb, int minGb, int maxGb)
+    {
+        if (maxGb <= minGb) return 0.5;
+        return Math.Clamp((double)(valueGb - minGb) / (maxGb - minGb), 0, 1);
+    }
+
     /// <summary>Invokes <c>wsl.exe --shutdown</c> synchronously (Windows only).</summary>
     public static void ShutdownWsl()
     {

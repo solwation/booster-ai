@@ -27,6 +27,7 @@
         <SolidColorBrush x:Key="OutputBackgroundBrush" Color="#33000000" />
         <SolidColorBrush x:Key="LinkBrush" Color="#9A9DFF" />
         <SolidColorBrush x:Key="LinkHoverBrush" Color="#BDBFFF" />
+        <SolidColorBrush x:Key="RecommendedBrush" Color="#5BC26E" />
       </ResourceDictionary>
       <ResourceDictionary x:Key="Light">
         <SolidColorBrush x:Key="TextBrush" Color="#1B1D26" />
@@ -36,6 +37,7 @@
         <SolidColorBrush x:Key="OutputBackgroundBrush" Color="#0A000000" />
         <SolidColorBrush x:Key="LinkBrush" Color="#3B3FCF" />
         <SolidColorBrush x:Key="LinkHoverBrush" Color="#2A2DA8" />
+        <SolidColorBrush x:Key="RecommendedBrush" Color="#2F8A42" />
       </ResourceDictionary>
     </ResourceDictionary.ThemeDictionaries>
 

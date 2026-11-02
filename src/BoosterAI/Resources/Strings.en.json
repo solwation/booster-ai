@@ -277,6 +277,7 @@
   "settings.optimization.defaultUnset": "Default (not configured)",
   "settings.optimization.memorySlider": "Allocate memory to WSL:",
   "settings.optimization.recommendation": "Recommendation for your {0} GB RAM: {1} GB for WSL ({2} GB reserved for Windows).",
+  "settings.optimization.recommendedMarker": "Recommended",
   "settings.optimization.useRecommendation": "Use recommendation",
   "settings.optimization.save": "Save to .wslconfig",
   "settings.optimization.saved": "Settings saved to .wslconfig. Restart WSL for changes to take effect.",

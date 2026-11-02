@@ -171,9 +171,22 @@
                   <TextBlock Grid.Column="1" Text="{Binding Optimization.SliderMemoryText}" FontWeight="Bold" FontSize="16" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" />
                 </Grid>
 
-                <Slider Minimum="{Binding Optimization.MinMemoryGb}" Maximum="{Binding Optimization.MaxMemoryGb}"
-                        Value="{Binding Optimization.SliderMemoryGb, Mode=TwoWay}"
-                        TickFrequency="1" IsSnapToTickEnabled="True" Margin="0,4,0,4" />
+                <!-- Slider with the recommended value marked by a green tick and label (#77).
+                     The tick sits behind the slider so the thumb covers it at the recommendation. -->
+                <Panel Margin="0,4,0,0">
+                  <local:SliderMarkerPanel Fraction="{Binding Optimization.RecommendationFraction}" Inset="10"
+                                           IsHitTestVisible="False">
+                    <Border Width="2" Height="18" CornerRadius="1" Background="{DynamicResource RecommendedBrush}" />
+                  </local:SliderMarkerPanel>
+                  <Slider Minimum="{Binding Optimization.MinMemoryGb}" Maximum="{Binding Optimization.MaxMemoryGb}"
+                          Value="{Binding Optimization.SliderMemoryGb, Mode=TwoWay}"
+                          TickFrequency="1" IsSnapToTickEnabled="True" VerticalAlignment="Center" />
+                </Panel>
+                <local:SliderMarkerPanel Fraction="{Binding Optimization.RecommendationFraction}" Inset="10"
+                                         IsHitTestVisible="False" Margin="0,-10,0,6">
+                  <TextBlock Text="{local:T settings.optimization.recommendedMarker}" FontSize="11" FontWeight="SemiBold"
+                             Foreground="{DynamicResource RecommendedBrush}" />
+                </local:SliderMarkerPanel>
 
                 <Grid ColumnDefinitions="*,Auto" Margin="0,2,0,0">
                   <TextBlock Grid.Column="0" Classes="muted" FontSize="12.5" Text="{Binding Optimization.RecommendationText}" TextWrapping="Wrap" VerticalAlignment="Center" />
