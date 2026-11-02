@@ -16,7 +16,13 @@ The app follows the system's light or dark theme; `--theme light` or `--theme da
 
 ## Settings
 
-The settings window is divided into three tabs: **Projects** (name and directory, with a folder picker), **General** (window and tray behaviour, notifications, auto-clear, update checks and terminal environment), and **Appearance** (app theme, language, font size and tab colour palettes). On Windows you point at your normal Windows folders; WSL shares (`\\wsl.localhost\...`) and Linux paths such as `~/webshop` work too. Whether an agent then works in a mirror elsewhere is up to your own agent instructions.
+The settings window is divided into four tabs: **Projects** (name and directory, with a folder picker), **General** (window and tray behaviour, notifications, auto-clear, update checks and Linux terminal), **Optimization** (WSL resource tuning with a memory slider, hardware recommendations, `.wslconfig` management and environment check), and **Appearance** (app theme, language, font size and tab colour palettes). On Windows you point at your normal Windows folders; WSL shares (`\\wsl.localhost\...`) and Linux paths such as `~/webshop` work too. Whether an agent then works in a mirror elsewhere is up to your own agent instructions.
+
+### WSL optimization
+
+On Windows, WSL defaults to conservative memory limits that can throttle heavy AI coding CLI turns and parallel compilations. If no memory setting is configured in `%USERPROFILE%\.wslconfig`, the main window displays a prompt banner: *WSL is running with default resources. Optimize memory allocation for better performance with AI tools and heavy projects.* Clicking **Optimize …** opens Settings directly on the **Optimization** tab.
+
+The tab inspects total host physical RAM and calculates a tailored recommendation (reserving enough memory for Windows and background applications while giving WSL generous resources). Users can adjust allocation using a slider, apply recommendations with a single click, save directly to `.wslconfig` (preserving existing sections and comments), and restart WSL via `wsl.exe --shutdown`. A *Not now* button on the banner dismisses it permanently. On native Linux, the tab displays system memory and notes that `.wslconfig` resource tuning applies to Windows WSL hosts.
 
 ### Find projects
 

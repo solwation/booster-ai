@@ -358,6 +358,7 @@ public sealed partial class MainViewModel : Observable
         Tabs.CollectionChanged += (_, _) => TabsChanged();
         Update = new UpdateViewModel(cfg, Save);
         Denial = new DenialViewModel();
+        Optimization = new OptimizationViewModel(cfg);
         _ = InitAsync();
     }
 
@@ -473,6 +474,9 @@ public sealed partial class MainViewModel : Observable
 
     /// <summary>The offer to allow the commands agy denied in Run once tabs.</summary>
     public DenialViewModel Denial { get; }
+
+    /// <summary>The WSL memory optimization and hardware recommendations (#76).</summary>
+    public OptimizationViewModel Optimization { get; }
 
     public bool CheckForUpdates
     {

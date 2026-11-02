@@ -119,6 +119,19 @@
         </StackPanel>
       </Grid>
     </Border>
+
+    <!-- Optimization (#76): WSL memory not tuned, offer quick optimize. -->
+    <Border Classes="update" IsVisible="{Binding Optimization.BannerVisible}" Margin="0,0,0,14">
+      <Grid ColumnDefinitions="Auto,*,Auto">
+        <Path Grid.Column="0" Data="{StaticResource BoltIcon}" Width="14" Height="14" Stretch="Uniform"
+              Fill="{DynamicResource LinkBrush}" VerticalAlignment="Center" Margin="0,0,10,0" />
+        <TextBlock Grid.Column="1" Text="{local:T optimization.banner.text}" TextWrapping="Wrap" VerticalAlignment="Center" FontSize="13.5" />
+        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" Margin="16,0,0,0" VerticalAlignment="Center">
+          <Button Classes="accent" Content="{local:T optimization.banner.button}" Click="OnOptimizeWsl" Padding="14,6" />
+          <Button Content="{local:T optimization.banner.dismiss}" Click="OnDismissOptimization" Padding="14,6" />
+        </StackPanel>
+      </Grid>
+    </Border>
     </StackPanel>
 
     <Grid Grid.Row="2" ColumnDefinitions="4,20,36,*,200,132,195,110,130" Margin="0,0,0,6" IsVisible="{Binding HasTabs}">

@@ -61,6 +61,8 @@ public sealed class AppConfig
     public string? SkippedVersion { get; set; }
     /// <summary>When the last update check finished (UTC); drives the once-a-day check.</summary>
     public DateTime? LastUpdateCheck { get; set; }
+    /// <summary>Whether the user dismissed the WSL memory optimization banner on the main page (#76).</summary>
+    public bool DismissedWslOptimization { get; set; }
 }
 
 [JsonSourceGenerationOptions(WriteIndented = true)]
@@ -172,6 +174,7 @@ public static class ConfigMerge
         S(c => c.CheckForUpdates, (c, v) => c.CheckForUpdates = v),
         S(c => c.SkippedVersion, (c, v) => c.SkippedVersion = v),
         S(c => c.LastUpdateCheck, (c, v) => c.LastUpdateCheck = v),
+        S(c => c.DismissedWslOptimization, (c, v) => c.DismissedWslOptimization = v),
     ];
 
     /// <summary>

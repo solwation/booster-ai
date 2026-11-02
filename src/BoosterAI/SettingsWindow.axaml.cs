@@ -47,6 +47,12 @@ public partial class SettingsWindow : Window
 
     private void OnCheckSetup(object? sender, RoutedEventArgs e) => _vm.CheckSetupNow();
 
+    private void OnUseRecommendedMemory(object? sender, RoutedEventArgs e) => _vm.Optimization.ApplyRecommendation();
+
+    private void OnSaveOptimization(object? sender, RoutedEventArgs e) => _vm.Optimization.SaveConfig();
+
+    private void OnRestartWsl(object? sender, RoutedEventArgs e) => _vm.Optimization.RestartWsl();
+
     private async void OnBrowse(object? sender, RoutedEventArgs e)
     {
         if ((sender as Control)?.DataContext is not TabViewModel tab) return;

@@ -219,4 +219,12 @@ public partial class MainWindow : Window
         if (plan.Busy.Count > 0) choice = await new ConfirmRestartWindow(plan.Busy).ShowDialog<RestartChoice>(this);
         _vm.RestartAll(plan, choice);
     }
+
+    private async void OnOptimizeWsl(object? sender, RoutedEventArgs e)
+    {
+        var sw = new SettingsWindow(_vm) { SelectedTabIndex = 2 };
+        await sw.ShowDialog(this);
+    }
+
+    private void OnDismissOptimization(object? sender, RoutedEventArgs e) => _vm.Optimization.DismissBanner();
 }
