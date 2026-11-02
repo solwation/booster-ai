@@ -1,3 +1,5 @@
+# One-line summary of the next release, shown in the app's update bar. Update it before tagging.
+# `version` must equal the tag being released (it stops a stale summary from shipping again).
 version: 0.20.0
 sv: Minnesslidern under Inställningar › Optimering visar nu det rekommenderade värdet med ett grönt streck och text.
 en: The memory slider in Settings › Optimization now marks the recommended value with a green tick and label.
