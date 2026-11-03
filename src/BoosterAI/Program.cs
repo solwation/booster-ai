@@ -7,6 +7,12 @@ internal static class Program
     [STAThread]
     public static void Main(string[] args)
     {
+        // A terminal's placement watcher runs without Avalonia and outlives the main window when needed.
+        if (args is [TerminalPlacement.WatchArgument, var requestFile])
+        {
+            TerminalPlacement.Watch(requestFile);
+            return;
+        }
         // --dry-run prints what "Starta" would run, without opening anything.
         if (args.Contains("--dry-run"))
         {

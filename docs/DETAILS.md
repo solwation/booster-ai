@@ -14,6 +14,12 @@ Settings are stored in `%APPDATA%\BoosterAI\config.json` on Windows and `~/.conf
 `BoosterAI --dry-run` prints the commands that Start would run, without opening anything.
 The app follows the system's light or dark theme; `--theme light` or `--theme dark` overrides it.
 
+## Terminal window placement
+
+On Windows, BoosterAI remembers the visible bounds and monitor of the Windows Terminal window it opens. The next session restores that placement, including maximization. Docked/Snap windows reopen with the same bounds; Windows Snap group membership and FancyZones layouts are not recreated. When the monitor is disconnected, or its work area changes (resolution, scaling or taskbar), the bounds are fitted to an available monitor's work area.
+
+This works without changing global Windows Terminal settings. A brief bootstrap tab identifies the new window using a random handshake title, then closes automatically; the ordinary project tab names stay unchanged. A small headless BoosterAI helper watches that exact window, including after *Close after Start* or quitting BoosterAI, and exits when the terminal closes. It records changes about twice per second in `%LOCALAPPDATA%\BoosterAI\terminal-placement.json`; minimizing does not replace the last visible placement. Invalid or missing saved data and unavailable tracking fall back to the normal terminal launch. Packaged helpers run from a shared versioned copy under `%LOCALAPPDATA%\BoosterAI\placement-watchers`, so an open terminal does not lock the installed executable during an update; unused older copies are removed on a later launch. Other Terminal windows are never moved. Already-open tracked windows only get their new tabs, without having their placement reset.
+
 ## Settings
 
 The settings window is divided into four tabs: **Projects** (name and directory, with a folder picker), **General** (window and tray behaviour, notifications, auto-clear, update checks and Linux terminal), **Optimization** (WSL resource tuning with a memory slider, hardware recommendations, `.wslconfig` management and environment check), and **Appearance** (app theme, language, font size and tab colour palettes). On Windows you point at your normal Windows folders; WSL shares (`\\wsl.localhost\...`) and Linux paths such as `~/webshop` work too. Whether an agent then works in a mirror elsewhere is up to your own agent instructions.

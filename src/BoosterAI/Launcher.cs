@@ -508,8 +508,13 @@ fi
     {
         lock (ZoomLock) if (SyncZoomFragment(zoomPercent)) ReloadRunningWindowsTerminal();
         var psi = new ProcessStartInfo("wt.exe") { UseShellExecute = false };
-        foreach (var arg in WindowsTerminalArgs(tabs, distro, prompt, tracks, window, zoomPercent, resume)) psi.ArgumentList.Add(arg);
-        Process.Start(psi);
+        // Reusing a tracked window only adds tabs; restore placement only when opening a new one.
+        if (window is "new" or "-1") window = "BoosterAI-" + Guid.NewGuid().ToString("N");
+        var watch = TerminalPlacement.Prepare(window);
+        var args = WindowsTerminalArgs(tabs, distro, prompt, tracks, window, zoomPercent, resume);
+        if (watch is not null) args = TerminalPlacement.WithBootstrap(args, watch);
+        foreach (var arg in args) psi.ArgumentList.Add(arg);
+        using var process = Process.Start(psi);
     }
 
     /// <summary>"auto" tries the rest in this order. Ptyxis is first: it is the default on Ubuntu 25.10+ and Fedora.</summary>
@@ -698,5 +703,5 @@ fi
         (Environment.GetEnvironmentVariable("PATH") ?? "").Split(':')
             .Any(dir => dir != "" && File.Exists(Path.Combine(dir, exe)));
 
-    private static string Quote(string s) => "'" + s.Replace("'", "'\\''") + "'";
+    internal static string Quote(string s) => "'" + s.Replace("'", "'\\''") + "'";
 }
