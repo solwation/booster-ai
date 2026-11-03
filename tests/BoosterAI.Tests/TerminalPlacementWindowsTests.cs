@@ -48,7 +48,8 @@ public class TerminalPlacementWindowsTests
                 processes.Add(process);
                 nint hwnd = 0;
                 await Until(() => (hwnd = TerminalPlacement.FindOwnedWindow(window)) != 0 && File.Exists(marker), 20000);
-                var pid = int.Parse(File.ReadAllText(marker));
+                var pid = 0;
+                await Until(() => TryReadPid(marker, out pid), 2000);
                 if (TabSession.Liveness("Ubuntu")?.Invoke(pid) is { } start) shells.Add((pid, start));
                 await Until(() => File.Exists(Path.Combine(request.Directory, "ready")), 10000);
                 // The bootstrap writes its final marker and disappears before closing the single remaining test tab.
@@ -102,8 +103,13 @@ public class TerminalPlacementWindowsTests
                         File.WriteAllText(Path.Combine(request.Directory, "ready"), "cleanup");
                 }
                 catch (IOException) { } // The exiting watcher may have removed its temporary directory already.
-                if (File.Exists(marker) && int.TryParse(File.ReadAllText(marker), out var pid)
-                    && TabSession.Liveness("Ubuntu")?.Invoke(pid) is { } start) shells.Add((pid, start));
+                if (File.Exists(marker))
+                {
+                    var pid = 0;
+                    var markerWait = Stopwatch.StartNew();
+                    while (!TryReadPid(marker, out pid) && markerWait.ElapsedMilliseconds < 2000) await Task.Delay(50);
+                    if (pid > 0 && TabSession.Liveness("Ubuntu")?.Invoke(pid) is { } start) shells.Add((pid, start));
+                }
             }
             // End the test's own shells first; closing a multi-tab window directly can leave a WT confirmation dialog.
             foreach (var shell in shells.Distinct()) await StopShell(shell);
@@ -145,6 +151,13 @@ public class TerminalPlacementWindowsTests
             }
             File.WriteAllText(Path.Combine(evidence, "observations.json"), JsonSerializer.Serialize(observations, new JsonSerializerOptions { WriteIndented = true }));
         }
+    }
+
+    private static bool TryReadPid(string marker, out int pid)
+    {
+        pid = 0;
+        try { return int.TryParse(File.ReadAllText(marker), out pid) && pid > 0; }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return false; }
     }
 
     private static async Task StopShell((int Pid, long Start) shell)
