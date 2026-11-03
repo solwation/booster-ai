@@ -1,0 +1,104 @@
+{
+  "revision": "82b480f",
+  "environment": {
+    "platform": "Windows",
+    "terminal": "Windows Terminal 1.24.12741.0, official portable distribution",
+    "desktop": "Separate non-input desktop; user desktop never switched",
+    "work_area_pixels": [
+      0,
+      0,
+      2560,
+      1392
+    ]
+  },
+  "checks": [
+    {
+      "mode": "normal",
+      "passed": true,
+      "before": {
+        "Bounds": {
+          "X": 40,
+          "Y": 50,
+          "Width": 800,
+          "Height": 500,
+          "Valid": true
+        },
+        "Device": "\\\\.\\DISPLAY1",
+        "WorkArea": {
+          "X": 0,
+          "Y": 0,
+          "Width": 2560,
+          "Height": 1392,
+          "Valid": true
+        },
+        "Maximized": false
+      },
+      "after": {
+        "Bounds": {
+          "X": 40,
+          "Y": 50,
+          "Width": 800,
+          "Height": 500,
+          "Valid": true
+        },
+        "Device": "\\\\.\\DISPLAY1",
+        "WorkArea": {
+          "X": 0,
+          "Y": 0,
+          "Width": 2560,
+          "Height": 1392,
+          "Valid": true
+        },
+        "Maximized": false
+      },
+      "foreground_unchanged_during_restore": true,
+      "test_processes_cleaned_up": true
+    },
+    {
+      "mode": "maximized",
+      "passed": true,
+      "before": {
+        "Bounds": {
+          "X": 0,
+          "Y": 0,
+          "Width": 2560,
+          "Height": 1392,
+          "Valid": true
+        },
+        "Device": "\\\\.\\DISPLAY1",
+        "WorkArea": {
+          "X": 0,
+          "Y": 0,
+          "Width": 2560,
+          "Height": 1392,
+          "Valid": true
+        },
+        "Maximized": true
+      },
+      "after": {
+        "Bounds": {
+          "X": 0,
+          "Y": 0,
+          "Width": 2560,
+          "Height": 1392,
+          "Valid": true
+        },
+        "Device": "\\\\.\\DISPLAY1",
+        "WorkArea": {
+          "X": 0,
+          "Y": 0,
+          "Width": 2560,
+          "Height": 1392,
+          "Valid": true
+        },
+        "Maximized": true
+      },
+      "foreground_unchanged_during_restore": true,
+      "test_processes_cleaned_up": true
+    }
+  ],
+  "limitations": [
+    "PrintWindow returned black images on the non-input GPU-rendered desktop; those images provide no visual evidence and are not published.",
+    "Physical multi-monitor/DPI changes and native Snap group membership were not tested. Monitor changes and docked bounds are covered by component tests."
+  ]
+}
