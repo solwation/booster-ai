@@ -15,6 +15,7 @@ public class TerminalPlacementWindowsTests
         var evidence = Environment.GetEnvironmentVariable("BOOSTERAI_PLACEMENT_E2E");
         if (!OperatingSystem.IsWindows() || string.IsNullOrEmpty(evidence)) return;
         Directory.CreateDirectory(evidence);
+        var maximize = Environment.GetEnvironmentVariable("BOOSTERAI_PLACEMENT_MAXIMIZED") is "1" or "true";
         var state = Path.Combine(evidence, "placement.json");
         File.Delete(state);
         var requests = new List<(TerminalWatchRequest Request, string Marker)>();
@@ -58,9 +59,10 @@ public class TerminalPlacementWindowsTests
                     var display = TerminalPlacement.Displays().First(d => d.Primary);
                     var work = display.WorkArea;
                     var wanted = new TerminalWindowState(new(work.X + 40, work.Y + 50,
-                        Math.Min(800, work.Width - 80), Math.Min(500, work.Height - 100)), display.Device, work, false);
+                        Math.Min(800, work.Width - 80), Math.Min(500, work.Height - 100)), display.Device, work, maximize);
                     var foreground = GetForegroundWindow();
                     TerminalPlacement.Restore(hwnd, wanted);
+                    await Until(() => TerminalPlacement.Capture(hwnd)?.Maximized == maximize, 5000);
                     await Until(() => (expected = TerminalPlacement.Read(state)) is { Bounds.Width: > 0 }, 5000);
                     expected = TerminalPlacement.Capture(hwnd);
                     Assert.NotNull(expected);
@@ -74,6 +76,7 @@ public class TerminalPlacementWindowsTests
                 }
                 else
                 {
+                    await Until(() => TerminalPlacement.Capture(hwnd)?.Maximized == expected!.Maximized, 5000);
                     var actual = TerminalPlacement.Capture(hwnd);
                     var screenshot = CaptureWindow(hwnd, Path.Combine(evidence, "after.png"));
                     observations.Add(new { round, expected, actual, screenshot });
@@ -83,6 +86,7 @@ public class TerminalPlacementWindowsTests
                     Assert.InRange(Math.Abs(actual.Bounds.Width - expected.Bounds.Width), 0, 2);
                     Assert.InRange(Math.Abs(actual.Bounds.Height - expected.Bounds.Height), 0, 2);
                     Assert.Equal(expected.Device, actual.Device);
+                    Assert.Equal(expected.Maximized, actual.Maximized);
                 }
             }
         }
@@ -128,7 +132,14 @@ public class TerminalPlacementWindowsTests
                 }
                 finally
                 {
-                    if (process.HasExited) observations.Add(new { processId = process.Id, exitCode = process.ExitCode });
+                    if (process.HasExited)
+                    {
+                        // A process reopened by PID can disappear before .NET retains an exit-code handle.
+                        int? exitCode = null;
+                        try { exitCode = process.ExitCode; }
+                        catch (InvalidOperationException) { }
+                        observations.Add(new { processId = process.Id, exitCode });
+                    }
                     process.Dispose();
                 }
             }
