@@ -39,9 +39,11 @@ public sealed class OptimizationViewModel : Observable
         }
     }
 
-    public string SliderMemoryText => $"{_sliderMemoryGb} GB";
+    public string SliderMemoryText => Loc.Format("settings.optimization.selectedCap", _sliderMemoryGb);
 
-    public int RecommendedGb => WslOptimization.RecommendMemoryGb(_totalSystemMemoryGb);
+    public int RecommendedGb => RecommendedLowerGb;
+    public int RecommendedLowerGb => WslOptimization.RecommendMemoryRangeGb(_totalSystemMemoryGb).lowerGb;
+    public int RecommendedUpperGb => WslOptimization.RecommendMemoryRangeGb(_totalSystemMemoryGb).upperGb;
     public int MinMemoryGb => WslOptimization.GetSliderBounds(_totalSystemMemoryGb).minGb;
     public int MaxMemoryGb => WslOptimization.GetSliderBounds(_totalSystemMemoryGb).maxGb;
 
@@ -51,12 +53,13 @@ public sealed class OptimizationViewModel : Observable
         ? $"{_currentAllocatedGb.Value} GB"
         : Loc.Get("settings.optimization.defaultUnset");
 
-    public string RecommendationText => Loc.Format("settings.optimization.recommendation",
-        _totalSystemMemoryGb, RecommendedGb, Math.Max(0, _totalSystemMemoryGb - RecommendedGb));
+    public string RecommendationText => Loc.Format("settings.optimization.recommendation", RecommendedLowerGb, RecommendedUpperGb);
 
-    /// <summary>Where the recommended value sits on the slider, 0 = minimum, 1 = maximum (#77).</summary>
-    public double RecommendationFraction =>
-        WslOptimization.SliderFraction(RecommendedGb, MinMemoryGb, MaxMemoryGb);
+    public double RecommendationLowerFraction =>
+        WslOptimization.SliderFraction(RecommendedLowerGb, MinMemoryGb, MaxMemoryGb);
+    public double RecommendationUpperFraction =>
+        WslOptimization.SliderFraction(RecommendedUpperGb, MinMemoryGb, MaxMemoryGb);
+    public double RecommendationCentreFraction => (RecommendationLowerFraction + RecommendationUpperFraction) / 2;
 
     public bool IsWindows => _fakeWindows || OperatingSystem.IsWindows();
     public bool IsLinux => !_fakeWindows && !OperatingSystem.IsWindows();
@@ -105,7 +108,11 @@ public sealed class OptimizationViewModel : Observable
         Raise(nameof(SliderMemoryText));
         Raise(nameof(RecommendedGb));
         Raise(nameof(RecommendationText));
-        Raise(nameof(RecommendationFraction));
+        Raise(nameof(RecommendedLowerGb));
+        Raise(nameof(RecommendedUpperGb));
+        Raise(nameof(RecommendationLowerFraction));
+        Raise(nameof(RecommendationUpperFraction));
+        Raise(nameof(RecommendationCentreFraction));
         Raise(nameof(MinMemoryGb));
         Raise(nameof(MaxMemoryGb));
         Raise(nameof(BannerVisible));
@@ -165,12 +172,12 @@ public sealed class OptimizationViewModel : Observable
     }
 
     /// <summary>Forces the optimization banner to display for screenshot verification.</summary>
-    public void ShowFakeUnoptimized()
+    public void ShowFakeUnoptimized(int totalGb = 64, int? selectedGb = null)
     {
         _fakeWindows = true;
-        _totalSystemMemoryGb = 32;
+        _totalSystemMemoryGb = totalGb;
         _currentAllocatedGb = null;
-        _sliderMemoryGb = 16;
+        _sliderMemoryGb = selectedGb ?? RecommendedLowerGb;
         _bannerVisible = true;
         Raise(nameof(IsWindows));
         Raise(nameof(IsLinux));
@@ -184,7 +191,11 @@ public sealed class OptimizationViewModel : Observable
         Raise(nameof(SliderMemoryText));
         Raise(nameof(RecommendedGb));
         Raise(nameof(RecommendationText));
-        Raise(nameof(RecommendationFraction));
+        Raise(nameof(RecommendedLowerGb));
+        Raise(nameof(RecommendedUpperGb));
+        Raise(nameof(RecommendationLowerFraction));
+        Raise(nameof(RecommendationUpperFraction));
+        Raise(nameof(RecommendationCentreFraction));
         Raise(nameof(BannerVisible));
     }
 }

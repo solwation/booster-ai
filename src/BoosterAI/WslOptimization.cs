@@ -82,17 +82,19 @@ public static partial class WslOptimization
     }
 
     /// <summary>
-    /// Computes recommended memory to allocate to WSL based on total host RAM (#76):
-    /// gives WSL sufficient RAM for AI tools and compilations while reserving enough for Windows.
+    /// A cautious starting range based only on total RAM, not other virtual machines' measured needs.
+    /// Keep roughly 3/8–1/2 for WSL; users sharing the host with VMs may need a lower cap (#80).
     /// </summary>
-    public static int RecommendMemoryGb(int totalGb)
+    public static (int lowerGb, int upperGb) RecommendMemoryRangeGb(int totalGb)
     {
-        if (totalGb <= 8) return Math.Max(2, totalGb - 2);
-        if (totalGb <= 16) return Math.Max(4, totalGb - 6);
-        if (totalGb <= 32) return Math.Max(8, totalGb - 10);
-        if (totalGb <= 64) return Math.Max(16, totalGb - 16);
-        return Math.Max(32, (int)Math.Round(totalGb * 0.75));
+        var (min, max) = GetSliderBounds(totalGb);
+        var lower = Math.Clamp((int)Math.Floor(totalGb * 0.375), min, max);
+        var upper = Math.Clamp((int)Math.Floor(totalGb * 0.5), lower, max);
+        return (lower, upper);
     }
+
+    /// <summary>The cautious starting value; existing saved and manually chosen caps remain independent.</summary>
+    public static int RecommendMemoryGb(int totalGb) => RecommendMemoryRangeGb(totalGb).lowerGb;
 
     /// <summary>Determines sensible lower and upper slider bounds for WSL memory allocation.</summary>
     public static (int minGb, int maxGb) GetSliderBounds(int totalGb)

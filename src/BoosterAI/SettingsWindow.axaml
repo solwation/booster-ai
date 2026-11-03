@@ -148,7 +148,7 @@
       <!-- Flik 3: Optimering -->
       <TabItem Header="{local:T settings.tab.optimization}">
         <ScrollViewer HorizontalScrollBarVisibility="Disabled" Margin="0,16,0,0">
-          <StackPanel Spacing="24">
+          <StackPanel Spacing="24" Margin="0,0,16,0">
 
             <!-- WSL Minnesoptimering -->
             <StackPanel Spacing="12">
@@ -171,30 +171,33 @@
                   <TextBlock Grid.Column="1" Text="{Binding Optimization.SliderMemoryText}" FontWeight="Bold" FontSize="16" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" />
                 </Grid>
 
-                <!-- Slider with the recommended value marked by a green tick and label (#77).
-                     The tick sits behind the slider so the thumb covers it at the recommendation. -->
+                <!-- Both bracket boundaries meet the slider track and stay visible behind its thumb. -->
                 <Panel Margin="0,4,0,0">
-                  <local:SliderMarkerPanel Fraction="{Binding Optimization.RecommendationFraction}" Inset="10"
-                                           IsHitTestVisible="False">
-                    <Border Width="2" Height="18" CornerRadius="1" Background="{DynamicResource RecommendedBrush}" />
-                  </local:SliderMarkerPanel>
+                  <local:SliderRangePanel LowerFraction="{Binding Optimization.RecommendationLowerFraction}"
+                                          UpperFraction="{Binding Optimization.RecommendationUpperFraction}"
+                                          Inset="10" Height="14" VerticalAlignment="Center" Margin="0,-16,0,0"
+                                          IsHitTestVisible="False">
+                    <Border Background="{DynamicResource RecommendedBrush}" Opacity="0.18" />
+                    <Border BorderBrush="{DynamicResource RecommendedBrush}" BorderThickness="2,0,2,2" />
+                  </local:SliderRangePanel>
                   <Slider Minimum="{Binding Optimization.MinMemoryGb}" Maximum="{Binding Optimization.MaxMemoryGb}"
                           Value="{Binding Optimization.SliderMemoryGb, Mode=TwoWay}"
-                          TickFrequency="1" IsSnapToTickEnabled="True" VerticalAlignment="Center" />
+                          TickFrequency="1" IsSnapToTickEnabled="True" VerticalAlignment="Center"
+                          AutomationProperties.Name="{local:T settings.optimization.memorySlider}"
+                          AutomationProperties.HelpText="{Binding Optimization.RecommendationText}" />
                 </Panel>
-                <local:SliderMarkerPanel Fraction="{Binding Optimization.RecommendationFraction}" Inset="10"
-                                         IsHitTestVisible="False" Margin="0,-10,0,6">
-                  <TextBlock Text="{local:T settings.optimization.recommendedMarker}" FontSize="11" FontWeight="SemiBold"
+                <local:SliderMarkerPanel Fraction="{Binding Optimization.RecommendationCentreFraction}" Inset="10"
+                                         IsHitTestVisible="False" Margin="0,-10,0,4">
+                  <TextBlock Text="{Binding Optimization.RecommendationText}" FontSize="12" FontWeight="SemiBold"
                              Foreground="{DynamicResource RecommendedBrush}" />
                 </local:SliderMarkerPanel>
 
-                <Grid ColumnDefinitions="*,Auto" Margin="0,2,0,0">
-                  <TextBlock Grid.Column="0" Classes="muted" FontSize="12.5" Text="{Binding Optimization.RecommendationText}" TextWrapping="Wrap" VerticalAlignment="Center" />
-                  <Button Grid.Column="1" Classes="link" Click="OnUseRecommendedMemory" Margin="12,0,0,0" VerticalAlignment="Center"
-                          ToolTip.Tip="{local:T settings.optimization.useRecommendation}">
-                    <TextBlock Text="{local:T settings.optimization.useRecommendation}" />
-                  </Button>
-                </Grid>
+                <TextBlock Classes="muted" FontSize="12.5" Text="{local:T settings.optimization.rangeHint}" TextWrapping="Wrap" />
+                <TextBlock Classes="muted" FontSize="12.5" Text="{local:T settings.optimization.lowerHint}" TextWrapping="Wrap" />
+                <TextBlock Classes="muted" FontSize="12.5" Text="{local:T settings.optimization.upperHint}" TextWrapping="Wrap" />
+                <Button Classes="link" Click="OnUseRecommendedMemory" HorizontalAlignment="Left"
+                        Content="{local:T settings.optimization.useRecommendation}"
+                        ToolTip.Tip="{local:T settings.optimization.useRecommendation}" />
 
                 <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,14,0,0">
                   <Button Classes="accent" Content="{local:T settings.optimization.save}" Click="OnSaveOptimization" Padding="14,7" />

@@ -145,14 +145,82 @@ public class WslOptimizationTests
     }
 
     [Theory]
-    [InlineData(8, 6)]
-    [InlineData(16, 10)]
-    [InlineData(32, 22)]
-    [InlineData(64, 48)]
-    [InlineData(128, 96)]
+    [InlineData(8, 3)]
+    [InlineData(16, 6)]
+    [InlineData(32, 12)]
+    [InlineData(64, 24)]
+    [InlineData(128, 48)]
     public void RecommendMemoryGbCalculatesSensibleHardwareValues(int totalGb, int expectedRecommendGb)
     {
         Assert.Equal(expectedRecommendGb, WslOptimization.RecommendMemoryGb(totalGb));
+    }
+
+    [Theory]
+    [InlineData(2, 2, 2)]
+    [InlineData(4, 2, 2)]
+    [InlineData(8, 3, 4)]
+    [InlineData(16, 6, 8)]
+    [InlineData(32, 12, 16)]
+    [InlineData(64, 24, 32)]
+    [InlineData(128, 48, 64)]
+    public void RecommendedRangeLeavesRoomForOtherWorkloads(int total, int lower, int upper)
+    {
+        Assert.Equal((lower, upper), WslOptimization.RecommendMemoryRangeGb(total));
+    }
+
+    [Fact]
+    public void RangeAndStartingValueStayWithinTheSliderForSmallAndLargeHosts()
+    {
+        for (var total = 2; total <= 512; total++)
+        {
+            var (lower, upper) = WslOptimization.RecommendMemoryRangeGb(total);
+            var (min, max) = WslOptimization.GetSliderBounds(total);
+            Assert.InRange(lower, min, max);
+            Assert.InRange(upper, lower, max);
+            Assert.Equal(lower, WslOptimization.RecommendMemoryGb(total));
+        }
+    }
+
+    [Fact]
+    public void NewSelectionUsesLowerLimitAndRecommendationDoesNotSilentlySave()
+    {
+        var file = Path.GetTempFileName();
+        try
+        {
+            WslConfigFile.UseCustomPath(file);
+            var vm = new OptimizationViewModel(new AppConfig());
+            Assert.Equal(vm.RecommendedLowerGb, vm.SliderMemoryGb);
+            vm.SliderMemoryGb = vm.MaxMemoryGb;
+            vm.ApplyRecommendation();
+            Assert.Equal(vm.RecommendedLowerGb, vm.SliderMemoryGb);
+            Assert.Null(WslConfigFile.Load().MemoryGb);
+        }
+        finally { WslConfigFile.UseCustomPath(null); File.Delete(file); }
+    }
+
+    [Fact]
+    public void SavedCapOutsideTheRangeIsRetainedUntilTheUserChoosesAnother()
+    {
+        var file = Path.GetTempFileName();
+        try
+        {
+            WslConfigFile.UseCustomPath(file);
+            File.WriteAllText(file, "[wsl2]\nmemory=48GB\nprocessors=4\n");
+            var vm = new OptimizationViewModel(new AppConfig());
+            Assert.Equal(48, vm.SliderMemoryGb);
+            Assert.Equal(48, vm.CurrentAllocatedGb);
+            vm.ShowFakeUnoptimized(64, 48);
+            Assert.Equal(48, vm.SliderMemoryGb);
+            Assert.True(vm.SliderMemoryGb > vm.RecommendedUpperGb);
+            vm.ApplyRecommendation();
+            Assert.Equal(24, vm.SliderMemoryGb);
+            Assert.Equal(48, WslConfigFile.Load().MemoryGb);
+            vm.SliderMemoryGb = 48;
+            vm.SaveConfig();
+            Assert.Equal(48, WslConfigFile.Load().MemoryGb);
+            Assert.Contains("processors=4", File.ReadAllText(file));
+        }
+        finally { WslConfigFile.UseCustomPath(null); File.Delete(file); }
     }
 
     [Fact]

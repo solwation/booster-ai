@@ -3,7 +3,7 @@ using Xunit;
 
 namespace BoosterAI.Tests;
 
-/// <summary>Recommendation marker on the WSL memory slider (#77).</summary>
+/// <summary>Recommendation markers on the WSL memory slider (#77, #80).</summary>
 public class SliderMarkerTests
 {
     [Theory]
@@ -59,8 +59,33 @@ public class SliderMarkerTests
     }
 
     [Theory]
-    [InlineData("sv", "Rekommenderat")]
-    [InlineData("en", "Recommended")]
+    [InlineData(400, 10, 0.25, 0.5, 105, 95)]
+    [InlineData(400, 10, 0, 1, 10, 380)]
+    [InlineData(400, 10, -1, 2, 10, 380)]
+    [InlineData(400, 10, double.NaN, double.NaN, 10, 2)]
+    [InlineData(0, 10, 0, 1, 0, 0)]
+    public void RangeBandUsesTheSlidersInsetScale(double width, double inset, double lower, double upper,
+        double expectedLeft, double expectedWidth)
+    {
+        var actual = SliderRangePanel.BandBounds(width, inset, lower, upper);
+        Assert.Equal(expectedLeft, actual.left, 6);
+        Assert.Equal(expectedWidth, actual.width, 6);
+    }
+
+    [Fact]
+    public void RangeBoundariesFollowSliderResizeAndBothRemainInsideThePanel()
+    {
+        var narrow = SliderRangePanel.BandBounds(300, 10, 0.25, 0.5);
+        var wide = SliderRangePanel.BandBounds(600, 10, 0.25, 0.5);
+        Assert.Equal(narrow.width * 580 / 280, wide.width, 6);
+        var collapsed = SliderRangePanel.BandBounds(5, 10, 1, 0);
+        Assert.InRange(collapsed.left, 0, 5);
+        Assert.InRange(collapsed.left + collapsed.width, 0, 5);
+    }
+
+    [Theory]
+    [InlineData("sv", "Vägledande spann")]
+    [InlineData("en", "Suggested range")]
     public void MarkerLabelIsLocalized(string language, string expected)
     {
         Assert.Equal(expected, Loc.Table(language)["settings.optimization.recommendedMarker"]);

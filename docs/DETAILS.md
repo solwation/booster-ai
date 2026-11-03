@@ -26,9 +26,13 @@ The settings window is divided into four tabs: **Projects** (name and directory,
 
 ### WSL optimization
 
-On Windows, WSL defaults to conservative memory limits that can throttle heavy AI coding CLI turns and parallel compilations. If no memory setting is configured in `%USERPROFILE%\.wslconfig`, the main window displays a prompt banner: *WSL is running with default resources. Optimize memory allocation for better performance with AI tools and heavy projects.* Clicking **Optimize …** opens Settings directly on the **Optimization** tab.
+WSL's default memory cap is 50% of the host's RAM. A custom cap is optional; raising it is not always an improvement when Windows applications or other virtual machines share the computer. Without an explicit setting in `%USERPROFILE%\.wslconfig`, the main window offers **Review memory …**, which opens the **Optimization** tab.
 
-The tab inspects total host physical RAM and calculates a tailored recommendation (reserving enough memory for Windows and background applications while giving WSL generous resources). Users can adjust allocation using a slider, where a green tick labelled *Recommended* marks the recommended value at its proportional position, apply recommendations with a single click, save directly to `.wslconfig` (preserving existing sections and comments), and restart WSL via `wsl.exe --shutdown`. A *Not now* button on the banner dismisses it permanently. On native Linux, the tab displays system memory and notes that `.wslconfig` resource tuning applies to Windows WSL hosts.
+The slider shows a bracketed, proportional suggested range with both GB limits, separate from the selected cap. The range is a cautious rule of thumb based on roughly 3/8–1/2 of total physical RAM, clamped to the slider's limits on small computers: for example, 64 GB gives **24–32 GB**. It does not measure or reserve memory for Hyper-V or other VMs. The setting is a maximum for WSL, not memory reserved immediately. All workloads still share the host's RAM.
+
+Start at the lower end, or below the range, when Hyper-V or other VMs run alongside WSL. Try the upper end for heavy WSL builds only when other workloads leave room, and keep headroom for peak demand. The initial selection without a custom cap and **Choose lower value** both use the lower limit. An existing saved cap is retained; users can still select values outside the suggestion. Saving writes `.wslconfig` while preserving its other sections and comments; **Restart WSL** runs `wsl.exe --shutdown` to apply the new cap. **Not now** dismisses the main-window prompt permanently. Native Linux displays system memory and explains that `.wslconfig` applies only to Windows/WSL.
+
+See [Microsoft's WSL configuration reference](https://learn.microsoft.com/windows/wsl/wsl-config) for the memory cap and defaults, and [Hyper-V memory management](https://learn.microsoft.com/en-us/windows-server/virtualization/hyper-v/features-terminology#dynamic-memory) for VM memory needs.
 
 ### Find projects
 

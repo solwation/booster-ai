@@ -13,7 +13,7 @@ namespace BoosterAI;
 /// focus changes. The window frame (title bar) is not drawn; only the client area.
 /// </summary>
 internal sealed record ScreenshotOptions(string File, string Window, string? FakeUpdate, string? FakeStatus, bool FakeDenied, bool FakeChanged,
-    int? FakeOutput = null, int FakeRestartable = 0, string? FakeSetup = null, string? Tab = null, bool FakeOptimization = false);
+    int? FakeOutput = null, int FakeRestartable = 0, string? FakeSetup = null, string? Tab = null, bool FakeOptimization = false, int? FakeMemoryCap = null);
 
 internal static class Screenshot
 {
@@ -29,7 +29,8 @@ internal static class Screenshot
             args.Contains("--fake-changed") || Value(args, "--window") == "restart", FakeOutputIndex(args),
             int.TryParse(Value(args, "--fake-restartable"), out var r) ? r : 0,
             args.Contains("--fake-setup") ? (Value(args, "--fake-setup") is "wsl" or "alias" ? Value(args, "--fake-setup") : "cli") : null,
-            Value(args, "--tab"), args.Contains("--fake-optimization"));
+            Value(args, "--tab"), args.Contains("--fake-optimization"),
+            int.TryParse(Value(args, "--fake-memory-cap"), out var cap) ? cap : null);
     }
 
     /// <summary>--fake-output [N]: the popup of the Nth running sample tab (0: the first, interactive; 1: Watching).</summary>
@@ -72,7 +73,7 @@ internal static class Screenshot
         if (o.FakeSetup == "alias") vm.ShowSampleAlias();
         else if (o.FakeSetup is { } setup) vm.ShowSampleSetup(wslMissing: setup == "wsl");
         // --fake-optimization shows the WSL optimization banner on the main page.
-        if (o.FakeOptimization) vm.Optimization.ShowFakeUnoptimized();
+        if (o.FakeOptimization) vm.Optimization.ShowFakeUnoptimized(selectedGb: o.FakeMemoryCap);
         // --fake-status "text" shows a status line message as normal, error:text as an error (screenshots only).
         if (o.FakeStatus is { } st)
             vm.ShowStatus(st.StartsWith("error:") ? st[6..] : st, st.StartsWith("error:"));
@@ -94,7 +95,7 @@ internal static class Screenshot
             else if (o.Tab is "optimization" or "optimering")
             {
                 sw.SelectedTabIndex = 2;
-                vm.Optimization.ShowFakeUnoptimized();
+                vm.Optimization.ShowFakeUnoptimized(selectedGb: o.FakeMemoryCap);
             }
             else if (o.Tab is "appearance" or "utseende") sw.SelectedTabIndex = 3;
             else if (o.Tab is "projects" or "projekt") sw.SelectedTabIndex = 0;
