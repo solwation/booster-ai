@@ -87,7 +87,8 @@ internal static class TerminalPlacement
             var ready = Path.Combine(dir, "ready");
             // No semicolons: wt treats them as command delimiters, including inside quoted arguments.
             File.WriteAllText(Path.Combine(dir, "bootstrap.cmd"),
-                "@echo off\r\nfor /l %%i in (1,1,12) do (\r\n if exist \"" + ready + "\" exit /b 0\r\n timeout /t 1 /nobreak >nul 2>nul\r\n)\r\nexit /b 0\r\n");
+                "@echo off\r\nfor /l %%i in (1,1,12) do (\r\n if exist \"" + ready + "\" goto done\r\n timeout /t 1 /nobreak >nul 2>nul\r\n)\r\n:done\r\n>\""
+                + Path.Combine(dir, "bootstrap-done") + "\" echo done\r\nexit /b 0\r\n");
             var file = Path.Combine(dir, "request.json");
             File.WriteAllText(file, JsonSerializer.Serialize(request, TerminalPlacementJson.Default.TerminalWatchRequest));
             var start = WatcherStart(file);

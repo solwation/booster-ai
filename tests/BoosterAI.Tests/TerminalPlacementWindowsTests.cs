@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text.Json;
+using System.Text;
 using BoosterAI;
 using Xunit;
 using SkiaSharp;
@@ -16,7 +17,6 @@ public class TerminalPlacementWindowsTests
         Directory.CreateDirectory(evidence);
         var state = Path.Combine(evidence, "placement.json");
         File.Delete(state);
-        var foreground = GetForegroundWindow();
         var requests = new List<(TerminalWatchRequest Request, string Marker)>();
         var processes = new List<Process>();
         var watchers = new List<Process>();
@@ -38,7 +38,9 @@ public class TerminalPlacementWindowsTests
                 var script = "printf '%s' $$ > " + Launcher.Quote(PathMapping.ToWslPath(marker)) + "\nread -r -t 120 ignored || true";
                 var args = TerminalPlacement.WithBootstrap(Launcher.WindowsTerminalArgs(
                     [new TabConfig { Name = request.Token + " check", Script = script }], "Ubuntu", window: window), request);
-                var psi = new ProcessStartInfo("wt.exe")
+                // Run this opt-in check on the conductor's isolated Windows desktop. Hidden startup alone does not hide WT.
+                var terminal = Environment.GetEnvironmentVariable("BOOSTERAI_PLACEMENT_TERMINAL") ?? "wt.exe";
+                var psi = new ProcessStartInfo(terminal)
                     { UseShellExecute = false, CreateNoWindow = true, WindowStyle = ProcessWindowStyle.Hidden };
                 foreach (var arg in args) psi.ArgumentList.Add(arg);
                 var process = Process.Start(psi)!;
@@ -48,19 +50,22 @@ public class TerminalPlacementWindowsTests
                 var pid = int.Parse(File.ReadAllText(marker));
                 if (TabSession.Liveness("Ubuntu")?.Invoke(pid) is { } start) shells.Add((pid, start));
                 await Until(() => File.Exists(Path.Combine(request.Directory, "ready")), 10000);
-                // SW_HIDE from the launch is preserved: placement operations must not change keyboard focus.
-                Assert.Equal(foreground, GetForegroundWindow());
+                // The bootstrap writes its final marker and disappears before closing the single remaining test tab.
+                await Until(() => File.Exists(Path.Combine(request.Directory, "bootstrap-done"))
+                    && WindowTitle(hwnd).Contains(request.Token + " check", StringComparison.Ordinal), 15000);
                 if (round == 0)
                 {
                     var display = TerminalPlacement.Displays().First(d => d.Primary);
                     var work = display.WorkArea;
                     var wanted = new TerminalWindowState(new(work.X + 40, work.Y + 50,
                         Math.Min(800, work.Width - 80), Math.Min(500, work.Height - 100)), display.Device, work, false);
+                    var foreground = GetForegroundWindow();
                     TerminalPlacement.Restore(hwnd, wanted);
                     await Until(() => (expected = TerminalPlacement.Read(state)) is { Bounds.Width: > 0 }, 5000);
                     expected = TerminalPlacement.Capture(hwnd);
                     Assert.NotNull(expected);
                     await Until(() => TerminalPlacement.Read(state) == expected, 5000);
+                    Assert.Equal(foreground, GetForegroundWindow());
                     var screenshot = CaptureWindow(hwnd, Path.Combine(evidence, "before.png"));
                     observations.Add(new { round, expected, screenshot });
                     PostMessage(hwnd, 0x0010, 0, 0); // WM_CLOSE, only our proven HWND.
@@ -78,7 +83,6 @@ public class TerminalPlacementWindowsTests
                     Assert.InRange(Math.Abs(actual.Bounds.Width - expected.Bounds.Width), 0, 2);
                     Assert.InRange(Math.Abs(actual.Bounds.Height - expected.Bounds.Height), 0, 2);
                     Assert.Equal(expected.Device, actual.Device);
-                    Assert.Equal(foreground, GetForegroundWindow());
                 }
             }
         }
@@ -87,12 +91,33 @@ public class TerminalPlacementWindowsTests
             // A failure before the normal handle/PID registration must also close everything this test started.
             foreach (var (request, marker) in requests)
             {
-                var owned = TerminalPlacement.FindOwnedWindow(request.Window);
-                var candidates = TerminalPlacement.Windows().Where(h => TerminalPlacement.Candidate(h, request));
-                foreach (var hwnd in candidates.Append(owned).Where(h => h != 0).Distinct())
-                    PostMessage(hwnd, 0x0010, 0, 0);
+                // Release the bootstrap before closing a test window, including early failures.
+                try
+                {
+                    if (Directory.Exists(request.Directory))
+                        File.WriteAllText(Path.Combine(request.Directory, "ready"), "cleanup");
+                }
+                catch (IOException) { } // The exiting watcher may have removed its temporary directory already.
                 if (File.Exists(marker) && int.TryParse(File.ReadAllText(marker), out var pid)
                     && TabSession.Liveness("Ubuntu")?.Invoke(pid) is { } start) shells.Add((pid, start));
+            }
+            // End the test's own shells first; closing a multi-tab window directly can leave a WT confirmation dialog.
+            foreach (var shell in shells.Distinct()) await StopShell(shell);
+            foreach (var (request, _) in requests)
+            {
+                var wait = Stopwatch.StartNew();
+                while (wait.ElapsedMilliseconds < 15000)
+                {
+                    var owned = TerminalPlacement.FindOwnedWindow(request.Window);
+                    var candidates = TerminalPlacement.Windows().Where(h => TerminalPlacement.Candidate(h, request));
+                    var handles = candidates.Append(owned).Where(h => h != 0).Distinct().ToArray();
+                    if (handles.Length == 0) break;
+                    foreach (var hwnd in handles)
+                        if (File.Exists(Path.Combine(request.Directory, "bootstrap-done"))
+                            && WindowTitle(hwnd).Contains(request.Token + " check", StringComparison.Ordinal))
+                            PostMessage(hwnd, 0x0010, 0, 0);
+                    await Task.Delay(50);
+                }
             }
             foreach (var process in processes.Concat(watchers))
             {
@@ -107,24 +132,31 @@ public class TerminalPlacementWindowsTests
                     process.Dispose();
                 }
             }
-            // WSL may delay terminal teardown. Kill only the test's recorded, still-identical shell, never a shared host.
-            foreach (var shell in shells)
-            {
-                if (TabSession.Liveness("Ubuntu")?.Invoke(shell.Pid) != shell.Start) continue;
-                using var kill = Process.Start(new ProcessStartInfo("wsl.exe")
-                {
-                    UseShellExecute = false, CreateNoWindow = true,
-                    ArgumentList = { "-d", "Ubuntu", "--exec", "bash", "-c", "kill -KILL " + shell.Pid }
-                });
-                if (kill is not null)
-                {
-                    try { if (!await Wait(kill, 10000)) kill.Kill(entireProcessTree: true); }
-                    finally { await kill.WaitForExitAsync(); }
-                }
-            }
             File.WriteAllText(Path.Combine(evidence, "observations.json"), JsonSerializer.Serialize(observations, new JsonSerializerOptions { WriteIndented = true }));
         }
     }
+
+    private static async Task StopShell((int Pid, long Start) shell)
+    {
+        // Only stop the exact recorded WSL process, never a shared terminal host or reused PID.
+        if (TabSession.Liveness("Ubuntu")?.Invoke(shell.Pid) != shell.Start) return;
+        using var kill = Process.Start(new ProcessStartInfo("wsl.exe")
+        {
+            UseShellExecute = false, CreateNoWindow = true,
+            ArgumentList = { "-d", "Ubuntu", "--exec", "bash", "-c", "kill -KILL " + shell.Pid }
+        });
+        if (kill is null) return;
+        try { if (!await Wait(kill, 10000)) kill.Kill(entireProcessTree: true); }
+        finally { await kill.WaitForExitAsync(); }
+    }
+
+    private static string WindowTitle(nint hwnd)
+    {
+        var title = new StringBuilder(512);
+        GetWindowText(hwnd, title, title.Capacity);
+        return title.ToString();
+    }
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern int GetWindowText(nint hwnd, StringBuilder title, int size);
 
     // PrintWindow captures only the dedicated test terminal; never capture the user's desktop.
     private static bool CaptureWindow(nint hwnd, string file)
