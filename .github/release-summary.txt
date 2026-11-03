@@ -1,5 +1,5 @@
 # One-line summary of the next release, shown in the app's update bar. Update it before tagging.
 # `version` must equal the tag being released (it stops a stale summary from shipping again).
-version: 0.21.0
-sv: WSL-terminalen minns nu skärm, placering och storlek mellan sessioner, även maximering och dockad geometri.
-en: The WSL terminal now remembers its screen, position and size across sessions, including maximized and docked bounds.
+version: 0.22.0
+sv: Minnesreglaget visar ett vägledande spann och råd för att dela RAM mellan WSL, Windows och Hyper-V.
+en: The memory slider shows a suggested range and advice for sharing RAM between WSL, Windows and Hyper-V.
