@@ -29,7 +29,7 @@ public class TerminalPlacementWindowsTests
             for (var round = 0; round < 2; round++)
             {
                 var window = "BoosterAI-placement-test-" + Guid.NewGuid().ToString("N");
-                var request = TerminalPlacement.Prepare(window, state);
+                var request = TerminalPlacement.Prepare(window, state, Path.Combine(evidence, "watch-" + round + ".log"));
                 Assert.NotNull(request);
                 var marker = Path.Combine(evidence, "shell-" + round);
                 File.Delete(marker);
@@ -101,7 +101,11 @@ public class TerminalPlacementWindowsTests
                     if (!process.HasExited && !await Wait(process, 10000)) process.Kill(entireProcessTree: true);
                     await process.WaitForExitAsync();
                 }
-                finally { process.Dispose(); }
+                finally
+                {
+                    if (process.HasExited) observations.Add(new { processId = process.Id, exitCode = process.ExitCode });
+                    process.Dispose();
+                }
             }
             // WSL may delay terminal teardown. Kill only the test's recorded, still-identical shell, never a shared host.
             foreach (var shell in shells)

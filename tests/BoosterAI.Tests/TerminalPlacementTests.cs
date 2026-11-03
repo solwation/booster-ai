@@ -64,11 +64,12 @@ public class TerminalPlacementTests
     public void IdentificationRequiresExactNonceNewHandleTerminalClassAndProcess()
     {
         var r = new TerminalWatchRequest("nonce", "window", "temp", "state", [1, 2]);
-        Assert.True(TerminalPlacement.IsCandidate(3, "nonce", "CASCADIA_HOSTING_WINDOW", "WindowsTerminal", r));
-        Assert.False(TerminalPlacement.IsCandidate(1, "nonce", "CASCADIA_HOSTING_WINDOW", "WindowsTerminal", r));
-        Assert.False(TerminalPlacement.IsCandidate(3, "other-title", "CASCADIA_HOSTING_WINDOW", "WindowsTerminal", r));
+        Assert.True(TerminalPlacement.IsCandidate(3, "nonce", "CASCADIA_HOSTING_WINDOW_CLASS", "WindowsTerminal", r));
+        Assert.False(TerminalPlacement.IsCandidate(1, "nonce", "CASCADIA_HOSTING_WINDOW_CLASS", "WindowsTerminal", r));
+        Assert.False(TerminalPlacement.IsCandidate(3, "other-title", "CASCADIA_HOSTING_WINDOW_CLASS", "WindowsTerminal", r));
+        Assert.False(TerminalPlacement.IsCandidate(3, "nonce", "CASCADIA_HOSTING_WINDOW", "WindowsTerminal", r));
         Assert.False(TerminalPlacement.IsCandidate(3, "nonce", "other", "WindowsTerminal", r));
-        Assert.False(TerminalPlacement.IsCandidate(3, "nonce", "CASCADIA_HOSTING_WINDOW", "other", r));
+        Assert.False(TerminalPlacement.IsCandidate(3, "nonce", "CASCADIA_HOSTING_WINDOW_CLASS", "other", r));
     }
 
     [Fact]

@@ -15,7 +15,7 @@ internal sealed record TerminalBounds(int X, int Y, int Width, int Height)
 }
 internal sealed record TerminalDisplay(string Device, TerminalBounds WorkArea, bool Primary);
 internal sealed record TerminalWindowState(TerminalBounds Bounds, string Device, TerminalBounds WorkArea, bool Maximized);
-internal sealed record TerminalWatchRequest(string Token, string Window, string Directory, string StateFile, long[] ExistingWindows, int WatcherPid = 0);
+internal sealed record TerminalWatchRequest(string Token, string Window, string Directory, string StateFile, long[] ExistingWindows, int WatcherPid = 0, string? TraceFile = null);
 
 [JsonSerializable(typeof(TerminalWindowState))]
 [JsonSerializable(typeof(TerminalWatchRequest))]
@@ -73,7 +73,7 @@ internal static class TerminalPlacement
     }
 
     /// <summary>Prepare the optional handshake before opening Terminal. Failure must never prevent the actual tabs.</summary>
-    internal static TerminalWatchRequest? Prepare(string window, string? stateFile = null)
+    internal static TerminalWatchRequest? Prepare(string window, string? stateFile = null, string? traceFile = null)
     {
         if (!OperatingSystem.IsWindows() || FindOwnedWindow(window) != 0) return null;
         TerminalWatchRequest? request = null;
@@ -83,14 +83,17 @@ internal static class TerminalPlacement
             var dir = Path.Combine(Path.GetTempPath(), token);
             if (dir.Contains(';')) return null; // wt splits semicolons even inside quoted arguments.
             Directory.CreateDirectory(dir);
-            request = new(token, window, dir, stateFile ?? StateFile, Windows().Select(h => (long)h).ToArray());
+            request = new(token, window, dir, stateFile ?? StateFile, Windows().Select(h => (long)h).ToArray(), TraceFile: traceFile);
             var ready = Path.Combine(dir, "ready");
             // No semicolons: wt treats them as command delimiters, including inside quoted arguments.
             File.WriteAllText(Path.Combine(dir, "bootstrap.cmd"),
                 "@echo off\r\nfor /l %%i in (1,1,12) do (\r\n if exist \"" + ready + "\" exit /b 0\r\n timeout /t 1 /nobreak >nul 2>nul\r\n)\r\nexit /b 0\r\n");
             var file = Path.Combine(dir, "request.json");
             File.WriteAllText(file, JsonSerializer.Serialize(request, TerminalPlacementJson.Default.TerminalWatchRequest));
-            using var process = Process.Start(WatcherStart(file));
+            var start = WatcherStart(file);
+            Trace(request, "starting helper: " + start.FileName + " " + string.Join(" | ", start.ArgumentList));
+            using var process = Process.Start(start);
+            Trace(request, "helper PID " + process?.Id);
             return process is null ? null : request with { WatcherPid = process.Id };
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.ComponentModel.Win32Exception or InvalidOperationException)
@@ -163,7 +166,7 @@ internal static class TerminalPlacement
 
     internal static bool IsCandidate(long handle, string title, string windowClass, string processName,
         TerminalWatchRequest request) => !request.ExistingWindows.Contains(handle)
-        && title.Contains(request.Token, StringComparison.Ordinal) && windowClass == "CASCADIA_HOSTING_WINDOW"
+        && title.Contains(request.Token, StringComparison.Ordinal) && windowClass == "CASCADIA_HOSTING_WINDOW_CLASS"
         && processName.Equals("WindowsTerminal", StringComparison.OrdinalIgnoreCase);
 
     internal static nint FindOwnedWindow(string window) => Windows().FirstOrDefault(h => GetProp(h, PropertyPrefix + window) != 0);
@@ -181,22 +184,37 @@ internal static class TerminalPlacement
         {
             request = JsonSerializer.Deserialize(File.ReadAllText(requestFile), TerminalPlacementJson.Default.TerminalWatchRequest);
             if (request is null) return;
+            Trace(request, "watch entered PID=" + Environment.ProcessId);
             var until = Stopwatch.StartNew();
+            var nextTrace = 0L;
             while (until.Elapsed < TimeSpan.FromSeconds(15))
             {
-                var candidates = Windows().Where(h => Candidate(h, request)).ToArray();
+                var handles = Windows();
+                var candidates = handles.Where(h => Candidate(h, request)).ToArray();
+                if (until.ElapsedMilliseconds >= nextTrace && request.TraceFile is not null)
+                {
+                    Trace(request, "candidate count=" + candidates.Length + " real-ready=" + File.Exists(Path.Combine(request.Directory, "real-ready")));
+                    foreach (var handle in handles.Where(h => !request.ExistingWindows.Contains((long)h)))
+                        TraceWindow(request, handle);
+                    nextTrace = until.ElapsedMilliseconds + 1000;
+                }
                 if (candidates.Length == 1) { hwnd = candidates[0]; break; }
                 Thread.Sleep(50);
             }
-            if (hwnd == 0) return;
+            if (hwnd == 0) { Trace(request, "timeout: no unique terminal HWND"); return; }
+            Trace(request, "identified HWND=" + hwnd);
             property = PropertyPrefix + request.Window;
-            if (GetProp(hwnd, property) != 0 || !SetProp(hwnd, property, Environment.ProcessId)) return;
+            if (GetProp(hwnd, property) != 0 || !SetProp(hwnd, property, Environment.ProcessId))
+            { Trace(request, "cannot set ownership property, last-error=" + Marshal.GetLastWin32Error()); return; }
+            Trace(request, "ownership property set");
             // Never close the last bootstrap tab before at least one real tab has actually started.
             while (!File.Exists(Path.Combine(request.Directory, "real-ready")) && until.Elapsed < TimeSpan.FromSeconds(15)
                 && GetProp(hwnd, property) == Environment.ProcessId) Thread.Sleep(50);
-            if (!File.Exists(Path.Combine(request.Directory, "real-ready"))) return;
+            if (!File.Exists(Path.Combine(request.Directory, "real-ready"))) { Trace(request, "timeout: real tab handshake missing"); return; }
+            Trace(request, "real tab handshake received");
             var saved = Read(request.StateFile);
             Restore(hwnd, saved);
+            Trace(request, "restore finished, saved=" + (saved is not null));
             // Unblock the bootstrap even if there was no saved state. It is bounded independently if this process dies.
             File.WriteAllText(Path.Combine(request.Directory, "ready"), "ready");
             TerminalWindowState? previous = null;
@@ -211,12 +229,34 @@ internal static class TerminalPlacement
                 Thread.Sleep(500);
             }
         }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException or System.ComponentModel.Win32Exception) { }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException or System.ComponentModel.Win32Exception)
+        { Trace(request, "watch failure: " + e); }
         finally
         {
             if (hwnd != 0 && property is not null && GetProp(hwnd, property) == Environment.ProcessId) RemoveProp(hwnd, property);
+            Trace(request, "watch exiting");
             if (request is not null) Clean(request.Directory);
         }
+    }
+
+    private static void Trace(TerminalWatchRequest? request, string message)
+    {
+        if (request?.TraceFile is not { } file) return;
+        try { File.AppendAllText(file, DateTime.UtcNow.ToString("O") + " " + message + Environment.NewLine); }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }
+    }
+
+    private static void TraceWindow(TerminalWatchRequest request, nint hwnd)
+    {
+        var title = new StringBuilder(512); GetWindowText(hwnd, title, title.Capacity);
+        var windowClass = new StringBuilder(256); GetClassName(hwnd, windowClass, windowClass.Capacity);
+        GetWindowThreadProcessId(hwnd, out var pid);
+        try
+        {
+            using var process = Process.GetProcessById((int)pid);
+            Trace(request, $"HWND={hwnd} PID={pid} class={windowClass} process={process.ProcessName} title={title}");
+        }
+        catch (ArgumentException) { Trace(request, $"HWND={hwnd} PID={pid} process already exited"); }
     }
 
     private static void Clean(string directory)
@@ -324,7 +364,7 @@ internal static class TerminalPlacement
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern int GetWindowText(nint hwnd, StringBuilder text, int max);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern int GetClassName(nint hwnd, StringBuilder text, int max);
     [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(nint hwnd, out uint pid);
-    [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern bool SetProp(nint hwnd, string name, nint value);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)] private static extern bool SetProp(nint hwnd, string name, nint value);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] internal static extern nint GetProp(nint hwnd, string name);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern nint RemoveProp(nint hwnd, string name);
     [DllImport("user32.dll")] private static extern nint SetThreadDpiAwarenessContext(nint context);
