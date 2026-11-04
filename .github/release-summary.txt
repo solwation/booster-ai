@@ -1,3 +1,3 @@
-version: 0.25.0
-sv: BoosterAI kommer ihåg sin egen fönsterstorlek och maximering mellan omstarter och installationer.
-en: BoosterAI remembers its own window size and maximized state across restarts and installations.
+version: 0.25.1
+sv: Fönstret stannar öppet när BoosterAI återställs från systemfältet eller startas igen från menyn.
+en: The window stays visible when restoring BoosterAI from the tray or launching it again from the menu.
