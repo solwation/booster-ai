@@ -19,3 +19,12 @@ and secondary launches exited; the user's real app was never activated.
 The final Windows full suite, installation restart and release are conductor gates.
 Screenshot hook is inapplicable: no layout changed and the screenshot mode ignores
 window persistence intentionally. No launcher/terminal arguments changed.
+
+Final Windows suite:585/585 passed. [Real installation](installation.json) replaced
+the old installed process and automatically started exactly one0.25.0+7ee2d03
+process in the background; installed executable hash matches the verified build.
+All six observed managed PTYs returned to saved80% after startup's zoom pulse.
+The desktop foreground handle changed between the installation's before/after
+samples, so that run does not establish unchanged foreground; the installed app
+was subsequently verified hidden/minimized and not the foreground owner. Native
+isolated-desktop checks independently verified minimized startup.

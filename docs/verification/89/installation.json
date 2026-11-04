@@ -1,0 +1,20 @@
+{
+  "exit": 0,
+  "savedZoomBefore": 80,
+  "savedZoomAfter": 80,
+  "observedFonts": [
+    9.6,
+    12
+  ],
+  "managedPtysObserved": 6,
+  "ptysResizedDuringPulse": 6,
+  "ptysAtOriginalSize": 6,
+  "windowsTestsPassed": 585,
+  "wslTestsPassed": 585,
+  "installedVersion": "0.25.0+7ee2d03",
+  "oneInstalledProcess": true,
+  "installedAppIsForeground": false,
+  "hiddenOrMinimized": true,
+  "installedHashMatchesDist": true,
+  "foregroundHandleUnchangedAcrossInstall": false
+}

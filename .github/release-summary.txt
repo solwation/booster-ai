@@ -1,3 +1,3 @@
-version: 0.24.1
-sv: En programinstans, bevarade fliknamn och automatisk återstart med rätt textstorlek efter installation.
-en: One app instance, restored tab names and automatic restart with saved terminal font size after installation.
+version: 0.25.0
+sv: BoosterAI kommer ihåg sin egen fönsterstorlek och maximering mellan omstarter och installationer.
+en: BoosterAI remembers its own window size and maximized state across restarts and installations.
