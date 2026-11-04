@@ -300,5 +300,10 @@
   "settings.optimization.selectedCap": "Selected cap: {0} GB",
   "settings.optimization.rangeHint": "A rule of thumb based on total RAM. Hyper-V and other VMs’ needs have not been measured.",
   "settings.optimization.lowerHint": "Running Hyper-V or other VMs too: start at the lower end or below it.",
-  "settings.optimization.upperHint": "Heavy WSL builds: try the upper end if there is room. Leave headroom for peaks."
+  "settings.optimization.upperHint": "Heavy WSL builds: try the upper end if there is room. Leave headroom for peaks.",
+  "subtab.expand": "Show or hide subtabs",
+  "subtab.add": "+ Add subtab",
+  "subtab.summary": "{0} subtabs · same folder",
+  "subtab.remove": "Remove subtab",
+  "subtab.remove.tip": "Remove this subtab. Close its terminal tab first if it is open."
 }

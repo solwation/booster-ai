@@ -146,11 +146,12 @@
 
     <ScrollViewer Grid.Row="3" HorizontalScrollBarVisibility="Disabled">
       <Panel>
-        <ItemsControl ItemsSource="{Binding Tabs}">
+        <ItemsControl ItemsSource="{Binding VisibleTabs}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="local:TabViewModel">
               <Border Classes="row" DragDrop.AllowDrop="True" DragDrop.DragOver="OnTabDragOver"
                       DragDrop.DragLeave="OnTabDragLeave" DragDrop.Drop="OnTabDrop">
+                <StackPanel>
                 <Grid ColumnDefinitions="4,20,36,*,200,132,195,110,130">
                   <Border Grid.Column="0" Background="{Binding ColorBrush}" CornerRadius="2" />
                   <TextBlock Grid.Column="1" Text="⋮" Foreground="{DynamicResource FaintBrush}" FontSize="16"
@@ -160,14 +161,26 @@
                   <CheckBox Grid.Column="2" IsChecked="{Binding Enabled}" AutomationProperties.Name="{Binding Name}" VerticalAlignment="Center"
                             MinWidth="0" ToolTip.Tip="{local:T tab.open.tip}" />
 
-                  <!-- The path is a hover tip on the name; the icon after it opens the folder. -->
-                  <Grid Grid.Column="3" ColumnDefinitions="*,Auto" HorizontalAlignment="Left" VerticalAlignment="Center"
-                        Opacity="{Binding RowOpacity}" Margin="0,0,16,0">
-                    <TextBlock Grid.Column="0" Classes="name" Text="{Binding Name}" VerticalAlignment="Center"
-                               TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Directory}" />
-                    <Button Grid.Column="1" Classes="icon" Click="OnOpenFolder" Margin="6,-6,0,-6"
+                  <!-- The folder belongs to the project; children only edit their own tab name. -->
+                  <Grid Grid.Column="3" ColumnDefinitions="Auto,*,Auto,Auto" VerticalAlignment="Center"
+                        Opacity="{Binding RowOpacity}" Margin="0,0,10,0">
+                    <Button Grid.Column="0" Classes="icon" Click="OnExpandProject" IsVisible="{Binding IsProject}"
+                            Content="{Binding ExpandGlyph}" Padding="2,4" Margin="-4,0,4,0" Width="20"
+                            ToolTip.Tip="{local:T subtab.expand}" AutomationProperties.Name="{local:T subtab.expand}" />
+                    <TextBlock Grid.Column="0" Text="↳" IsVisible="{Binding IsSubTab}" Width="20"
+                               Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1" Classes="name" Text="{Binding Name}" IsVisible="{Binding IsProject}"
+                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Directory}" />
+                    <TextBox Grid.Column="1" Classes="inline name" Text="{Binding Name}" IsVisible="{Binding IsSubTab}"
+                             Watermark="{local:T col.tabname}" ToolTip.Tip="{Binding Directory}" MinWidth="30" />
+                    <Button Grid.Column="2" Classes="icon" Click="OnOpenFolder" Margin="4,-6,0,-6" IsVisible="{Binding IsProject}"
                             ToolTip.Tip="{local:T folder.open.tip}" AutomationProperties.Name="{local:T folder.open.name}">
                       <Path Data="{StaticResource OpenExternalIcon}" Width="12" Height="12" />
+                    </Button>
+                    <Button Grid.Column="3" Classes="icon remove" Click="OnRemoveSubTab" IsVisible="{Binding IsSubTab}"
+                            IsEnabled="{Binding CanRemoveSubTab}" Margin="2,0,0,0"
+                            ToolTip.Tip="{local:T subtab.remove.tip}" AutomationProperties.Name="{local:T subtab.remove}">
+                      <Path Data="{StaticResource CloseIcon}" Width="9" Height="9" />
                     </Button>
                   </Grid>
 
@@ -229,6 +242,14 @@
                                 OnContent="{x:Null}" OffContent="{x:Null}" MinWidth="0"
                                 ToolTip.Tip="{local:T once.tip}" AutomationProperties.Name="{local:T col.once}" />
                 </Grid>
+                <StackPanel Orientation="Horizontal" Margin="62,6,0,2" Spacing="12" IsVisible="{Binding IsProject}">
+                  <StackPanel Orientation="Horizontal" Spacing="12" IsVisible="{Binding Expanded}">
+                    <Button Classes="link" Content="{local:T subtab.add}" Click="OnAddSubTab" Padding="0,2"
+                            AutomationProperties.Name="{local:T subtab.add}" />
+                    <TextBlock Classes="muted" Text="{Binding SubTabSummary}" VerticalAlignment="Center" FontSize="12" />
+                  </StackPanel>
+                </StackPanel>
+                </StackPanel>
               </Border>
             </DataTemplate>
           </ItemsControl.ItemTemplate>

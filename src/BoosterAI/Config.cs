@@ -6,6 +6,11 @@ namespace BoosterAI;
 /// <summary>One terminal tab: where it opens and which AI CLI starts in it.</summary>
 public sealed class TabConfig
 {
+    /// <summary>Stable tab identity, also written into session metadata; old files acquire it on save.</summary>
+    public string Id { get; set; } = "";
+    /// <summary>Extra tabs sharing this project's directory, saved in launch order. Only one child level is supported.</summary>
+    public List<TabConfig> SubTabs { get; set; } = [];
+    public bool Expanded { get; set; }
     public string Name { get; set; } = Loc.Get("tab.newName");
     /// <summary>Position in the colour theme; -1 in files from before themes (derived from Color).</summary>
     public int ColorIndex { get; set; } = -1;
@@ -194,5 +199,22 @@ public static class ConfigMerge
             }
         }
         return taken;
+    }
+}
+
+/// <summary>Projects on disk, individual tabs at launch. Child directories always come from their project.</summary>
+public static class TabGroups
+{
+    public static IEnumerable<TabConfig> Flatten(IEnumerable<TabConfig> projects)
+    {
+        foreach (var project in projects)
+        {
+            yield return project;
+            foreach (var child in project.SubTabs)
+            {
+                child.Directory = project.Directory;
+                yield return child;
+            }
+        }
     }
 }

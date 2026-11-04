@@ -300,5 +300,10 @@
   "settings.optimization.selectedCap": "Valt tak: {0} GB",
   "settings.optimization.rangeHint": "Tumregel utifrån totalt RAM. Hyper-V och andra VM:ars behov är inte uppmätta.",
   "settings.optimization.lowerHint": "Hyper-V eller andra VM samtidigt: börja i nedre delen eller lägre.",
-  "settings.optimization.upperHint": "Tunga WSL-byggen: prova övre delen om utrymme finns. Lämna marginal för toppar."
+  "settings.optimization.upperHint": "Tunga WSL-byggen: prova övre delen om utrymme finns. Lämna marginal för toppar.",
+  "subtab.expand": "Visa eller dölj undertabbar",
+  "subtab.add": "+ Lägg till undertabb",
+  "subtab.summary": "{0} undertabbar · samma mapp",
+  "subtab.remove": "Ta bort undertabb",
+  "subtab.remove.tip": "Ta bort undertabben. Stäng dess terminaltabb först om den är öppen."
 }

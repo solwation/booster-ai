@@ -32,7 +32,7 @@ public partial class SettingsWindow : Window
 
     private void OnRemoveTab(object? sender, RoutedEventArgs e)
     {
-        if ((sender as Control)?.DataContext is TabViewModel tab) _vm.Tabs.Remove(tab);
+        if ((sender as Control)?.DataContext is TabViewModel tab) _vm.RemoveProject(tab);
     }
 
     private void OnNextColor(object? sender, RoutedEventArgs e) =>

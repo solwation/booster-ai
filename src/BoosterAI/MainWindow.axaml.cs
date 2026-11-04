@@ -72,6 +72,21 @@ public partial class MainWindow : Window
         if ((sender as Control)?.DataContext is TabViewModel tab) _vm.OpenFolder(tab);
     }
 
+    private void OnExpandProject(object? sender, RoutedEventArgs e)
+    {
+        if ((sender as Control)?.DataContext is TabViewModel tab) tab.Expanded = !tab.Expanded;
+    }
+
+    private void OnAddSubTab(object? sender, RoutedEventArgs e)
+    {
+        if ((sender as Control)?.DataContext is TabViewModel tab) _vm.AddSubTab(tab);
+    }
+
+    private void OnRemoveSubTab(object? sender, RoutedEventArgs e)
+    {
+        if ((sender as Control)?.DataContext is TabViewModel tab) _vm.RemoveSubTab(tab);
+    }
+
     private async void OnTabDragStart(object? sender, PointerPressedEventArgs e)
     {
         if ((sender as Control)?.DataContext is not TabViewModel tab) return;

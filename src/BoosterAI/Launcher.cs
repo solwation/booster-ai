@@ -358,7 +358,7 @@ fi
     internal static string Launch(AppConfig cfg, Action<TerminalRequest> open, string? prompt = null,
         Func<TabConfig, TabTrack?>? track = null, string window = "new", bool resume = false)
     {
-        var tabs = cfg.Tabs.Where(t => t.Enabled).ToList();
+        var tabs = TabGroups.Flatten(cfg.Tabs).Where(t => t.Enabled).ToList();
         if (tabs.Count == 0) return Loc.Get("err.noTab");
         var error = Validate(tabs);
         if (error != "") return error;
@@ -500,7 +500,7 @@ fi
     private static TabConfig InWsl(TabConfig t) => new()
     {
         Name = t.Name, Color = t.Color, ColorIndex = t.ColorIndex, Enabled = t.Enabled,
-        Llm = t.Llm, Model = t.Model, Orkester = t.Orkester, NonInteractive = t.NonInteractive, Directory = PathMapping.ToWslPath(t.Directory), Script = t.Script,
+        Id = t.Id, Llm = t.Llm, Model = t.Model, Orkester = t.Orkester, NonInteractive = t.NonInteractive, Directory = PathMapping.ToWslPath(t.Directory), Script = t.Script,
     };
 
     private static void LaunchWindowsTerminal(IReadOnlyList<TabConfig> tabs, string distro, string? prompt,

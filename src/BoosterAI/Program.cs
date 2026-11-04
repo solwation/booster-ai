@@ -19,7 +19,7 @@ internal static class Program
             var at = Array.IndexOf(args, "--config");
             if (at >= 0 && at + 1 < args.Length) ConfigStore.UseFile(args[at + 1]);
             var cfg = ConfigStore.Load();
-            var tabs = cfg.Tabs.Where(t => t.Enabled).ToList();
+            var tabs = TabGroups.Flatten(cfg.Tabs).Where(t => t.Enabled).ToList();
             // Each Start gets a session directory with a status log per tab; shown here with a placeholder.
             var root = OperatingSystem.IsWindows() ? PathMapping.ToWslPath(TabSession.DefaultRoot) : TabSession.DefaultRoot;
             var dir = root.Replace('\\', '/') + "/<session>";

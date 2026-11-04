@@ -27,6 +27,26 @@ public abstract class Observable : INotifyPropertyChanged
 public sealed class TabViewModel : Observable
 {
     private readonly MainViewModel _owner;
+    public string Id { get; }
+    public TabViewModel? Parent { get; internal set; }
+    public bool IsSubTab => Parent is not null;
+    public bool IsProject => Parent is null;
+    private bool _expanded;
+    public bool Expanded
+    {
+        get => _expanded;
+        set
+        {
+            if (!Set(ref _expanded, value)) return;
+            Raise(nameof(ExpandGlyph));
+            _owner.TabsChanged();
+        }
+    }
+    public string ExpandGlyph => Expanded ? "▾" : "▸";
+    public bool CanRemoveSubTab => IsSubTab && !HasOpenTerminal && !IsAlive;
+    public string SubTabSummary => Loc.Format("subtab.summary", _owner.Tabs.Count(t => t.Parent == this));
+    internal void GroupChanged() => Raise(nameof(SubTabSummary));
+
     private string _name, _directory, _llm, _model;
     private int _colorIndex;
     private bool _enabled, _orkester, _nonInteractive;
@@ -35,6 +55,8 @@ public sealed class TabViewModel : Observable
     public TabViewModel(TabConfig c, MainViewModel owner, int index)
     {
         _owner = owner;
+        Id = c.Id;
+        _expanded = c.Expanded;
         _name = c.Name; _directory = c.Directory; _enabled = c.Enabled;
         _colorIndex = c.ColorIndex >= 0 ? c.ColorIndex : LegacyIndex(c.Color, index);
         _llm = Catalog.Llms.Contains(c.Llm) ? c.Llm : Catalog.DefaultLlm;
@@ -61,8 +83,17 @@ public sealed class TabViewModel : Observable
 
     public string Directory
     {
-        get => _directory;
-        set { if (Set(ref _directory, value)) _owner.CheckOrkester(this); }
+        get => Parent?.Directory ?? _directory;
+        set
+        {
+            if (IsSubTab || !Set(ref _directory, value)) return;
+            _owner.CheckOrkester(this);
+            foreach (var child in _owner.Tabs.Where(t => t.Parent == this))
+            {
+                child.Raise(nameof(Directory));
+                _owner.CheckOrkester(child);
+            }
+        }
     }
 
     public bool Enabled
@@ -326,7 +357,7 @@ public sealed class TabViewModel : Observable
         _clearedAt = clearedAt;
         if (state != TabState.Running) PendingRestart = false;
         foreach (var n in new[] { nameof(HasStatus), nameof(IsRunning), nameof(IsAlive), nameof(Activity), nameof(StatusText), nameof(StatusTip), nameof(StatusBrush),
-            nameof(ShowsOutput), nameof(HasOutput), nameof(OutputNote), nameof(HasOutputNote) }) Raise(n);
+            nameof(ShowsOutput), nameof(HasOutput), nameof(OutputNote), nameof(HasOutputNote), nameof(CanRemoveSubTab) }) Raise(n);
         RaiseRestart();
         if (stateChanged) _owner.RecoveredTabChanged(this);
         return stateChanged;
@@ -334,7 +365,7 @@ public sealed class TabViewModel : Observable
 
     public TabConfig ToConfig(bool forLaunch) => new()
     {
-        Name = Name.Trim(), Color = Color, ColorIndex = _colorIndex, Directory = Directory.Trim(), Enabled = Enabled,
+        Id = Id, Expanded = Expanded, Name = Name.Trim(), Color = Color, ColorIndex = _colorIndex, Directory = Directory.Trim(), Enabled = Enabled,
         Llm = Llm, Model = string.IsNullOrWhiteSpace(Model) ? Catalog.StandardModel : Model,
         Orkester = forLaunch ? Orkester && CanOrkester : Orkester,
         NonInteractive = NonInteractive,
@@ -354,7 +385,23 @@ public sealed partial class MainViewModel : Observable
     {
         _cfg = cfg;
         _saved = ConfigStore.Copy(cfg);
-        Tabs = new ObservableCollection<TabViewModel>(cfg.Tabs.Select((t, i) => new TabViewModel(t, this, i)));
+        Tabs = [];
+        var ids = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var project in cfg.Tabs)
+        {
+            AddConfigured(project, null);
+            var parent = Tabs[^1];
+            foreach (var child in project.SubTabs) AddConfigured(child, parent);
+        }
+        void AddConfigured(TabConfig tab, TabViewModel? parent)
+        {
+            if (string.IsNullOrWhiteSpace(tab.Id) || !ids.Add(tab.Id))
+            {
+                tab.Id = Guid.NewGuid().ToString("N");
+                ids.Add(tab.Id);
+            }
+            Tabs.Add(new TabViewModel(tab, this, Tabs.Count) { Parent = parent });
+        }
         Tabs.CollectionChanged += (_, _) => TabsChanged();
         Update = new UpdateViewModel(cfg, Save);
         Denial = new DenialViewModel();
@@ -363,6 +410,8 @@ public sealed partial class MainViewModel : Observable
     }
 
     public ObservableCollection<TabViewModel> Tabs { get; }
+    public IEnumerable<TabViewModel> Projects => Tabs.Where(t => t.IsProject);
+    public IEnumerable<TabViewModel> VisibleTabs => Tabs.Where(t => t.Parent is null || t.Parent.Expanded);
     public bool IsWindows => OperatingSystem.IsWindows();
     public bool IsLinux => !OperatingSystem.IsWindows();
     public IReadOnlyList<string> LinuxTerminals => Launcher.LinuxTerminals;
@@ -537,6 +586,9 @@ public sealed partial class MainViewModel : Observable
 
     public void TabsChanged()
     {
+        Raise(nameof(Projects));
+        Raise(nameof(VisibleTabs));
+        foreach (var project in Projects) project.GroupChanged();
         Raise(nameof(HasTabs));
         Raise(nameof(EnabledCount));
         Raise(nameof(ToStartCount));
@@ -554,17 +606,70 @@ public sealed partial class MainViewModel : Observable
         Raise(nameof(RestartAllLabel));
     }
 
-    /// <summary>Moves one project tab to a new position and persists its order.</summary>
+    /// <summary>Moves a whole project group, or a child within its own group; runtime rows keep their identity.</summary>
     public void MoveTab(int oldIndex, int newIndex)
     {
         if (oldIndex < 0 || oldIndex >= Tabs.Count || newIndex < 0 || newIndex >= Tabs.Count || oldIndex == newIndex) return;
-        Tabs.Move(oldIndex, newIndex);
+        var source = Tabs[oldIndex];
+        var target = Tabs[newIndex];
+        if (source.Parent is { } parent)
+        {
+            if (target.Parent != parent) return;
+            Tabs.Move(oldIndex, newIndex);
+        }
+        else
+        {
+            var targetProject = target.Parent ?? target;
+            if (source == targetProject) return;
+            var projects = Projects.ToList();
+            var group = Tabs.Where(t => t == source || t.Parent == source).ToList();
+            var projectIndex = projects.IndexOf(targetProject);
+            projects.Remove(source);
+            projects.Insert(projectIndex, source);
+            var order = projects.SelectMany(p => p == source ? group : Tabs.Where(t => t == p || t.Parent == p).ToList()).ToList();
+            for (var i = 0; i < order.Count; i++) Tabs.Move(Tabs.IndexOf(order[i]), i);
+        }
         Save();
+    }
+
+    public TabViewModel AddSubTab(TabViewModel project)
+    {
+        project = project.Parent ?? project;
+        if (!Tabs.Contains(project)) throw new ArgumentException("Project is not configured.", nameof(project));
+        var siblings = Tabs.Where(t => t.Parent == project).ToList();
+        var number = 2;
+        string name;
+        do { name = project.Name.Trim() + " · " + number++; } while (Tabs.Any(t => t.Name == name));
+        var config = project.ToConfig(forLaunch: false);
+        config.Id = Guid.NewGuid().ToString("N");
+        config.Name = name;
+        config.Expanded = false;
+        var child = new TabViewModel(config, this, Tabs.Count) { Parent = project };
+        Tabs.Insert(Tabs.IndexOf(project) + siblings.Count + 1, child);
+        project.Expanded = true;
+        CheckOrkester(child);
+        Save();
+        return child;
+    }
+
+    /// <summary>Running/idle-shell tabs must be closed before removing their monitoring/configuration.</summary>
+    public bool RemoveSubTab(TabViewModel tab)
+    {
+        if (!tab.CanRemoveSubTab || !Tabs.Contains(tab)) return false;
+        Tabs.Remove(tab);
+        Save();
+        return true;
+    }
+
+    public void RemoveProject(TabViewModel project)
+    {
+        if (!project.IsProject) return;
+        foreach (var tab in Tabs.Where(t => t == project || t.Parent == project).ToList()) Tabs.Remove(tab);
     }
 
     public void AddTab()
     {
-        var tab = new TabViewModel(new TabConfig { ColorIndex = Tabs.Count }, this, Tabs.Count);
+        var tab = new TabViewModel(new TabConfig { Id = Guid.NewGuid().ToString("N"), ColorIndex = Tabs.Count }, this, Tabs.Count);
         Tabs.Add(tab);
         CheckOrkester(tab);
     }
@@ -580,7 +685,7 @@ public sealed partial class MainViewModel : Observable
         if (Tabs is [{ } only] && only.Directory.Trim() is "" or "~" && Loc.IsDefaultTabName(only.Name)) Tabs.Clear();
         foreach (var p in projects)
         {
-            var tab = new TabViewModel(new TabConfig { Name = p.Name, Directory = PathMapping.ToTabPath(p.Path), ColorIndex = Tabs.Count }, this, Tabs.Count);
+            var tab = new TabViewModel(new TabConfig { Id = Guid.NewGuid().ToString("N"), Name = p.Name, Directory = PathMapping.ToTabPath(p.Path), ColorIndex = Tabs.Count }, this, Tabs.Count);
             Tabs.Add(tab);
             CheckOrkester(tab);
         }
@@ -627,7 +732,17 @@ public sealed partial class MainViewModel : Observable
 
     private AppConfig Snapshot(bool forLaunch)
     {
-        _cfg.Tabs = Tabs.Select(t => t.ToConfig(forLaunch)).ToList();
+        _cfg.Tabs = forLaunch ? Tabs.Select(t => t.ToConfig(true)).ToList() : Projects.Select(project =>
+        {
+            var config = project.ToConfig(false);
+            config.SubTabs = Tabs.Where(t => t.Parent == project).Select(t =>
+            {
+                var child = t.ToConfig(false);
+                child.Directory = ""; // The folder is configured once on the project.
+                return child;
+            }).ToList();
+            return config;
+        }).ToList();
         return _cfg;
     }
 
@@ -949,7 +1064,7 @@ public sealed partial class MainViewModel : Observable
 
     /// <summary>
     /// At start: finds the tabs an earlier BoosterAI run opened that still run, and watches them again on the
-    /// configured tab with the same name and directory. Start then opens only the others, in their window.
+    /// configured tab with the same identity (old metadata: main-tab name and directory). Start opens only the others.
     /// </summary>
     public void FindRunningTabs()
     {
@@ -1023,9 +1138,11 @@ public sealed partial class MainViewModel : Observable
         }, TaskScheduler.FromCurrentSynchronizationContext());
     }
 
-    /// <summary>The configured tab a running one belongs to: same name and directory, not already watched.</summary>
+    /// <summary>Stable identity survives renames and equal folders/names. Old session metadata falls back to the original project row.</summary>
     internal TabViewModel? Match(TabConfig running) =>
-        Tabs.FirstOrDefault(t => t.LaunchedAs is null && t.Name.Trim() == running.Name.Trim() && t.Directory.Trim() == running.Directory.Trim());
+        Tabs.FirstOrDefault(t => t.LaunchedAs is null && (string.IsNullOrWhiteSpace(running.Id)
+            ? t.IsProject && t.Name.Trim() == running.Name.Trim() && t.Directory.Trim() == running.Directory.Trim()
+            : t.Id == running.Id));
 
     /// <summary>Reads the logs and checks liveness off the UI thread (UNC reads can take a few hundred ms).</summary>
     private void Poll()
