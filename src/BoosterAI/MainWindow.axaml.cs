@@ -9,6 +9,47 @@ public partial class MainWindow : Window
 {
     private static readonly DataFormat<string> TabDragFormat = DataFormat.CreateStringApplicationFormat("boosterai-tab-index");
     private readonly MainViewModel _vm;
+    private MainWindowSize? _rememberedSize;
+
+    /// <summary>Enabled only for the real GUI; screenshots and preview windows never touch the user's size file.</summary>
+    internal void RememberSize(string? file = null)
+    {
+        file ??= MainWindowSize.StateFile;
+        _rememberedSize = MainWindowSize.Read(file);
+        var work = Screens.Primary?.WorkingArea;
+        var scaling = Screens.Primary?.Scaling ?? 1;
+        Width = Math.Clamp(_rememberedSize.Width, MinWidth, Math.Max(MinWidth, work?.Width / scaling ?? 100000));
+        Height = Math.Clamp(_rememberedSize.Height, MinHeight, Math.Max(MinHeight, work?.Height / scaling ?? 100000));
+        if (WindowState != WindowState.Minimized && _rememberedSize.Maximized) WindowState = WindowState.Maximized;
+        var opened = false;
+        var save = new Avalonia.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
+        void Persist()
+        {
+            save.Stop();
+            _rememberedSize.Save(file);
+        }
+        save.Tick += (_, _) => Persist();
+        void Changed()
+        {
+            if (!opened || !IsVisible || WindowState == WindowState.Minimized) return;
+            _rememberedSize = _rememberedSize.Observe(ClientSize.Width, ClientSize.Height,
+                WindowState == WindowState.Normal, WindowState == WindowState.Maximized);
+            save.Stop();
+            save.Start();
+        }
+        Opened += (_, _) => opened = true;
+        Resized += (_, _) => Changed();
+        PropertyChanged += (_, e) =>
+        {
+            if (e.Property != WindowStateProperty) return;
+            if (WindowState == WindowState.Minimized) Persist();
+            else Changed();
+        };
+        Closing += (_, _) => Persist();
+        Closed += (_, _) => save.Stop();
+    }
+
+    internal void RestoreSizeState() => WindowState = _rememberedSize?.Maximized == true ? WindowState.Maximized : WindowState.Normal;
 
     // Required by the XAML previewer.
     public MainWindow() : this(new MainViewModel(new AppConfig())) { }

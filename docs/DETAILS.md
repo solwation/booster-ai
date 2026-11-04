@@ -222,3 +222,16 @@ its PID and start time twice. It never types into the CLI, switches tabs or move
 focus. Missing processes, non-PTY output and inaccessible terminals are skipped.
 There are no persistent watcher processes; the short batched command is bounded
 and reaped. On quitting BoosterAI the periodic correction stops; startup resumes it.
+
+### BoosterAI window size
+
+The main window remembers its normal client size (device-independent pixels) and
+maximized state in `main-window.json` next to `config.json`. Resize/state changes
+are saved after 250 ms and flushed when minimizing or closing, so an installer
+that stops the process does not depend on a graceful exit. Minimized and tray-hidden
+windows never replace the last normal size. Background startup stays minimized
+without activation; showing it restores the remembered normal/maximized state.
+Normal startup restores immediately. Sizes are constrained to the primary screen's
+working area and the existing minimum window size. Missing, damaged or invalid
+state falls back to 1100 × 560. Window position is not saved. Preview/screenshot
+windows do not load or save this state; a custom config keeps its own adjacent file.

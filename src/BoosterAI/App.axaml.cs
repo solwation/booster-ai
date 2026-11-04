@@ -52,6 +52,7 @@ public partial class App : Application
             desktop.ShutdownMode = ShutdownMode.OnMainWindowClose;
             var vm = new MainViewModel(_config);
             var main = new MainWindow(vm, background: desktop.Args?.Contains("--background") == true);
+            main.RememberSize();
             desktop.MainWindow = main;
             // Queue early requests until the window has opened, including the initial background hide.
             main.Opened += (_, _) => Program.Instance?.RegisterActivation(() =>
@@ -102,7 +103,11 @@ public partial class App : Application
     private static void Restore(Window window)
     {
         window.ShowActivated = true;
-        if (window.WindowState == WindowState.Minimized) window.WindowState = WindowState.Normal;
+        if (window.WindowState == WindowState.Minimized)
+        {
+            if (window is MainWindow main) main.RestoreSizeState();
+            else window.WindowState = WindowState.Normal;
+        }
         window.Show();
         window.Activate();
     }
