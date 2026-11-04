@@ -13,3 +13,17 @@ Worker checks on WSL:
 - `git diff --check`: passed.
 
 No terminal, GUI window, or user work tab was opened for worker verification. The conductor owns Windows tests, isolated desktop activation verification and the final background installation. No visible layout changed, so screenshot comparison does not test this behavior.
+
+Conductor verification on combined revision `9843bb4`: 579/579 tests pass on
+Windows and WSL, Release build has zero warnings/errors. An actual Avalonia App
+on a separate non-input Windows desktop used a private guard key (the live app
+was never activated). [Activation evidence](activation.json) verifies minimized
+and hidden restoration, background no-op, preserved maximization and secondary
+process exit without a new owner. Initial probe setup created a dispatcher before
+platform initialization; fixing that harness setup produced the passing run.
+
+The final Windows install automatically restarted exactly one installed app at
+0.24.1+9843bb4, without changing the foreground window. All six observed managed
+PTYs returned to saved 80% after the startup pulse. A subsequent real installed
+`--background` launch exited 0 and preserved the same owner and focus
+([evidence](installed-secondary.json)). No native probe or secondary remains running.

@@ -1,0 +1,9 @@
+{
+  "initialMinimized": true,
+  "backgroundKeepsMinimized": true,
+  "minimizedRestored": true,
+  "hiddenBeforeRequest": true,
+  "hiddenRestored": true,
+  "maximizedPreserved": true,
+  "allSecondariesExitedWithoutOwning": true
+}

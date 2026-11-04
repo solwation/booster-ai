@@ -27,3 +27,11 @@ Correction follows BoosterAI's lifetime; quitting the app stops the poll, and
 restarting it recovers live managed shells and resumes correction. Manually renamed
 terminal tabs can have their own terminal-side title override and are outside this
 OSC mechanism. No UI layout changes, so the screenshot hook does not apply.
+
+Combined verification at `9843bb4`: 579/579 tests pass in both WSL and Windows;
+Release build and dry-run pass. A native Windows .NET probe executed the real
+TabTitles.Command via wsl.exe against a private PTY with a fabricated project name:
+its title was restored, a stale start time wrote nothing, and shell metacharacters
+remained literal. The private PTY process group was terminated and waited.
+The real WT marker command check from #85 remains applicable: no launcher or WT
+argument changed in #86/#87. Final installed app: 0.24.1+9843bb4, running in background.
