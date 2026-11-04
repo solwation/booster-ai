@@ -93,6 +93,27 @@ public sealed class SubTabTests : IDisposable
     }
 
     [Fact]
+    public void DragDropBeforeAndAfterMainRowsMovesWholeGroupsInBothDirections()
+    {
+        var vm = new MainViewModel(new AppConfig { Tabs = [new() { Name = "A", SubTabs = [new() { Name = "a1" }] }, new() { Name = "B", SubTabs = [new() { Name = "b1" }] }, new() { Name = "C" }] });
+        var a = vm.Tabs[0];
+        var b = vm.Tabs[2];
+        vm.MoveTabRelative(b, a, after: true);
+        Assert.Equal(["A", "a1", "B", "b1", "C"], vm.Tabs.Select(t => t.Name));
+        vm.MoveTabRelative(b, a, after: false);
+        Assert.Equal(["B", "b1", "A", "a1", "C"], vm.Tabs.Select(t => t.Name));
+        vm.MoveTabRelative(b, a, after: true);
+        Assert.Equal(["A", "a1", "B", "b1", "C"], vm.Tabs.Select(t => t.Name));
+        var a2 = vm.AddSubTab(a);
+        vm.MoveTabRelative(a2, vm.Tabs[1], after: false);
+        Assert.Same(a2, vm.Tabs[1]);
+        vm.MoveTabRelative(a2, vm.Tabs[2], after: true);
+        Assert.Same(a2, vm.Tabs[2]);
+        vm.MoveTabRelative(a2, b, after: true);
+        Assert.Same(a2, vm.Tabs[2]);
+    }
+
+    [Fact]
     public void StartUsesGroupOrderAndIndependentEnabledChoicesWithUniqueTracks()
     {
         var name = "group-start-" + Guid.NewGuid().ToString("N");
@@ -141,6 +162,27 @@ public sealed class SubTabTests : IDisposable
         Assert.Same(vm.Tabs[0], vm.Match(new() { Name = "same", Directory = "~/a" }));
         vm.Tabs[0].LaunchedAs = configs[0];
         Assert.Null(vm.Match(new() { Name = "same", Directory = "~/a" }));
+    }
+
+    [Fact]
+    public void SharedCliHistoryCannotResumeASiblingsLatestConversation()
+    {
+        var vm = new MainViewModel(new AppConfig { Tabs = [new() { Llm = "claude", Directory = "~/a", SubTabs = [new() { Llm = "claude" }] }] });
+        var main = vm.Tabs[0];
+        var child = vm.Tabs[1];
+        main.LaunchedAs = main.ToConfig(true);
+        main.SetState(TabState.Running, null);
+        main.Model = "another-model";
+        Assert.True(main.IsChanged);
+        Assert.False(main.RestartResumes);
+        main.SetState(TabState.Closed, null);
+        Assert.False(main.CanContinueClosed);
+        child.Llm = "codex";
+        Assert.True(main.CanContinueClosed);
+        main.SetState(TabState.Running, null);
+        Assert.True(main.RestartResumes);
+        child.LaunchedAs = new() { Llm = "claude" };
+        Assert.False(main.RestartResumes);
     }
 
     [Fact]

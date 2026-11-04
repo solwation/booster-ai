@@ -123,9 +123,8 @@ public partial class MainWindow : Window
         var targetIndex = _vm.Tabs.IndexOf(tab);
         if (targetIndex < 0) return;
         var after = e.GetPosition(target).Y >= target.Bounds.Height / 2;
-        var insertionIndex = targetIndex + (after ? 1 : 0);
-        if (sourceIndex < insertionIndex) insertionIndex--;
-        _vm.MoveTab(sourceIndex, insertionIndex);
+        if (sourceIndex < 0 || sourceIndex >= _vm.Tabs.Count) return;
+        _vm.MoveTabRelative(_vm.Tabs[sourceIndex], tab, after);
         ClearDropTarget(target);
         e.DragEffects = DragDropEffects.Move;
         e.Handled = true;

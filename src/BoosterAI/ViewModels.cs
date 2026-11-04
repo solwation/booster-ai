@@ -225,12 +225,14 @@ public sealed class TabViewModel : Observable
     }
 
     /// <summary>Whether the in-place restart keeps the conversation (model change on claude/codex).</summary>
-    public bool RestartResumes => LaunchedAs is { } l && Launcher.CanResume(l, ToConfig(forLaunch: true));
+    public bool RestartResumes => LaunchedAs is { } l && Launcher.CanResume(l, ToConfig(forLaunch: true))
+        && !_owner.SharesConversationDirectory(this, l.Llm);
 
     /// <summary>A one-shot tab is "run again" rather than "open again"; a changed one restarts with the new choices.</summary>
     public string RestartTip =>
         PendingRestart ? Loc.Get("restart.pending.tip")
-        : IsChanged ? Loc.Format(RestartResumes ? "restart.changed.resume.tip" : "restart.changed.tip", Llm, ModelLabel)
+        : IsChanged ? Loc.Format(RestartResumes ? "restart.changed.resume.tip"
+            : _owner.SharesConversationDirectory(this, Llm) ? "subtab.restart.fresh.tip" : "restart.changed.tip", Llm, ModelLabel)
         : Loc.Get(LaunchedAs is { NonInteractive: true, Orkester: true } ? "restart.once.tip"
             : LaunchedAs is { Llm: Catalog.ShellOnly } ? "restart.shell.tip" : "restart.tip");
 
@@ -240,7 +242,8 @@ public sealed class TabViewModel : Observable
         or TabState.NotStarted or TabState.Lost or TabState.Denied;
 
     /// <summary>A separate action: reopen an ended interactive session with the latest conversation in its directory.</summary>
-    public bool CanContinueClosed => CanRestart && !IsAlive && LaunchedAs is { } launched && Launcher.CanContinue(launched);
+    public bool CanContinueClosed => CanRestart && !IsAlive && LaunchedAs is { } launched && Launcher.CanContinue(launched)
+        && !_owner.SharesConversationDirectory(this, launched.Llm);
     public string ContinueTip => Loc.Get("restart.continue.tip");
 
     private void ChoiceChanged()
@@ -248,6 +251,7 @@ public sealed class TabViewModel : Observable
         if (!IsChanged) PendingRestart = false;
         RaiseRestart();
         Raise(nameof(StatusText));
+        _owner.RefreshConversationChoices();
     }
 
     private void RaiseRestart()
@@ -589,6 +593,7 @@ public sealed partial class MainViewModel : Observable
         Raise(nameof(Projects));
         Raise(nameof(VisibleTabs));
         foreach (var project in Projects) project.GroupChanged();
+        RefreshConversationChoices();
         Raise(nameof(HasTabs));
         Raise(nameof(EnabledCount));
         Raise(nameof(ToStartCount));
@@ -597,6 +602,19 @@ public sealed partial class MainViewModel : Observable
         Raise(nameof(CanCloseAll));
         RestartableChanged();
         SetupRowsChanged();
+    }
+
+    /// <summary>CLI --continue/--last selects by folder, so a group with matching CLIs must never resume a sibling's conversation.</summary>
+    internal bool SharesConversationDirectory(TabViewModel row, string llm)
+    {
+        var project = row.Parent ?? row;
+        return Tabs.Any(other => other != row && (other.Parent ?? other) == project
+            && (other.Llm == llm || other.LaunchedAs?.Llm == llm));
+    }
+
+    internal void RefreshConversationChoices()
+    {
+        foreach (var tab in Tabs) tab.RaiseRestartTip();
     }
 
     internal void RestartableChanged()
@@ -630,6 +648,31 @@ public sealed partial class MainViewModel : Observable
             for (var i = 0; i < order.Count; i++) Tabs.Move(Tabs.IndexOf(order[i]), i);
         }
         Save();
+    }
+
+    /// <summary>A drop belongs before/after an entire project, even when its main row is followed by children.</summary>
+    public void MoveTabRelative(TabViewModel source, TabViewModel target, bool after)
+    {
+        if (!Tabs.Contains(source) || !Tabs.Contains(target) || source == target) return;
+        if (source.Parent is { } parent)
+        {
+            if (target.Parent != parent) return;
+            var siblings = Tabs.Where(t => t.Parent == parent).ToList();
+            siblings.Remove(source);
+            var index = siblings.IndexOf(target) + (after ? 1 : 0);
+            MoveTab(Tabs.IndexOf(source), Tabs.IndexOf(parent) + 1 + index);
+        }
+        else
+        {
+            var targetProject = target.Parent ?? target;
+            if (targetProject == source) return;
+            var projects = Projects.ToList();
+            projects.Remove(source);
+            projects.Insert(projects.IndexOf(targetProject) + (after ? 1 : 0), source);
+            var order = projects.SelectMany(p => Tabs.Where(t => t == p || t.Parent == p).ToList()).ToList();
+            for (var i = 0; i < order.Count; i++) Tabs.Move(Tabs.IndexOf(order[i]), i);
+            Save();
+        }
     }
 
     public TabViewModel AddSubTab(TabViewModel project)
@@ -883,7 +926,7 @@ public sealed partial class MainViewModel : Observable
         if (error != "") { ShowStatus(error, error: true); return; }
         try
         {
-            var resume = Launcher.CanResume(launched, next);
+            var resume = tab.RestartResumes;
             tab.Session!.QueueNext(tab.Track!.Id, Launcher.RestartScript(next, tab.Track with { UpdateClis = _cfg.AutoUpdateClis, AutoClear = _cfg.AutoClearIdle }, resume));
             var pid = tab.ShellPid!.Value;
             var distro = _cfg.WslDistro;

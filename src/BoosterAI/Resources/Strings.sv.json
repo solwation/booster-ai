@@ -305,5 +305,6 @@
   "subtab.add": "+ Lägg till undertabb",
   "subtab.summary": "{0} undertabbar · samma mapp",
   "subtab.remove": "Ta bort undertabb",
-  "subtab.remove.tip": "Ta bort undertabben. Stäng dess terminaltabb först om den är öppen."
+  "subtab.remove.tip": "Ta bort undertabben. Stäng dess terminaltabb först om den är öppen.",
+  "subtab.restart.fresh.tip": "Starta om fliken med {0} / {1} och en ny konversation. Flera tabbar i projektet delar denna AI:s konversationshistorik."
 }

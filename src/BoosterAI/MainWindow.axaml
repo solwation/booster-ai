@@ -9,8 +9,8 @@
         WindowStartupLocation="CenterScreen">
 
   <!--
-    Today's choices only: which tabs, and the AI, model and /orkester for each.
-    Names and directories are edited in Settings. The header and the rows share
+    Today's choices: which tabs, the AI, model and /orkester for each, plus expandable subtabs.
+    Project names/directories are edited in Settings; subtab names are edited here. The header and the rows share
     one column layout (stripe 4 · drag handle 20 · check 36 · name * · status 200 · llm 132 · model 195 · orkester 110 · once 130)
     inside the same padding, so labels sit exactly over their fields.
   -->
