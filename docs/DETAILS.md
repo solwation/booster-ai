@@ -235,3 +235,6 @@ Normal startup restores immediately. Sizes are constrained to the primary screen
 working area and the existing minimum window size. Missing, damaged or invalid
 state falls back to 1100 × 560. Window position is not saved. Preview/screenshot
 windows do not load or save this state; a custom config keeps its own adjacent file.
+
+Background startup hides the main window only on its first opening. Later tray
+or menu activation keeps it visible; minimizing it again still returns it to the tray.

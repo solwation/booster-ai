@@ -1,0 +1,10 @@
+{
+  "initialMinimized": true,
+  "backgroundKeepsMinimized": true,
+  "minimizedRestored": true,
+  "hiddenBeforeRequest": true,
+  "hiddenRestored": true,
+  "trayRestoreAfterRepeatedMinimize": true,
+  "maximizedPreserved": true,
+  "allSecondariesExitedWithoutOwning": true
+}

@@ -63,7 +63,7 @@ public partial class MainWindow : Window
         {
             ShowActivated = false;
             WindowState = WindowState.Minimized;
-            Opened += (_, _) => { if (_vm.MinimizeToTray && TrayAvailable()) Hide(); };
+            Opened += OnBackgroundOpened;
         }
         Closing += OnClosing;
         PropertyChanged += (_, e) =>
@@ -73,6 +73,13 @@ public partial class MainWindow : Window
         };
         Activated += (_, _) => { _vm.Update.WindowActive(true); _vm.SetupWindowActive(); };
         Deactivated += (_, _) => _vm.Update.WindowActive(false);
+    }
+
+    private void OnBackgroundOpened(object? sender, EventArgs e)
+    {
+        // Opened fires again when a tray-hidden window is shown. Only startup may hide it automatically.
+        Opened -= OnBackgroundOpened;
+        if (_vm.MinimizeToTray && TrayAvailable()) Hide();
     }
 
     /// <summary>Windows only (Linux trays need a StatusNotifierItem host, missing on plain GNOME); shows the tray icon as a side effect.</summary>
