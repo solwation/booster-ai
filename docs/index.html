@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BoosterAI — Kickstart Your Daily AI Agent Workspace</title>
+  <meta name="description" content="Open every project as a terminal tab with Claude, Codex, or AGY already running. Pick models per tab to balance token budgets, monitor status live, and automate daily AI workflows.">
+  
+  <!-- Open Graph -->
+  <meta property="og:title" content="BoosterAI — Kickstart Your Daily AI Agent Workspace">
+  <meta property="og:description" content="Start your whole working day with one click: dedicated AI CLI terminal tabs for Claude, Codex, and AGY on Windows and Linux.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://solwation.github.io/booster-ai/">
+  <meta property="og:image" content="https://solwation.github.io/booster-ai/assets/boosterai.png">
+
+  <link rel="icon" type="image/svg+xml" href="assets/boosterai.svg">
+  <link rel="icon" type="image/png" href="assets/boosterai.png">
+
+  <style>
+    :root {
+      --bg: #090c13;
+      --bg-card: rgba(18, 22, 34, 0.75);
+      --bg-card-hover: rgba(26, 32, 48, 0.85);
+      --border: rgba(255, 255, 255, 0.08);
+      --border-focus: rgba(56, 189, 248, 0.4);
+      --cyan: #38bdf8;
+      --blue: #3b82f6;
+      --purple: #a855f7;
+      --emerald: #10b981;
+      --amber: #f59e0b;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --glow: radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.15), transparent 70%);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+      min-height: 100vh;
+      background-image: 
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(56, 189, 248, 0.18), transparent),
+        radial-gradient(ellipse 60% 40% at 80% 30%, rgba(168, 85, 247, 0.12), transparent);
+      background-attachment: fixed;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    /* Container */
+    .container {
+      max-width: 1140px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* Navigation */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      background: rgba(9, 12, 19, 0.7);
+    }
+
+    .nav-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 72px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 700;
+      font-size: 1.25rem;
+      letter-spacing: -0.02em;
+    }
+
+    .brand img {
+      width: 36px;
+      height: 36px;
+      filter: drop-shadow(0 0 12px rgba(56, 189, 248, 0.4));
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+    }
+
+    .nav-links a {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      font-weight: 500;
+      transition: color 0.2s ease;
+    }
+
+    .nav-links a:hover {
+      color: var(--text);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: 9999px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      border: 1px solid transparent;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #38bdf8 0%, #2563eb 100%);
+      color: #fff;
+      box-shadow: 0 0 20px rgba(56, 189, 248, 0.35);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 30px rgba(56, 189, 248, 0.55);
+    }
+
+    .btn-outline {
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text);
+    }
+
+    .btn-outline:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px);
+    }
+
+    /* Hero Section */
+    .hero {
+      padding: 90px 0 60px;
+      text-align: center;
+      position: relative;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--cyan);
+      margin-bottom: 24px;
+      letter-spacing: 0.02em;
+    }
+
+    .badge-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--cyan);
+      box-shadow: 0 0 8px var(--cyan);
+      animation: pulse 2s infinite ease-in-out;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    .hero h1 {
+      font-size: clamp(2.5rem, 6vw, 4.25rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      margin-bottom: 24px;
+      background: linear-gradient(180deg, #ffffff 30%, #94a3b8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero h1 span.gradient {
+      background: linear-gradient(135deg, #38bdf8 0%, #818cf8 50%, #c084fc 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero p {
+      font-size: clamp(1.1rem, 2vw, 1.3rem);
+      color: var(--text-muted);
+      max-width: 740px;
+      margin: 0 auto 36px;
+      font-weight: 400;
+    }
+
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 48px;
+    }
+
+    .hero-meta {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      color: var(--text-dim);
+      font-size: 0.9rem;
+    }
+
+    .hero-meta span {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Showcase Screenshot */
+    .showcase {
+      margin-top: 20px;
+      position: relative;
+    }
+
+    .showcase-glow {
+      position: absolute;
+      inset: -20px;
+      background: linear-gradient(180deg, rgba(56, 189, 248, 0.25), rgba(168, 85, 247, 0.15));
+      filter: blur(50px);
+      z-index: 0;
+      border-radius: 28px;
+      opacity: 0.7;
+    }
+
+    .window-frame {
+      position: relative;
+      z-index: 1;
+      background: #111522;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 18px;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05);
+      overflow: hidden;
+    }
+
+    .window-header {
+      background: #0d101a;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .window-dots {
+      display: flex;
+      gap: 8px;
+    }
+
+    .window-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+
+    .dot-red { background: #ef4444; }
+    .dot-yellow { background: #f59e0b; }
+    .dot-green { background: #10b981; }
+
+    .window-tabs {
+      display: flex;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.04);
+      padding: 4px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+
+    .tab-btn {
+      padding: 6px 14px;
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      border-radius: 7px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .tab-btn.active {
+      background: rgba(255, 255, 255, 0.12);
+      color: var(--text);
+    }
+
+    .showcase-media {
+      display: block;
+      width: 100%;
+      height: auto;
+      aspect-ratio: 16 / 10;
+      object-fit: cover;
+      background: #0f131f;
+    }
+
+    /* Stats Banner */
+    .stats-banner {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      padding: 60px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .stat-card {
+      text-align: center;
+      padding: 20px;
+    }
+
+    .stat-number {
+      font-size: 2.5rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #38bdf8, #818cf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 6px;
+    }
+
+    .stat-label {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      font-weight: 500;
+    }
+
+    /* Bento Grid */
+    .features-section {
+      padding: 100px 0;
+    }
+
+    .section-head {
+      text-align: center;
+      max-width: 680px;
+      margin: 0 auto 60px;
+    }
+
+    .section-head h2 {
+      font-size: 2.4rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 16px;
+    }
+
+    .section-head p {
+      color: var(--text-muted);
+      font-size: 1.1rem;
+    }
+
+    .bento-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+
+    .bento-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 32px;
+      backdrop-filter: blur(12px);
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .bento-card:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-focus);
+      transform: translateY(-4px);
+    }
+
+    .bento-card.col-span-2 {
+      grid-column: span 2;
+    }
+
+    .card-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+      font-size: 1.5rem;
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      color: var(--cyan);
+    }
+
+    .card-purple .card-icon {
+      background: rgba(168, 85, 247, 0.1);
+      border-color: rgba(168, 85, 247, 0.2);
+      color: var(--purple);
+    }
+
+    .card-emerald .card-icon {
+      background: rgba(16, 185, 129, 0.1);
+      border-color: rgba(16, 185, 129, 0.2);
+      color: var(--emerald);
+    }
+
+    .card-amber .card-icon {
+      background: rgba(245, 158, 11, 0.1);
+      border-color: rgba(245, 158, 11, 0.2);
+      color: var(--amber);
+    }
+
+    .bento-card h3 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+      letter-spacing: -0.01em;
+    }
+
+    .bento-card p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+
+    .card-highlight {
+      margin-top: 20px;
+      padding: 12px 16px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.85rem;
+      color: var(--cyan);
+    }
+
+    /* Terminal Preview Section */
+    .cli-matrix {
+      display: flex;
+      gap: 12px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+
+    .cli-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    /* Install Section */
+    .install-section {
+      padding: 90px 0;
+      background: linear-gradient(180deg, transparent, rgba(56, 189, 248, 0.03) 50%, transparent);
+    }
+
+    .install-box {
+      background: #111522;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      overflow: hidden;
+      max-width: 820px;
+      margin: 0 auto;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    }
+
+    .install-tabs {
+      display: flex;
+      background: #0b0e17;
+      border-bottom: 1px solid var(--border);
+      padding: 6px 12px;
+    }
+
+    .install-tab-btn {
+      padding: 10px 20px;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+      border-radius: 8px;
+      transition: all 0.2s;
+    }
+
+    .install-tab-btn.active {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .install-content {
+      padding: 28px;
+    }
+
+    .install-pane {
+      display: none;
+    }
+
+    .install-pane.active {
+      display: block;
+    }
+
+    .code-block {
+      background: #07090e;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.95rem;
+      color: #38bdf8;
+      overflow-x: auto;
+    }
+
+    .copy-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .copy-btn:hover {
+      background: rgba(255, 255, 255, 0.16);
+    }
+
+    .install-note {
+      margin-top: 16px;
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 50px 0 40px;
+      background: #06080e;
+      color: var(--text-dim);
+      font-size: 0.9rem;
+    }
+
+    .footer-grid {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 24px;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 24px;
+    }
+
+    .footer-links a:hover {
+      color: var(--text);
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .bento-grid {
+        grid-template-columns: 1fr;
+      }
+      .bento-card.col-span-2 {
+        grid-column: span 1;
+      }
+      .nav-links {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <header>
+    <div class="container">
+      <div class="nav-wrapper">
+        <a href="#" class="brand">
+          <img src="assets/boosterai.svg" alt="BoosterAI">
+          <span>BoosterAI</span>
+        </a>
+        <nav class="nav-links">
+          <a href="#features">Features</a>
+          <a href="#install">Install</a>
+          <a href="https://github.com/solwation/booster-ai/blob/main/docs/DETAILS.md" target="_blank" rel="noopener">Documentation</a>
+          <a href="https://github.com/solwation/booster-ai" target="_blank" rel="noopener">GitHub</a>
+        </nav>
+        <div class="nav-cta">
+          <a href="https://github.com/solwation/booster-ai/releases/latest" class="btn btn-primary">
+            Download Latest
+          </a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="container">
+      <div class="badge">
+        <span class="badge-dot"></span>
+        <span>Version 0.25.1 Live & Ready</span>
+      </div>
+      <h1>
+        Start your whole work day<br>
+        <span class="gradient">with one single click.</span>
+      </h1>
+      <p>
+        BoosterAI opens every project you touch into a dedicated terminal tab with your chosen AI coding CLI &mdash; Claude, Codex, or AGY &mdash; already initialized and ready to roll. Match models to your token budget and automate your daily multi-agent flow.
+      </p>
+      
+      <div class="hero-actions">
+        <a href="https://github.com/solwation/booster-ai/releases/latest" class="btn btn-primary" style="padding: 14px 28px; font-size: 1.05rem;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          Download BoosterAI
+        </a>
+        <a href="https://github.com/solwation/booster-ai" class="btn btn-outline" style="padding: 14px 28px; font-size: 1.05rem;" target="_blank" rel="noopener">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+          View on GitHub
+        </a>
+      </div>
+
+      <div class="hero-meta">
+        <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg> Zero .NET runtime install required</span>
+        <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg> Windows 11 (WSL) & Linux Native</span>
+        <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg> Open Source (MIT)</span>
+      </div>
+
+      <!-- App Window Mockup -->
+      <div class="showcase">
+        <div class="showcase-glow"></div>
+        <div class="window-frame">
+          <div class="window-header">
+            <div class="window-dots">
+              <span class="window-dot dot-red"></span>
+              <span class="window-dot dot-yellow"></span>
+              <span class="window-dot dot-green"></span>
+            </div>
+            <div class="window-tabs">
+              <button class="tab-btn active" onclick="switchPreview('dark', this)">Start (Dark)</button>
+              <button class="tab-btn" onclick="switchPreview('light', this)">Start (Light)</button>
+              <button class="tab-btn" onclick="switchPreview('settings', this)">Settings & WSL</button>
+            </div>
+            <div style="width: 50px;"></div>
+          </div>
+          <img id="previewImg" class="showcase-media" src="screenshot-dark.png" alt="BoosterAI App Screenshot">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stats Banner -->
+  <section class="container">
+    <div class="stats-banner">
+      <div class="stat-card">
+        <div class="stat-number">1 Click</div>
+        <div class="stat-label">Launches all your daily workspaces</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number">3 Engines</div>
+        <div class="stat-label">Claude &middot; Codex &middot; AGY supported</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number">0 Config</div>
+        <div class="stat-label">Restores tabs, positions, and models</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number">100% Native</div>
+        <div class="stat-label">Windows Terminal + Linux Ptyxis/Gnome</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features (Bento Grid) -->
+  <section id="features" class="features-section">
+    <div class="container">
+      <div class="section-head">
+        <h2>Built for Engineers Who Live in AI CLIs</h2>
+        <p>Managing multiple concurrent AI sessions shouldn't mean wasting 15 minutes setting up terminal tabs every morning.</p>
+      </div>
+
+      <div class="bento-grid">
+        <!-- Feature 1 (Span 2) -->
+        <div class="bento-card col-span-2">
+          <div class="card-icon">🚀</div>
+          <h3>One Click, Complete Multi-Agent Setup</h3>
+          <p>
+            BoosterAI opens each repository in its own tab, at the exact directory, assigned its own custom color theme and title. Tabs refresh state every two seconds. Need multiple workers in the same repo? Add subtabs with distinct AI CLIs, custom model overrides, or dedicated Run-once agents in seconds.
+          </p>
+          <div class="cli-matrix">
+            <span class="cli-pill">⚡ Claude Code</span>
+            <span class="cli-pill">⚡ Codex CLI</span>
+            <span class="cli-pill">⚡ Antigravity (AGY)</span>
+            <span class="cli-pill">💻 Standard Bash</span>
+          </div>
+        </div>
+
+        <!-- Feature 2 -->
+        <div class="bento-card card-purple">
+          <div class="card-icon">🧠</div>
+          <h3>Per-Tab Model & Token Control</h3>
+          <p>
+            Allocate costly high-intelligence models (Opus / Pro) to difficult architecture issues while routing simple repetitive tasks to Flash or Haiku. Switch models in place mid-stream without losing the current conversation.
+          </p>
+        </div>
+
+        <!-- Feature 3 -->
+        <div class="bento-card card-emerald">
+          <div class="card-icon">👁️</div>
+          <h3>Live Peek & Terminal Pulse</h3>
+          <p>
+            Never wonder what an agent is doing. Hover over any running tab's status badge to see the last 20 lines of terminal output streamed live &mdash; without leaving your current workspace window.
+          </p>
+          <div class="card-highlight">
+            Running &middot; Idle &middot; Watching &middot; Exited
+          </div>
+        </div>
+
+        <!-- Feature 4 -->
+        <div class="bento-card card-amber">
+          <div class="card-icon">🎼</div>
+          <h3>Orchestra on Demand</h3>
+          <p>
+            Full native integration with <a href="https://github.com/solwation/dirigenten-och-orkestern" style="color:var(--cyan);text-decoration:underline;" target="_blank">Dirigenten och orkestern</a>. Toggle <code>/orkester</code> as the automatic first prompt, or run unattended one-shot batch tasks leaving an open shell when done.
+          </p>
+        </div>
+
+        <!-- Feature 5 (Span 2) -->
+        <div class="bento-card col-span-2">
+          <div class="card-icon">⚡</div>
+          <h3>WSL Memory Guard & Auto-Optimization</h3>
+          <p>
+            WSL memory consumption getting out of hand? BoosterAI features an integrated RAM telemetry dashboard with 30-minute min/avg/max tracking, recommended limit calculators, and instant configuration of memory caps directly inside Settings.
+          </p>
+          <div class="card-highlight">
+            WSL RAM Cap &middot; Auto-Clear Idle Context &middot; Seamless Restarts
+          </div>
+        </div>
+
+        <!-- Feature 6 -->
+        <div class="bento-card">
+          <div class="card-icon">🛡️</div>
+          <h3>Graceful Day-End Teardown</h3>
+          <p>
+            Hit <strong>Close All</strong> when you are done. BoosterAI prompts each running AI agent to save uncommitted work, commit, and push changes before cleanly closing all tabs and terminating child process trees.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Install Section -->
+  <section id="install" class="install-section">
+    <div class="container">
+      <div class="section-head">
+        <h2>Install BoosterAI</h2>
+        <p>Single self-contained executables. Zero dependencies or runtimes needed.</p>
+      </div>
+
+      <div class="install-box">
+        <div class="install-tabs">
+          <button class="install-tab-btn active" onclick="switchInstall('win', this)">Windows 11 (PowerShell)</button>
+          <button class="install-tab-btn" onclick="switchInstall('linux', this)">Linux (Bash)</button>
+        </div>
+        <div class="install-content">
+          <!-- Windows Pane -->
+          <div id="pane-win" class="install-pane active">
+            <p style="margin-bottom:12px;color:var(--text-muted);font-size:0.95rem;">Download and unpack the latest release, then run the installer (no administrator rights needed):</p>
+            <div class="code-block">
+              <code>powershell -ExecutionPolicy Bypass -File install-windows.ps1</code>
+              <button class="copy-btn" onclick="copyCode('powershell -ExecutionPolicy Bypass -File install-windows.ps1')">Copy</button>
+            </div>
+            <p class="install-note">
+              Places BoosterAI in <code>%LOCALAPPDATA%\Programs\BoosterAI</code>, registers Start menu & desktop shortcuts, and restarts in the background.
+            </p>
+          </div>
+
+          <!-- Linux Pane -->
+          <div id="pane-linux" class="install-pane">
+            <p style="margin-bottom:12px;color:var(--text-muted);font-size:0.95rem;">Extract the release tarball and run the install script:</p>
+            <div class="code-block">
+              <code>tar -xzf BoosterAI-*-linux-x64.tar.gz && ./BoosterAI-*-linux-x64/install-linux.sh</code>
+              <button class="copy-btn" onclick="copyCode('tar -xzf BoosterAI-*-linux-x64.tar.gz && ./BoosterAI-*-linux-x64/install-linux.sh')">Copy</button>
+            </div>
+            <p class="install-note">
+              Installs binary to <code>~/.local/bin</code> and adds desktop menu entries with native desktop icons.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <div class="footer-grid">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <img src="assets/boosterai.svg" alt="" width="24" height="24">
+          <span>BoosterAI &mdash; Released under the MIT License</span>
+        </div>
+        <div class="footer-links">
+          <a href="https://github.com/solwation/booster-ai" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://github.com/solwation/booster-ai/releases" target="_blank" rel="noopener">Releases</a>
+          <a href="https://github.com/solwation/booster-ai/blob/main/docs/DEVELOPMENT.md" target="_blank" rel="noopener">Development</a>
+          <a href="https://github.com/solwation/booster-ai/issues" target="_blank" rel="noopener">Issues</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    function switchPreview(mode, btn) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const img = document.getElementById('previewImg');
+      if (mode === 'dark') img.src = 'screenshot-dark.png';
+      else if (mode === 'light') img.src = 'screenshot.png';
+      else if (mode === 'settings') img.src = 'settings.png';
+    }
+
+    function switchInstall(os, btn) {
+      document.querySelectorAll('.install-tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.install-pane').forEach(p => p.classList.remove('active'));
+      document.getElementById('pane-' + os).classList.add('active');
+    }
+
+    function copyCode(text) {
+      navigator.clipboard.writeText(text);
+      event.target.innerText = 'Copied!';
+      setTimeout(() => { event.target.innerText = 'Copy'; }, 2000);
+    }
+  </script>
+</body>
+</html>

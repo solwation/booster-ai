@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Source of the app icon; tools/IconRender renders the PNG and ICO sizes from it. -->
+  <defs>
+    <linearGradient id="boost" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1E66F5"/>
+      <stop offset="1" stop-color="#8839EF"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="240" height="240" rx="56" fill="url(#boost)"/>
+  <g fill="#FFFFFF">
+    <polygon points="120.3,31.6 55.2,120.4 99.6,120.4 83.3,188.4 154.3,92.2 108.4,92.2 130.6,31.6"/>
+    <!-- "ai": a ring with a stem, then a stem with a dot. -->
+    <path fill-rule="evenodd" d="M188,194 a22,22 0 1 0 -44,0 a22,22 0 1 0 44,0 Z M178,194 a12,12 0 1 0 -24,0 a12,12 0 1 0 24,0 Z"/>
+    <rect x="180" y="172" width="9" height="44" rx="1"/>
+    <rect x="202" y="172" width="9" height="44" rx="1"/>
+    <circle cx="206.5" cy="157" r="6.5"/>
+  </g>
+</svg>
