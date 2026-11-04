@@ -12,6 +12,9 @@ Läs därefter den versionslåsta [kärnan](../../.orchestra/shared/ORCHESTRA.md
 Börja med att återuppta ofärdigt arbete i checkouten och worktrees
 ([Resume unfinished work first](../../.orchestra/shared/ORCHESTRA.md#resume-unfinished-work-first)):
 finns det redan på `main` från en annan orkester, kasta det lokalt och ta nästa issue.
+Reconcile finished handoffs using the shared
+[handoff procedure](../../.orchestra/shared/ORCHESTRA.md#handoff-for-integration)
+before dispatch; keep their integration owner and evidence without an active slot.
 Använd [arbetsagentens korta uppdrag](../../.orchestra/shared/WORKER.md) vid delegering.
 Svara på svenska. Projektpolicyn anger kön, behörigheter, ansvar, användarfrågor och tidsgränser.
 Ställ inga frågor i chatten (inte heller med frågeverktyget): frågor som bara användaren kan besvara går som kommentar på berört issue enligt policyns rad Questions.

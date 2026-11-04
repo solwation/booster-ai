@@ -18,6 +18,9 @@ The user writes Swedish; reply in Swedish. Code, comments and docs are English; 
 When the user writes `/orkester` or `$orkester`, run the orchestra for the requested
 scope through [.claude/commands/orkester.md](.claude/commands/orkester.md) (Claude) or
 [.agents/skills/orkester/SKILL.md](.agents/skills/orkester/SKILL.md) (Codex and others).
+Finished worker handoffs follow the shared
+[integration procedure](.orchestra/shared/ORCHESTRA.md#handoff-for-integration):
+keep their owner and evidence while waiting, without an active worker slot.
 Reading or maintaining these files does not start an unattended queue session.
 
 **Release when you drain the backlog**, in or outside an orchestra session: if your work

@@ -12,6 +12,9 @@ When the user requests orchestration, read and follow [AGENTS.md](../../../AGENT
 First resume unfinished local work under the core's
 [startup rule](../../../.orchestra/shared/ORCHESTRA.md#resume-unfinished-work-first),
 discarding what another orchestra already delivered to `main`.
+Reconcile owned finished handoffs through the core's
+[handoff procedure](../../../.orchestra/shared/ORCHESTRA.md#handoff-for-integration)
+before new dispatch; preserve their owner, revision and evidence without an active slot.
 Preserve the requested scope. Use the available agent tools with
 [the compact worker brief](../../../.orchestra/shared/WORKER.md).
 The project policy owns capacity, claims, user questions, publication and idle watch.

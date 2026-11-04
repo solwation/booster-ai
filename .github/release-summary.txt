@@ -1,3 +1,3 @@
-version: 0.23.0
-sv: Lägg till undertabbar med egna AI-val och se WSL:s faktiska RAM-användning med 30 minuters statistik.
-en: Add project subtabs with separate AI choices and see actual WSL RAM usage with 30-minute statistics.
+version: 0.24.0
+sv: Optimering får en vänstermeny och en större RAM-översikt med tydliga värden för användning, historik och tak.
+en: Optimization gains a sidebar and larger RAM overview with clear usage, history and configured-cap values.
