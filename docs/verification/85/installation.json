@@ -1,0 +1,18 @@
+{
+  "exit": 0,
+  "savedZoomBefore": 80,
+  "savedZoomAfter": 80,
+  "observedFonts": [
+    9.6,
+    12
+  ],
+  "managedPtysObserved": 6,
+  "ptysResizedDuringPulse": 6,
+  "ptysAtOriginalSize": 6,
+  "focusUnchanged": true,
+  "oldProcessExited": true,
+  "installedProcessCount": 1,
+  "newInstalledProcess": true,
+  "windowsTestsPassed": 568,
+  "windowsTestProfileUnchanged": true
+}

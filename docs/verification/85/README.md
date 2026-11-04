@@ -24,3 +24,10 @@ terminal was opened or focused by that check. Font metrics could not be reliably
 observed on the non-input desktop; the installation check instead observes the
 existing managed PTYs read-only while the requested real app restart runs. Its result
 and Windows test/profile-isolation evidence are recorded with the delivered revision.
+
+[Installation evidence](installation.json): the real installer replaced and restarted the
+installed app in the background. All six observed managed PTYs resized during the
+12-point pulse and returned to their original grid at the saved 80% (9.6 points).
+Saved zoom remained 80%, the old installed process exited, exactly one new installed
+app remained running, and the foreground window stayed unchanged. Windows: 568/568
+tests passed and the real profile hash was identical before and after the test run.
