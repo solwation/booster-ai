@@ -30,11 +30,13 @@ public class ZoomSaveTests : IDisposable
     public void AZoomChoiceIsSavedAtOnceAndSurvivesARestart()
     {
         var vm = Started();
+        var before = TestTerminal.ZoomRequests.Count;
         vm.SelectedZoom = Choice(vm, 80);
 
         // No Settings close or app exit: the install script stops the app with Stop-Process -Force.
         Assert.Equal(80, ConfigStore.Load().ZoomPercent);
         Assert.Equal(80, Started().SelectedZoom.Percent);
+        Assert.Contains((80, false), TestTerminal.ZoomRequests.Skip(before));
     }
 
     [Fact]

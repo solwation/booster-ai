@@ -13,11 +13,17 @@ public partial class MainWindow : Window
     // Required by the XAML previewer.
     public MainWindow() : this(new MainViewModel(new AppConfig())) { }
 
-    public MainWindow(MainViewModel vm)
+    public MainWindow(MainViewModel vm, bool background = false)
     {
         _vm = vm;
         DataContext = vm;
         InitializeComponent();
+        if (background)
+        {
+            ShowActivated = false;
+            WindowState = WindowState.Minimized;
+            Opened += (_, _) => { if (_vm.MinimizeToTray && TrayAvailable()) Hide(); };
+        }
         Closing += OnClosing;
         PropertyChanged += (_, e) =>
         {

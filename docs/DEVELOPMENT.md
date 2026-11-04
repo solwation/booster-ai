@@ -24,7 +24,7 @@ Open a new PowerShell window after installation so it picks up the user PATH. Th
 tools/publish.sh    # dist/win-x64/BoosterAI.exe and dist/linux-x64/BoosterAI
 ```
 
-Install the result with `tools/install-linux.sh` or `tools\install-windows.ps1` from the checkout.
+Install the result with `tools/install-linux.sh` or `tools\install-windows.ps1` from the checkout. The Windows installer stops only installed copies, replaces the executable and starts one new installed copy with `--background` and hidden process startup. Normal delivery must leave that app running, with no focus change and its saved zoom restored. `-NoStart` is only for packaging/test automation, never a normal user delivery.
 
 Run the tests with:
 
@@ -34,7 +34,7 @@ dotnet test tests/BoosterAI.Tests
 
 On Windows, run `dotnet test tests\BoosterAI.Tests` from the Windows mirror after it has synced the revision under test.
 
-A test run never opens terminal windows: the test assembly records every launch instead (`tests/BoosterAI.Tests/TestTerminal.cs`) and keeps sessions in a temporary folder, away from the real `sessions` folder BoosterAI watches. The one test that drives real Ptyxis windows (`PtyxisTabsAreVisibleInATSPITabBar`) only runs with `BOOSTERAI_REAL_TERMINAL_TESTS=1`.
+A test run never opens terminal windows: the test assembly records every launch instead (`tests/BoosterAI.Tests/TestTerminal.cs`) and keeps sessions in a temporary folder, away from the real `sessions` folder BoosterAI watches. It also records zoom requests instead of writing the real Windows Terminal profile or nudging real settings; zoom persistence tests must not resize the user's terminals. The one test that drives real Ptyxis windows (`PtyxisTabsAreVisibleInATSPITabBar`) only runs with `BOOSTERAI_REAL_TERMINAL_TESTS=1`.
 
 ## UI strings
 

@@ -10,6 +10,7 @@ using BoosterAI;
 internal static class TestTerminal
 {
     public static readonly ConcurrentQueue<Launcher.TerminalRequest> Requests = new();
+    public static readonly ConcurrentQueue<(int Percent, bool Restore)> ZoomRequests = new();
 
     public static readonly string SessionRoot =
         Path.Combine(Path.GetTempPath(), "boosterai-test-sessions-" + Environment.ProcessId);
@@ -18,6 +19,7 @@ internal static class TestTerminal
     internal static void Install()
     {
         Launcher.OpenTerminal = Requests.Enqueue;
+        Launcher.RequestZoom = (percent, restore) => ZoomRequests.Enqueue((percent, restore));
         TabSession.DefaultRoot = SessionRoot;
         AppDomain.CurrentDomain.ProcessExit += (_, _) =>
         {

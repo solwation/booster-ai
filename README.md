@@ -24,7 +24,7 @@ Start your whole working day with one click: BoosterAI opens every project you w
 - **Open the folder.** The icon after each project name opens its directory in Explorer (WSL folders included), Finder or your Linux file manager; hover the name to see the path.
 - **Your shell, your setup.** Tabs run through `bash -lic`, so your aliases and `PATH` apply, and you keep a normal shell when the CLI exits.
 - **After Start.** Choose whether the window stays open (default), minimizes (to the tray on Windows when that setting is on) or closes after Start; the tray icon is shown on Windows either way ([details](docs/DETAILS.md)).
-- **Font size.** One setting zooms the CLI text in all tabs.
+- **Font size.** One setting zooms the CLI text in all tabs; on Windows, startup reapplies the saved size to already-open BoosterAI terminal tabs too.
 - **Themes and language.** Five tab colour themes, an Appearance setting (Auto, Light or Dark, applied at once), in Swedish or English.
 - **Stays up to date.** At start, when its window gets focus and every five minutes while it is active, BoosterAI asks GitHub for a newer release and offers it in a quiet bar: *Update* downloads it, checks it against `SHA256SUMS` and restarts into the new version; When the release carries a one-line summary of what is new, the bar shows it (in the app language, cut with an ellipsis, full text in the tooltip) with *Show more*, which opens the full list of changes since your version on GitHub. *Later* (hides that version for a day) or *Skip this version* (turn the check off in Settings).
 - **Help getting started.** At start (and with *Check WSL and AI CLIs* in Settings) BoosterAI checks in the background, without opening a window, whether WSL is installed (Windows) and which of claude, codex and agy the tabs' login shell finds. A missing CLI that a project uses gets an *Install* button that runs its official installer in a new visible tab, and the bar disappears once the CLI is found; a missing WSL gets `wsl --install` after a confirmation. Installed CLIs without an alias can get an optional full-auto alias (the CLI then acts without asking) in a marked block in `~/.bashrc`, after a warning ([details](docs/DETAILS.md#setup-wsl-and-ai-clis)).
@@ -52,6 +52,8 @@ Windows: extract `BoosterAI-<version>-win-x64.zip` and run the installer inside 
 ```powershell
 powershell -ExecutionPolicy Bypass -File install-windows.ps1
 ```
+
+The Windows installer starts BoosterAI again in the background after copying the new executable. It returns to the tray (or starts minimized when the tray is disabled), recovers existing tabs and reapplies the saved terminal font size without opening duplicate work tabs.
 
 `BoosterAI.exe` is not code-signed yet, so Windows 11 with Smart App Control on blocks it ("could not verify its publisher"). Smart App Control has no per-app exception; until signing lands ([#30](https://github.com/solwation/booster-ai/issues/30)), it has to be turned off to run BoosterAI.
 

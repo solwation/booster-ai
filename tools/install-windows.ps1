@@ -1,6 +1,9 @@
 ﻿# Installs BoosterAI.exe (next to this script in a release download, else dist\win-x64\) for the current user (no admin needed):
 # %LOCALAPPDATA%\Programs\BoosterAI plus Start menu and desktop shortcuts.
 #   powershell -ExecutionPolicy Bypass -File tools\install-windows.ps1
+# -NoStart is for packaging/test automation only; normal installs restart the app in the background.
+param([switch]$NoStart)
+
 $ErrorActionPreference = 'Stop'
 $src = Join-Path $PSScriptRoot 'BoosterAI.exe'
 if (-not (Test-Path $src)) { $src = Join-Path $PSScriptRoot '..\dist\win-x64\BoosterAI.exe' }
@@ -61,3 +64,13 @@ foreach ($folder in @([Environment]::GetFolderPath('Programs'), [Environment]::G
   $lnk.Save()
 }
 Write-Host "Installerat i $dir (Start-menyn och skrivbordet)."
+
+
+if (-not $NoStart) {
+  # Restore monitoring and the saved terminal font without opening new tabs or taking focus.
+  $started = Start-Process -FilePath $dest -WorkingDirectory $dir -ArgumentList '--background' -WindowStyle Hidden -PassThru
+  if ($started.WaitForExit(1500)) {
+    throw "BoosterAI avslutades direkt efter installationen (kod $($started.ExitCode)). Starta programmet igen."
+  }
+  Write-Host "BoosterAI startat i bakgrunden (PID $($started.Id))."
+}

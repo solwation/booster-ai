@@ -433,18 +433,53 @@ fi
     /// Windows: writes the profile for a zoom chosen in Settings at once and makes a running Windows Terminal reload
     /// it, so the open BoosterAI tabs and the CLIs restarted in them follow without a new Start (#61). In the background.
     /// </summary>
-    public static void ApplyZoom(int zoomPercent)
+    public static void ApplyZoom(int zoomPercent) => RequestZoom(zoomPercent, false);
+
+    /// <summary>App startup also refreshes already-open tabs when the fragment is unchanged.</summary>
+    public static void RestoreZoomOnStartup(int zoomPercent) => RequestZoom(zoomPercent, true);
+
+    /// <summary>The test assembly records requests instead of changing the user's live terminal font.</summary>
+    internal static Action<int, bool> RequestZoom { get; set; } = QueueZoom;
+
+    private static void QueueZoom(int zoomPercent, bool restore)
     {
         if (!OperatingSystem.IsWindows()) return;
         Volatile.Write(ref _wantedZoom, zoomPercent);
         Task.Run(() =>
         {
-            lock (ZoomLock)
+            try
             {
-                try { if (SyncZoomFragment(Volatile.Read(ref _wantedZoom))) ReloadRunningWindowsTerminal(); }
-                catch (Exception e) when (e is IOException or UnauthorizedAccessException) { /* the next Start writes it again */ }
+                WithZoomProfileLock(() => ZoomRefresh.Apply(restore && WindowsTerminalRunning(),
+                    () => restore ? ConfigStore.TryRead()?.ZoomPercent ?? Volatile.Read(ref _wantedZoom) : Volatile.Read(ref _wantedZoom),
+                    SyncZoomFragment, ReloadRunningWindowsTerminal));
             }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException) { /* the next startup/choice retries */ }
         });
+    }
+
+    private static void WithZoomProfileLock(Action update)
+    {
+        lock (ZoomLock)
+        {
+            // Multiple app instances share one fragment. A launch must not read another instance's temporary pulse.
+            using var gate = new Mutex(false, @"Local\BoosterAI.ZoomProfile");
+            var owned = false;
+            try
+            {
+                try { owned = gate.WaitOne(TimeSpan.FromSeconds(15)); }
+                catch (AbandonedMutexException) { owned = true; }
+                if (!owned) throw new IOException(Loc.Get("err.fontProfileBusy"));
+                update();
+            }
+            finally { if (owned) gate.ReleaseMutex(); }
+        }
+    }
+
+    private static bool WindowsTerminalRunning()
+    {
+        var processes = Process.GetProcessesByName("WindowsTerminal");
+        try { return processes.Length > 0; }
+        finally { foreach (var process in processes) process.Dispose(); }
     }
 
     /// <summary>settings.json of Windows Terminal (Store, Preview and unpackaged installs).</summary>
@@ -470,7 +505,7 @@ fi
     /// <summary>Makes a running Windows Terminal reload its settings, so a new zoom fragment applies to the tabs about to open.</summary>
     private static void ReloadRunningWindowsTerminal()
     {
-        if (Process.GetProcessesByName("WindowsTerminal").Length == 0) return;
+        if (!WindowsTerminalRunning()) return;
         var nudged = false;
         foreach (var file in WtSettingsFiles())
         {
@@ -506,7 +541,7 @@ fi
     private static void LaunchWindowsTerminal(IReadOnlyList<TabConfig> tabs, string distro, string? prompt,
         IReadOnlyList<TabTrack?> tracks, string window, int zoomPercent, bool resume)
     {
-        lock (ZoomLock) if (SyncZoomFragment(zoomPercent)) ReloadRunningWindowsTerminal();
+        WithZoomProfileLock(() => { if (SyncZoomFragment(zoomPercent)) ReloadRunningWindowsTerminal(); });
         var psi = new ProcessStartInfo("wt.exe") { UseShellExecute = false };
         // Reusing a tracked window only adds tabs; restore placement only when opening a new one.
         if (window is "new" or "-1") window = "BoosterAI-" + Guid.NewGuid().ToString("N");

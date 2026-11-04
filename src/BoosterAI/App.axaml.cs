@@ -51,7 +51,8 @@ public partial class App : Application
             // A minimized or tray-hidden window keeps the app running; closing it (with Minimize to tray off), or Quit in the tray, ends it.
             desktop.ShutdownMode = ShutdownMode.OnMainWindowClose;
             var vm = new MainViewModel(_config);
-            desktop.MainWindow = new MainWindow(vm);
+            desktop.MainWindow = new MainWindow(vm, background: desktop.Args?.Contains("--background") == true);
+            Launcher.RestoreZoomOnStartup(_config.ZoomPercent);
             vm.Update.Start();
             vm.FindRunningTabs();
             vm.StartSetupChecks();
