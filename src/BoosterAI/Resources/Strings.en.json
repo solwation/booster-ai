@@ -89,6 +89,7 @@
   "dir.hint": "C:\\Users\\you\\Documents\\project",
   "dir.hint.unix": "~/project",
   "llm.skal": "shell",
+  "llm.aider": "aider",
   "theme.Standard": "Standard",
   "theme.Pastell": "Pastel",
   "theme.Nordisk": "Nordic",

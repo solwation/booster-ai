@@ -59,7 +59,7 @@ public class CliUpdateTests
 
     [Fact]
     public void DryRunListsTheCommandPerCli() =>
-        Assert.Equal(["claude", "codex", "agy"], Launcher.CliUpdateCommands.Select(c => c.Llm));
+        Assert.Equal(["claude", "codex", "agy", "aider"], Launcher.CliUpdateCommands.Select(c => c.Llm));
 
     /// <summary>Fake codex (installed under a fake npm root), npm, claude and agy, a HOME for the stamps, and the lib.</summary>
     private sealed class Fakes : IDisposable
@@ -80,6 +80,7 @@ public class CliUpdateTests
             Set("codex-latest", "0.165.0");
             Set("claude", "2.1.312");
             Set("agy", "1.4.10");
+            Set("aider", "0.72.0");
             Write(Path.Combine(codexDir, "codex.js"), $"""
                 [ "$1" = --version ] && {'{'} echo "codex-cli $(cat {Root}/codex)"; exit 0; {'}'}
                 echo "codex $*" >> {Calls}
@@ -93,7 +94,7 @@ public class CliUpdateTests
                   "install -g") sleep "${FAKE_INSTALL_SECONDS:-0}"; echo "${3##*@}" > {{Root}}/codex ;;
                 esac
                 """);
-            foreach (var cli in new[] { "claude", "agy" })
+            foreach (var cli in new[] { "claude", "agy", "aider" })
                 Write(Path.Combine(Bin, cli), $$"""
                     [ "$1" = --version ] && { echo "$(cat {{Root}}/{{cli}}) ({{cli}})"; exit 0; }
                     echo "{{cli}} $*" >> {{Calls}}
@@ -169,6 +170,17 @@ public class CliUpdateTests
         var (output, _) = f.Run($"bs_update {cli}");
         Assert.Equal([cli + " update"], f.ReadCalls());
         Assert.EndsWith($"updated to {newer}\n", output);
+    }
+
+    [Fact]
+    public void AiderUsesItsOwnUpgrade()
+    {
+        if (!CanRunBash) return;
+        using var f = new Fakes();
+        f.Set("aider-latest", "0.73.0");
+        var (output, _) = f.Run("bs_update aider");
+        Assert.Equal(["aider --upgrade"], f.ReadCalls());
+        Assert.EndsWith("updated to 0.73.0\n", output);
     }
 
     [Theory]

@@ -61,7 +61,7 @@ internal static class Program
         }
         if (args.Contains("--dry-run-close"))
         {
-            foreach (var llm in new[] { "claude", "codex", "agy" })
+            foreach (var llm in new[] { "claude", "codex", "agy", "aider" })
                 Console.WriteLine(llm + ": " + Launcher.SaveAndCloseScript(new TabConfig { Llm = llm }, "example-token"));
             Console.WriteLine("Close recorded tab (example PID/starttime):\n" + Launcher.CloseTabScript(12345, 67890, exitCleanly: true));
             return;

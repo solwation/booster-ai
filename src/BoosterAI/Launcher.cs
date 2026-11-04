@@ -60,7 +60,7 @@ public static class Launcher
     /// or the tab is a shell. It never fails the chain: the CLI starts as installed when the update cannot run.
     /// </summary>
     private static string UpdateHook(TabConfig tab, TabTrack track) =>
-        track.UpdateClis && tab.Llm is "claude" or "codex" or "agy" ? Hook("bs_update " + tab.Llm) + " && " : "";
+        track.UpdateClis && tab.Llm is "claude" or "codex" or "agy" or "aider" ? Hook("bs_update " + tab.Llm) + " && " : "";
 
     /// <summary>How tab-lib.sh's bs_update updates each CLI, for --dry-run and the docs.</summary>
     public static readonly IReadOnlyList<(string Llm, string How)> CliUpdateCommands =
@@ -68,15 +68,16 @@ public static class Launcher
         ("claude", "claude update (its own check; also updates npm/package-manager installs)"),
         ("codex", "npm install -g @openai/codex@<latest> when npm view @openai/codex version is newer than codex --version and codex lives under npm root -g, otherwise codex update"),
         ("agy", "agy update (its own check)"),
+        ("aider", "aider --upgrade (its own check)"),
     ];
 
-    /// <summary>A model change on claude or codex restarts with the same conversation; anything else starts fresh.</summary>
+    /// <summary>A model change on claude, codex or aider restarts with the same conversation; anything else starts fresh.</summary>
     public static bool CanResume(TabConfig from, TabConfig to) =>
-        from.Llm == to.Llm && to.Llm is "claude" or "codex" && !(to.NonInteractive && to.Orkester);
+        from.Llm == to.Llm && to.Llm is "claude" or "codex" or "aider" && !(to.NonInteractive && to.Orkester);
 
     /// <summary>Explicit continuation is interactive; Run once always starts a new orchestra pass.</summary>
     public static bool CanContinue(TabConfig tab) =>
-        tab.Llm is "claude" or "codex" or "agy" && !(tab.NonInteractive && tab.Orkester);
+        tab.Llm is "claude" or "codex" or "agy" or "aider" && !(tab.NonInteractive && tab.Orkester);
 
     /// <summary>The settings file whose hooks log busy/idle for an interactive claude tab (written by TabSession.NewTrack).</summary>
     public static string HooksFile(TabTrack track) => $"{track.Dir}/{track.Id}.claude.json";
@@ -107,13 +108,18 @@ public static class Launcher
     {
         var args = new List<string>();
         if (resume && tab.Llm is "claude" or "agy") args.Add("--continue");
+        if (resume && tab.Llm == "aider") args.Add("--restore-chat-history");
         if (tab.Model != Catalog.StandardModel) args.Add("--model " + Quote(tab.Model));
         // One-shot mode applies to the orchestra command only; a given prompt (the install) stays interactive.
         var once = tab.NonInteractive && tab.Orkester && prompt is null && !resume;
         // A resumed conversation gets no first prompt: it already ran /orkester or the install.
         if (resume) { }
         else if (prompt is not null)
-            args.Add((tab.Llm == "agy" ? "-i " : "") + Quote(prompt));
+        {
+            if (tab.Llm == "agy") args.Add("-i " + Quote(prompt));
+            else if (tab.Llm == "aider") args.Add("-m " + Quote(prompt));
+            else args.Add(Quote(prompt));
+        }
         else if (tab.Orkester)
             args.Add(tab.Llm switch
             {
@@ -121,6 +127,7 @@ public static class Launcher
                 // Codex invokes repository skills as $name; repositories without one get the slash text.
                 "codex" when once => "\"" + CodexOrkester + "\"" + Quote(" " + ForegroundWatchNote),
                 "codex" => CodexOrkester,
+                "aider" => "-m " + Quote(once ? "/orkester " + ForegroundWatchNote : "/orkester"),
                 _ when once => "-p " + Quote("/orkester"),
                 _ => Quote("/orkester"),
             });
@@ -132,7 +139,7 @@ public static class Launcher
         // claude -p and agy -p only print the final answer; their event streams, read by tab-lib.sh's
         // bs_stream, show the text and tool calls as they happen. codex exec already prints progress.
         // Without a lib (no track) they stay in text mode.
-        if (once && track is not null && tab.Llm != "codex")
+        if (once && track is not null && tab.Llm != "codex" && tab.Llm != "aider")
             cli = "bs_stream " + cli + (tab.Llm == "claude" ? " --output-format stream-json --verbose" : " --output-format stream-json");
         return cli;
     }
@@ -166,6 +173,7 @@ public static class Launcher
             "claude" => "bs_stream claude --continue" + model + " -p " + Quote(SaveAndClosePrompt) + " --output-format stream-json --verbose",
             "agy" => "bs_stream agy --continue" + model + " -p " + Quote(SaveAndClosePrompt) + " --output-format stream-json",
             "codex" => "bs_run " + Quote("codex exec resume --last" + model + " " + Quote(SaveAndClosePrompt)),
+            "aider" => "bs_run " + Quote("aider --restore-chat-history" + model + " -m " + Quote(SaveAndClosePrompt)),
             _ => throw new ArgumentException("A save turn requires an AI CLI."),
         };
         return $"{Cd(InWsl(tab))} && bs_cli && bs_ev close-save token={Quote(token)} && {command} && bs_done 0 || bs_done $?";

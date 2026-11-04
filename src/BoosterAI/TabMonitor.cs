@@ -452,7 +452,7 @@ bs_up_why() {
 }
 bs_update() (
   cli=$1
-  case $cli in claude|codex|agy) ;; *) exit 0 ;; esac
+  case $cli in claude|codex|agy|aider) ;; *) exit 0 ;; esac
   # Only a CLI on PATH: a shell function or alias is not something BoosterAI can update.
   exe=$(type -P "$cli") || exit 0
   bs_up_due "$bs_up_dir/$cli.checked" || exit 0
@@ -478,20 +478,25 @@ bs_update() (
   : > "$log" 2>/dev/null || log=/dev/null
   cur=$(bs_up_ver "$exe")
   printf 'BoosterAI: checking for a newer %s %s... ' "$cli" "$cur"
-  # codex installed with npm: compare with the registry and install only a newer version. Everything else uses the
-  # CLI's own updater, which checks first (claude update also handles package-manager installs).
-  root=
-  [ "$cli" != codex ] || ! command -v npm >/dev/null 2>&1 || root=$(timeout 10 npm root -g 2>/dev/null </dev/null) || root=
-  if [ -n "$root" ] && [[ $(readlink -f "$exe") == "$root"/* ]]; then
-    latest=$(timeout "$bs_up_net" npm view @openai/codex version 2>>"$log" </dev/null)
-    rc=$?
-    if [ $rc != 0 ] || [ -z "$latest" ]; then echo "skipped: npm view @openai/codex failed ($(bs_up_why $rc "$log"))"; exit 0; fi
-    if [ -n "$cur" ] && [ "$(printf '%s\n%s\n' "$cur" "$latest" | sort -V | tail -n 1)" = "$cur" ]; then echo "up to date"; exit 0; fi
-    what="npm install -g @openai/codex@$latest"
-    set -- npm install -g "@openai/codex@$latest"
+  if [ "$cli" = aider ]; then
+    what="aider --upgrade"
+    set -- "$exe" --upgrade
   else
-    what="$cli update"
-    set -- "$exe" update
+    # codex installed with npm: compare with the registry and install only a newer version. Everything else uses the
+    # CLI's own updater, which checks first (claude update also handles package-manager installs).
+    root=
+    [ "$cli" != codex ] || ! command -v npm >/dev/null 2>&1 || root=$(timeout 10 npm root -g 2>/dev/null </dev/null) || root=
+    if [ -n "$root" ] && [[ $(readlink -f "$exe") == "$root"/* ]]; then
+      latest=$(timeout "$bs_up_net" npm view @openai/codex version 2>>"$log" </dev/null)
+      rc=$?
+      if [ $rc != 0 ] || [ -z "$latest" ]; then echo "skipped: npm view @openai/codex failed ($(bs_up_why $rc "$log"))"; exit 0; fi
+      if [ -n "$cur" ] && [ "$(printf '%s\n%s\n' "$cur" "$latest" | sort -V | tail -n 1)" = "$cur" ]; then echo "up to date"; exit 0; fi
+      what="npm install -g @openai/codex@$latest"
+      set -- npm install -g "@openai/codex@$latest"
+    else
+      what="$cli update"
+      set -- "$exe" update
+    fi
   fi
   timeout "$bs_up_limit" "$@" </dev/null >>"$log" 2>&1 &
   pid=$!

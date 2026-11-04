@@ -49,6 +49,38 @@ public class LauncherTests
         Launcher.TabScript(Once("codex")));
 
     [Fact]
+    public void OneShotAiderUsesMessage() => Assert.Equal(
+        "cd ~/'proj' && aider --model 'x' -m '/orkester " + Launcher.ForegroundWatchNote + "' || true && exec bash",
+        Launcher.TabScript(Once("aider")));
+
+    [Fact]
+    public void AiderInteractiveWithCustomOllamaModel()
+    {
+        var tab = new TabConfig { Directory = "~/myproj", Llm = "aider", Model = "ollama/qwen3.5:9b-ctx64k" };
+        var script = Launcher.TabScript(tab);
+        Assert.Equal("cd ~/'myproj' && aider --model 'ollama/qwen3.5:9b-ctx64k' || true && exec bash", script);
+    }
+
+    [Fact]
+    public void AiderResumeUsesRestoreChatHistory()
+    {
+        var track = new TabTrack("/s/lib.sh", "/s", "tab1");
+        var tab = new TabConfig { Directory = "~/proj", Llm = "aider", Model = Catalog.StandardModel };
+        var restart = Launcher.RestartScript(tab, track, resume: true);
+        Assert.Contains("aider --restore-chat-history", restart);
+    }
+
+    [Fact]
+    public void AiderSaveAndCloseUsesRestoreChatHistoryAndMessage()
+    {
+        var tab = new TabConfig { Directory = "~/proj", Llm = "aider", Model = "ollama/llama3" };
+        var script = Launcher.SaveAndCloseScript(tab, "tok123");
+        Assert.Contains("aider --restore-chat-history", script);
+        Assert.Contains("-m", script);
+        Assert.Contains("ollama/llama3", script);
+    }
+
+    [Fact]
     public void ForegroundWatchNoteIsSafeInATabCommand()
     {
         foreach (var c in new[] { ';', '\'', '"', '$', '`', '\\', '\n' })
@@ -79,7 +111,7 @@ public class LauncherTests
     [Fact]
     public void OneShotWithoutOrkesterIsIgnored()
     {
-        foreach (var llm in new[] { "claude", "codex", "agy" })
+        foreach (var llm in new[] { "claude", "codex", "agy", "aider" })
             Assert.Equal(Launcher.TabScript(new TabConfig { Directory = "~/proj", Llm = llm, Model = "x" }),
                 Launcher.TabScript(Once(llm, orkester: false)));
     }
@@ -96,7 +128,7 @@ public class LauncherTests
     public void OneShotWithTrackingKeepsHooksAndShell()
     {
         var track = new TabTrack("/s/lib.sh", "/s", "tab1");
-        foreach (var llm in new[] { "claude", "codex", "agy" })
+        foreach (var llm in new[] { "claude", "codex", "agy", "aider" })
         {
             var script = Launcher.TabScript(Once(llm), null, track);
             Assert.DoesNotContain(';', script);
@@ -203,7 +235,12 @@ public class LauncherTests
                 Assert.DoesNotContain(';', restart);
                 if (resume && llm != Catalog.ShellOnly)
                 {
-                    Assert.Contains(llm == "codex" ? "codex resume --last" : llm + " --continue", restart);
+                    Assert.Contains(llm switch
+                    {
+                        "codex" => "codex resume --last",
+                        "aider" => "aider --restore-chat-history",
+                        _ => llm + " --continue",
+                    }, restart);
                     Assert.DoesNotContain("orkester", restart);
                 }
                 if (!OperatingSystem.IsLinux()) continue;

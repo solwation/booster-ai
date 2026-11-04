@@ -63,6 +63,7 @@ public class CloseAllTests
     [InlineData("claude", "bs_stream claude --continue", "-p")]
     [InlineData("codex", "bs_run 'codex exec resume --last", "Stop now.")]
     [InlineData("agy", "bs_stream agy --continue", "-p")]
+    [InlineData("aider", "bs_run 'aider --restore-chat-history", "Stop now.")]
     public void SavingContinuesWithANewPromptAndOwnMarker(string llm, string command, string argument)
     {
         var script = Launcher.SaveAndCloseScript(new TabConfig { Llm = llm, Directory = "/tmp/it's here", Orkester = true }, "token");

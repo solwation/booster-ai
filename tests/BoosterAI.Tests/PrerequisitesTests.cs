@@ -64,10 +64,10 @@ public class PrerequisitesTests
     }
 
     [Fact]
-    public void NewUserWithoutAnyCliIsOfferedAllThree()
+    public void NewUserWithoutAnyCliIsOfferedAllFour()
     {
-        var s = Status(new CliStatus("claude", "none", null), new CliStatus("codex", "none", null), new CliStatus("agy", "none", null));
-        Assert.Equal(["claude", "codex", "agy"], Prerequisites.MissingToOffer(s, []));
+        var s = Status(new CliStatus("claude", "none", null), new CliStatus("codex", "none", null), new CliStatus("agy", "none", null), new CliStatus("aider", "none", null));
+        Assert.Equal(["claude", "codex", "agy", "aider"], Prerequisites.MissingToOffer(s, []));
         Assert.Empty(Prerequisites.MissingToOffer(SetupStatus.Empty, ["claude"]));
     }
 
@@ -86,6 +86,7 @@ public class PrerequisitesTests
         Assert.Equal("alias claude='claude --dangerously-skip-permissions'", Prerequisites.AliasLine("claude"));
         Assert.Equal("alias codex='codex --dangerously-bypass-approvals-and-sandbox'", Prerequisites.AliasLine("codex"));
         Assert.Equal("alias agy='agy --dangerously-skip-permissions'", Prerequisites.AliasLine("agy"));
+        Assert.Equal("alias aider='aider --yes-always'", Prerequisites.AliasLine("aider"));
         Assert.Throws<ArgumentException>(() => Prerequisites.AliasLine(Catalog.ShellOnly));
     }
 
@@ -130,6 +131,7 @@ public class PrerequisitesTests
     [InlineData("claude", "curl -fsSL https://claude.ai/install.sh | bash", "run claude here")]
     [InlineData("codex", "npm install -g @openai/codex", "run codex login here")]
     [InlineData("agy", "curl -fsSL https://antigravity.google/cli/install.sh | bash", "run agy here")]
+    [InlineData("aider", "curl -LsSf https://aider.chat/install.sh | bash", "run aider here")]
     public void InstallScriptUsesTheOfficialInstaller(string cli, string command, string login)
     {
         var script = Prerequisites.InstallScript(cli);
@@ -247,17 +249,19 @@ public class PrerequisitesTests
     public void SetupViewModelListsSupportedAgents()
     {
         var vm = new SetupViewModel();
-        Assert.Equal(["claude", "codex", "agy"], vm.Agents.Select(a => a.Cli));
+        Assert.Equal(["claude", "codex", "agy", "aider"], vm.Agents.Select(a => a.Cli));
         Assert.All(vm.Agents, a => Assert.False(a.IsInstalled));
 
         vm.Apply(Status(
             new CliStatus("claude", "file", "/bin/claude"),
             new CliStatus("codex", "none", null),
-            new CliStatus("agy", "file", "/bin/agy")), "Ubuntu");
+            new CliStatus("agy", "file", "/bin/agy"),
+            new CliStatus("aider", "file", "/bin/aider")), "Ubuntu");
 
         Assert.True(vm.Agents.First(a => a.Cli == "claude").IsInstalled);
         Assert.False(vm.Agents.First(a => a.Cli == "codex").IsInstalled);
         Assert.True(vm.Agents.First(a => a.Cli == "agy").IsInstalled);
+        Assert.True(vm.Agents.First(a => a.Cli == "aider").IsInstalled);
     }
 
     [Fact]

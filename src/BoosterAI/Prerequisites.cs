@@ -31,7 +31,7 @@ public sealed record SetupStatus(WslState Wsl, IReadOnlyList<string> Distros, IR
 /// </summary>
 public static partial class Prerequisites
 {
-    public static readonly IReadOnlyList<string> Clis = ["claude", "codex", "agy"];
+    public static readonly IReadOnlyList<string> Clis = ["claude", "codex", "agy", "aider"];
 
     /// <summary>Lines of the detection output start with this; everything else (login banners, .bashrc output) is ignored.</summary>
     private const string Marker = "bsdetect";
@@ -41,7 +41,7 @@ public static partial class Prerequisites
 
     /// <summary>The bash a check runs in an interactive login shell (<c>bash -lic</c>), so aliases, functions and PATH match a tab's.</summary>
     public const string DetectScript =
-        "for c in claude codex agy npm; do t=$(type -t \"$c\" 2>/dev/null | head -n1); p=$(type -P \"$c\" 2>/dev/null); "
+        "for c in claude codex agy aider npm; do t=$(type -t \"$c\" 2>/dev/null | head -n1); p=$(type -P \"$c\" 2>/dev/null); "
         + "printf '" + Marker + " %s %s %s\\n' \"$c\" \"${t:-none}\" \"${p:--}\"; done; "
         + "grep -qF '" + BlockStart + "' ~/.bashrc 2>/dev/null && echo '" + Marker + "-block yes'; true";
 
@@ -107,6 +107,7 @@ public static partial class Prerequisites
         "claude" => "alias claude='claude --dangerously-skip-permissions'",
         "codex" => "alias codex='codex --dangerously-bypass-approvals-and-sandbox'",
         "agy" => "alias agy='agy --dangerously-skip-permissions'",
+        "aider" => "alias aider='aider --yes-always'",
         _ => throw new ArgumentException("No alias for " + cli, nameof(cli)),
     };
 
@@ -156,6 +157,8 @@ public static partial class Prerequisites
                 " If npm reported EACCES, its global folder needs root: use a Node.js from nvm instead of sudo."),
             // https://antigravity.google/docs/getting-started?tab=cli (macOS and Linux; installs ~/.local/bin/agy)
             "agy" => ("installing the Antigravity CLI with the official script", "set -o pipefail && curl -fsSL https://antigravity.google/cli/install.sh | bash", ""),
+            // https://aider.chat/docs/install.html (standalone installer; installs ~/.local/bin/aider)
+            "aider" => ("installing Aider with the official script", "set -o pipefail && curl -LsSf https://aider.chat/install.sh | bash", ""),
             _ => throw new ArgumentException("No installer for " + cli, nameof(cli)),
         };
         return $"cd ~ && echo 'BoosterAI: {intro}' && echo && {body}"
