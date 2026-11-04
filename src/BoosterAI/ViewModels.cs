@@ -1191,7 +1191,7 @@ public sealed partial class MainViewModel : Observable
     private void Poll()
     {
         var watched = Tabs.Where(t => t.TrackId is not null && t.Session is not null)
-            .Select(t => (Row: t, Id: t.TrackId!, t.LaunchedAt, Session: t.Session!)).ToList();
+            .Select(t => (Row: t, Id: t.TrackId!, t.LaunchedAt, Session: t.Session!, Name: t.Name)).ToList();
         if (_polling || watched.Count == 0) return;
         _polling = true;
         var distro = _cfg.WslDistro;
@@ -1210,6 +1210,11 @@ public sealed partial class MainViewModel : Observable
                 return (w.Row, w.Id, State: state, log?.CliExit, Denied: denied,
                     log?.Pid, Activity: w.Session.ReadActivity(w.Id, log, now), log?.WatchingSince, Log: log, LastOutput: w.Session.LastOutput(w.Id));
             }).ToList();
+            TabTitles.Restore(results.Zip(watched)
+                .Where(pair => pair.First.Log is { Pid: > 0, StartTime: > 0, Exited: false }
+                    && pair.First.State is not (TabState.Lost or TabState.Closed or TabState.NotStarted))
+                .Select(pair => new TabTitles.Target(pair.First.Log!.Pid!.Value,
+                    pair.First.Log.StartTime!.Value, pair.Second.Name)).ToList(), distro);
             // agy's settings are only read while a tab has a denial to offer rules for.
             var settings = results.Any(r => r.State == TabState.Denied) ? ReadText(settingsPath) : null;
             return (results, settings);

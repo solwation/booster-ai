@@ -19,6 +19,7 @@ internal static class TestTerminal
     internal static void Install()
     {
         Launcher.OpenTerminal = Requests.Enqueue;
+        TabTitles.Restore = (_, _) => { };
         Launcher.RequestZoom = (percent, restore) => ZoomRequests.Enqueue((percent, restore));
         TabSession.DefaultRoot = SessionRoot;
         AppDomain.CurrentDomain.ProcessExit += (_, _) =>
