@@ -3,6 +3,7 @@ using Xunit;
 
 namespace BoosterAI.Tests;
 
+[Collection(ConfigFileCollection.Name)]
 public class LocTests
 {
     [Fact]
