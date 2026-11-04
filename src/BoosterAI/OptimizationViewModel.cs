@@ -1,4 +1,5 @@
 using Avalonia.Media;
+using Avalonia.Threading;
 
 namespace BoosterAI;
 
@@ -16,6 +17,10 @@ public sealed class OptimizationViewModel : Observable
     private string? _statusMessage;
     private bool _statusIsError;
     private bool _fakeWindows;
+    private WslMemoryMonitor? _memoryMonitor;
+    private DispatcherTimer? _memoryRefresh;
+    private bool _memoryStopped;
+    private WslMemorySnapshot _memory = new(WslMemoryState.Unavailable, null, null, null, null, TimeSpan.Zero, 0);
 
     public OptimizationViewModel(AppConfig cfg)
     {
@@ -60,6 +65,65 @@ public sealed class OptimizationViewModel : Observable
     public double RecommendationUpperFraction =>
         WslOptimization.SliderFraction(RecommendedUpperGb, MinMemoryGb, MaxMemoryGb);
     public double RecommendationCentreFraction => (RecommendationLowerFraction + RecommendationUpperFraction) / 2;
+
+    private const double BytesPerGb = 1024d * 1024 * 1024;
+    public bool HasMemoryHistory => _memory.SampleCount > 0;
+    public string MemoryCurrentText => _memory.CurrentBytes.HasValue
+        ? Loc.Format("settings.optimization.usageCurrent", Gb(_memory.CurrentBytes.Value))
+        : Loc.Get(_memory.State switch
+        {
+            WslMemoryState.NotRunning => "settings.optimization.usageNotRunning",
+            WslMemoryState.LegacyProcess => "settings.optimization.usageLegacy",
+            WslMemoryState.Stale => "settings.optimization.usageStale",
+            _ => "settings.optimization.usageUnavailable",
+        });
+    public string MemoryStatisticsText => HasMemoryHistory
+        ? Loc.Format("settings.optimization.usageStatistics", Gb(_memory.AverageBytes!.Value),
+            Gb(_memory.MinimumBytes!.Value), Gb(_memory.MaximumBytes!.Value)) : "";
+    public string MemoryPeriodText => HasMemoryHistory
+        ? Loc.Format("settings.optimization.usagePeriod", _memory.CollectedTime.TotalMinutes.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture), _memory.SampleCount)
+        : Loc.Get("settings.optimization.usageWaiting");
+    public double MemoryLowerFraction => MemoryFraction(_memory.MinimumBytes ?? 0);
+    public double MemoryUpperFraction => MemoryFraction(_memory.MaximumBytes ?? 0);
+    public double MemoryAverageFraction => MemoryFraction(_memory.AverageBytes ?? 0);
+    private double MemoryFraction(double bytes) => MaxMemoryGb <= MinMemoryGb ? 0
+        : Math.Clamp((bytes / BytesPerGb - MinMemoryGb) / (MaxMemoryGb - MinMemoryGb), 0, 1);
+    private static string Gb(double bytes) => (bytes / BytesPerGb).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture);
+
+    /// <summary>Only App startup calls this; tests and headless screenshots never read live memory.</summary>
+    public void StartMemoryMonitoring()
+    {
+        if (!OperatingSystem.IsWindows() || _memoryMonitor is not null) return;
+        _memoryStopped = false;
+        _memoryMonitor = new();
+        _memoryMonitor.Updated += snapshot => Dispatcher.UIThread.Post(() =>
+        {
+            if (!_memoryStopped) SetMemorySnapshot(snapshot);
+        });
+        _memoryMonitor.Start();
+        _memoryRefresh = new DispatcherTimer { Interval = WslMemoryHistory.Interval };
+        _memoryRefresh.Tick += (_, _) =>
+        {
+            if (_memoryMonitor is not null) SetMemorySnapshot(_memoryMonitor.Snapshot());
+        };
+        _memoryRefresh.Start();
+    }
+
+    public void StopMemoryMonitoring()
+    {
+        _memoryStopped = true;
+        _memoryRefresh?.Stop();
+        _memoryRefresh = null;
+        _memoryMonitor?.Dispose();
+        _memoryMonitor = null;
+    }
+
+    internal void SetMemorySnapshot(WslMemorySnapshot snapshot)
+    {
+        _memory = snapshot;
+        foreach (var property in new[] { nameof(HasMemoryHistory), nameof(MemoryCurrentText), nameof(MemoryStatisticsText),
+            nameof(MemoryPeriodText), nameof(MemoryLowerFraction), nameof(MemoryUpperFraction), nameof(MemoryAverageFraction) }) Raise(property);
+    }
 
     public bool IsWindows => _fakeWindows || OperatingSystem.IsWindows();
     public bool IsLinux => !_fakeWindows && !OperatingSystem.IsWindows();
@@ -197,5 +261,7 @@ public sealed class OptimizationViewModel : Observable
         Raise(nameof(RecommendationUpperFraction));
         Raise(nameof(RecommendationCentreFraction));
         Raise(nameof(BannerVisible));
+        SetMemorySnapshot(new(WslMemoryState.Available, (long)(12.4 * BytesPerGb), 11.7 * BytesPerGb,
+            (long)(8.2 * BytesPerGb), (long)(17.6 * BytesPerGb), TimeSpan.FromMinutes(30), 61));
     }
 }

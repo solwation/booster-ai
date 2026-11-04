@@ -1,0 +1,9 @@
+{
+    "Timestamp":  "2026-11-04T09:58:12.6858568+00:00",
+    "SourceState":  "Available",
+    "SourceBytes":  13895356416,
+    "PowerShellWorkingSetBytes":  13895356416,
+    "AbsoluteDifferenceBytes":  0,
+    "IncludesGenericVmmem":  false,
+    "Source":  "System.Diagnostics.Process.WorkingSet64 for vmmemWSL only"
+}

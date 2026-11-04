@@ -55,6 +55,8 @@ public partial class App : Application
             vm.Update.Start();
             vm.FindRunningTabs();
             vm.StartSetupChecks();
+            vm.Optimization.StartMemoryMonitoring();
+            desktop.Exit += (_, _) => vm.Optimization.StopMemoryMonitoring();
         }
         base.OnFrameworkInitializationCompleted();
     }

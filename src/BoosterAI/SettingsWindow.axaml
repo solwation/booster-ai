@@ -192,6 +192,25 @@
                              Foreground="{DynamicResource RecommendedBrush}" />
                 </local:SliderMarkerPanel>
 
+                <!-- Measured history has its own lane; it never covers the suggested range or slider thumb. -->
+                <StackPanel Spacing="4" Margin="0,0,0,6" ToolTip.Tip="{local:T settings.optimization.usageSource}">
+                  <Panel Height="12" IsVisible="{Binding Optimization.HasMemoryHistory}" IsHitTestVisible="False">
+                    <local:SliderRangePanel LowerFraction="{Binding Optimization.MemoryLowerFraction}"
+                                            UpperFraction="{Binding Optimization.MemoryUpperFraction}" Inset="10" MinWidth="2">
+                      <Border Background="{DynamicResource LinkBrush}" Opacity="0.22" MinWidth="2" />
+                      <Border BorderBrush="{DynamicResource LinkBrush}" BorderThickness="2,0,2,2" MinWidth="2" />
+                    </local:SliderRangePanel>
+                    <local:SliderMarkerPanel Fraction="{Binding Optimization.MemoryAverageFraction}" Inset="10">
+                      <Border Width="3" Height="12" Background="{DynamicResource LinkBrush}" />
+                    </local:SliderMarkerPanel>
+                  </Panel>
+                  <TextBlock Text="{Binding Optimization.MemoryCurrentText}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                  <TextBlock Text="{Binding Optimization.MemoryStatisticsText}" IsVisible="{Binding Optimization.HasMemoryHistory}"
+                             Foreground="{DynamicResource LinkBrush}" FontSize="12" TextWrapping="Wrap" />
+                  <TextBlock Text="{Binding Optimization.MemoryPeriodText}" Classes="muted" FontSize="11.5" TextWrapping="Wrap" />
+                  <TextBlock Text="{local:T settings.optimization.usageHint}" Classes="muted" FontSize="11.5" TextWrapping="Wrap" />
+                </StackPanel>
+
                 <TextBlock Classes="muted" FontSize="12.5" Text="{local:T settings.optimization.rangeHint}" TextWrapping="Wrap" />
                 <TextBlock Classes="muted" FontSize="12.5" Text="{local:T settings.optimization.lowerHint}" TextWrapping="Wrap" />
                 <TextBlock Classes="muted" FontSize="12.5" Text="{local:T settings.optimization.upperHint}" TextWrapping="Wrap" />
