@@ -886,11 +886,11 @@
       const img = document.getElementById('previewImg');
       img.style.opacity = '0.3';
       setTimeout(() => {
-        if (mode === 'dark') img.src = 'screenshot-dark.png';
-        else if (mode === 'light') img.src = 'screenshot.png';
-        else if (mode === 'settings') img.src = 'settings-general.png';
-        else if (mode === 'appearance') img.src = 'settings-appearance.png';
-        else if (mode === 'wsl') img.src = 'settings-wsl.png';
+        if (mode === 'dark') img.src = 'screenshot-dark.png?v=2';
+        else if (mode === 'light') img.src = 'screenshot.png?v=2';
+        else if (mode === 'settings') img.src = 'settings-general.png?v=2';
+        else if (mode === 'appearance') img.src = 'settings-appearance.png?v=2';
+        else if (mode === 'wsl') img.src = 'settings-wsl.png?v=2';
         img.onload = () => { img.style.opacity = '1'; };
         // Fallback in case image is already cached
         setTimeout(() => { img.style.opacity = '1'; }, 100);
