@@ -124,6 +124,35 @@
               </StackPanel>
             </StackPanel>
 
+            <!-- AI-agenter och verktyg -->
+            <StackPanel Spacing="8">
+              <TextBlock Classes="sectionhead" Text="{local:T settings.section.agents}" />
+              <TextBlock Classes="muted" Text="{local:T settings.agents.hint}" TextWrapping="Wrap" />
+
+              <Border Background="{DynamicResource RowHoverBrush}" CornerRadius="8" Padding="14,10" Margin="0,4,0,0">
+                <StackPanel Spacing="10">
+                  <ItemsControl ItemsSource="{Binding Setup.Agents}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="local:AgentInfo">
+                        <Grid ColumnDefinitions="140,*,Auto" Margin="0,4">
+                          <TextBlock Grid.Column="0" Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                          <TextBlock Grid.Column="1" Text="{Binding StatusText}" Classes="muted" VerticalAlignment="Center" />
+                          <Button Grid.Column="2" Content="{Binding InstallButtonText}" Click="OnInstallAgent"
+                                  IsVisible="{Binding !IsInstalled}" ToolTip.Tip="{Binding InstallTip}" Padding="10,4" VerticalAlignment="Center" />
+                        </Grid>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+
+                  <Grid ColumnDefinitions="Auto,*" Margin="0,6,0,0">
+                    <Button Grid.Column="0" Content="{local:T setup.check}" Click="OnCheckSetup" Padding="12,6" VerticalAlignment="Center"
+                            IsEnabled="{Binding !Setup.IsChecking}" ToolTip.Tip="{local:T setup.check.tip}" />
+                    <TextBlock Grid.Column="1" Classes="muted" Text="{Binding Setup.Summary}" TextWrapping="Wrap" VerticalAlignment="Center" Margin="14,0,0,0" />
+                  </Grid>
+                </StackPanel>
+              </Border>
+            </StackPanel>
+
             <!-- Miljö och terminal (Linux) -->
             <StackPanel Spacing="8" IsVisible="{Binding IsLinux}">
               <TextBlock Classes="sectionhead" Text="{local:T settings.section.environment}" />
@@ -132,12 +161,6 @@
                 <TextBlock Grid.Column="0" Classes="colhead" Text="{local:T terminal}" VerticalAlignment="Center" Margin="0,0,14,0" />
                 <ComboBox Grid.Column="1" ItemsSource="{Binding LinuxTerminals}" SelectedItem="{Binding LinuxTerminal}" Width="170"
                           FontFamily="{StaticResource MonoFont}" FontSize="13" />
-              </Grid>
-
-              <Grid ColumnDefinitions="Auto,*" Margin="0,6,0,0">
-                <Button Grid.Column="0" Content="{local:T setup.check}" Click="OnCheckSetup" Padding="12,6" VerticalAlignment="Center"
-                        IsEnabled="{Binding !Setup.IsChecking}" ToolTip.Tip="{local:T setup.check.tip}" />
-                <TextBlock Grid.Column="1" Classes="muted" Text="{Binding Setup.Summary}" TextWrapping="Wrap" VerticalAlignment="Center" Margin="14,0,0,0" />
               </Grid>
             </StackPanel>
 

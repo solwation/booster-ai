@@ -6,6 +6,9 @@ namespace BoosterAI;
 /// <summary>One CLI button in the setup bars: "Installera codex" or the CLI an alias is offered for.</summary>
 public sealed record CliOffer(string Cli, string Label, string Tip);
 
+/// <summary>One supported AI CLI listed in the Settings agents hub (#91).</summary>
+public sealed record AgentInfo(string Cli, string Name, string StatusText, bool IsInstalled, string InstallButtonText, string InstallTip);
+
 /// <summary>
 /// The quiet setup bars in the main window (#74): WSL missing (Windows), CLIs missing in the tabs' shell with an
 /// install button each, and the full-auto alias offer; plus the summary that Settings shows after a check.
@@ -19,6 +22,14 @@ public sealed class SetupViewModel : Observable
 
     public SetupStatus Status => _status;
     public bool IsChecking { get => _checking; set { if (Set(ref _checking, value)) Raise(nameof(Summary)); } }
+    public Action? OnStatusChanged { get; set; }
+
+    public IReadOnlyList<AgentInfo> Agents { get; private set; } = [];
+
+    public SetupViewModel()
+    {
+        Refresh();
+    }
 
     public bool WslVisible => _status.Wsl is WslState.Missing or WslState.DistroMissing;
     public bool CanInstallWsl => _status.Wsl == WslState.Missing;
@@ -68,6 +79,7 @@ public sealed class SetupViewModel : Observable
         _distro = distro.Trim();
         _checked = true;
         Refresh();
+        OnStatusChanged?.Invoke();
     }
 
     /// <summary>The project rows' CLIs changed: recompute what to offer without a new check.</summary>
@@ -88,8 +100,19 @@ public sealed class SetupViewModel : Observable
         Missing = Prerequisites.MissingToOffer(_status, _rowLlms)
             .Select(c => new CliOffer(c, Loc.Format("setup.cli.install", c), Loc.Format("setup.cli.install.tip", Prerequisites.InstallScript(c)))).ToList();
         Aliases = Prerequisites.AliasesToOffer(_status, _dismissedAliases);
+        Agents = Prerequisites.Clis.Select(c =>
+        {
+            var installed = _status.Cli(c)?.Installed == true;
+            return new AgentInfo(
+                c,
+                Loc.Display("llm", c),
+                Loc.Get(installed ? "setup.status.installed" : "setup.status.missing"),
+                installed,
+                Loc.Format("setup.cli.install", c),
+                Loc.Format("setup.cli.install.tip", Prerequisites.InstallScript(c)));
+        }).ToList();
         foreach (var name in new[] { nameof(Status), nameof(WslVisible), nameof(CanInstallWsl), nameof(WslText), nameof(Missing), nameof(MissingVisible),
-                     nameof(MissingText), nameof(Aliases), nameof(AliasVisible), nameof(AliasText), nameof(AliasTip), nameof(Summary) })
+                     nameof(MissingText), nameof(Aliases), nameof(AliasVisible), nameof(AliasText), nameof(AliasTip), nameof(Agents), nameof(Summary) })
             Raise(name);
     }
 }

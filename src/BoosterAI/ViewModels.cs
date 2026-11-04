@@ -150,7 +150,20 @@ public sealed class TabViewModel : Observable
 
     /// <summary>Example shown in an empty directory field.</summary>
     public string DirectoryHint => Loc.Get(OperatingSystem.IsWindows() ? "dir.hint" : "dir.hint.unix");
-    public IReadOnlyList<string> Llms => Catalog.Llms;
+    public IReadOnlyList<string> Llms
+    {
+        get
+        {
+            var status = _owner.Setup.Status;
+            if (!status.Checked) return Catalog.Llms;
+            var list = status.Clis.Where(c => c.Installed).Select(c => c.Cli).ToList();
+            if (!list.Contains(_llm) && _llm != Catalog.ShellOnly)
+                list.Add(_llm);
+            list.Add(Catalog.ShellOnly);
+            return list;
+        }
+    }
+    public void RaiseLlms() => Raise(nameof(Llms));
     public IReadOnlyList<string> Models => Catalog.ModelsFor(_llm);
     public bool IsAi => _llm != Catalog.ShellOnly;
 
@@ -160,6 +173,7 @@ public sealed class TabViewModel : Observable
         set
         {
             if (value is null || !Set(ref _llm, value)) return;
+            Raise(nameof(Llms));
             Raise(nameof(Models));
             Raise(nameof(IsAi));
             Raise(nameof(CanOrkester));
@@ -410,6 +424,11 @@ public sealed partial class MainViewModel : Observable
         Update = new UpdateViewModel(cfg, Save);
         Denial = new DenialViewModel();
         Optimization = new OptimizationViewModel(cfg);
+        Converters.IsCliMissing = cli => Setup.Status.Checked && Setup.Status.Cli(cli)?.Installed == false;
+        Setup.OnStatusChanged = () =>
+        {
+            foreach (var t in Tabs) t.RaiseLlms();
+        };
         _ = InitAsync();
     }
 

@@ -35,6 +35,12 @@ public partial class SettingsWindow : Window
     private void OnShowMemoryLimit(object? sender, RoutedEventArgs e) => SelectedOptimizationSectionIndex = 1;
     private void OnShowMemoryUsage(object? sender, RoutedEventArgs e) => SelectedOptimizationSectionIndex = 0;
 
+    private void OnInstallAgent(object? sender, RoutedEventArgs e)
+    {
+        if ((sender as Control)?.DataContext is AgentInfo agent)
+            _vm.InstallCli(agent.Cli);
+    }
+
     private void OnAddTab(object? sender, RoutedEventArgs e) => _vm.AddTab();
 
     private async void OnFindProjects(object? sender, RoutedEventArgs e) => await ImportProjectsWindow.FindProjects(this, _vm);

@@ -242,4 +242,50 @@ public class PrerequisitesTests
         Assert.Contains("npm install -g @openai/codex", withNpm);
         Assert.Contains("run codex login here", withNpm);
     }
+
+    [Fact]
+    public void SetupViewModelListsSupportedAgents()
+    {
+        var vm = new SetupViewModel();
+        Assert.Equal(["claude", "codex", "agy"], vm.Agents.Select(a => a.Cli));
+        Assert.All(vm.Agents, a => Assert.False(a.IsInstalled));
+
+        vm.Apply(Status(
+            new CliStatus("claude", "file", "/bin/claude"),
+            new CliStatus("codex", "none", null),
+            new CliStatus("agy", "file", "/bin/agy")), "Ubuntu");
+
+        Assert.True(vm.Agents.First(a => a.Cli == "claude").IsInstalled);
+        Assert.False(vm.Agents.First(a => a.Cli == "codex").IsInstalled);
+        Assert.True(vm.Agents.First(a => a.Cli == "agy").IsInstalled);
+    }
+
+    [Fact]
+    public void TabViewModelLlmsFiltersToInstalledClis()
+    {
+        var appConfig = new AppConfig { Tabs = [new TabConfig { Llm = "claude" }] };
+        var main = new MainViewModel(appConfig);
+        var tab = main.Tabs[0];
+
+        // Before setup check completes, all Catalog.Llms are available as fallback
+        Assert.Equal(Catalog.Llms, tab.Llms);
+
+        // After setup check finds only codex installed
+        main.Setup.Apply(Status(
+            new CliStatus("claude", "none", null),
+            new CliStatus("codex", "file", "/bin/codex"),
+            new CliStatus("agy", "none", null)), "Ubuntu");
+
+        // tab.Llm is "claude", so "claude" is retained even though missing; "codex" is installed; "agy" is omitted.
+        Assert.Contains("codex", tab.Llms);
+        Assert.Contains("claude", tab.Llms);
+        Assert.DoesNotContain("agy", tab.Llms);
+        Assert.Contains(Catalog.ShellOnly, tab.Llms);
+
+        // If tab changes to codex, claude (uninstalled) drops off tab.Llms
+        tab.Llm = "codex";
+        Assert.DoesNotContain("claude", tab.Llms);
+        Assert.Contains("codex", tab.Llms);
+        Assert.Contains(Catalog.ShellOnly, tab.Llms);
+    }
 }
