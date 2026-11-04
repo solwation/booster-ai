@@ -24,7 +24,7 @@ Open a new PowerShell window after installation so it picks up the user PATH. Th
 tools/publish.sh    # dist/win-x64/BoosterAI.exe and dist/linux-x64/BoosterAI
 ```
 
-Install the result with `tools/install-linux.sh` or `tools\install-windows.ps1` from the checkout. The Windows installer stops only installed copies, replaces the executable and starts one new installed copy with `--background` and hidden process startup. Normal delivery must leave that app running, with no focus change and its saved zoom restored. `-NoStart` is only for packaging/test automation, never a normal user delivery.
+Install the result with `tools/install-linux.sh` or `tools\install-windows.ps1` from the checkout. The Windows installer stops only installed copies, replaces the executable and starts one new installed copy with `--background` and hidden process startup. Normal delivery must leave that app running, with no focus change and its saved zoom restored. If a portable copy already owns the single-instance guard, a clean secondary exit acknowledges it without failing installation; the installer reports that the existing copy must be restarted to use the new version. `-NoStart` is only for packaging/test automation, never a normal user delivery.
 
 Run the tests with:
 

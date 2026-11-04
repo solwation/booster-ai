@@ -99,6 +99,7 @@
   "status.installRunning": "Installationen körs i en ny flik för {0}.",
   "status.pickerFailed": "Kunde inte öppna mappväljaren: {0}",
   "picker.title": "Katalog för {0}",
+  "err.instanceUnavailable": "Den öppna instansen av BoosterAI svarar inte. Försök igen om en stund.",
   "err.fontProfileBusy": "Terminalens teckenstorlek uppdateras. Försök igen om en stund.",
   "err.model": "{0}: ogiltigt modell-id \"{1}\".",
   "err.directory": "{0}: katalogen får inte innehålla ; eller radbrytning.",

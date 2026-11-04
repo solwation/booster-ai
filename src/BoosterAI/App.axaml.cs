@@ -51,7 +51,11 @@ public partial class App : Application
             // A minimized or tray-hidden window keeps the app running; closing it (with Minimize to tray off), or Quit in the tray, ends it.
             desktop.ShutdownMode = ShutdownMode.OnMainWindowClose;
             var vm = new MainViewModel(_config);
-            desktop.MainWindow = new MainWindow(vm, background: desktop.Args?.Contains("--background") == true);
+            var main = new MainWindow(vm, background: desktop.Args?.Contains("--background") == true);
+            desktop.MainWindow = main;
+            // Queue early requests until the window has opened, including the initial background hide.
+            main.Opened += (_, _) => Program.Instance?.RegisterActivation(() =>
+                Avalonia.Threading.Dispatcher.UIThread.Post(() => Restore(main)));
             Launcher.RestoreZoomOnStartup(_config.ZoomPercent);
             vm.Update.Start();
             vm.FindRunningTabs();
@@ -97,8 +101,9 @@ public partial class App : Application
 
     private static void Restore(Window window)
     {
+        window.ShowActivated = true;
+        if (window.WindowState == WindowState.Minimized) window.WindowState = WindowState.Normal;
         window.Show();
-        window.WindowState = WindowState.Normal;
         window.Activate();
     }
 }

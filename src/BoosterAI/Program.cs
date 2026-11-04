@@ -4,6 +4,8 @@ namespace BoosterAI;
 
 internal static class Program
 {
+    internal static SingleInstance? Instance { get; private set; }
+
     [STAThread]
     public static void Main(string[] args)
     {
@@ -70,7 +72,21 @@ internal static class Program
             Environment.ExitCode = Screenshot.Run(shot);
             return;
         }
-        BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+        SingleInstance? instance;
+        try { instance = SingleInstance.Enter(activate: !args.Contains("--background")); }
+        catch (IOException e)
+        {
+            Console.Error.WriteLine(e.Message);
+            Environment.ExitCode = 1;
+            return;
+        }
+        if (instance is null) return;
+        using (instance)
+        {
+            Instance = instance;
+            try { BuildAvaloniaApp().StartWithClassicDesktopLifetime(args); }
+            finally { Instance = null; }
+        }
     }
 
     /// <summary>The setup check and the install and alias commands it can offer (#74); nothing is run.</summary>

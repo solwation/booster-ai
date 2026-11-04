@@ -99,6 +99,7 @@
   "status.installRunning": "The installation is running in a new tab for {0}.",
   "status.pickerFailed": "Could not open the folder picker: {0}",
   "picker.title": "Folder for {0}",
+  "err.instanceUnavailable": "The running BoosterAI instance did not respond. Try again shortly.",
   "err.fontProfileBusy": "The terminal font profile is busy. Try again shortly.",
   "err.model": "{0}: invalid model id \"{1}\".",
   "err.directory": "{0}: the folder must not contain ; or a line break.",

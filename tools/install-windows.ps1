@@ -70,7 +70,12 @@ if (-not $NoStart) {
   # Restore monitoring and the saved terminal font without opening new tabs or taking focus.
   $started = Start-Process -FilePath $dest -WorkingDirectory $dir -ArgumentList '--background' -WindowStyle Hidden -PassThru
   if ($started.WaitForExit(1500)) {
-    throw "BoosterAI avslutades direkt efter installationen (kod $($started.ExitCode)). Starta programmet igen."
+    if ($started.ExitCode -ne 0) {
+      throw "BoosterAI avslutades direkt efter installationen (kod $($started.ExitCode)). Starta programmet igen."
+    }
+    # Another portable copy can own the user-wide GUI guard. Its acknowledgement is a successful start.
+    Write-Host "En befintlig instans av BoosterAI kör redan; ingen extra instans startades. Starta om den för att använda den nyinstallerade versionen."
+  } else {
+    Write-Host "BoosterAI startat i bakgrunden (PID $($started.Id))."
   }
-  Write-Host "BoosterAI startat i bakgrunden (PID $($started.Id))."
 }

@@ -23,6 +23,7 @@ Start your whole working day with one click: BoosterAI opens every project you w
 - **Find your projects.** *Find projects* searches Documents (or any folder you pick) for git checkouts and folders with an AI instruction file (`AGENTS.md`, `CLAUDE.md`, `AI.md` …) and adds the ones you tick.
 - **Open the folder.** The icon after each project name opens its directory in Explorer (WSL folders included), Finder or your Linux file manager; hover the name to see the path.
 - **Your shell, your setup.** Tabs run through `bash -lic`, so your aliases and `PATH` apply, and you keep a normal shell when the CLI exits.
+- **One app instance.** Starting BoosterAI again from the menu brings the existing window back, including when it is minimized or hidden in the tray; it does not open another instance.
 - **After Start.** Choose whether the window stays open (default), minimizes (to the tray on Windows when that setting is on) or closes after Start; the tray icon is shown on Windows either way ([details](docs/DETAILS.md)).
 - **Font size.** One setting zooms the CLI text in all tabs; on Windows, startup reapplies the saved size to already-open BoosterAI terminal tabs too.
 - **Themes and language.** Five tab colour themes, an Appearance setting (Auto, Light or Dark, applied at once), in Swedish or English.
