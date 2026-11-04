@@ -13,7 +13,7 @@ thin adapters. Reading or improving the instructions does not start an unattende
 | Repository | `solwation/booster-ai` (public, MIT) |
 | Coordination | #1; one editable status comment per session |
 | Exclusions | Pull requests, #1 and the `orkester` coordination label |
-| Labels | Exactly one of `priority: high`, `priority: medium`, `priority: low` (missing counts as medium); `in-progress` during active implementation/integration, `integration-ready` for a finished handoff; retain `orkester: <stable-session-id>` during active work or its documented integration wait |
+| Labels | Exactly one of `priority: high`, `priority: medium`, `priority: low` (missing counts as medium); `in-progress` during active implementation/integration or canonical parent summaries, `integration-ready` for a finished handoff; retain `orkester: <stable-session-id>` during active work or its documented integration wait |
 | Ordering | high → medium → low, then `created_at`, then issue number |
 | Capacity | At most 2 active agents including helpers and a conductor implementing/integrating; at least 1 while startable work exists. Integration-ready waits and parent summary labels use no slot |
 | Integration queue | #1 status comment and private checkpoint record integration owner, checkout (branch if applicable), exact revision, evidence and next action. Reconcile before dispatch/drain and at every poll; waiting handoffs are not new-worker work |
