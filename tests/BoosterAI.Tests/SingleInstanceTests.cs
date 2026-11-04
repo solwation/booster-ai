@@ -95,7 +95,7 @@ public sealed class SingleInstanceTests
             using var other = SingleInstance.Enter(true, owner.Key);
             Assert.Null(other);
         })).ToArray();
-        await Task.WhenAll(attempts).WaitAsync(TimeSpan.FromSeconds(10));
+        await Task.WhenAll(attempts).WaitAsync(TimeSpan.FromSeconds(20));
         Assert.Equal(8, count);
     }
 

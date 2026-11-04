@@ -121,7 +121,7 @@ internal sealed class SingleInstance : IDisposable
 
     private static async Task Notify(string name, bool activate)
     {
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(15));
         while (true)
         {
             timeout.Token.ThrowIfCancellationRequested();
