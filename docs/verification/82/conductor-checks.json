@@ -1,0 +1,18 @@
+{
+  "outcome": "passed",
+  "marker": "booster-82-quoted-marker",
+  "scriptHasSemicolon": false,
+  "namedWindow": "BoosterAI-82-marker-eeb6ecceb98643168913851502248449",
+  "isolatedDesktop": true,
+  "sourceRevision": "d26e66f2e2c1657e42c17eb6fb38123c78550b4e",
+  "wslTests": {
+    "passed": 557,
+    "failed": 0
+  },
+  "windowsTests": {
+    "passed": 557,
+    "failed": 0
+  },
+  "build": "Release, 0 warnings, 0 errors",
+  "notes": "Generated WindowsTerminalArgs used against a private named terminal window on a non-input Windows desktop; marker script exited, owned window/process cleaned up."
+}
