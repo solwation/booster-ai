@@ -236,7 +236,7 @@ public partial class MainWindow : Window
 
     private async void OnOptimizeWsl(object? sender, RoutedEventArgs e)
     {
-        var sw = new SettingsWindow(_vm) { SelectedTabIndex = 2 };
+        var sw = new SettingsWindow(_vm) { SelectedTabIndex = 2, SelectedOptimizationSectionIndex = 1 };
         await sw.ShowDialog(this);
     }
 

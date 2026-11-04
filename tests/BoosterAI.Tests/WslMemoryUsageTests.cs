@@ -153,7 +153,7 @@ public class WslMemoryPresentationTests
         vm.SetMemorySnapshot(new(WslMemoryState.Available, 70L * 1024 * 1024 * 1024,
             35d * 1024 * 1024 * 1024, 1024, 70L * 1024 * 1024 * 1024, TimeSpan.FromMinutes(2), 5));
         Assert.Equal(48, vm.SliderMemoryGb);
-        Assert.Equal(0, vm.MemoryLowerFraction);
+        Assert.InRange(vm.MemoryLowerFraction, 0, 0.000001);
         Assert.Equal(1, vm.MemoryUpperFraction);
         Assert.InRange(vm.MemoryAverageFraction, 0, 1);
         Assert.Contains("70.0", vm.MemoryCurrentText);
@@ -163,5 +163,77 @@ public class WslMemoryPresentationTests
         Assert.False(vm.HasMemoryHistory);
         Assert.DoesNotContain("70.0", vm.MemoryCurrentText);
         Assert.Equal(48, vm.SliderMemoryGb);
+    }
+
+    [Fact]
+    public void OverviewUsesWholeHostScaleAndDoesNotTreatSliderSelectionAsSavedCap()
+    {
+        var vm = new OptimizationViewModel(new AppConfig());
+        vm.ShowFakeUnoptimized(64, 48);
+        const long gb = 1024L * 1024 * 1024;
+        vm.SetMemorySnapshot(new(WslMemoryState.Available, 16 * gb, 12 * gb,
+            gb / 2, 20 * gb, TimeSpan.FromMinutes(2), 5));
+        Assert.Equal(0.25, vm.MemoryCurrentFraction);
+        Assert.Equal(0.5 / 64, vm.MemoryLowerFraction);
+        Assert.Equal(12d / 64, vm.MemoryAverageFraction);
+        Assert.Equal(20d / 64, vm.MemoryUpperFraction);
+        Assert.Equal(24d / 64, vm.SuggestedLowerFraction);
+        Assert.Equal(32d / 64, vm.SuggestedUpperFraction);
+        Assert.Equal(0.5, vm.MemoryCapFraction);
+        Assert.Contains("32", vm.MemoryCapText);
+        vm.SliderMemoryGb = 56;
+        Assert.Equal(0.5, vm.MemoryCapFraction);
+        Assert.Equal(0.25, vm.MemoryCurrentFraction);
+        Assert.Contains("16.0", vm.MemoryCurrentValue);
+    }
+
+    [Fact]
+    public void StaleCurrentIsBlankWhileRetainedHistoryRemainsLabelledAndReadable()
+    {
+        var vm = new OptimizationViewModel(new AppConfig());
+        vm.ShowFakeUnoptimized();
+        const long gb = 1024L * 1024 * 1024;
+        vm.SetMemorySnapshot(new(WslMemoryState.Stale, null, 12 * gb, 8 * gb, 16 * gb, TimeSpan.FromMinutes(2), 5));
+        Assert.False(vm.HasCurrentMemory);
+        Assert.Equal("—", vm.MemoryCurrentValue);
+        Assert.True(vm.HasMemoryHistory);
+        Assert.Equal("8.0 GB", vm.MemoryMinimumValue);
+        Assert.Equal("12.0 GB", vm.MemoryAverageValue);
+        Assert.Equal("16.0 GB", vm.MemoryMaximumValue);
+        Assert.Contains("2/30", vm.MemoryPeriodText);
+        vm.SetMemorySnapshot(new(WslMemoryState.NotRunning, null, null, null, null, TimeSpan.Zero, 0));
+        Assert.False(vm.HasMemoryHistory);
+        Assert.Equal("—", vm.MemoryAverageValue);
+        Assert.Equal("—", vm.MemoryMinimumValue);
+        Assert.Equal("—", vm.MemoryMaximumValue);
+    }
+
+    [Fact]
+    public void SavingExplicitlyUpdatesTheConfiguredCapAndNotifiesTheOverview()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "booster-memory-overview-" + Guid.NewGuid().ToString("N"), ".wslconfig");
+        WslConfigFile.UseCustomPath(path);
+        try
+        {
+            var vm = new OptimizationViewModel(new AppConfig());
+            vm.ShowFakeUnoptimized(64);
+            var changed = new List<string?>();
+            vm.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+            vm.SliderMemoryGb = 16;
+            Assert.False(File.Exists(path));
+            Assert.Equal(0.5, vm.MemoryCapFraction);
+            vm.SaveConfig();
+            Assert.False(vm.StatusIsError);
+            Assert.Equal(16, WslConfigFile.Load().MemoryGb);
+            Assert.Equal("16 GB", vm.MemoryCapText);
+            Assert.Equal(0.25, vm.MemoryCapFraction);
+            Assert.Contains(nameof(vm.MemoryCapFraction), changed);
+            Assert.Contains(nameof(vm.MemoryCapText), changed);
+        }
+        finally
+        {
+            WslConfigFile.UseCustomPath(null);
+            if (Directory.Exists(Path.GetDirectoryName(path))) Directory.Delete(Path.GetDirectoryName(path)!, recursive: true);
+        }
     }
 }

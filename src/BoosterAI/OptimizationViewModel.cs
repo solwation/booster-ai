@@ -59,6 +59,7 @@ public sealed class OptimizationViewModel : Observable
         : Loc.Get("settings.optimization.defaultUnset");
 
     public string RecommendationText => Loc.Format("settings.optimization.recommendation", RecommendedLowerGb, RecommendedUpperGb);
+    public string RecommendationValue => $"{RecommendedLowerGb}–{RecommendedUpperGb} GB";
 
     public double RecommendationLowerFraction =>
         WslOptimization.SliderFraction(RecommendedLowerGb, MinMemoryGb, MaxMemoryGb);
@@ -68,6 +69,23 @@ public sealed class OptimizationViewModel : Observable
 
     private const double BytesPerGb = 1024d * 1024 * 1024;
     public bool HasMemoryHistory => _memory.SampleCount > 0;
+    public bool HasCurrentMemory => _memory.CurrentBytes.HasValue;
+    public string MemoryCurrentValue => MemoryValue(_memory.CurrentBytes);
+    public string MemoryMinimumValue => MemoryValue(_memory.MinimumBytes);
+    public string MemoryAverageValue => MemoryValue(_memory.AverageBytes);
+    public string MemoryMaximumValue => MemoryValue(_memory.MaximumBytes);
+    public string MemoryScaleText => Loc.Format("settings.optimization.scale", TotalMemoryText);
+    public string MemoryQuarterText => ScaleValue(0.25);
+    public string MemoryHalfText => ScaleValue(0.5);
+    public string MemoryThreeQuarterText => ScaleValue(0.75);
+    public string MemoryCapText => _currentAllocatedGb is { } cap
+        ? $"{cap} GB" : Loc.Format("settings.optimization.defaultCap", _totalSystemMemoryGb / 2d);
+    public double MemoryCurrentFraction => MemoryFraction(_memory.CurrentBytes ?? 0);
+    public double MemoryCapFraction => HostFraction(_currentAllocatedGb ?? _totalSystemMemoryGb / 2d);
+    public double SuggestedLowerFraction => HostFraction(RecommendedLowerGb);
+    public double SuggestedUpperFraction => HostFraction(RecommendedUpperGb);
+    public bool MemoryOutsideScale => _memory.MaximumBytes > _totalSystemMemoryGb * BytesPerGb
+        || _memory.CurrentBytes > _totalSystemMemoryGb * BytesPerGb || _currentAllocatedGb > _totalSystemMemoryGb;
     public string MemoryCurrentText => _memory.CurrentBytes.HasValue
         ? Loc.Format("settings.optimization.usageCurrent", Gb(_memory.CurrentBytes.Value))
         : Loc.Get(_memory.State switch
@@ -86,8 +104,11 @@ public sealed class OptimizationViewModel : Observable
     public double MemoryLowerFraction => MemoryFraction(_memory.MinimumBytes ?? 0);
     public double MemoryUpperFraction => MemoryFraction(_memory.MaximumBytes ?? 0);
     public double MemoryAverageFraction => MemoryFraction(_memory.AverageBytes ?? 0);
-    private double MemoryFraction(double bytes) => MaxMemoryGb <= MinMemoryGb ? 0
-        : Math.Clamp((bytes / BytesPerGb - MinMemoryGb) / (MaxMemoryGb - MinMemoryGb), 0, 1);
+    // The overview uses the whole host's RAM, from zero. The editable slider keeps its own bounds.
+    private double MemoryFraction(double bytes) => HostFraction(bytes / BytesPerGb);
+    private double HostFraction(double gb) => _totalSystemMemoryGb <= 0 ? 0 : Math.Clamp(gb / _totalSystemMemoryGb, 0, 1);
+    private static string MemoryValue(double? bytes) => bytes is { } value ? Gb(value) + " GB" : "—";
+    private string ScaleValue(double fraction) => (_totalSystemMemoryGb * fraction).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture) + " GB";
     private static string Gb(double bytes) => (bytes / BytesPerGb).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture);
 
     /// <summary>Only App startup calls this; tests and headless screenshots never read live memory.</summary>
@@ -122,7 +143,17 @@ public sealed class OptimizationViewModel : Observable
     {
         _memory = snapshot;
         foreach (var property in new[] { nameof(HasMemoryHistory), nameof(MemoryCurrentText), nameof(MemoryStatisticsText),
-            nameof(MemoryPeriodText), nameof(MemoryLowerFraction), nameof(MemoryUpperFraction), nameof(MemoryAverageFraction) }) Raise(property);
+            nameof(MemoryPeriodText), nameof(MemoryLowerFraction), nameof(MemoryUpperFraction), nameof(MemoryAverageFraction),
+            nameof(HasCurrentMemory), nameof(MemoryCurrentValue), nameof(MemoryMinimumValue), nameof(MemoryAverageValue),
+            nameof(MemoryMaximumValue), nameof(MemoryCurrentFraction), nameof(MemoryOutsideScale) }) Raise(property);
+    }
+
+    private void RaiseMemoryScale()
+    {
+        foreach (var property in new[] { nameof(MemoryScaleText), nameof(MemoryQuarterText), nameof(MemoryHalfText),
+            nameof(MemoryThreeQuarterText), nameof(MemoryCapText), nameof(MemoryCapFraction), nameof(SuggestedLowerFraction),
+            nameof(SuggestedUpperFraction), nameof(MemoryCurrentFraction), nameof(MemoryLowerFraction), nameof(MemoryUpperFraction),
+            nameof(MemoryAverageFraction), nameof(MemoryOutsideScale), nameof(RecommendationValue) }) Raise(property);
     }
 
     public bool IsWindows => _fakeWindows || OperatingSystem.IsWindows();
@@ -180,6 +211,7 @@ public sealed class OptimizationViewModel : Observable
         Raise(nameof(MinMemoryGb));
         Raise(nameof(MaxMemoryGb));
         Raise(nameof(BannerVisible));
+        RaiseMemoryScale();
     }
 
     public void ApplyRecommendation()
@@ -199,6 +231,7 @@ public sealed class OptimizationViewModel : Observable
             StatusMessage = Loc.Get("settings.optimization.saved");
             Raise(nameof(CurrentAllocatedGb));
             Raise(nameof(CurrentConfigText));
+            RaiseMemoryScale();
             Raise(nameof(StatusColorBrush));
         }
         catch (Exception ex)
@@ -261,6 +294,7 @@ public sealed class OptimizationViewModel : Observable
         Raise(nameof(RecommendationUpperFraction));
         Raise(nameof(RecommendationCentreFraction));
         Raise(nameof(BannerVisible));
+        RaiseMemoryScale();
         SetMemorySnapshot(new(WslMemoryState.Available, (long)(12.4 * BytesPerGb), 11.7 * BytesPerGb,
             (long)(8.2 * BytesPerGb), (long)(17.6 * BytesPerGb), TimeSpan.FromMinutes(30), 61));
     }

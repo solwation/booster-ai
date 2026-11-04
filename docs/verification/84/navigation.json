@@ -1,0 +1,13 @@
+{
+  "headless": true,
+  "keyboardNavigation": "Down/Up traverses usage,limit,environment",
+  "keyboardAction": "Space opens memory limit",
+  "unsavedSelectionPreserved": true,
+  "minimumSize": {
+    "width": 640,
+    "height": 400
+  },
+  "lastActionReachable": true,
+  "smallLimitSaveReachable": true,
+  "linuxNoteVisible": true
+}

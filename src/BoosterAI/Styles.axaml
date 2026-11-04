@@ -24,6 +24,28 @@
   </Style>
 
   <!-- Settings tab navigation -->
+  <Style Selector="TabControl.settings-tabs TabControl.optimization-sections TabItem">
+    <Setter Property="Width" Value="150" />
+    <Setter Property="MinHeight" Value="44" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="Padding" Value="10,12" />
+    <Setter Property="Margin" Value="0,0,0,4" />
+    <Setter Property="HorizontalContentAlignment" Value="Left" />
+  </Style>
+  <Style Selector="Border.memory-track">
+    <Setter Property="Height" Value="24" />
+    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="Background" Value="{DynamicResource RowHoverBrush}" />
+  </Style>
+  <Style Selector="Border.memory-stat">
+    <Setter Property="Padding" Value="10,7" />
+    <Setter Property="CornerRadius" Value="5" />
+    <Setter Property="Background" Value="{DynamicResource RowHoverBrush}" />
+  </Style>
+  <Style Selector="TextBlock.memory-axis">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="Foreground" Value="{DynamicResource MutedBrush}" />
+  </Style>
   <Style Selector="TabControl.settings-tabs">
     <Setter Property="Padding" Value="0,16,0,0" />
   </Style>

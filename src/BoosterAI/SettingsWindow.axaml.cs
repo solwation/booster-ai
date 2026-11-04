@@ -26,6 +26,15 @@ public partial class SettingsWindow : Window
         set => TabsControl.SelectedIndex = value;
     }
 
+    public int SelectedOptimizationSectionIndex
+    {
+        get => OptimizationSections.SelectedIndex;
+        set => OptimizationSections.SelectedIndex = value;
+    }
+
+    private void OnShowMemoryLimit(object? sender, RoutedEventArgs e) => SelectedOptimizationSectionIndex = 1;
+    private void OnShowMemoryUsage(object? sender, RoutedEventArgs e) => SelectedOptimizationSectionIndex = 0;
+
     private void OnAddTab(object? sender, RoutedEventArgs e) => _vm.AddTab();
 
     private async void OnFindProjects(object? sender, RoutedEventArgs e) => await ImportProjectsWindow.FindProjects(this, _vm);

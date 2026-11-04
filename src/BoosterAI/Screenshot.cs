@@ -13,7 +13,8 @@ namespace BoosterAI;
 /// focus changes. The window frame (title bar) is not drawn; only the client area.
 /// </summary>
 internal sealed record ScreenshotOptions(string File, string Window, string? FakeUpdate, string? FakeStatus, bool FakeDenied, bool FakeChanged,
-    int? FakeOutput = null, int FakeRestartable = 0, string? FakeSetup = null, string? Tab = null, bool FakeOptimization = false, int? FakeMemoryCap = null);
+    int? FakeOutput = null, int FakeRestartable = 0, string? FakeSetup = null, string? Tab = null, bool FakeOptimization = false, int? FakeMemoryCap = null,
+    string? Section = null, string? FakeMemoryState = null, int? Width = null, int? Height = null);
 
 internal static class Screenshot
 {
@@ -30,7 +31,10 @@ internal static class Screenshot
             int.TryParse(Value(args, "--fake-restartable"), out var r) ? r : 0,
             args.Contains("--fake-setup") ? (Value(args, "--fake-setup") is "wsl" or "alias" ? Value(args, "--fake-setup") : "cli") : null,
             Value(args, "--tab"), args.Contains("--fake-optimization"),
-            int.TryParse(Value(args, "--fake-memory-cap"), out var cap) ? cap : null);
+            int.TryParse(Value(args, "--fake-memory-cap"), out var cap) ? cap : null,
+            Value(args, "--section"), Value(args, "--fake-memory-state"),
+            int.TryParse(Value(args, "--width"), out var width) ? width : null,
+            int.TryParse(Value(args, "--height"), out var height) ? height : null);
     }
 
     /// <summary>--fake-output [N]: the popup of the Nth running sample tab (0: the first, interactive; 1: Watching).</summary>
@@ -96,6 +100,20 @@ internal static class Screenshot
             {
                 sw.SelectedTabIndex = 2;
                 vm.Optimization.ShowFakeUnoptimized(selectedGb: o.FakeMemoryCap);
+                sw.SelectedOptimizationSectionIndex = o.Section switch { "limit" => 1, "environment" => 2, _ => 0 };
+                if (o.FakeMemoryState is { } state)
+                {
+                    const long gb = 1024L * 1024 * 1024;
+                    vm.Optimization.SetMemorySnapshot(state switch
+                    {
+                        "empty" => new(WslMemoryState.NotRunning, null, null, null, null, TimeSpan.Zero, 0),
+                        "partial" => new(WslMemoryState.Available, 12 * gb, 10 * gb, 8 * gb, 12 * gb, TimeSpan.FromMinutes(2), 5),
+                        "stale" => new(WslMemoryState.Stale, null, 10 * gb, 8 * gb, 12 * gb, TimeSpan.FromMinutes(2), 5),
+                        "legacy" => new(WslMemoryState.LegacyProcess, null, null, null, null, TimeSpan.Zero, 0),
+                        "outside" => new(WslMemoryState.Available, 70 * gb, 55 * gb, 40 * gb, 70 * gb, TimeSpan.FromMinutes(30), 61),
+                        _ => throw new ArgumentException("Unknown --fake-memory-state: " + state),
+                    });
+                }
             }
             else if (o.Tab is "appearance" or "utseende") sw.SelectedTabIndex = 3;
             else if (o.Tab is "projects" or "projekt") sw.SelectedTabIndex = 0;
@@ -103,6 +121,8 @@ internal static class Screenshot
         }
         // Room below the first rows for the status popup.
         if (o.FakeOutput is not null) window.Height = 820;
+        if (o.Width is { } shotWidth) window.Width = Math.Max(window.MinWidth, shotWidth);
+        if (o.Height is { } shotHeight) window.Height = Math.Max(window.MinHeight, shotHeight);
         window.Show();
         // The orchestra check runs in the background; give it a moment so the toggles show their real state.
         for (var i = 0; i < 40 && vm.Tabs.Any(t => t.HasOrkester is null && t.Directory.Trim() != ""); i++)
