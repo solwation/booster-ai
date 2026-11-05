@@ -13,7 +13,9 @@
     <StackPanel Spacing="6">
       <TextBlock Classes="muted" TextWrapping="Wrap" Text="{Binding CodeLabel}" />
       <Border Background="{DynamicResource RowHoverBrush}" CornerRadius="6" Padding="10,7">
-        <TextBlock Classes="path" Text="{Binding Code}" TextWrapping="Wrap" Foreground="{DynamicResource TextBrush}" />
+        <ScrollViewer MaxHeight="160" HorizontalScrollBarVisibility="Disabled">
+          <SelectableTextBlock Classes="path" Text="{Binding Code}" TextWrapping="Wrap" Foreground="{DynamicResource TextBrush}" />
+        </ScrollViewer>
       </Border>
     </StackPanel>
     <TextBlock Classes="muted" TextWrapping="Wrap" LineHeight="20" Text="{Binding Detail}" />

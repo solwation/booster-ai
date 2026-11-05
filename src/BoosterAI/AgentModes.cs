@@ -69,12 +69,18 @@ public static class AgentModes
     }
 
     /// <summary>Only recognized aliases inside one well-formed block are editable; preserve every other byte.</summary>
-    public static string Change(string? bashrc, CliStatus status, AgentModeChoice choice)
+    public static string Change(string? bashrc, CliStatus status, AgentModeChoice choice, bool replaceCustomConfirmed = false)
     {
         var text = bashrc ?? "";
         if (!Prerequisites.Clis.Contains(status.Cli) || choice.Mode == AgentMode.Custom
             || (choice.Mode != AgentMode.Standard && !Choices(status).Contains(choice)))
             throw new InvalidOperationException(Loc.Get("agents.mode.unsupported"));
+        if (status.HasPermissionOverride || Current(status) == AgentMode.Custom)
+        {
+            if (Current(status) == AgentMode.Custom && !replaceCustomConfirmed)
+                throw new InvalidOperationException(Loc.Get("agents.alias.confirm.required"));
+            return PermissionOverrides.Change(text, status.Cli, choice);
+        }
         var starts = System.Text.RegularExpressions.Regex.Matches(text,
             "^" + System.Text.RegularExpressions.Regex.Escape(Prerequisites.BlockStart) + "\\r?$", System.Text.RegularExpressions.RegexOptions.Multiline);
         var ends = System.Text.RegularExpressions.Regex.Matches(text,
@@ -93,8 +99,11 @@ public static class AgentModes
             || System.Text.RegularExpressions.Regex.IsMatch(source,
                 @"^\s*alias\s+.*\s" + System.Text.RegularExpressions.Regex.Escape(status.Cli) + "=",
                 System.Text.RegularExpressions.RegexOptions.Multiline);
-        if (Defines(outside) || Current(status) == AgentMode.Custom)
-            throw new InvalidOperationException(Loc.Get("agents.mode.custom.detail"));
+        if (Defines(outside))
+        {
+            if (!replaceCustomConfirmed) throw new InvalidOperationException(Loc.Get("agents.alias.confirm.required"));
+            return PermissionOverrides.Change(text, status.Cli, choice);
+        }
         var line = AliasLine(status.Cli, choice);
         if (start < 0)
         {

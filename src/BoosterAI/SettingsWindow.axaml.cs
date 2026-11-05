@@ -73,9 +73,8 @@ public partial class SettingsWindow : Window
     private async void OnApplyAgentMode(object? sender, RoutedEventArgs e)
     {
         if ((sender as Control)?.DataContext is not AgentInfo agent || !agent.CanApply) return;
-        var confirmed = agent.SelectedMode.Mode != AgentMode.Yolo
-            || await ConfirmSetupWindow.AgentMode(agent).ShowDialog<bool>(this);
-        if (confirmed) _vm.ApplyAgentMode(agent, yoloConfirmed: true);
+        if (await ConfirmSetupWindow.AgentMode(agent).ShowDialog<bool>(this))
+            _vm.ApplyAgentMode(agent, yoloConfirmed: true, replaceCustomConfirmed: true);
     }
 
     private void OnAddTab(object? sender, RoutedEventArgs e) => _vm.AddTab();

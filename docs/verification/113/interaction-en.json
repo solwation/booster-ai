@@ -1,0 +1,56 @@
+{
+  "language": "en",
+  "theme": "dark",
+  "synthetic": true,
+  "results": [
+    {
+      "action": "escape",
+      "popupCount": 1,
+      "fileChanged": false,
+      "originalPreserved": true,
+      "defaultCancel": true
+    },
+    {
+      "action": "cancel",
+      "popupCount": 1,
+      "fileChanged": false,
+      "originalPreserved": true,
+      "defaultCancel": true
+    },
+    {
+      "action": "close",
+      "popupCount": 1,
+      "fileChanged": false,
+      "originalPreserved": true,
+      "defaultCancel": true
+    },
+    {
+      "action": "enter-default",
+      "popupCount": 1,
+      "fileChanged": false,
+      "originalPreserved": true,
+      "defaultCancel": true
+    },
+    {
+      "action": "confirm",
+      "popupCount": 1,
+      "fileChanged": true,
+      "originalPreserved": true,
+      "defaultCancel": true
+    },
+    {
+      "action": "confirm-yolo",
+      "popupCount": 1,
+      "fileChanged": true,
+      "originalPreserved": true,
+      "defaultCancel": true
+    },
+    {
+      "action": "confirm-no-alias",
+      "popupCount": 1,
+      "fileChanged": true,
+      "originalPreserved": true,
+      "defaultCancel": true
+    }
+  ]
+}

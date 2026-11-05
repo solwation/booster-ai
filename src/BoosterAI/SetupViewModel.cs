@@ -51,13 +51,15 @@ public sealed class AgentInfo : Observable
     public string AliasInspectCommand => "type " + Cli + (Detected.Kind == "function" ? "; declare -f " + Cli : "; alias " + Cli);
     public string AliasRecommendation => Loc.Get(ModeChoices.Any(c => c.Mode == AgentMode.AutoApprove) ? "agents.alias.recommend" : "agents.alias.recommend.basic");
     public bool CanSelectMode => IsInstalled;
-    public bool CanApply => CanSelectMode && !HasExternalDefinition && SelectedMode.Mode != CurrentMode;
+    public bool CanApply => CanSelectMode && SelectedMode.Mode != AgentMode.Custom && SelectedMode.Mode != CurrentMode;
     public bool HasPresetPreview => SelectedMode.Mode != AgentMode.Custom;
     public string ModeExplanation => SelectedMode.Explanation;
     public string ModeCommand => AgentModes.AliasLine(Cli, SelectedMode);
     public bool HasModeCommand => ModeCommand != "";
     public string ModePreview => SelectedMode.Mode == AgentMode.Standard ? Cli : ModeCommand;
-    public string ModePreviewEffect => Loc.Get(HasExternalDefinition ? "agents.alias.preview.external" : SelectedMode.Mode == AgentMode.Standard ? "agents.alias.remove" : "agents.alias.write");
+    public string ModePreviewEffect => Loc.Get(HasExternalDefinition || Detected.HasPermissionOverride
+        ? SelectedMode.Mode == AgentMode.Standard ? "agents.alias.override.none" : "agents.alias.preview.external"
+        : SelectedMode.Mode == AgentMode.Standard ? "agents.alias.remove" : "agents.alias.write");
     private AgentModeChoice _selectedMode;
     public AgentModeChoice SelectedMode
     {
@@ -293,17 +295,19 @@ public sealed partial class MainViewModel
     }
 
     /// <summary>The ~/.bashrc of the tabs' Linux as this process can read it; null until the WSL home is known.</summary>
-    private string? BashrcFile => PathMapping.ToLocalPath("~/.bashrc", _cfg.WslDistro, _wslHome);
+    internal string? PermissionConfigPath { get; set; }
+    private string? BashrcFile => PermissionConfigPath ?? PathMapping.ToLocalPath("~/.bashrc", _cfg.WslDistro, _wslHome);
 
     /// <summary>Called only by the Apply action after its required confirmation; never changes a running CLI.</summary>
-    public bool ApplyAgentMode(AgentInfo agent, bool yoloConfirmed)
+    public bool ApplyAgentMode(AgentInfo agent, bool yoloConfirmed, bool replaceCustomConfirmed = false)
     {
-        if (!agent.CanApply || (agent.SelectedMode.Mode == AgentMode.Yolo && !yoloConfirmed)) return false;
+        if (!agent.CanApply || (agent.SelectedMode.Mode == AgentMode.Yolo && !yoloConfirmed)
+            || (agent.HasExternalDefinition && !replaceCustomConfirmed)) return false;
         if (BashrcFile is not { } path) { ShowStatus(Loc.Get("status.wslHomeMissing"), error: true); return false; }
         try
         {
             var current = File.Exists(path) ? File.ReadAllText(path) : null;
-            var updated = AgentModes.Change(current, agent.Detected, agent.SelectedMode);
+            var updated = AgentModes.Change(current, agent.Detected, agent.SelectedMode, replaceCustomConfirmed);
             if (updated != (current ?? "")) File.WriteAllText(path, updated);
             ShowStatus(Loc.Format("agents.mode.applied", agent.Name, agent.SelectedMode.Label), error: false);
             CheckSetup();

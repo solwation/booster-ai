@@ -122,7 +122,7 @@ Only a copy in the location the installers use updates itself: `%LOCALAPPDATA%\P
 
 ## Setup: WSL and AI CLIs
 
-BoosterAI checks what the tabs need when it starts, when its main window is activated (at most every 30 seconds) and when you press **Check WSL and AI CLIs** in Settings, which also shows the result (*claude: installed, with alias · codex: missing · …*). The check runs in the background with hidden processes, so no window opens and focus stays where it is, and the window stays usable meanwhile.
+BoosterAI checks what the tabs need when it starts, when its main window is activated (at most every 30 seconds) and when you press **Check environment** under Settings → Optimization → WSL & environment, which also shows the result (*claude: installed · codex: missing · …*). The page explains that this is a read-only check of WSL/Linux, installed programs, versions and supported options; its link opens the AI agents overview for alias details. The check runs in the background with hidden processes, so no window opens and focus stays where it is, and the window stays usable meanwhile.
 
 - **WSL (Windows only).** `wsl.exe -l -q` lists the distributions. Without `wsl.exe` or without any distribution a bar explains that BoosterAI runs the tabs in WSL and offers **Install WSL …**; a dialog first says that it needs administrator rights and usually a restart, then `powershell.exe -NoExit -Command "wsl.exe --install"` runs elevated (UAC prompt) in its own visible window. Afterwards: restart, open Ubuntu once to create the Linux user, then start BoosterAI again. When other distributions exist but not the one under *WSL* in Settings, the bar names them instead of offering an install. Everything else works as before while WSL is missing.
 - **AI CLIs.** In the tabs' own login shell (`wsl.exe -d <distro> --exec bash -lic …` on Windows, `bash -lic …` on Linux), so PATH, nvm and aliases match a tab, BoosterAI runs `type -t` and `type -P` for `claude`, `codex`, `agy`, `aider`, `interpreter`, `openhands` and `npm`, with a 30-second limit after which the shell is stopped. A CLI counts as installed when an executable is on PATH; an alias alone does not count. Each missing CLI that a project row uses gets **Install &lt;cli&gt;** in a bar (all supported agents when none is installed at all, so a new user can start). *Not now* hides the bar until BoosterAI restarts.
@@ -154,7 +154,7 @@ guidance. Older BoosterAI alias blocks remain recognized by the agent editor.
 
 ### Agent versions and permission modes
 
-Settings → **AI agents** opens an overview of all six supported programs, with local theme-aware icons, installation status, version and current permission mode. Select a card or a sidebar entry to open **Overview**, **Permission alias** or **Context**. Installation details and context calculations are collapsible; the actual detected alias and selected preset preview stay visible. Each page scrolls independently; switching agents or sections keeps the same editors and unsaved selections. The same icons identify agents in the main window selectors. The alias **Save alias choice** action and compaction **Save for model** action remain separate. Versions are program versions, not model versions. Detection runs in the background in the tab's login environment. Each executable's `--version` and `--help` probe is bounded to two seconds (plus 0.2 seconds to force termination), with bounded output; the overall check remains limited to 30 seconds. A failed version probe leaves an installed CLI marked installed with **Unknown** version. Help failure hides unverified presets. No model or account is contacted intentionally by BoosterAI.
+Settings → **AI agents** opens an overview of all six supported programs, with local theme-aware icons, installation status, version and current permission mode. Select a card or a sidebar entry to open **Overview**, **Permission alias** or **Context**. Installation details and context calculations are collapsible; the actual detected alias and selected preset preview stay visible. Each page scrolls independently; switching agents or sections keeps the same editors and unsaved selections. The same icons identify agents in the main window selectors. The alias **Apply alias** action and compaction **Save for model** action remain separate. Versions are program versions, not model versions. Detection runs in the background in the tab's login environment. Each executable's `--version` and `--help` probe is bounded to two seconds (plus 0.2 seconds to force termination), with bounded output; the overall check remains limited to 30 seconds. A failed version probe leaves an installed CLI marked installed with **Unknown** version. Help failure hides unverified presets. No model or account is contacted intentionally by BoosterAI.
 
 An alias is a shell shortcut that expands a CLI name into a command with extra flags.
 The permission page separates **Currently detected** (the actual shell alias or
@@ -165,13 +165,21 @@ external CLI configuration and organization policy still apply.
 
 Custom aliases and shell functions have explicit labels rather than a generic
 "Custom" permission level. Their definitions are shown as selectable text. Function
-inspection uses `declare -f`, capped at 8 KiB, without executing the function; a
-truncation notice directs the user to the full inspection command. Custom definitions
-can preview supported presets but cannot be overwritten from this screen. Expand
-**Change custom definition** for steps to edit/remove the definition in shell startup
-files, refresh detection and then save a BoosterAI preset. No source filename is guessed.
+inspection uses `declare -f`, capped at 8 KiB, without executing the function; long
+results carry a truncation notice. Choose a supported preset and press **Apply alias**
+to replace a custom definition. One confirmation shows the detected definition and
+the selected result, with the YOLO warning included when applicable. Cancel, Escape
+and closing the confirmation leave the file unchanged; no manual shell commands are
+required. Original definition lines and unrelated agents are preserved. A dedicated
+per-agent override at the end of `.bashrc` clears the selected shell alias/function
+and applies only the exact reviewed preset. No source filename is guessed.
 
-**No alias** (internally `Standard`) removes only the recognized BoosterAI alias. It does not reset the agent's own configuration or organization policies. **Auto Approve** and **YOLO** are offered only when the installed executable advertises the required flags. Selecting a value does not write anything: **Save alias choice** saves it; YOLO additionally requires an explicit confirmation showing the exact alias and its effect. Approval and sandbox behavior differ by CLI:
+**No alias** (internally `Standard`) clears the recognized alias; after an explicit
+custom replacement it also clears that shell function. It does not reset the agent's
+own configuration or organization policies. **Auto Approve** and **YOLO** are offered
+only when the installed executable advertises the required flags. Selecting a value
+does not write anything: **Apply alias** opens the single confirmation.
+Approval and sandbox behavior differ by CLI:
 
 | CLI | Auto Approve | YOLO | Official reference |
 | --- | --- | --- | --- |
@@ -183,9 +191,22 @@ files, refresh detection and then save a BoosterAI preset. No source filename is
 | Open Interpreter, current standalone (`--oss` capability) | `--ask-for-approval never --sandbox workspace-write`: no prompts inside the selected sandbox | `--dangerously-bypass-approvals-and-sandbox` | [Sandbox](https://www.openinterpreter.com/docs/terminal/sandbox) |
 | Open Interpreter, legacy Python (`--local`/`--auto_run` capabilities) | Not offered | `--auto_run`: generated code runs without confirmation; no added sandbox | [Legacy parser](https://github.com/openinterpreter/openinterpreter/blob/v0.4.2/interpreter/terminal_interface/start_terminal_interface.py) |
 
-Only exact recognized alias lines inside one well-formed BoosterAI block are changed. Duplicate/malformed blocks, custom definitions, functions, and aliases outside that block are preserved and reported as custom or refused at save. Standard is repeatable and keeps unrelated block content. This affects regular terminals that read the same `.bashrc` too.
+Normal preset edits retain support for older BoosterAI alias blocks. An explicitly
+confirmed replacement uses a separate, canonical per-agent override; subsequent
+changes edit only that override. Duplicate or malformed override blocks are refused
+without writes. Other file bytes and other agents' overrides remain unchanged. This
+affects regular terminals that read the same `.bashrc` too.
 
-New tabs inherit the mode. Explicit starts/restarts in tabs opened with this version refresh an alias only when its original ownership was proven and its shell value remains unchanged. The hook reads exact known rows; it never sources `.bashrc` again or evaluates file text. It can remove the previously owned alias when switching back to Standard. Running CLI turns are unchanged. Custom functions/aliases and uncertain ownership are left alone; tabs opened by older BoosterAI builds may need closing and reopening. Install/update buttons use the existing official installer path; the Interpreter standalone installer does not migrate a legacy Python environment automatically.
+New tabs inherit the mode. Explicit starts/restarts in tabs opened with this version
+refresh an explicitly confirmed override for that CLI, including clearing its old
+function. Without such an override the older conservative ownership rule remains:
+the original alias must have been proven and its shell value must remain unchanged.
+The hook parses exact known rows; it never sources `.bashrc` again or evaluates file
+text. Running CLI turns are unchanged. Tabs opened by older BoosterAI builds may
+need closing and reopening. If another startup file subsequently changes the name,
+detection continues to report the actual resulting alias/function. Install/update
+buttons use the existing official installer path; the Interpreter standalone installer
+does not migrate a legacy Python environment automatically.
 
 
 ## OpenHands CLI

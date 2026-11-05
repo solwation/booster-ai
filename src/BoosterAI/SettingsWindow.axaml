@@ -562,16 +562,6 @@
                             <SelectableTextBlock Text="{Binding ModePreview}" Classes="path" TextWrapping="Wrap" FontSize="12" />
                             <TextBlock Text="{Binding ModePreviewEffect}" Classes="muted" TextWrapping="Wrap" FontSize="12" />
                           </StackPanel>
-                          <StackPanel Spacing="8" IsVisible="{Binding HasExternalDefinition}">
-                            <TextBlock Text="{local:T agents.alias.external.help}" TextWrapping="Wrap" FontSize="12" />
-                            <Expander Header="{local:T agents.alias.external.steps}" HorizontalAlignment="Stretch">
-                              <StackPanel Spacing="8">
-                                <TextBlock Text="{local:T agents.alias.external.instructions}" TextWrapping="Wrap" FontSize="12" />
-                                <SelectableTextBlock Text="{Binding AliasInspectCommand}" Classes="path" TextWrapping="Wrap" FontSize="12" />
-                                <Button Content="{local:T agents.check.short}" Click="OnCheckSetup" HorizontalAlignment="Left" IsEnabled="{Binding !$parent[Window].((local:MainViewModel)DataContext).Setup.IsChecking}" />
-                              </StackPanel>
-                            </Expander>
-                          </StackPanel>
                           <Button Classes="accent" Content="{local:T agents.mode.apply}" Click="OnApplyAgentMode" IsEnabled="{Binding CanApply}" HorizontalAlignment="Left" />
                           <TextBlock Text="{local:T agents.alias.scope}" Classes="muted" TextWrapping="Wrap" FontSize="12" />
                         </StackPanel>

@@ -151,7 +151,7 @@ public class AgentModesTests
     [Theory]
     [InlineData("alias", "alias codex='codex --my-options'")]
     [InlineData("function", "codex () { command codex --my-options \"$@\"; }")]
-    public void CustomDefinitionsCanPreviewPresetsButNeverWriteThem(string kind, string definition)
+    public void CustomDefinitionsOfferPresetsButRequireReplacementConfirmation(string kind, string definition)
     {
         var agent = new AgentInfo(Codex with { Kind = kind,
             AliasDefinition = kind == "alias" ? definition : null,
@@ -161,7 +161,7 @@ public class AgentModesTests
         foreach (var choice in agent.ModeChoices)
         {
             agent.SelectedMode = choice;
-            Assert.False(agent.CanApply);
+            Assert.Equal(choice.Mode != AgentMode.Custom, agent.CanApply);
             Assert.Equal(definition, agent.CurrentAliasCommand);
             Assert.Equal(choice.Explanation, agent.ModeExplanation);
             Assert.False(new MainViewModel(new AppConfig()).ApplyAgentMode(agent, yoloConfirmed: true));
@@ -169,6 +169,83 @@ public class AgentModesTests
         var missing = new AgentInfo(Codex with { Kind = "function" });
         Assert.True(missing.MissingDefinition);
         Assert.Contains("declare -f codex", missing.AliasInspectCommand);
+    }
+
+    public static IEnumerable<object[]> OverrideCases() => Prerequisites.Clis.Append("interpreter-legacy")
+        .SelectMany(cli => new[] { new object[] { cli, "alias" }, new object[] { cli, "function" } });
+
+    [Theory]
+    [MemberData(nameof(OverrideCases))]
+    public void ConfirmedPresetsReplaceCustomStartupAndDetectionReportsTheActualResult(string program, string kind)
+    {
+        if (!OperatingSystem.IsLinux()) return;
+        using var shell = new Shell();
+        var cli = program.Replace("-legacy", "");
+        var help = program.EndsWith("-legacy") ? "--local --auto_run"
+            : "acceptEdits --permission-mode --approve-for-me --dangerously-skip-permissions --dangerously-bypass-approvals-and-sandbox --mode auto --yes-always --llm-approve --always-approve --oss --ask-for-approval --sandbox";
+        shell.Write(cli, "if [ \"$1\" = --help ]; then printf '%s\\n' " + Launcher.Quote(help) + "; else echo 'cli 1.2.3'; fi");
+        var original = "# original startup is preserved\nalias helper='printf keep'\n" + (kind == "alias"
+            ? $"alias {cli}='{cli} --custom'\n" : $"function {cli} {{ command {cli} --custom \"$@\"; }}\n");
+        var status = new CliStatus(cli, kind, "/sample/" + cli) { Help = help };
+        foreach (var choice in AgentModes.Choices(status))
+        {
+            Assert.Throws<InvalidOperationException>(() => AgentModes.Change(original, status, choice));
+            var updated = AgentModes.Change(original, status, choice, replaceCustomConfirmed: true);
+            Assert.StartsWith(original, updated);
+            File.WriteAllText(Path.Combine(shell.Root, ".bashrc"), updated);
+            var result = shell.Run("shopt -s expand_aliases\n. ~/.bashrc\n" + Prerequisites.DetectScript);
+            Assert.Equal(0, result.Code);
+            var detected = Prerequisites.ParseDetect(result.Output).Clis.Single(c => c.Cli == cli);
+            Assert.True(detected.HasPermissionOverride);
+            Assert.Equal(choice.Mode, AgentModes.Current(detected));
+            Assert.Equal(updated, AgentModes.Change(updated, detected, choice));
+            var next = AgentModes.Choices(status).Last();
+            var changedAgain = AgentModes.Change(updated, detected, next);
+            Assert.StartsWith(original, changedAgain);
+            Assert.True(PermissionOverrides.TryRead(changedAgain, cli, out var saved));
+            Assert.Equal(next, saved);
+        }
+    }
+
+    [Fact]
+    public void ExplicitRestartUsesOnlyTheConfirmedTargetAndNeverEvaluatesOtherShellCode()
+    {
+        if (!OperatingSystem.IsLinux()) return;
+        using var shell = new Shell();
+        var auto = Choice(Codex, AgentMode.AutoApprove);
+        var original = "touch must-not-run\nalias helper='printf keep'\n";
+        var text = AgentModes.Change(original, Codex with { Kind = "function" }, auto, replaceCustomConfirmed: true);
+        File.WriteAllText(Path.Combine(shell.Root, ".bashrc"), text);
+        var result = shell.Run("shopt -s expand_aliases\nfunction codex { echo custom; }\nalias helper='printf keep'\n. ./lib.sh . tab1\nbs_refresh_aliases codex\nalias codex\nalias helper\ndeclare -F codex && exit 9\ntrue");
+        Assert.Equal(0, result.Code);
+        Assert.Contains(AgentModes.AliasLine("codex", auto), result.Output);
+        Assert.Contains("alias helper='printf keep'", result.Output);
+        Assert.False(File.Exists(Path.Combine(shell.Root, "must-not-run")));
+        var invalid = text.Replace("unset -f codex", "touch injected\nunset -f codex");
+        Assert.False(PermissionOverrides.TryRead(invalid, "codex", out _));
+        Assert.Throws<InvalidOperationException>(() => PermissionOverrides.Change(invalid, "codex", auto));
+        File.WriteAllText(Path.Combine(shell.Root, ".bashrc"), invalid);
+        result = shell.Run("function codex { echo original; }\n. ./lib.sh . tab1\nbs_refresh_aliases codex\ncodex");
+        Assert.Equal(0, result.Code);
+        Assert.Contains("original", result.Output);
+        Assert.False(File.Exists(Path.Combine(shell.Root, "injected")));
+    }
+
+    [Fact]
+    public void IndependentOverridesPreserveOtherAgentsAndRejectUnknownCommands()
+    {
+        var original = "# settings\r\nexport EDITOR=nano\r\n";
+        var codex = Choice(Codex, AgentMode.AutoApprove);
+        var claudeStatus = new CliStatus("claude", "file", "/sample/claude") { Help = "--permission-mode acceptEdits" };
+        var claude = Choice(claudeStatus, AgentMode.AutoApprove);
+        var both = PermissionOverrides.Change(PermissionOverrides.Change(original, "codex", codex), "claude", claude);
+        var changed = PermissionOverrides.Change(both, "codex", Choice(Codex, AgentMode.Standard));
+        Assert.StartsWith(original, changed);
+        Assert.True(PermissionOverrides.TryRead(changed, "codex", out var cleared));
+        Assert.Equal(AgentMode.Standard, cleared!.Mode);
+        Assert.True(PermissionOverrides.TryRead(changed, "claude", out var retained));
+        Assert.Equal(claude, retained);
+        Assert.Throws<InvalidOperationException>(() => PermissionOverrides.Change(both, "codex", new(AgentMode.Yolo, "; touch injected", "anything")));
     }
 
     [Fact]

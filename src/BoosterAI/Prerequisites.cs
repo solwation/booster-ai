@@ -15,6 +15,7 @@ public sealed record CliStatus(string Cli, string Kind, string? Path)
     public string? AliasDefinition { get; init; }
     public string? ManagedAlias { get; init; }
     public string? FunctionDefinition { get; init; }
+    public bool HasPermissionOverride { get; init; }
     /// <summary>An executable is on PATH; an alias or function alone does not make a CLI installed.</summary>
     public bool Installed => Path is not null;
     /// <summary>The user's shell already defines the name as an alias or function: BoosterAI never adds one then.</summary>
@@ -74,6 +75,8 @@ then
   grep -qF '# >>> BoosterAI full-auto aliases >>>' ~/.bashrc && echo 'bsdetect-block yes'
   b=$(sed -n '/^# >>> BoosterAI full-auto aliases >>>$/,/^# <<< BoosterAI full-auto aliases <<<$/{p;}' ~/.bashrc | head -c 20000 | base64 -w0)
   printf 'bsdetect-managed %s\n' "$b"
+  o=$(sed -n '/^# >>> BoosterAI permissions for /,/^# <<< BoosterAI permissions for /{p;}' ~/.bashrc | head -c 20000 | base64 -w0)
+  printf 'bsdetect-overrides %s\n' "$o"
 fi
 true
 """;
@@ -106,15 +109,20 @@ true
             .GroupBy(p => (p[0], p[1])).ToDictionary(g => g.Key, g => Decode(g.First()[2], trim: g.Key.Item1 != Marker + "-function"));
         var managed = output.Split('\n').FirstOrDefault(l => l.StartsWith(Marker + "-managed ", StringComparison.Ordinal));
         var managedText = managed is null ? "" : Decode(managed[(Marker.Length + 9)..]);
+        var overrides = output.Split('\n').FirstOrDefault(l => l.StartsWith(Marker + "-overrides ", StringComparison.Ordinal));
+        var overrideText = overrides is null ? "" : Decode(overrides[(Marker.Length + 11)..]);
         for (var i = 0; i < clis.Count; i++)
         {
             var cli = clis[i];
             string? Meta(string type) => metadata.GetValueOrDefault((Marker + "-" + type, cli.Cli));
             var definitions = managedText.Split('\n').Where(l => Defined(l).Contains(cli.Cli)).ToArray();
+            var hasOverride = PermissionOverrides.TryRead(overrideText, cli.Cli, out var preset);
             clis[i] = cli with
             {
                 Version = ParseVersion(Meta("version")), Help = Meta("help") ?? "",
-                AliasDefinition = Meta("alias"), FunctionDefinition = Meta("function"), ManagedAlias = definitions.Length == 1 ? definitions[0] : definitions.Length > 1 ? "custom" : null,
+                AliasDefinition = Meta("alias"), FunctionDefinition = Meta("function"), HasPermissionOverride = hasOverride,
+                ManagedAlias = hasOverride ? preset!.Mode == AgentMode.Standard ? null : AgentModes.AliasLine(cli.Cli, preset)
+                    : definitions.Length == 1 ? definitions[0] : definitions.Length > 1 ? "custom" : null,
             };
         }
         return (clis, npm, block);

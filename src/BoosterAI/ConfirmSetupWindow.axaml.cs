@@ -4,8 +4,8 @@ using Avalonia.Interactivity;
 namespace BoosterAI;
 
 /// <summary>
-/// Asks before a setup step that changes the system (#74): installing WSL (admin rights, usually a restart) or
-/// adding full-auto aliases to ~/.bashrc (the CLIs then act without asking). Cancel is the default button.
+/// Confirms system changes and permission alias replacements, including their scope.
+/// Cancel is the default button.
 /// </summary>
 public partial class ConfirmSetupWindow : Window
 {
@@ -33,9 +33,11 @@ public partial class ConfirmSetupWindow : Window
         Loc.Get("setupConfirm.alias.detail"), Loc.Get("setupConfirm.alias.button"), Loc.Get("setup.dismiss"));
 
     public static ConfirmSetupWindow AgentMode(AgentInfo agent) => new(
-        Loc.Format("agents.yolo.title", agent.Name), Loc.Get("agents.yolo.warning"),
-        Loc.Get("agents.yolo.code"), agent.ModeCommand, agent.ModeExplanation + "\n\n" + Loc.Get("agents.applies"),
-        Loc.Get("agents.yolo.confirm"), Loc.Get("cancel"));
+        Loc.Format("agents.alias.confirm.title", agent.Name), Loc.Get(agent.HasExternalDefinition ? "agents.alias.confirm.replace" : "agents.alias.confirm.apply"),
+        Loc.Get("agents.alias.confirm.preview"), (agent.CurrentAliasCommand.Length > 0 ? agent.CurrentAliasCommand : agent.CurrentModeText)
+            + "\n\n→\n\n" + agent.ModePreview,
+        (agent.IsYolo ? Loc.Get("agents.yolo.warning") + "\n\n" : "") + agent.ModeExplanation + "\n\n" + Loc.Get("agents.alias.scope"),
+        Loc.Get("agents.mode.apply"), Loc.Get("cancel"));
 
     public string Heading { get; }
     public string Body { get; }
