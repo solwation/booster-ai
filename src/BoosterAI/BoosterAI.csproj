@@ -14,6 +14,9 @@
   <ItemGroup>
     <AvaloniaResource Include="../../assets/boosterai.ico" Link="Assets/boosterai.ico" />
     <AvaloniaResource Include="../../assets/boosterai.png" Link="Assets/boosterai.png" />
+    <AvaloniaResource Include="../../assets/agents/*.txt" Link="Assets/Agents/%(Filename)%(Extension)" />
+    <AvaloniaResource Include="../../assets/agents/README.md" Link="Assets/Agents/README.md" />
+    <AvaloniaResource Include="../../assets/agents/*.png" Link="Assets/Agents/%(Filename)%(Extension)" />
     <AvaloniaResource Include="../../assets/fonts/*.ttf" Link="Assets/Fonts/%(Filename)%(Extension)" />
   </ItemGroup>
   <ItemGroup>

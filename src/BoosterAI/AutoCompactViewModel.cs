@@ -14,7 +14,7 @@ public sealed class AutoCompactViewModel : Observable
     public void UpdateManualMode(bool manual)
     {
         _manual = manual;
-        foreach (var name in new[] { nameof(CanEdit), nameof(CanSave), nameof(Validation), nameof(EditExplanation) }) Raise(name);
+        foreach (var name in new[] { nameof(CanEdit), nameof(CanSave), nameof(Validation), nameof(EditExplanation), nameof(ShowBudget), nameof(BudgetPercent), nameof(BudgetHint) }) Raise(name);
     }
     public void UpdateSettings(IList<AutoCompactSetting> settings)
     {
@@ -47,6 +47,11 @@ public sealed class AutoCompactViewModel : Observable
     public string Context { get => _context; set { if (Set(ref _context, value ?? "")) Changed(); } }
     public string Custom { get => _custom; set { if (Set(ref _custom, value ?? "")) Changed(); } }
     public bool IsCustom => Mode.Id == "custom";
+    public bool ShowBudget => CanEdit && AutoCompact.Resolve(Draft()) is not null && ContextValue > 0;
+    public double BudgetPercent => ShowBudget ? Math.Clamp(100d * AutoCompact.Resolve(Draft())!.Value / ContextValue, 0, 100) : 0;
+    public string BudgetValue => AutoCompact.Resolve(Draft()) is { } tokens ? Number(tokens) : "—";
+    public string BudgetCapacity => Loc.Format("compact.visual.capacity", Number(ContextValue));
+    public string BudgetHint => Loc.Get(Mode.Id == "default" ? "compact.visual.default" : ShowBudget ? "compact.visual.known" : "compact.visual.unknown");
     public string Validation => !CanEdit || !IsCustom || CanSave ? "" : Loc.Get("compact.custom.invalid");
     private static string Number(int value) => Loc.Language == "sv" ? value.ToString("N0", CultureInfo.InvariantCulture).Replace(',', ' ' ) : value.ToString("N0", CultureInfo.InvariantCulture);
     private int ContextValue => int.TryParse(Context, NumberStyles.None, CultureInfo.InvariantCulture, out var n) ? n : 0;
@@ -112,7 +117,7 @@ public sealed class AutoCompactViewModel : Observable
         if (_loading) return;
         if (edited) _hasDraft = true;
         Status = "";
-        foreach (var name in new[] { nameof(CanSave), nameof(IsCustom), nameof(Recommendation), nameof(ContextSource), nameof(Validation) }) Raise(name);
+        foreach (var name in new[] { nameof(CanSave), nameof(IsCustom), nameof(Recommendation), nameof(ContextSource), nameof(Validation), nameof(ShowBudget), nameof(BudgetPercent), nameof(BudgetValue), nameof(BudgetCapacity), nameof(BudgetHint) }) Raise(name);
     }
 
     public void Save()

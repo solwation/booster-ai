@@ -15,6 +15,13 @@ public sealed class AgentInfo : Observable
     public CliStatus Detected { get; }
     public string Cli => Detected.Cli;
     public string Name => Loc.Display("llm", Cli);
+    public string DisplayName => Cli switch { "claude" => "Claude Code", "codex" => "Codex", "agy" => "Antigravity", "aider" => "Aider", "interpreter" => "Open Interpreter", "openhands" => "OpenHands", _ => Name };
+    private int _section;
+    public int Section { get => _section; set { if (Set(ref _section, value)) { Raise(nameof(IsOverview)); Raise(nameof(IsPermissions)); Raise(nameof(IsContext)); } } }
+    public bool IsOverview => Section == 0;
+    public bool IsPermissions => Section == 1;
+    public bool IsContext => Section == 2;
+    public bool IsYolo => SelectedMode.Mode == AgentMode.Yolo;
     public string Description => Loc.Get("agents.description." + Cli);
     public bool IsInstalled => Detected.Installed;
     public string StatusText => Loc.Get(IsInstalled ? "setup.status.installed" : "setup.status.missing");
@@ -37,7 +44,7 @@ public sealed class AgentInfo : Observable
         set
         {
             if (value is null || !Set(ref _selectedMode, value)) return;
-            Raise(nameof(CanApply)); Raise(nameof(ModeExplanation)); Raise(nameof(ModeCommand)); Raise(nameof(HasModeCommand));
+            Raise(nameof(IsYolo)); Raise(nameof(CanApply)); Raise(nameof(ModeExplanation)); Raise(nameof(ModeCommand)); Raise(nameof(HasModeCommand));
         }
     }
 
@@ -75,12 +82,14 @@ public sealed class SetupViewModel : Observable
         get => _selectedAgent;
         set
         {
-            if (value is null || !Agents.Contains(value) || ReferenceEquals(value, _selectedAgent)) return;
+            if ((value is not null && !Agents.Contains(value)) || ReferenceEquals(value, _selectedAgent)) return;
             if (_selectedAgent is { } previous) previous.IsSelected = false;
             Set(ref _selectedAgent, value);
-            value.IsSelected = true;
+            if (value is not null) value.IsSelected = true;
+            Raise(nameof(IsAgentOverview));
         }
     }
+    public bool IsAgentOverview => SelectedAgent is null;
     private Func<CliStatus, AutoCompactViewModel>? _compactFactory;
     public void ConfigureCompact(Func<CliStatus, AutoCompactViewModel> factory) { _compactFactory = factory; Refresh(); }
 
@@ -156,17 +165,19 @@ public sealed class SetupViewModel : Observable
     private void Refresh()
     {
         var selectedCli = SelectedAgent?.Cli;
+        var sections = Agents.ToDictionary(a => a.Cli, a => a.Section);
         Missing = Prerequisites.MissingToOffer(_status, _rowLlms)
             .Select(c => new CliOffer(c, Loc.Format("setup.cli.install", c), Loc.Format("setup.cli.install.tip", Prerequisites.InstallScript(c)))).ToList();
         Aliases = Prerequisites.AliasesToOffer(_status, _dismissedAliases);
         Agents = Prerequisites.Clis.Select(c =>
         {
             var status = _status.Cli(c) ?? new CliStatus(c, "none", null);
-            return new AgentInfo(status) { Compact = _compactFactory?.Invoke(status) };
+            return new AgentInfo(status) { Compact = _compactFactory?.Invoke(status), Section = sections.GetValueOrDefault(c) };
         }).ToList();
-        SelectedAgent = Agents.FirstOrDefault(a => a.Cli == selectedCli) ?? Agents.FirstOrDefault();
+        Raise(nameof(Agents));
+        SelectedAgent = Agents.FirstOrDefault(a => a.Cli == selectedCli);
         foreach (var name in new[] { nameof(Status), nameof(WslVisible), nameof(CanInstallWsl), nameof(WslText), nameof(Missing), nameof(MissingVisible),
-                     nameof(MissingText), nameof(Aliases), nameof(AliasVisible), nameof(AliasText), nameof(AliasTip), nameof(Agents), nameof(Summary), nameof(CheckNotice) })
+                     nameof(MissingText), nameof(Aliases), nameof(AliasVisible), nameof(AliasText), nameof(AliasTip), nameof(Summary), nameof(CheckNotice) })
             Raise(name);
     }
 }

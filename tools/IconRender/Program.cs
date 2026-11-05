@@ -1,6 +1,34 @@
 using SkiaSharp;
 using Svg.Skia;
 
+// Render bundled agent marks for Avalonia's native Image control; no runtime SVG dependency.
+if (args.FirstOrDefault() == "--agents")
+{
+    var directory = Path.GetFullPath(args[1]);
+    foreach (var file in Directory.GetFiles(directory, "*.svg"))
+    foreach (var theme in new[] { "light", "dark" })
+    {
+        var ink = theme == "dark" ? "#F4F4F5" : "#202124";
+        var source = File.ReadAllText(file).Replace("currentColor", ink).Replace("#171717", ink).Replace("#000000", ink);
+        if (Path.GetFileName(file) == "interpreter.svg") source = source.Replace("stroke-width=\"4\"", "stroke-width=\"10\"");
+        using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(source));
+        using var svg = new SKSvg();
+        var picture = svg.Load(stream) ?? throw new InvalidOperationException(file);
+        using var bitmap = new SKBitmap(new SKImageInfo(128, 128, SKColorType.Rgba8888, SKAlphaType.Unpremul));
+        using var canvas = new SKCanvas(bitmap);
+        canvas.Clear(SKColors.Transparent);
+        var scale = 128 / Math.Max(picture.CullRect.Width, picture.CullRect.Height);
+        canvas.Translate((128 - picture.CullRect.Width * scale) / 2, (128 - picture.CullRect.Height * scale) / 2);
+        canvas.Scale(scale);
+        canvas.DrawPicture(picture);
+        canvas.Flush();
+        using var image = SKImage.FromBitmap(bitmap);
+        File.WriteAllBytes(Path.Combine(directory, Path.GetFileNameWithoutExtension(file) + "-" + theme + ".png"), image.Encode(SKEncodedImageFormat.Png, 100).ToArray());
+    }
+    Console.WriteLine("Rendered agent marks at 128px for light and dark themes.");
+    return;
+}
+
 // Windows picks the nearest ICO size and scales it, so ship every size the shell uses.
 int[] sizes = [16, 20, 24, 32, 40, 48, 64, 96, 128, 256];
 const int SmallUpTo = 24; // below this "ai" is unreadable; use the bolt-only variant

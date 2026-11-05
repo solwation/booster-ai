@@ -33,12 +33,24 @@
     <Setter Property="HorizontalContentAlignment" Value="Left" />
   </Style>
   <Style Selector="ListBox.agent-sections ListBoxItem">
-    <Setter Property="MinWidth" Value="110" />
+    <Setter Property="MinWidth" Value="130" />
     <Setter Property="MinHeight" Value="32" />
     <Setter Property="FontSize" Value="13" />
-    <Setter Property="Padding" Value="10,7" />
+    <Setter Property="Padding" Value="8,7" />
     <Setter Property="Margin" Value="0,0,0,2" />
     <Setter Property="HorizontalContentAlignment" Value="Left" />
+  </Style>
+  <Style Selector="Button.agent-nav">
+    <Setter Property="Padding" Value="10,8" /><Setter Property="Background" Value="Transparent" /><Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="Button.agent-nav.chosen">
+    <Setter Property="Background" Value="{DynamicResource RowHoverBrush}" /><Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="Button.agent-card">
+    <Setter Property="Background" Value="{DynamicResource RowHoverBrush}" /><Setter Property="Padding" Value="14" /><Setter Property="CornerRadius" Value="8" /><Setter Property="BorderThickness" Value="1" /><Setter Property="BorderBrush" Value="{DynamicResource RowHoverBrush}" /><Setter Property="HorizontalContentAlignment" Value="Stretch" />
+  </Style>
+  <Style Selector="ListBox.permission-choices ListBoxItem">
+    <Setter Property="Padding" Value="12,14" /><Setter Property="Margin" Value="0,0,6,6" /><Setter Property="MinWidth" Value="90" />
   </Style>
   <Style Selector="Border.agent-group">
     <Setter Property="Background" Value="{DynamicResource RowHoverBrush}" />

@@ -34,13 +34,24 @@ public partial class SettingsWindow : Window
 
     public string? SelectedAgentCli
     {
-        get => (AgentSections.SelectedItem as AgentInfo)?.Cli;
+        get => _vm.Setup.SelectedAgent?.Cli;
         set
         {
             if (_vm.Setup.Agents.FirstOrDefault(a => a.Cli == value) is { } agent)
-                AgentSections.SelectedItem = agent;
+                _vm.Setup.SelectedAgent = agent;
         }
     }
+
+    private void OnAgentOverview(object? sender, RoutedEventArgs e) => _vm.Setup.SelectedAgent = null;
+    private void OnOpenAgent(object? sender, RoutedEventArgs e)
+    {
+        if ((sender as Control)?.DataContext is AgentInfo agent) { _vm.Setup.SelectedAgent = agent; agent.Section = 0; }
+    }
+    private void OnAgentSection(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Button { DataContext: AgentInfo agent, Tag: string section } && int.TryParse(section, out var index)) agent.Section = Math.Clamp(index, 0, 2);
+    }
+    private void OnAgentCompactSettings(object? sender, RoutedEventArgs e) { SelectedTabIndex = 2; SelectedOptimizationSectionIndex = 3; }
 
     private void OnShowCompactAgents(object? sender, RoutedEventArgs e) => SelectedTabIndex = 4;
 

@@ -28,15 +28,21 @@ public class AgentNavigationTests
     }
 
     [Fact]
-    public void RefreshKeepsSelectedAgentAndInvalidNavigationDoesNotClearIt()
+    public void RefreshKeepsAgentSectionAndOverviewPreservesDrafts()
     {
         var setup = new SetupViewModel();
         setup.SelectedAgent = setup.Agents.Single(a => a.Cli == "interpreter");
-        setup.SelectedAgent = null;
+        setup.SelectedAgent!.Section = 2;
         setup.SelectedAgent = new AgentInfo(new("unknown", "none", null));
         Assert.Equal("interpreter", setup.SelectedAgent!.Cli);
         setup.Apply(SetupStatus.Empty, "Ubuntu");
         Assert.Same(setup.SelectedAgent, setup.Agents.Single(a => a.Cli == "interpreter"));
         Assert.Single(setup.Agents, a => a.IsSelected);
+        Assert.Equal(2, setup.SelectedAgent!.Section);
+        setup.SelectedAgent = null;
+        Assert.True(setup.IsAgentOverview);
+        Assert.DoesNotContain(setup.Agents, a => a.IsSelected);
+        setup.Apply(SetupStatus.Empty, "Ubuntu");
+        Assert.True(setup.IsAgentOverview);
     }
 }

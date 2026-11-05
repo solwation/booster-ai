@@ -13,6 +13,7 @@ Start your whole working day with one click: BoosterAI opens every project you w
 
 - **One click, all your workspaces:** Opens each repository in its own color-coded tab in the right directory. Add subtabs sharing a folder for multi-agent workflows.
 - **Granular model control:** Run Opus or Pro on architecture tasks and Flash or Haiku on routine fixes. Switch models in-place without losing the ongoing conversation.
+- **Agent overview:** Recognize each CLI by its icon; manage installation, permissions and context in separate settings sections.
 - **Context budgets:** Choose Off, Auto or Manual under Optimization; tune or reset individual agents in Manual. Auto uses known model capacity and an explained task reserve. [How budgets work](docs/DETAILS.md#auto-compaction-budgets).
 - **Live Peek:** Hover any tab's status badge to stream its last 20 terminal output lines live &mdash; never break focus to check if an agent is done.
 - **Orchestra on demand:** Native integration with [Dirigenten och orkestern](https://github.com/solwation/dirigenten-och-orkestern) for unattended autonomous queue execution. Reload an idle Claude orchestra in its existing conversation without restarting its tab.

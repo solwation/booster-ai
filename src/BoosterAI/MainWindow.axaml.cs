@@ -19,7 +19,7 @@ public partial class MainWindow : Window
         if (grid.Tag is bool previous && previous == compact) return;
         grid.Tag = compact;
         grid.ColumnDefinitions = new ColumnDefinitions(compact
-            ? "4,20,36,*,115,148,130,75,105" : "4,20,36,*,200,148,195,110,130");
+            ? "4,20,36,*,115,166,120,75,105" : "4,20,36,*,200,166,195,110,130");
     }
 
     private static readonly DataFormat<string> TabDragFormat = DataFormat.CreateStringApplicationFormat("boosterai-tab-index");

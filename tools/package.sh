@@ -17,12 +17,16 @@ win="dist/stage/BoosterAI-$ver-win-x64"
 rm -rf dist/stage
 mkdir -p "$win"
 cp dist/win-x64/BoosterAI.exe tools/install-windows.ps1 "$win/"
+mkdir -p "$win/licenses/agent-icons"
+cp assets/agents/LICENSE-*.txt assets/agents/README.md "$win/licenses/agent-icons/"
 (cd dist/stage && python3 -m zipfile -c "$out/BoosterAI-$ver-win-x64.zip" "BoosterAI-$ver-win-x64")
 
 # Linux: binary, installer, icons. The script finds them next to itself.
 lin="dist/stage/BoosterAI-$ver-linux-x64"
 mkdir -p "$lin"
 cp dist/linux-x64/BoosterAI tools/install-linux.sh assets/boosterai.svg assets/boosterai.png "$lin/"
+mkdir -p "$lin/licenses/agent-icons"
+cp assets/agents/LICENSE-*.txt assets/agents/README.md "$lin/licenses/agent-icons/"
 chmod 755 "$lin/BoosterAI" "$lin/install-linux.sh"
 tar -C dist/stage -czf "$out/BoosterAI-$ver-linux-x64.tar.gz" "BoosterAI-$ver-linux-x64"
 

@@ -134,7 +134,7 @@
     </Border>
     </StackPanel>
 
-    <Grid Grid.Row="2" Classes="project-columns" Loaded="OnProjectGridLoaded" ColumnDefinitions="4,20,36,*,200,148,195,110,130" Margin="0,0,0,6" IsVisible="{Binding HasTabs}">
+    <Grid Grid.Row="2" Classes="project-columns" Loaded="OnProjectGridLoaded" ColumnDefinitions="4,20,36,*,200,166,195,110,130" Margin="0,0,0,6" IsVisible="{Binding HasTabs}">
       <TextBlock Grid.Column="2" Classes="colhead" Text="{local:T col.with}" />
       <TextBlock Grid.Column="3" Classes="colhead" Text="{local:T col.project}" />
       <TextBlock Grid.Column="4" Classes="colhead" Text="{local:T col.status}" />
@@ -152,7 +152,7 @@
               <Border Classes="row" DragDrop.AllowDrop="True" DragDrop.DragOver="OnTabDragOver"
                       DragDrop.DragLeave="OnTabDragLeave" DragDrop.Drop="OnTabDrop">
                 <StackPanel>
-                <Grid Classes="project-columns" Loaded="OnProjectGridLoaded" ColumnDefinitions="4,20,36,*,200,148,195,110,130">
+                <Grid Classes="project-columns" Loaded="OnProjectGridLoaded" ColumnDefinitions="4,20,36,*,200,166,195,110,130">
                   <Border Grid.Column="0" Background="{Binding ColorBrush}" CornerRadius="2" />
                   <TextBlock Grid.Column="1" Text="⋮" Foreground="{DynamicResource FaintBrush}" FontSize="16"
                              HorizontalAlignment="Center" VerticalAlignment="Center" PointerPressed="OnTabDragStart"
@@ -218,7 +218,7 @@
                             Margin="0,0,12,0" Opacity="{Binding RowOpacity}">
                     <ComboBox.ItemTemplate>
                       <DataTemplate x:DataType="x:String">
-                        <TextBlock Text="{Binding, Converter={x:Static local:Converters.LlmName}}" />
+                        <StackPanel Orientation="Horizontal" Spacing="6"><local:AgentIcon Cli="{Binding}" Width="16" Height="16" /><TextBlock Text="{Binding, Converter={x:Static local:Converters.LlmName}}" VerticalAlignment="Center" /></StackPanel>
                       </DataTemplate>
                     </ComboBox.ItemTemplate>
                   </ComboBox>
