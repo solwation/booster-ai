@@ -11,7 +11,7 @@
   <!--
     Today's choices: which tabs, the AI, model and /orkester for each, plus expandable subtabs.
     Project names/directories are edited in Settings; subtab names are edited here. The header and the rows share
-    one column layout (stripe 4 · drag handle 20 · check 36 · name * · status 200 · llm 132 · model 195 · orkester 110 · once 130)
+    one responsive column layout (with enough room for longer agent names such as interpreter)
     inside the same padding, so labels sit exactly over their fields.
   -->
   <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" Margin="28,22,28,20">
@@ -134,7 +134,7 @@
     </Border>
     </StackPanel>
 
-    <Grid Grid.Row="2" ColumnDefinitions="4,20,36,*,200,132,195,110,130" Margin="0,0,0,6" IsVisible="{Binding HasTabs}">
+    <Grid Grid.Row="2" Classes="project-columns" Loaded="OnProjectGridLoaded" ColumnDefinitions="4,20,36,*,200,148,195,110,130" Margin="0,0,0,6" IsVisible="{Binding HasTabs}">
       <TextBlock Grid.Column="2" Classes="colhead" Text="{local:T col.with}" />
       <TextBlock Grid.Column="3" Classes="colhead" Text="{local:T col.project}" />
       <TextBlock Grid.Column="4" Classes="colhead" Text="{local:T col.status}" />
@@ -152,7 +152,7 @@
               <Border Classes="row" DragDrop.AllowDrop="True" DragDrop.DragOver="OnTabDragOver"
                       DragDrop.DragLeave="OnTabDragLeave" DragDrop.Drop="OnTabDrop">
                 <StackPanel>
-                <Grid ColumnDefinitions="4,20,36,*,200,132,195,110,130">
+                <Grid Classes="project-columns" Loaded="OnProjectGridLoaded" ColumnDefinitions="4,20,36,*,200,148,195,110,130">
                   <Border Grid.Column="0" Background="{Binding ColorBrush}" CornerRadius="2" />
                   <TextBlock Grid.Column="1" Text="⋮" Foreground="{DynamicResource FaintBrush}" FontSize="16"
                              HorizontalAlignment="Center" VerticalAlignment="Center" PointerPressed="OnTabDragStart"
@@ -204,8 +204,8 @@
                       <TextBlock Grid.Column="1" Text="{Binding StatusText}" FontSize="12.5" VerticalAlignment="Center"
                                  TextTrimming="CharacterEllipsis" />
                     </Grid>
-                    <Button Grid.Column="2" Classes="icon" Click="OnRestart" IsVisible="{Binding CanRestart}" Margin="7,-6,0,-6"
-                            ToolTip.Tip="{Binding RestartTip}" AutomationProperties.Name="{local:T restart.name}">
+                    <Button Grid.Column="2" Classes="icon" Click="OnRestart" IsVisible="{Binding ShowReload}" Margin="7,-6,0,-6"
+                            ToolTip.Tip="{Binding RestartTip}" AutomationProperties.Name="{Binding ReloadName}">
                       <Path Data="{StaticResource RestartIcon}" Width="12" Height="12" />
                     </Button>
                     <Button Grid.Column="3" Classes="icon" Click="OnContinue" IsVisible="{Binding CanContinueClosed}" Margin="4,-6,0,-6"

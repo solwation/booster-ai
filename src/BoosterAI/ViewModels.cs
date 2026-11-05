@@ -69,7 +69,7 @@ public sealed class TabViewModel : Observable
     public bool Orkester
     {
         get => _orkester;
-        set { if (Set(ref _orkester, value)) { Raise(nameof(CanNonInteractive)); Raise(nameof(OnceChecked)); } }
+        set { if (Set(ref _orkester, value)) { Raise(nameof(CanNonInteractive)); Raise(nameof(OnceChecked)); RaiseRestart(); } }
     }
 
     public bool NonInteractive { get => _nonInteractive; set { if (Set(ref _nonInteractive, value)) Raise(nameof(OnceChecked)); } }
@@ -247,6 +247,7 @@ public sealed class TabViewModel : Observable
         PendingRestart ? Loc.Get("restart.pending.tip")
         : IsChanged ? Loc.Format(RestartResumes ? "restart.changed.resume.tip"
             : _owner.SharesConversationDirectory(this, Llm) ? "subtab.restart.fresh.tip" : "restart.changed.tip", Llm, ModelLabel)
+        : CanReloadOrchestra ? Loc.Get("restart.orkester.tip")
         : Loc.Get(LaunchedAs is { NonInteractive: true, Orkester: true } ? "restart.once.tip"
             : LaunchedAs is { Llm: Catalog.ShellOnly } ? "restart.shell.tip" : "restart.tip");
 
@@ -254,6 +255,22 @@ public sealed class TabViewModel : Observable
 
     public bool CanRestart => IsChanged || _state is TabState.Closed or TabState.CliExited or TabState.CliMissing
         or TabState.NotStarted or TabState.Lost or TabState.Denied;
+
+    private TabLog? _inputLog;
+    private DateTime? _lastInputOutput;
+    internal long? OrchestraRequestedFor { get; set; }
+    public bool CanReloadOrchestra => !IsChanged && Orkester && !_owner.IsClosingAll && !IsClosing
+        && OrchestraReload.Due(LaunchedAs, _state ?? TabState.NotStarted, Activity, PendingRestart, false,
+            _inputLog, _lastInputOutput, OrchestraRequestedFor, DateTime.UtcNow) is not null;
+    public bool ShowReload => CanRestart || CanReloadOrchestra;
+    public string ReloadName => Loc.Get(CanReloadOrchestra ? "restart.orkester.name" : "restart.name");
+
+    internal void RefreshInputState(TabLog? log, DateTime? lastOutput)
+    {
+        _inputLog = log;
+        _lastInputOutput = lastOutput;
+        RaiseRestart();
+    }
 
     /// <summary>A separate action: reopen an ended interactive session with the latest conversation in its directory.</summary>
     public bool CanContinueClosed => CanRestart && !IsAlive && LaunchedAs is { } launched && Launcher.CanContinue(launched)
@@ -270,7 +287,7 @@ public sealed class TabViewModel : Observable
 
     private void RaiseRestart()
     {
-        foreach (var n in new[] { nameof(IsChanged), nameof(CanRestart), nameof(RestartTip), nameof(PendingRestart), nameof(CanContinueClosed) }) Raise(n);
+        foreach (var n in new[] { nameof(IsChanged), nameof(CanRestart), nameof(RestartTip), nameof(PendingRestart), nameof(CanContinueClosed), nameof(CanReloadOrchestra), nameof(ShowReload), nameof(ReloadName) }) Raise(n);
         _owner.RestartableChanged();
     }
     /// <summary>The programs of the commands agy denied (state Denied).</summary>
@@ -283,6 +300,7 @@ public sealed class TabViewModel : Observable
     internal void SetCloseProgress(string? text)
     {
         _closeProgress = text;
+        RaiseRestart();
         Raise(nameof(StatusText));
         Raise(nameof(StatusTip));
     }
@@ -874,6 +892,22 @@ public sealed partial class MainViewModel : Observable
         }
     }
 
+    /// <summary>Neutral explicit idle/input state for headless reload screenshots, with no live session or process.</summary>
+    public void ShowSampleOrchestraIdle()
+    {
+        if (Tabs.FirstOrDefault(t => t.Enabled && t.Llm == "claude") is not { } tab) return;
+        tab.HasOrkester = true;
+        tab.Orkester = true;
+        var launched = tab.ToConfig(forLaunch: true);
+        launched.NonInteractive = false;
+        tab.LaunchedAs = launched;
+        var idle = DateTimeOffset.UtcNow.AddMinutes(-2).ToUnixTimeMilliseconds();
+        tab.SetState(TabState.Running, null, activity: Activity.Idle);
+        tab.RefreshInputState(new TabLog(null, null, true, null, false, Activity: Activity.Idle)
+        { InputReady = true, InputProtocol = 2, InputReadyAt = idle - 2000, BusyAt = idle - 1000, IdleAt = idle },
+            DateTimeOffset.FromUnixTimeMilliseconds(idle).UtcDateTime);
+    }
+
     /// <summary>For --screenshot --fake-changed: the first tab runs a turn with another model than the one now chosen.</summary>
     public void ShowSampleChange()
     {
@@ -1249,6 +1283,7 @@ public sealed partial class MainViewModel : Observable
                 row.ShellPid = pid;
                 if (row.PendingRestart && state == TabState.Running && activity == Activity.Idle) RestartChanged(row);
                 var changed = row.SetState(state, rc, denied, activity, activity == Activity.Watching ? watchingSince : null, AutoClear.ClearedAt(log));
+                row.RefreshInputState(log, lastOutput);
                 RequestAutoClear(row, id, state, log, lastOutput);
                 if (!changed) continue;
                 if (_cfg.Notifications && TabStatus.IsUnexpected(state, rc))
@@ -1260,18 +1295,42 @@ public sealed partial class MainViewModel : Observable
         }, TaskScheduler.FromCurrentSynchronizationContext());
     }
 
+    /// <summary>Queues one prompt to the existing PTY; it never calls Start, Restart or process-control methods.</summary>
+    public bool ReloadOrchestra(TabViewModel row)
+    {
+        if (!row.CanReloadOrchestra || row.Session is not { } session || row.TrackId is not { } id) return false;
+        try
+        {
+            var log = session.ReadLog(id);
+            var live = TabSession.Liveness(_cfg.WslDistro);
+            if (log is null || live is null || !TabSession.IsAlive(log, live)) return false;
+            var due = OrchestraReload.Due(row.LaunchedAs, TabStatus.Evaluate(log, DateTime.UtcNow - row.LaunchedAt, live),
+                session.ReadActivity(id, log, DateTime.UtcNow), row.PendingRestart, IsClosingAll || row.IsClosing,
+                log, session.LastOutput(id), row.OrchestraRequestedFor, DateTime.UtcNow);
+            if (due is null || !session.TryRequestInput(id, due.Value.Since, OrchestraReload.Command, log, "orkester")) return false;
+            row.OrchestraRequestedFor = due.Value.IdleAt;
+            row.RaiseRestartTip();
+            return true;
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return false; }
+    }
+
     /// <summary>
     /// Types /clear into a tab whose claude has been idle for the configured time (AutoClear.Due), once per idle period.
     /// The tab's bs_pty picks the request up within a second and logs whether it typed it; the status then says so.
     /// </summary>
     private void RequestAutoClear(TabViewModel row, string id, TabState state, TabLog? log, DateTime? lastOutput)
     {
-        if (row.Session is not { } session) return;
+        if (row.Session is not { } session || row.OrchestraRequestedFor == log?.IdleAt && log?.IdleAt is not null) return;
         if (AutoClear.Due(_cfg.AutoClearIdle, _cfg.AutoClearMinutes, row.LaunchedAs, state, row.Activity, row.PendingRestart,
                 IsClosingAll || row.IsClosing, log, lastOutput, row.AutoClearRequestedFor, DateTime.UtcNow) is not { } due) return;
         // Asked once per idle period even when the write fails: a tab that cannot take it is not asked every poll.
         row.AutoClearRequestedFor = due.IdleAt;
-        try { session.RequestInput(id, due.Since, AutoClear.Command); }
+        try
+        {
+            if (log is { InputProtocol: >= 2 }) session.TryRequestInput(id, due.Since, AutoClear.Command, log, "clear");
+            else session.RequestInput(id, due.Since, AutoClear.Command);
+        }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }
     }
 

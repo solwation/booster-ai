@@ -39,12 +39,12 @@ public static class Launcher
     private const string Next = "(type bs_next >/dev/null 2>&1) && bs_next || true";
 
     /// <summary>
-    /// The CLI under tab-lib.sh's bs_run; an interactive claude with auto-clear on (#69) runs under bs_pty ("input"), which
-    /// lets BoosterAI type /clear into it. One-shot runs (bs_stream) and other CLIs never do.
+    /// The CLI under tab-lib.sh's bs_run; an interactive claude with auto-clear or orchestra on runs under bs_pty ("input"), which
+    /// lets BoosterAI type /clear or reload the orchestra without restarting it. One-shot runs (bs_stream) and other CLIs never do.
     /// </summary>
     private static string TrackedCommand(string command, TabConfig tab, TabTrack track) =>
         command.StartsWith("bs_stream ", StringComparison.Ordinal) ? command
-            : "bs_run " + Quote(command) + (track.AutoClear && AutoClear.Supports(tab.Llm) ? " input" : "");
+            : "bs_run " + Quote(command) + ((track.AutoClear && AutoClear.Supports(tab.Llm) || tab.Orkester && !tab.NonInteractive && OrchestraReload.Supports(tab.Llm)) ? " input" : "");
 
     /// <summary>
     /// What tab-lib.sh's bs_next runs in a tab whose CLI BoosterAI stopped for an in-place restart: the CLI

@@ -271,15 +271,16 @@ public class AutoClearConfigTests
     }
 
     [Fact]
-    public void OnlyAnInteractiveClaudeRunsUnderBsPtyAndOnlyWithTheSetting()
+    public void InteractiveOrchestraClaudeGetsInputEvenWithoutAutoClear()
     {
         var on = new TabTrack("/s/tab-lib.sh", "/s", "tab1", AutoClear: true);
         var off = on with { AutoClear = false };
         var claude = new TabConfig { Llm = "claude", Orkester = true };
         Assert.Contains("' input && ", Launcher.TabScript(claude, track: on));
         Assert.Contains("' input && ", Launcher.RestartScript(claude, on, resume: true));
-        Assert.DoesNotContain(" input", Launcher.TabScript(claude, track: off));
-        Assert.DoesNotContain(" input", Launcher.RestartScript(claude, off, resume: false));
+        Assert.Contains(" input", Launcher.TabScript(claude, track: off));
+        Assert.Contains(" input", Launcher.RestartScript(claude, off, resume: false));
+        Assert.DoesNotContain(" input", Launcher.TabScript(new TabConfig { Llm = "claude" }, track: off));
         // Run once streams (bs_stream); codex, agy and shells are never typed into.
         Assert.DoesNotContain(" input", Launcher.TabScript(claude.WithOnce(), track: on));
         foreach (var llm in new[] { "codex", "agy", Catalog.ShellOnly })

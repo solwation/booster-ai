@@ -2,11 +2,26 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Input;
+using Avalonia.VisualTree;
 
 namespace BoosterAI;
 
 public partial class MainWindow : Window
 {
+    private void OnProjectGridLoaded(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Grid grid) ApplyProjectColumns(grid);
+    }
+
+    private void ApplyProjectColumns(Grid grid)
+    {
+        var compact = Bounds.Width is > 0 and < 1050;
+        if (grid.Tag is bool previous && previous == compact) return;
+        grid.Tag = compact;
+        grid.ColumnDefinitions = new ColumnDefinitions(compact
+            ? "4,20,36,*,115,148,130,75,105" : "4,20,36,*,200,148,195,110,130");
+    }
+
     private static readonly DataFormat<string> TabDragFormat = DataFormat.CreateStringApplicationFormat("boosterai-tab-index");
     private readonly MainViewModel _vm;
     private MainWindowSize? _rememberedSize;
@@ -59,6 +74,11 @@ public partial class MainWindow : Window
         _vm = vm;
         DataContext = vm;
         InitializeComponent();
+        Resized += (_, _) =>
+        {
+            foreach (var grid in this.GetVisualDescendants().OfType<Grid>().Where(g => g.Classes.Contains("project-columns")))
+                ApplyProjectColumns(grid);
+        };
         if (background)
         {
             ShowActivated = false;
@@ -267,6 +287,7 @@ public partial class MainWindow : Window
     private async void OnRestart(object? sender, RoutedEventArgs e)
     {
         if (_vm.IsClosingAll || (sender as Control)?.DataContext is not TabViewModel tab) return;
+        if (tab.IsAlive && !tab.IsChanged) { _vm.ReloadOrchestra(tab); return; }
         if (!tab.IsChanged) { _vm.Restart(tab); return; }
         // A changed running tab: a second click cancels the wait; an idle CLI restarts at once; otherwise ask.
         if (tab.PendingRestart) { tab.PendingRestart = false; return; }

@@ -53,5 +53,5 @@ public static class AutoClear
 
     /// <summary>When the clear command was typed in the current idle period (epoch-ms), for the tab's status; null: not cleared.</summary>
     public static long? ClearedAt(TabLog? log) =>
-        log is { Activity: Activity.Idle, InputSent: true, InputAt: { } at, IdleAt: { } idle } && at >= idle ? at : null;
+        log is { Activity: Activity.Idle, InputSent: true, InputAt: { } at, IdleAt: { } idle } && log.InputKind is null or "clear" && at >= idle ? at : null;
 }

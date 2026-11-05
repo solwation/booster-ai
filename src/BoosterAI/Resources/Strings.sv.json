@@ -14,6 +14,8 @@
   "model.tip": "Välj i listan eller skriv ett eget modell-id",
   "col.once": "Engångskörning",
   "once.tip": "Kör orkestern som en uppgift och avslutar. Du kan inte svara eller styra under körningen, och verktyg som kräver godkännande nekas normalt. OpenHands kör i headless-läge och godkänner alltid verktyg automatiskt. Kräver att orkestern är på.",
+  "restart.orkester.tip": "Kör /orkester igen i den lediga sessionen utan att starta om fliken eller agenten",
+  "restart.orkester.name": "Kör orkestern igen",
   "restart.once.tip": "Kör orkestern igen i fliken (ny engångskörning)",
   "orkester.tip": "Skicka /orkester som första prompt",
   "install.name": "Installera orkestern",

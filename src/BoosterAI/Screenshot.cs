@@ -14,7 +14,7 @@ namespace BoosterAI;
 /// </summary>
 internal sealed record ScreenshotOptions(string File, string Window, string? FakeUpdate, string? FakeStatus, bool FakeDenied, bool FakeChanged,
     int? FakeOutput = null, int FakeRestartable = 0, string? FakeSetup = null, string? Tab = null, bool FakeOptimization = false, int? FakeMemoryCap = null,
-    string? Section = null, string? FakeMemoryState = null, int? Width = null, int? Height = null);
+    string? Section = null, string? FakeMemoryState = null, int? Width = null, int? Height = null, bool FakeOrchestraIdle = false);
 
 internal static class Screenshot
 {
@@ -34,7 +34,7 @@ internal static class Screenshot
             int.TryParse(Value(args, "--fake-memory-cap"), out var cap) ? cap : null,
             Value(args, "--section"), Value(args, "--fake-memory-state"),
             int.TryParse(Value(args, "--width"), out var width) ? width : null,
-            int.TryParse(Value(args, "--height"), out var height) ? height : null);
+            int.TryParse(Value(args, "--height"), out var height) ? height : null, args.Contains("--fake-orchestra-idle"));
     }
 
     /// <summary>--fake-output [N]: the popup of the Nth running sample tab (0: the first, interactive; 1: Watching).</summary>
@@ -130,6 +130,7 @@ internal static class Screenshot
             Dispatcher.UIThread.RunJobs();
             Thread.Sleep(50);
         }
+        if (o.FakeOrchestraIdle) vm.ShowSampleOrchestraIdle();
         Dispatcher.UIThread.RunJobs();
         for (var i = 0; i < 3; i++)
         {

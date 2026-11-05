@@ -39,6 +39,11 @@ public sealed record TabLog(int? Pid, long? StartTime, bool CliStarted, int? Cli
     /// <summary>Epoch-ms of the last request bs_pty handled ("input-sent" / "input-skipped"); <see cref="InputSent"/>: it was typed.</summary>
     public long? InputAt { get; init; }
     public bool InputSent { get; init; }
+    public long? InputReadyAt { get; init; }
+    public int InputProtocol { get; init; }
+    public long? InputTypedAt { get; init; }
+    public string? InputKind { get; init; }
+    public long? OrchestraIdleAt { get; init; }
 
     public static TabLog Parse(string text)
     {
@@ -47,7 +52,9 @@ public sealed record TabLog(int? Pid, long? StartTime, bool CliStarted, int? Cli
         bool cliStarted = false, exited = false, canClose = false, canRestart = false, inputReady = false, inputSent = false;
         List<string>? denied = null;
         var activity = Activity.Unknown;
-        string? closeToken = null;
+        string? closeToken = null, inputKind = null;
+        long? inputReadyAt = null, orchestraIdleAt = null, inputTypedAt = null;
+        int inputProtocol = 0;
         foreach (var line in text.Split('\n'))
         {
             var parts = line.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -63,11 +70,15 @@ public sealed record TabLog(int? Pid, long? StartTime, bool CliStarted, int? Cli
                     break;
                 case "cli-start":
                     closeToken = null; cliStarted = true; rc = null; denied = null; activity = Activity.Unknown; watching = null;
-                    busyAt = idleAt = inputAt = null; inputReady = inputSent = false;
+                    busyAt = idleAt = inputAt = inputReadyAt = orchestraIdleAt = inputTypedAt = null; inputProtocol = 0; inputReady = inputSent = false; inputKind = null;
                     break;
-                case "input-ready": inputReady = true; break;
-                case "input-sent": inputAt = at; inputSent = true; break;
-                case "input-skipped": inputAt = at; inputSent = false; break;
+                case "input-ready": inputReady = true; inputReadyAt = at; inputProtocol = Int(values, "protocol") ?? 0; break;
+                case "input-typed": inputTypedAt = at; break;
+                case "input-sent":
+                    inputAt = at; inputSent = true; inputKind = values.GetValueOrDefault("kind") ?? "clear";
+                    if (inputKind == "orkester" && long.TryParse(values.GetValueOrDefault("idle"), out var reloadIdle)) orchestraIdleAt = reloadIdle;
+                    break;
+                case "input-skipped": inputAt = at; inputSent = false; inputKind = values.GetValueOrDefault("kind"); break;
                 case "close-ready": canClose = true; break;
                 case "restart-ready": canRestart = true; break;
                 case "close-save": closeToken = values.GetValueOrDefault("token"); break;
@@ -85,6 +96,8 @@ public sealed record TabLog(int? Pid, long? StartTime, bool CliStarted, int? Cli
         return new TabLog(pid, start, cliStarted, rc, exited, denied, activity, watching, closeToken, canClose, canRestart)
         {
             BusyAt = busyAt, IdleAt = idleAt, InputReady = inputReady, InputAt = inputAt, InputSent = inputSent,
+            InputReadyAt = inputReadyAt, InputKind = inputKind, OrchestraIdleAt = orchestraIdleAt,
+            InputProtocol = inputProtocol, InputTypedAt = inputTypedAt,
         };
     }
 
@@ -274,14 +287,14 @@ bs_run() {
 }
 # bs_pty <command>: run it on a pseudo-terminal of its own and pass the tab's keyboard and screen through unchanged
 # (raw bytes, so raw mode, bracketed paste and mouse/focus reports reach the CLI as before; window size changes are
-# copied). It is BoosterAI's only way to type into a running CLI (auto-clear, #69): it polls for the tab's request
-# file "<since-epoch-ms> <base64 text>", deletes it, and types the text, a final CR separately 0.3 s later so the CLI
-# sees a typed command, not a paste. A request is skipped (logged input-skipped) when a key was pressed after <since>,
+# copied). It polls for the tab's input request: legacy "<since-ms> <base64 text>" or protocol-2 JSON with the
+# expected idle/busy/input generation. It deletes the request and types the text, a final CR separately 0.3 s later so the CLI
+# sees a typed command, not a paste. State is rechecked before text and Enter. A request is skipped when a key was pressed after <since>,
 # so a draft in the prompt is never sent along. No TIOCSTI (disabled on current kernels), no window. TERM, INT and
 # QUIT are passed on; a hangup of the tab stops the command with HUP and TERM (script ignores a hangup it does not see
-# on its own terminal) instead of leaving it behind. Logs input-ready while it accepts requests.
+# on its own terminal) instead of leaving it behind. Logs input-ready protocol=2 while it accepts requests.
 bs_pty() {
-  BS_INPUT="$bs_input" BS_LOG="$bs_log" python3 -c 'import os, sys, pty, tty, termios, fcntl, signal, select, time, base64
+  BS_INPUT="$bs_input" BS_LOG="$bs_log" BS_TIMING="$bs_timing" python3 -c 'import os, sys, pty, tty, termios, fcntl, signal, select, time, base64, json
 cmd = sys.argv[1:]
 req = os.environ["BS_INPUT"]
 def ev(s):
@@ -327,11 +340,44 @@ signal.signal(signal.SIGHUP, hangup)
 def put(b):
     while b:
         b = b[os.write(master, b):]
+def fresh(expected, before_text=False):
+    if expected is None:
+        return True
+    if before_text and expected.get("kind") == "orkester":
+        try:
+            if time.time() - os.path.getmtime(os.environ["BS_TIMING"]) < 2:
+                return False
+        except (OSError, KeyError):
+            return False
+    state = None
+    ready = idle = busy = None
+    try:
+        with open(os.environ["BS_LOG"]) as f:
+            for line in f:
+                fields = line.split()
+                if len(fields) < 2:
+                    continue
+                at, event = int(fields[0]), fields[1]
+                if event == "cli-start":
+                    state = ready = idle = busy = None
+                elif event == "input-ready":
+                    ready = at
+                elif event == "busy":
+                    state, busy = "busy", at
+                elif event == "idle":
+                    state, idle = "idle", at
+                elif event in ("waiting", "cli-exit", "exit"):
+                    state = "busy"
+                elif event == "input-sent" and "kind=orkester" in fields and ("idle=%s" % expected["idle"]) in fields:
+                    return False
+        return state == "idle" and (ready, idle, busy) == (expected["ready"], expected["idle"], expected["busy"])
+    except (OSError, ValueError, KeyError):
+        return False
 typed = 0.0
 due = []
 checked = 0.0
 fds = [0, master]
-ev("input-ready")
+ev("input-ready protocol=2")
 try:
     tty.setraw(0)
     while True:
@@ -361,10 +407,18 @@ try:
                 # Focus reports are the terminal, not the user typing.
                 if b.replace(b"\x1b[I", b"").replace(b"\x1b[O", b""):
                     typed = time.time()
+                    ev("input-typed")
                 put(b)
         now = time.time()
         if due and now >= due[0][0]:
-            put(due.pop(0)[1])
+            _, data, expected, since, label = due.pop(0)
+            if typed > since:
+                ev("input-skipped reason=typed" + label)
+            elif not fresh(expected):
+                ev("input-skipped reason=stale" + label)
+            else:
+                put(data)
+                ev("input-sent" + label)
         if now - checked >= 1:
             checked = now
             try:
@@ -374,21 +428,34 @@ try:
             except OSError:
                 text = None
             if text is not None:
+                expected = None
+                label = ""
                 try:
-                    since, data = text.split()
-                    since = int(since) / 1000
-                    data = base64.b64decode(data, validate=True)
-                except ValueError:
+                    if text.startswith("{"):
+                        expected = json.loads(text)
+                        since = int(expected["since"]) / 1000
+                        data = expected["text"].encode()
+                        label = " kind=%s idle=%s" % (expected["kind"], expected["idle"])
+                        if now * 1000 - expected["created"] > 10000:
+                            data = b""
+                    else:
+                        since, data = text.split()
+                        since = int(since) / 1000
+                        data = base64.b64decode(data, validate=True)
+                except (ValueError, KeyError, TypeError):
                     since, data = now, b""
                 if not data:
-                    ev("input-skipped reason=invalid")
+                    ev("input-skipped reason=invalid" + label)
+                elif due or not fresh(expected, before_text=True):
+                    ev("input-skipped reason=stale" + label)
                 elif typed > since:
-                    ev("input-skipped reason=typed")
+                    ev("input-skipped reason=typed" + label)
                 else:
                     put(data.rstrip(b"\r"))
                     if data.endswith(b"\r"):
-                        due.append((now + 0.3, b"\r"))
-                    ev("input-sent")
+                        due.append((now + 0.3, b"\r", expected, since, label))
+                    else:
+                        ev("input-sent" + label)
 except OSError:
     hangup()
 finally:
@@ -784,7 +851,26 @@ for line in sys.stdin:
         try
         {
             File.WriteAllText(temporary, sinceMs.ToString(CultureInfo.InvariantCulture) + " " + Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(text)) + "\n");
-            File.Move(temporary, path, overwrite: true);
+            try { File.Move(temporary, path, overwrite: false); }
+            catch (IOException) when (File.Exists(path)) { }
+        }
+        finally { File.Delete(temporary); }
+    }
+
+    /// <summary>Atomically reserves the input slot; another request (including auto-clear) is never overwritten.</summary>
+    public bool TryRequestInput(string id, long sinceMs, string text, TabLog expected, string kind)
+    {
+        var path = Path.Combine(Directory, id + ".input");
+        var temporary = path + "." + Guid.NewGuid().ToString("N");
+        try
+        {
+            File.WriteAllText(temporary, JsonSerializer.Serialize(new
+            {
+                since = sinceMs, text, idle = expected.IdleAt, busy = expected.BusyAt,
+                ready = expected.InputReadyAt, created = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), kind,
+            }));
+            try { File.Move(temporary, path, overwrite: false); return true; }
+            catch (IOException) when (File.Exists(path)) { return false; }
         }
         finally { File.Delete(temporary); }
     }

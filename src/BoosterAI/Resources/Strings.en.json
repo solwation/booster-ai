@@ -14,6 +14,8 @@
   "model.tip": "Pick from the list or type your own model id",
   "col.once": "Run once",
   "once.tip": "Runs the orchestra as one task and exits. You cannot answer or steer during the run, and tools that need approval are normally refused. OpenHands runs headless and always approves tools automatically. Needs the orchestra on.",
+  "restart.orkester.tip": "Run /orkester again in the idle session without restarting the tab or agent",
+  "restart.orkester.name": "Run orchestra again",
   "restart.once.tip": "Run the orchestra again in the tab (a new one-shot run)",
   "orkester.tip": "Send /orkester as the first prompt",
   "install.name": "Install the orchestra",
