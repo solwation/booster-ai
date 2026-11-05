@@ -7,3 +7,7 @@ Release build: zero warnings/errors. Eighteen targeted zoom/persistence/environm
 Full suite and Windows installation are recorded at combined integration after #118. Terminal arguments/quoting were not changed by this issue; the production edit only adds offered percentages.
 
 Reproduce UI evidence: `dotnet run --project docs/verification/117/probe -- docs/verification/117`.
+
+## Final integrated verification
+
+Combined WSL suite: 779/779 passed on `94cc32a`; Windows suite: 779/779 on `b0d90a1`. The subsequent test correction affects Linux-guarded fixtures and no product code, so the Windows result remains applicable. Release build passed without warnings/errors. The conductor records Windows installation and release delivery in the release evidence.

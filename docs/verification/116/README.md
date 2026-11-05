@@ -7,3 +7,7 @@ Validation: Release build succeeded without warnings/errors. Three environment-s
 Full suite and Windows delivery are recorded at integration. An initial full WSL run exposed an unrelated test-isolation defect (#118); that run was stopped and its owned process tree killed. It is not passing evidence. No personal shell settings were changed.
 
 Reproduce UI evidence: `dotnet run --project docs/verification/116/probe -- docs/verification/116`.
+
+## Final integrated verification
+
+Combined WSL suite: 779/779 passed on `94cc32a`; Windows suite: 779/779 on `b0d90a1`. The subsequent test correction affects Linux-guarded fixtures and no product code, so the Windows result remains applicable. Release build passed without warnings/errors. The conductor records Windows installation and release delivery in the release evidence.

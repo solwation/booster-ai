@@ -38,3 +38,7 @@ installation and final integrated checks belong to the conductor.
 The probe closes every window and deletes its temporary configuration. The
 interrupted test process and its full descendant tree were killed; no live process
 remained in its synthetic PTY directories.
+
+## Final integrated verification
+
+Combined WSL suite: 779/779 passed on `94cc32a`; Windows suite: 779/779 on `b0d90a1`. The subsequent test correction affects Linux-guarded fixtures and no product code, so the Windows result remains applicable. Release build passed without warnings/errors. The real headless main-window selector also passed 40 checks on Windows, with zero CLI launches; its result and inspected image are included here. The conductor records Windows installation and release delivery in the release evidence.
