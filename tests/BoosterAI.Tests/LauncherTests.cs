@@ -300,6 +300,17 @@ public class ZoomTests
             .RootElement.GetProperty("profiles")[0].GetProperty("font").GetProperty("size").GetDouble());
     }
 
+    [Theory]
+    [InlineData(50, 6)]
+    [InlineData(60, 7.2)]
+    [InlineData(70, 8.4)]
+    public void SmallerZoomUsesTheSameScaleAcrossTerminals(int percent, double points)
+    {
+        using var doc = System.Text.Json.JsonDocument.Parse(Launcher.ZoomFragmentJson(percent));
+        Assert.Equal(points, doc.RootElement.GetProperty("profiles")[0].GetProperty("font").GetProperty("size").GetDouble());
+        Assert.Equal(["--zoom=" + (percent / 100d).ToString(System.Globalization.CultureInfo.InvariantCulture)], Launcher.LinuxZoomArgs("gnome-terminal", percent));
+    }
+
     [Fact]
     public void DefaultZoomProfileClosesOnExitAndInheritsFont()
     {

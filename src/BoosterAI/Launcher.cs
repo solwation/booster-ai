@@ -433,7 +433,7 @@ fi
     }
 
     /// <summary>The zoom levels offered in Settings, in percent; 0 = terminal default.</summary>
-    public static readonly IReadOnlyList<int> ZoomChoices = [0, 80, 90, 110, 125, 150, 175, 200];
+    public static readonly IReadOnlyList<int> ZoomChoices = [0, 50, 60, 70, 80, 90, 110, 125, 150, 175, 200];
 
     public const string ZoomProfileName = "BoosterAI";
     private const string ZoomProfileGuid = "{b005e57a-2a27-4c00-9a0e-5b0057a27001}";
