@@ -8,6 +8,10 @@ Advanced controls remain available only in global Manual mode.
 
 - Release build: no warnings or errors.
 - WSL full suite: 718 passed, 0 failed/skipped.
+- Windows full suite: 718 passed, 0 failed/skipped.
+- Main integration build: no warnings/errors; source/test/tool/asset trees match
+  reviewed worker revision e230f59. Existing single-file IL3000 publish warning
+  and existing test analyzer warnings are unchanged.
 - Headless navigation probe at 640×400: all six agents and all three sections;
   overview-card click; parent-tab navigation; same editor and unsaved model,
   profile, capacity, custom budget and permission selections retained;
@@ -30,3 +34,15 @@ Screenshots: [overview](overview.png), [dark overview](overview-dark.png),
 Program versions in these images are fixtures, not a claim about installed model
 versions. Budget bars are visualizations of the existing heuristic or manual value,
 not a measured efficiency guarantee. The smallest supported window uses scrolling.
+
+## Delivery and combined review
+
+Integrated as `460d149`. Installed Windows build `0.29.0+460d149` matches its
+published executable hash. Exactly one new installed process runs in the background;
+the previous process exited, foreground focus stayed unchanged, and saved 80% zoom
+was restored (terminal font 9.6). See [installation evidence](installation.json).
+
+Combined review covered this complete issue, navigation/editor state, the six icon
+sources, license distribution, docs/screenshots, and global compact/permission
+contracts. No launcher, tab script or terminal argument changed, so no additional
+real Windows Terminal launch was required. No unresolved findings or owned handoffs.
