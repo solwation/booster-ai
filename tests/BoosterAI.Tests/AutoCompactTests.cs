@@ -87,7 +87,7 @@ public class AutoCompactTests
     }
 
     [Theory]
-    [InlineData("codex", "-c model_auto_compact_token_limit=150000")]
+    [InlineData("codex", "-c model_auto_compact_token_limit=150000 -c model_auto_compact_token_limit_scope=total")]
     [InlineData("aider", "--max-chat-history-tokens 150000")]
     [InlineData("claude", "--autocompact 150000")]
     [InlineData("interpreter", "-c model_auto_compact_token_limit=150000")]

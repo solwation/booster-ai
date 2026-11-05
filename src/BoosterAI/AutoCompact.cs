@@ -63,7 +63,8 @@ public static class AutoCompact
         var value = n.ToString(CultureInfo.InvariantCulture);
         return cli switch
         {
-            "codex" => "-c model_auto_compact_token_limit=" + value + " -c 'model_auto_compact_token_limit_scope=\"total\"'",
+            // Codex falls back to a string for non-TOML values. Bare total also survives WT quoting.
+            "codex" => "-c model_auto_compact_token_limit=" + value + " -c model_auto_compact_token_limit_scope=total",
             "aider" => "--max-chat-history-tokens " + value,
             "interpreter" => "-c model_auto_compact_token_limit=" + value,
             "claude" => "--autocompact " + value,
