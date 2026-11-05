@@ -32,6 +32,19 @@
     <Setter Property="Margin" Value="0,0,0,4" />
     <Setter Property="HorizontalContentAlignment" Value="Left" />
   </Style>
+  <Style Selector="ListBox.agent-sections ListBoxItem">
+    <Setter Property="MinWidth" Value="110" />
+    <Setter Property="MinHeight" Value="32" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="Padding" Value="10,7" />
+    <Setter Property="Margin" Value="0,0,0,2" />
+    <Setter Property="HorizontalContentAlignment" Value="Left" />
+  </Style>
+  <Style Selector="Border.agent-group">
+    <Setter Property="Background" Value="{DynamicResource RowHoverBrush}" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="14,12" />
+  </Style>
   <Style Selector="Border.memory-track">
     <Setter Property="Height" Value="24" />
     <Setter Property="CornerRadius" Value="4" />

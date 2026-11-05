@@ -411,5 +411,9 @@
   "agents.update.interpreter": "Installs the current standalone version. Legacy Python installations are not migrated automatically; modes follow detected flags.",
   "agents.update.openhands": "Installs OpenHands CLI. Configure its LLM and local/container environment in the agent.",
   "compact.unit.interpreter": "Current Open Interpreter: token budget for automatic history compaction, through a per-run -c override. Legacy Python CLI is unsupported. Confirm the local model’s context capacity.",
-  "compact.custom.invalid": "Enter a whole token count: Claude 100,000–1,000,000, others 1–10,000,000 (app safety bound), at most the specified capacity. Choose an exact model ID."
+  "compact.custom.invalid": "Enter a whole token count: Claude 100,000–1,000,000, others 1–10,000,000 (app safety bound), at most the specified capacity. Choose an exact model ID.",
+  "agents.group.installation": "Version and installation",
+  "agents.check.short": "Check versions",
+  "agents.mode.editHint": "Choose a mode and Apply to save the agent alias. YOLO requires an additional confirmation.",
+  "agents.compact.editHint": "Applies to the selected model and task profile. Save for model is separate from the alias mode above."
 }

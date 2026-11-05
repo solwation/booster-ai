@@ -66,4 +66,4 @@ git tag v0.2.0 && git push origin v0.2.0
 
 Development is issue-driven and run with the orchestra itself. See [AGENTS.md](../AGENTS.md) and [.orchestra/project.md](../.orchestra/project.md).
 
-The agent settings screenshot (`--window settings --tab agents`) uses fixed neutral versions, installed/missing states and managed/custom aliases without running detection. `--section claude|codex|agy|aider|interpreter|openhands` scrolls to a sample agent for minimum-window checks; `--window agent-yolo` renders its explicit YOLO confirmation without writing settings.
+The agent settings screenshot (`--window settings --tab agents`) uses fixed neutral versions, installed/missing states and managed/custom aliases without running detection. `--section claude|codex|agy|aider|interpreter|openhands` selects that agent’s page; append `-permissions` or `-compact` to scroll to its corresponding group for minimum-window checks; `--window agent-yolo` renders its explicit YOLO confirmation without writing settings.

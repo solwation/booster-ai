@@ -9,6 +9,8 @@ public sealed record CliOffer(string Cli, string Label, string Tip);
 /// <summary>One supported AI CLI listed in the Settings agents hub (#91).</summary>
 public sealed class AgentInfo : Observable
 {
+    private bool _isSelected;
+    public bool IsSelected { get => _isSelected; internal set => Set(ref _isSelected, value); }
     public AutoCompactViewModel? Compact { get; init; }
     public CliStatus Detected { get; }
     public string Cli => Detected.Cli;
@@ -67,6 +69,18 @@ public sealed class SetupViewModel : Observable
     public Action? OnStatusChanged { get; set; }
 
     public IReadOnlyList<AgentInfo> Agents { get; private set; } = [];
+    private AgentInfo? _selectedAgent;
+    public AgentInfo? SelectedAgent
+    {
+        get => _selectedAgent;
+        set
+        {
+            if (value is null || !Agents.Contains(value) || ReferenceEquals(value, _selectedAgent)) return;
+            if (_selectedAgent is { } previous) previous.IsSelected = false;
+            Set(ref _selectedAgent, value);
+            value.IsSelected = true;
+        }
+    }
     private Func<CliStatus, AutoCompactViewModel>? _compactFactory;
     public void ConfigureCompact(Func<CliStatus, AutoCompactViewModel> factory) { _compactFactory = factory; Refresh(); }
 
@@ -141,6 +155,7 @@ public sealed class SetupViewModel : Observable
 
     private void Refresh()
     {
+        var selectedCli = SelectedAgent?.Cli;
         Missing = Prerequisites.MissingToOffer(_status, _rowLlms)
             .Select(c => new CliOffer(c, Loc.Format("setup.cli.install", c), Loc.Format("setup.cli.install.tip", Prerequisites.InstallScript(c)))).ToList();
         Aliases = Prerequisites.AliasesToOffer(_status, _dismissedAliases);
@@ -149,6 +164,7 @@ public sealed class SetupViewModel : Observable
             var status = _status.Cli(c) ?? new CliStatus(c, "none", null);
             return new AgentInfo(status) { Compact = _compactFactory?.Invoke(status) };
         }).ToList();
+        SelectedAgent = Agents.FirstOrDefault(a => a.Cli == selectedCli) ?? Agents.FirstOrDefault();
         foreach (var name in new[] { nameof(Status), nameof(WslVisible), nameof(CanInstallWsl), nameof(WslText), nameof(Missing), nameof(MissingVisible),
                      nameof(MissingText), nameof(Aliases), nameof(AliasVisible), nameof(AliasText), nameof(AliasTip), nameof(Agents), nameof(Summary), nameof(CheckNotice) })
             Raise(name);

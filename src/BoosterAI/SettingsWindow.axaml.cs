@@ -32,6 +32,16 @@ public partial class SettingsWindow : Window
         set => OptimizationSections.SelectedIndex = value;
     }
 
+    public string? SelectedAgentCli
+    {
+        get => (AgentSections.SelectedItem as AgentInfo)?.Cli;
+        set
+        {
+            if (_vm.Setup.Agents.FirstOrDefault(a => a.Cli == value) is { } agent)
+                AgentSections.SelectedItem = agent;
+        }
+    }
+
     private void OnShowMemoryLimit(object? sender, RoutedEventArgs e) => SelectedOptimizationSectionIndex = 1;
     private void OnShowMemoryUsage(object? sender, RoutedEventArgs e) => SelectedOptimizationSectionIndex = 0;
 

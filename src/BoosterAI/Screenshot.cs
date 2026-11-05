@@ -128,6 +128,8 @@ internal static class Screenshot
             {
                 vm.ShowSampleAgents();
                 sw.SelectedTabIndex = 4;
+                if (o.Section is { } agentSection)
+                    sw.SelectedAgentCli = agentSection.Split('-')[0];
             }
             else if (o.Tab is "appearance" or "utseende") sw.SelectedTabIndex = 3;
             else if (o.Tab is "projects" or "projekt") sw.SelectedTabIndex = 0;
@@ -153,15 +155,13 @@ internal static class Screenshot
             window.UpdateLayout();
             AvaloniaHeadlessPlatform.ForceRenderTimerTick();
         }
-        if (o.Tab is "agents" or "agenter" && o.Section is { } section
-            && window.FindControl<ScrollViewer>("AgentsScroll") is { } agentsScroll)
+        if (o.Tab is "agents" or "agenter" && o.Section is { } section && section.Contains('-'))
         {
-            var compact = section.EndsWith("-compact", StringComparison.Ordinal);
-            var cli = compact ? section[..^"-compact".Length] : section;
-            Control? target = compact
-                ? window.GetVisualDescendants().OfType<AutoCompactView>().FirstOrDefault(v => v.DataContext is AutoCompactViewModel c && c.Cli == cli)
-                : window.GetVisualDescendants().OfType<Border>().FirstOrDefault(b => b.DataContext is AgentInfo a && a.Cli == cli);
-            if (target?.TranslatePoint(default, agentsScroll) is { } position)
+            var parts = section.Split('-', 2);
+            var target = window.GetVisualDescendants().OfType<Border>()
+                .FirstOrDefault(v => v.Tag as string == parts[1] && v.DataContext is AgentInfo a && a.Cli == parts[0]);
+            var agentsScroll = target?.GetVisualAncestors().OfType<ScrollViewer>().FirstOrDefault();
+            if (agentsScroll is not null && target?.TranslatePoint(default, agentsScroll) is { } position)
             {
                 agentsScroll.Offset = new Vector(0, agentsScroll.Offset.Y + position.Y);
                 Dispatcher.UIThread.RunJobs();

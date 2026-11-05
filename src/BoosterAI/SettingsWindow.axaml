@@ -430,64 +430,86 @@
         </ScrollViewer>
       </TabItem>
 
-      <!-- Agent management is separate from general app preferences. -->
+      <!-- Each page reuses its AgentInfo and compact editor; navigation does not save or refresh. -->
       <TabItem x:Name="AgentsTab" Header="{local:T settings.tab.agents}">
         <Grid RowDefinitions="*,Auto" Margin="0,16,0,0">
-          <ScrollViewer x:Name="AgentsScroll" HorizontalScrollBarVisibility="Disabled">
-          <StackPanel>
-          <StackPanel Spacing="6" Margin="0,0,0,12">
-            <TextBlock Classes="title" Text="{local:T settings.section.agents}" TextWrapping="Wrap" />
-            <TextBlock Classes="muted" Text="{local:T agents.intro}" TextWrapping="Wrap" />
-            <Button Content="{local:T agents.check}" Click="OnCheckSetup" HorizontalAlignment="Left" Padding="12,6"
-                    IsEnabled="{Binding !Setup.IsChecking}" />
-            <TextBlock Classes="muted" Text="{Binding Setup.CheckNotice}" TextWrapping="Wrap" FontSize="12" />
-          </StackPanel>
-            <ItemsControl ItemsSource="{Binding Setup.Agents}" Margin="0,0,12,0">
+          <Grid ColumnDefinitions="116,*">
+            <ListBox x:Name="AgentSections" Classes="agent-sections" ItemsSource="{Binding Setup.Agents}"
+                     SelectedItem="{Binding Setup.SelectedAgent}" Background="Transparent" BorderThickness="0"
+                     AutomationProperties.Name="{local:T settings.tab.agents}">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="local:AgentInfo"><TextBlock Text="{Binding Name}" /></DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+            <!-- Keep each editor mounted so editable controls cannot reload its draft on a tab switch. -->
+            <ItemsControl Grid.Column="1" ItemsSource="{Binding Setup.Agents}">
+              <ItemsControl.ItemsPanel><ItemsPanelTemplate><Panel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="local:AgentInfo">
-                  <Border Background="{DynamicResource RowHoverBrush}" CornerRadius="8" Padding="14,12" Margin="0,0,0,12">
-                    <StackPanel Spacing="8">
-                      <Grid ColumnDefinitions="*,Auto">
-                        <StackPanel Spacing="3" Margin="0,0,14,0">
-                          <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="15" />
-                          <TextBlock Text="{Binding Description}" TextWrapping="Wrap" />
-                          <StackPanel Orientation="Horizontal" Spacing="10">
-                            <TextBlock Text="{Binding StatusText}" Classes="muted" />
-                            <TextBlock Text="{local:T agents.version}" Classes="muted" />
-                            <TextBlock Text="{Binding VersionText}" Classes="muted" />
-                          </StackPanel>
-                        </StackPanel>
-                        <Button Grid.Column="1" Content="{Binding InstallButtonText}" Click="OnInstallAgent" ToolTip.Tip="{Binding InstallTip}"
-                                Padding="12,6" VerticalAlignment="Top" />
-                      </Grid>
-                      <TextBlock Text="{Binding UpdateInfo}" Classes="muted" FontSize="12" TextWrapping="Wrap" />
-                      <Grid ColumnDefinitions="140,180,Auto,*">
-                        <StackPanel Spacing="2" VerticalAlignment="Center">
-                          <TextBlock Text="{local:T agents.mode.title}" FontWeight="SemiBold" />
-                          <TextBlock Text="{Binding CurrentModeText}" Classes="muted" FontSize="12" />
-                        </StackPanel>
-                        <ComboBox Grid.Column="1" ItemsSource="{Binding ModeChoices}" SelectedItem="{Binding SelectedMode}"
-                                  IsEnabled="{Binding CanSelectMode}" HorizontalAlignment="Stretch" AutomationProperties.Name="{local:T agents.mode.title}">
-                          <ComboBox.ItemTemplate><DataTemplate x:DataType="local:AgentModeChoice"><TextBlock Text="{Binding Label}" /></DataTemplate></ComboBox.ItemTemplate>
-                        </ComboBox>
-                        <Button Grid.Column="2" Content="{local:T agents.mode.apply}" Click="OnApplyAgentMode" IsEnabled="{Binding CanApply}" Margin="10,0,0,0" Padding="12,6" />
-                      </Grid>
-                      <TextBlock Text="{Binding ModeExplanation}" TextWrapping="Wrap" LineHeight="19" FontSize="12.5" />
-                      <TextBlock Text="{Binding ModeCommand}" Classes="path" TextWrapping="Wrap" FontSize="11.5" IsVisible="{Binding HasModeCommand}" />
-                      <Expander Header="{local:T compact.title}" IsExpanded="{Binding Compact.IsExpanded}" HorizontalAlignment="Stretch">
-                        <local:AutoCompactView DataContext="{Binding Compact}" Margin="0,6,0,0" />
-                      </Expander>
+              <DataTemplate x:DataType="local:AgentInfo">
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled" Margin="16,0,0,0" IsVisible="{Binding IsSelected}">
+                  <StackPanel Spacing="14" Margin="0,0,12,12">
+                    <StackPanel Spacing="4">
+                      <TextBlock Classes="title" Text="{Binding Name}" />
+                      <TextBlock Classes="muted" Text="{Binding Description}" TextWrapping="Wrap" />
                     </StackPanel>
-                  </Border>
-                </DataTemplate>
+
+                    <Border Classes="agent-group">
+                      <StackPanel Spacing="8">
+                        <TextBlock Classes="sectionhead" Text="{local:T agents.group.installation}" />
+                        <Grid ColumnDefinitions="*,Auto">
+                          <TextBlock Text="{Binding StatusText}" />
+                          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+                            <TextBlock Text="{local:T agents.version}" Classes="muted" />
+                            <TextBlock Text="{Binding VersionText}" FontWeight="SemiBold" />
+                          </StackPanel>
+                        </Grid>
+                        <TextBlock Text="{local:T agents.intro}" Classes="muted" FontSize="12" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding UpdateInfo}" FontSize="12" TextWrapping="Wrap" />
+                        <WrapPanel Orientation="Horizontal">
+                          <Button Content="{Binding InstallButtonText}" Click="OnInstallAgent" ToolTip.Tip="{Binding InstallTip}"
+                                  Padding="12,6" Margin="0,0,8,6" />
+                          <Button Content="{local:T agents.check.short}" Click="OnCheckSetup" Padding="12,6" Margin="0,0,0,6"
+                                  ToolTip.Tip="{local:T agents.check}" IsEnabled="{Binding !$parent[Window].((local:MainViewModel)DataContext).Setup.IsChecking}" />
+                        </WrapPanel>
+                        <TextBlock Classes="muted" Text="{Binding $parent[Window].((local:MainViewModel)DataContext).Setup.CheckNotice}"
+                                   TextWrapping="Wrap" FontSize="12" />
+                      </StackPanel>
+                    </Border>
+
+                    <Border Classes="agent-group" Tag="permissions">
+                      <StackPanel Spacing="8">
+                        <Grid ColumnDefinitions="*,Auto">
+                          <TextBlock Classes="sectionhead" Text="{local:T agents.mode.title}" />
+                          <TextBlock Grid.Column="1" Text="{Binding CurrentModeText}" Classes="muted" FontSize="12" VerticalAlignment="Center" />
+                        </Grid>
+                        <TextBlock Text="{local:T agents.mode.editHint}" Classes="muted" TextWrapping="Wrap" FontSize="12" />
+                        <Grid ColumnDefinitions="*,Auto">
+                          <ComboBox ItemsSource="{Binding ModeChoices}" SelectedItem="{Binding SelectedMode}"
+                                    IsEnabled="{Binding CanSelectMode}" HorizontalAlignment="Stretch" AutomationProperties.Name="{local:T agents.mode.title}">
+                            <ComboBox.ItemTemplate><DataTemplate x:DataType="local:AgentModeChoice"><TextBlock Text="{Binding Label}" /></DataTemplate></ComboBox.ItemTemplate>
+                          </ComboBox>
+                          <Button Grid.Column="1" Content="{local:T agents.mode.apply}" Click="OnApplyAgentMode" IsEnabled="{Binding CanApply}" Margin="10,0,0,0" Padding="12,6" />
+                        </Grid>
+                        <TextBlock Text="{Binding ModeExplanation}" TextWrapping="Wrap" LineHeight="19" FontSize="12.5" />
+                        <TextBlock Text="{Binding ModeCommand}" Classes="path" TextWrapping="Wrap" FontSize="11.5" IsVisible="{Binding HasModeCommand}" />
+                        <TextBlock Text="{local:T agents.applies}" Classes="muted" TextWrapping="Wrap" FontSize="12" />
+                      </StackPanel>
+                    </Border>
+
+                    <Border Classes="agent-group" Tag="compact">
+                      <StackPanel Spacing="8">
+                        <TextBlock Classes="sectionhead" Text="{local:T compact.title}" />
+                        <TextBlock Text="{local:T agents.compact.editHint}" Classes="muted" TextWrapping="Wrap" FontSize="12" />
+                        <local:AutoCompactView DataContext="{Binding Compact}" />
+                      </StackPanel>
+                    </Border>
+                  </StackPanel>
+                </ScrollViewer>
+              </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
-          </StackPanel>
-          </ScrollViewer>
-          <StackPanel Grid.Row="1" Spacing="5" Margin="0,6,0,0">
-            <TextBlock Classes="muted" Text="{local:T agents.applies}" TextWrapping="Wrap" FontSize="12" />
-            <TextBlock Text="{Binding Status}" TextWrapping="Wrap" FontSize="12" />
-          </StackPanel>
+          </Grid>
+          <TextBlock Grid.Row="1" Text="{Binding Status}" TextWrapping="Wrap" FontSize="12" Margin="0,6,0,0" />
         </Grid>
       </TabItem>
 

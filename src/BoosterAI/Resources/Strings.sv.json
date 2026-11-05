@@ -411,5 +411,9 @@
   "agents.update.interpreter": "Installerar aktuell standalone-version. Äldre Python-installation migreras inte automatiskt; lägen väljs efter detekterade flaggor.",
   "agents.update.openhands": "Installerar OpenHands CLI. LLM och lokal-/containermiljö ställs in i agenten.",
   "compact.unit.interpreter": "Aktuell Open Interpreter: tokenbudget för automatisk historikkomprimering, via tillfällig -c-inställning. Äldre Python-CLI stöds inte. Bekräfta den lokala modellens kontextkapacitet.",
-  "compact.custom.invalid": "Ange ett helt tokenantal: Claude 100 000–1 000 000, övriga 1–10 000 000 (appens säkerhetsgräns), högst angiven kapacitet. Välj ett exakt modell-ID."
+  "compact.custom.invalid": "Ange ett helt tokenantal: Claude 100 000–1 000 000, övriga 1–10 000 000 (appens säkerhetsgräns), högst angiven kapacitet. Välj ett exakt modell-ID.",
+  "agents.group.installation": "Version och installation",
+  "agents.check.short": "Kontrollera versioner",
+  "agents.mode.editHint": "Välj läge och använd Tillämpa för att spara agentens alias. YOLO kräver en extra bekräftelse.",
+  "agents.compact.editHint": "Gäller den valda modellen och uppgiftsprofilen. Spara för modell är separat från aliasläget ovan."
 }
