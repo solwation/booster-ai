@@ -1,0 +1,40 @@
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Headless;
+using Avalonia.VisualTree;
+using Avalonia.Threading;
+using BoosterAI;
+using System.Text.Json;
+
+var file = Path.Combine(Path.GetTempPath(), "booster-ux105-synthetic-" + Guid.NewGuid() + ".json");
+ConfigStore.UseFile(file);
+AppBuilder.Configure<App>().UseSkia().UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false }).SetupWithoutStarting();
+var vm = new MainViewModel(new AppConfig { Tabs = [new TabConfig { Name = "Atlas", Directory = "/sample/atlas", Expanded = true, SubTabs = [new TabConfig { Name = "Review" }] }] });
+vm.ShowSampleStatus();
+var main = new MainWindow(vm);
+main.Show();
+Dispatcher.UIThread.RunJobs();
+main.UpdateLayout();
+var statuses = main.GetVisualDescendants().OfType<Control>().Where(c => ToolTip.GetTip(c) is ToolTip).ToArray();
+var before = vm.Tabs.Select(t => new { t.Name, t.IsAlive, t.CanRemoveSubTab }).ToArray();
+var child = vm.Tabs[1];
+var childRemovalAccepted = vm.RemoveSubTab(child);
+var project = vm.Tabs[0];
+vm.RemoveProject(project);
+var afterProjectRemoval = vm.Tabs.Count;
+var setup = new SetupViewModel();
+var status = new SetupStatus(WslState.Ok, ["Ubuntu"], [new CliStatus("codex", "file", "/sample/bin/codex")], true, false);
+setup.Apply(status, "Ubuntu");
+var aliasInitiallyVisible = setup.AliasVisible;
+setup.DismissAliases();
+var aliasAfterDismiss = setup.AliasVisible;
+var nextSetup = new SetupViewModel();
+nextSetup.Apply(status, "Ubuntu");
+var result = new { synthetic = true, before, childRemovalAccepted, afterProjectRemoval,
+ statusControls = statuses.Select(c => new { type = c.GetType().Name, c.Focusable, FocusAccepted = c.Focus() }).ToArray(),
+ aliasInitiallyVisible, aliasAfterDismiss, aliasAfterNewInstance = nextSetup.AliasVisible };
+Console.WriteLine(JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true }));
+main.Close();
+File.Delete(file);
+if (childRemovalAccepted || afterProjectRemoval != 0 || statuses.Length != 2 || statuses.Any(c => c.Focusable) || !nextSetup.AliasVisible) return 1;
+return 0;

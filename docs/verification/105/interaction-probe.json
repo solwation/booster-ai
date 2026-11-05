@@ -1,0 +1,32 @@
+{
+  "synthetic": true,
+  "before": [
+    {
+      "Name": "Atlas",
+      "IsAlive": true,
+      "CanRemoveSubTab": false
+    },
+    {
+      "Name": "Review",
+      "IsAlive": true,
+      "CanRemoveSubTab": false
+    }
+  ],
+  "childRemovalAccepted": false,
+  "afterProjectRemoval": 0,
+  "statusControls": [
+    {
+      "type": "Grid",
+      "Focusable": false,
+      "FocusAccepted": false
+    },
+    {
+      "type": "Grid",
+      "Focusable": false,
+      "FocusAccepted": false
+    }
+  ],
+  "aliasInitiallyVisible": true,
+  "aliasAfterDismiss": false,
+  "aliasAfterNewInstance": true
+}
