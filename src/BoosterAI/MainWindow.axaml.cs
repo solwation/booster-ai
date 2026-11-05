@@ -74,6 +74,8 @@ public partial class MainWindow : Window
         _vm = vm;
         DataContext = vm;
         InitializeComponent();
+        Closed += (_, _) => StopStatusPeek();
+        PropertyChanged += OnStatusWindowVisibilityChanged;
         Resized += (_, _) =>
         {
             foreach (var grid in this.GetVisualDescendants().OfType<Grid>().Where(g => g.Classes.Contains("project-columns")))
@@ -129,16 +131,6 @@ public partial class MainWindow : Window
     {
         if ((sender as Control)?.DataContext is not TabViewModel tab) return;
         if (await new ConfirmInstallWindow(tab).ShowDialog<bool>(this)) _vm.InstallOrkester(tab);
-    }
-
-    private void OnStatusTipOpening(object? sender, CancelRoutedEventArgs e)
-    {
-        if ((sender as Control)?.DataContext is TabViewModel tab) _vm.WatchOutput(tab, open: true);
-    }
-
-    private void OnStatusTipClosing(object? sender, RoutedEventArgs e)
-    {
-        if ((sender as Control)?.DataContext is TabViewModel tab) _vm.WatchOutput(tab, open: false);
     }
 
     private void OnOpenFolder(object? sender, RoutedEventArgs e)

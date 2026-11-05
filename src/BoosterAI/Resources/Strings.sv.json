@@ -498,5 +498,6 @@
   "setup.environment.windows": "Kontrollerar WSL och installerade distributioner samt vilka AI-program som finns i vald distributions inloggningsmiljö. Läser även programversioner och stöd för agentinställningar. Installerar inget och ändrar inga inställningar. Resultatet visas nedan; versioner och val finns under AI-agenter.",
   "setup.environment.linux": "Kontrollerar vilka AI-program som finns i flikarnas lokala inloggningsmiljö. Läser även programversioner och stöd för agentinställningar. Installerar inget och ändrar inga inställningar. Resultatet visas nedan; versioner och val finns under AI-agenter.",
   "setup.environment.result": "Resultat från miljökontrollen",
-  "setup.environment.agents": "Visa installation och inställningar för AI-agenter"
+  "setup.environment.agents": "Visa installation och inställningar för AI-agenter",
+  "output.action": "Visa status och terminalutmatning för {0}: {1}"
 }

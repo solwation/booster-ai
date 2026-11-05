@@ -1,0 +1,31 @@
+{
+  "language": "sv",
+  "theme": "light",
+  "synthetic": true,
+  "launches": 0,
+  "checks": {
+    "Named with project and complete status": true,
+    "Tab reaches status control": true,
+    "No watch before opening": true,
+    "Enter opens details": true,
+    "Keyboard opening starts output timer": true,
+    "Enter and Space inside details cannot reach Start": true,
+    "Keyboard details contain full status": true,
+    "Popup fits minimum frame": true,
+    "Keyboard can scroll all output at minimum size": true,
+    "Open details refresh from synthetic capture": true,
+    "Escape closes stops watch and restores focus": true,
+    "Closed details do not poll output": true,
+    "Space opens details": true,
+    "Space details close cleanly": true,
+    "Pointer hover retains quick preview": true,
+    "Hover starts the same watch": true,
+    "Hover and keyboard use the same bound content type": true,
+    "Pointer leave stops hover watch": true,
+    "Hover reopens after keyboard use": true,
+    "Hiding main window stops output watch": true,
+    "Hover resumes after showing main window": true,
+    "Closing main window stops output watch": true,
+    "Enter and Space never launch a CLI": true
+  }
+}

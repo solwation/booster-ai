@@ -498,5 +498,6 @@
   "setup.environment.windows": "Checks WSL, installed distributions and which AI programs are available in the selected distribution’s login environment. Also reads program versions and support for agent settings. Installs nothing and changes no settings. Results appear below; versions and choices are under AI agents.",
   "setup.environment.linux": "Checks which AI programs are available in the tabs’ local login environment. Also reads program versions and support for agent settings. Installs nothing and changes no settings. Results appear below; versions and choices are under AI agents.",
   "setup.environment.result": "Environment check results",
-  "setup.environment.agents": "View AI agent installation and settings"
+  "setup.environment.agents": "View AI agent installation and settings",
+  "output.action": "Show status and terminal output for {0}: {1}"
 }

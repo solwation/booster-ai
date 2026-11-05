@@ -71,7 +71,7 @@ public sealed class TabViewModel : Observable
         _nonInteractive = c.NonInteractive;
     }
 
-    public string Name { get => _name; set => Set(ref _name, value); }
+    public string Name { get => _name; set { if (Set(ref _name, value)) Raise(nameof(StatusActionName)); } }
     public bool Orkester
     {
         get => _orkester;
@@ -305,7 +305,7 @@ public sealed class TabViewModel : Observable
 
     private void RaiseRestart()
     {
-        foreach (var n in new[] { nameof(IsChanged), nameof(CanRestart), nameof(RestartTip), nameof(PendingRestart), nameof(CanContinueClosed), nameof(CanReloadOrchestra), nameof(ShowReload), nameof(ReloadName) }) Raise(n);
+        foreach (var n in new[] { nameof(IsChanged), nameof(CanRestart), nameof(RestartTip), nameof(PendingRestart), nameof(StatusActionName), nameof(CanContinueClosed), nameof(CanReloadOrchestra), nameof(ShowReload), nameof(ReloadName) }) Raise(n);
         _owner.RestartableChanged();
     }
     /// <summary>The programs of the commands agy denied (state Denied).</summary>
@@ -322,6 +322,7 @@ public sealed class TabViewModel : Observable
         Raise(nameof(StatusText));
         Raise(nameof(StatusTip));
     }
+    public string StatusActionName => Loc.Format("output.action", Name, StatusTip);
     public string StatusText => _closeProgress ?? (_state switch
     {
         null => "",
@@ -399,7 +400,7 @@ public sealed class TabViewModel : Observable
         if (_state == state && _rc == rc && _denied.SequenceEqual(denied) && _activity == activity && _watchingSince == watchingSince && _clearedAt == clearedAt)
         {
             // The elapsed minutes of Watching move on without a new event.
-            if (activity == Activity.Watching) { Raise(nameof(StatusText)); Raise(nameof(StatusTip)); }
+            if (activity == Activity.Watching) { Raise(nameof(StatusText)); Raise(nameof(StatusTip)); Raise(nameof(StatusActionName)); }
             return false;
         }
         var stateChanged = _state != state || _rc != rc || !_denied.SequenceEqual(denied);
