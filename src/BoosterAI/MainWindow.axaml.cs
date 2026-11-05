@@ -267,13 +267,6 @@ public partial class MainWindow : Window
         if (await ConfirmSetupWindow.Wsl().ShowDialog<bool>(this)) _vm.InstallWsl();
     }
 
-    private async void OnAddAliases(object? sender, RoutedEventArgs e)
-    {
-        if (await ConfirmSetupWindow.Aliases(_vm.Setup.Aliases).ShowDialog<bool>(this)) _vm.AddAliases();
-    }
-
-    private void OnDismissAliases(object? sender, RoutedEventArgs e) => _vm.Setup.DismissAliases();
-
     private void OnContinue(object? sender, RoutedEventArgs e)
     {
         if (!_vm.IsClosingAll && (sender as Control)?.DataContext is TabViewModel tab) _vm.Restart(tab, resume: true);

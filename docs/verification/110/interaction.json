@@ -1,0 +1,33 @@
+{
+  "synthetic": true,
+  "results": [
+    {
+      "lang": "sv",
+      "instance": 0,
+      "aliasOffer": false,
+      "installationComplete": true,
+      "explicitAgentChoices": 2
+    },
+    {
+      "lang": "sv",
+      "instance": 1,
+      "aliasOffer": false,
+      "installationComplete": true,
+      "explicitAgentChoices": 2
+    },
+    {
+      "lang": "en",
+      "instance": 0,
+      "aliasOffer": false,
+      "installationComplete": true,
+      "explicitAgentChoices": 2
+    },
+    {
+      "lang": "en",
+      "instance": 1,
+      "aliasOffer": false,
+      "installationComplete": true,
+      "explicitAgentChoices": 2
+    }
+  ]
+}

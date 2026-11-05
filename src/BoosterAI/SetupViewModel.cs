@@ -3,7 +3,7 @@ using Avalonia.Threading;
 
 namespace BoosterAI;
 
-/// <summary>One CLI button in the setup bars: "Installera codex" or the CLI an alias is offered for.</summary>
+/// <summary>One CLI installation button in the setup bar.</summary>
 public sealed record CliOffer(string Cli, string Label, string Tip);
 
 /// <summary>One supported AI CLI listed in the Settings agents hub (#91).</summary>
@@ -82,14 +82,13 @@ public sealed class AgentInfo : Observable
 
 /// <summary>
 /// The quiet setup bars in the main window (#74): WSL missing (Windows), CLIs missing in the tabs' shell with an
-/// install button each, and the full-auto alias offer; plus the summary that Settings shows after a check.
+/// install button each, plus the summary that Settings shows after a check.
 /// </summary>
 public sealed class SetupViewModel : Observable
 {
     private SetupStatus _status = SetupStatus.Empty;
     private bool _checking, _checked, _missingDismissed;
     private IReadOnlyList<string> _rowLlms = [];
-    private readonly HashSet<string> _dismissedAliases = [];
 
     public SetupStatus Status => _status;
     public bool IsChecking { get => _checking; set { if (Set(ref _checking, value)) { Raise(nameof(Summary)); Raise(nameof(CheckNotice)); } } }
@@ -138,11 +137,6 @@ public sealed class SetupViewModel : Observable
         }
     }
 
-    public IReadOnlyList<string> Aliases { get; private set; } = [];
-    public bool AliasVisible => Aliases.Count > 0 && !MissingVisible && !WslVisible;
-    public string AliasText => Loc.Format("setup.alias.offer", string.Join(", ", Aliases));
-    public string AliasTip => string.Join("\n", Aliases.Select(Prerequisites.AliasLine));
-
     /// <summary>What the last check found, for Settings.</summary>
     public string Summary
     {
@@ -181,15 +175,12 @@ public sealed class SetupViewModel : Observable
 
     public void DismissMissing() { _missingDismissed = true; Refresh(); }
 
-    public void DismissAliases() { _dismissedAliases.UnionWith(Aliases); Refresh(); }
-
     private void Refresh()
     {
         var selectedCli = SelectedAgent?.Cli;
         var sections = Agents.ToDictionary(a => a.Cli, a => a.Section);
         Missing = Prerequisites.MissingToOffer(_status, _rowLlms)
             .Select(c => new CliOffer(c, Loc.Format("setup.cli.install", c), Loc.Format("setup.cli.install.tip", Prerequisites.InstallScript(c)))).ToList();
-        Aliases = Prerequisites.AliasesToOffer(_status, _dismissedAliases);
         Agents = Prerequisites.Clis.Select(c =>
         {
             var status = _status.Cli(c) ?? new CliStatus(c, "none", null);
@@ -198,7 +189,7 @@ public sealed class SetupViewModel : Observable
         Raise(nameof(Agents));
         SelectedAgent = Agents.FirstOrDefault(a => a.Cli == selectedCli);
         foreach (var name in new[] { nameof(Status), nameof(WslVisible), nameof(CanInstallWsl), nameof(WslText), nameof(Missing), nameof(MissingVisible),
-                     nameof(MissingText), nameof(Aliases), nameof(AliasVisible), nameof(AliasText), nameof(AliasTip), nameof(Summary), nameof(CheckNotice) })
+                     nameof(MissingText), nameof(Summary), nameof(CheckNotice) })
             Raise(name);
     }
 }
@@ -305,27 +296,6 @@ public sealed partial class MainViewModel
     /// <summary>The ~/.bashrc of the tabs' Linux as this process can read it; null until the WSL home is known.</summary>
     private string? BashrcFile => PathMapping.ToLocalPath("~/.bashrc", _cfg.WslDistro, _wslHome);
 
-    /// <summary>Adds the offered full-auto aliases to BoosterAI's block in ~/.bashrc (after the user confirmed).</summary>
-    public void AddAliases()
-    {
-        if (BashrcFile is not { } path) { ShowStatus(Loc.Get("status.wslHomeMissing"), error: true); return; }
-        var clis = Setup.Aliases.ToList();
-        try
-        {
-            var current = File.Exists(path) ? File.ReadAllText(path) : null;
-            var updated = Prerequisites.AddAliases(current, clis);
-            // Written in place, so the file keeps its permissions.
-            if (updated != (current ?? "")) File.WriteAllText(path, updated);
-            ShowStatus(Loc.Format("status.aliasesAdded", "~/.bashrc", string.Join(", ", clis)), error: false);
-            Setup.DismissAliases();
-            CheckSetup();
-        }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
-        {
-            ShowStatus(Loc.Format("status.aliasesFailed", path, e.Message), error: true);
-        }
-    }
-
     /// <summary>Called only by the Apply action after its required confirmation; never changes a running CLI.</summary>
     public bool ApplyAgentMode(AgentInfo agent, bool yoloConfirmed)
     {
@@ -372,7 +342,7 @@ public sealed partial class MainViewModel
         Setup.RowsChanged(["claude", "codex", "agy"]);
     }
 
-    /// <summary>For --screenshot --fake-alias: every CLI installed, claude and codex without an alias.</summary>
+    /// <summary>For --screenshot --fake-setup alias: installed CLIs without permission aliases (no setup offer).</summary>
     public void ShowSampleAlias()
     {
         Setup.Apply(new SetupStatus(WslState.Ok, ["Ubuntu"],

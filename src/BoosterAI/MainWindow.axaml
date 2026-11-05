@@ -108,18 +108,6 @@
       </Grid>
     </Border>
 
-    <Border Classes="update" IsVisible="{Binding Setup.AliasVisible}" Margin="0,0,0,14">
-      <Grid ColumnDefinitions="Auto,*,Auto">
-        <Path Grid.Column="0" Data="{StaticResource ShieldIcon}" Width="14" Height="14" Stretch="Uniform" StrokeThickness="1.5"
-              StrokeLineCap="Round" StrokeJoin="Round" Stroke="{DynamicResource LinkBrush}" VerticalAlignment="Center" Margin="0,0,10,0" />
-        <TextBlock Grid.Column="1" Text="{Binding Setup.AliasText}" TextWrapping="Wrap" VerticalAlignment="Center" FontSize="13.5" />
-        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" Margin="16,0,0,0" VerticalAlignment="Center">
-          <Button Classes="accent" Content="{local:T setup.alias.add}" Click="OnAddAliases" ToolTip.Tip="{Binding Setup.AliasTip}" Padding="14,6" />
-          <Button Content="{local:T setup.dismiss}" Click="OnDismissAliases" Padding="14,6" />
-        </StackPanel>
-      </Grid>
-    </Border>
-
     <!-- Optimization (#76): WSL memory not tuned, offer quick optimize. -->
     <Border Classes="update" IsVisible="{Binding Optimization.BannerVisible}" Margin="0,0,0,14">
       <Grid ColumnDefinitions="Auto,*,Auto">

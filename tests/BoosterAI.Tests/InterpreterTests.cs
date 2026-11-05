@@ -15,7 +15,7 @@ public class InterpreterTests
         Assert.Equal("interpreter", row.Llm);
         Assert.Contains("interpreter", row.Llms);
         Assert.Equal("ollama/qwen2.5-coder:7b", row.ToConfig(forLaunch: true).Model);
-        Assert.Empty(vm.Setup.Aliases); // The two CLI generations have incompatible permission flags.
+        Assert.DoesNotContain(vm.Setup.Missing, offer => offer.Cli == "interpreter");
         Assert.False(Launcher.CanContinue(row.ToConfig(forLaunch: true)));
         Assert.False(Launcher.CanSaveAndClose(row.ToConfig(forLaunch: true)));
         Assert.False(Launcher.CanResume(row.ToConfig(forLaunch: true), row.ToConfig(forLaunch: true)));

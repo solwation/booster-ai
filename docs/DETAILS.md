@@ -143,18 +143,12 @@ CLI behavior was checked against the [current command reference](https://www.ope
 
 After an install BoosterAI checks again every 15 seconds (for up to 20 minutes) until the CLI is found, then says so in the status line and removes the button. New tabs start a new login shell, so they find the CLI without restarting BoosterAI; *CLI not found* is a state of a tab that already ran, and its restart button runs the installed CLI.
 
-**Full-auto aliases.** For each installed CLI that the shell has no alias or function for, a bar offers **Add aliases …** (and *Not now*, which hides it until BoosterAI restarts). A confirmation dialog warns that with the alias the AI runs commands and changes, creates and deletes files without asking, in every tab and terminal, and shows the exact lines. Confirming appends them to a marked block at the end of `~/.bashrc` (the WSL home on Windows):
-
-```sh
-# >>> BoosterAI full-auto aliases >>>
-# Added by BoosterAI: these CLIs run commands and edit files without asking. Delete this block to undo.
-alias claude='claude --dangerously-skip-permissions'
-alias codex='codex --dangerously-bypass-approvals-and-sandbox'
-alias agy='agy --dangerously-skip-permissions'
-# <<< BoosterAI full-auto aliases <<<
-```
-
-Only the lines for the offered CLIs are written; a later CLI joins the same block. An alias or function the user already has (detected in the shell, and checked again in the file text) is never overwritten or duplicated, so an alias such as `alias claude='claude --permission-mode auto'` stays as it is and no offer is made for it. Delete the block to undo. The aliases apply to new tabs, including Run once (see [Run once](#run-once-non-interactive)). Tabs read `~/.bashrc` through the login shell's `~/.profile`, as Ubuntu's default does; a profile that does not source it would not see the aliases, and BoosterAI offers them again after a restart (without writing them twice).
+**Permission aliases are optional.** An installed CLI without an alias is a complete
+basic installation. The main window does not offer automatic full-auto aliases or
+ask the user to decline them again on every start. Choose an agent's permission
+preset explicitly under **Settings → AI agents → Permission alias**; YOLO still
+requires confirmation. Existing aliases and CLI settings are not changed by setup
+guidance. Older BoosterAI alias blocks remain recognized by the agent editor.
 
 `--dry-run` prints the check, the WSL install command, each CLI's install script (also as the `wt.exe` arguments of its tab) and the alias block.
 
