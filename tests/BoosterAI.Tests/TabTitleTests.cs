@@ -50,7 +50,7 @@ public class TabTitleTests
             File.SetUnixFileMode(fake, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
             var chain = ". ./tab-lib.sh . tab1 'Mitt projekt' && (bs_cli 2>/dev/null || true) && bs_run claude && exit";
             var psi = new ProcessStartInfo("script") { RedirectStandardOutput = true, WorkingDirectory = dir };
-            psi.Environment["PATH"] = bin + ":" + Environment.GetEnvironmentVariable("PATH");
+            TestShell.Configure(psi, root, bin: bin);
             psi.Environment.Remove("CLAUDE_CODE_DISABLE_TERMINAL_TITLE");
             foreach (var a in new[] { "-qec", $"bash --norc --noprofile -ic \"{chain}\"", "/dev/null" }) psi.ArgumentList.Add(a);
             using var p = Process.Start(psi)!;
@@ -63,7 +63,7 @@ public class TabTitleTests
             }
             finally { if (!p.HasExited) p.Kill(entireProcessTree: true); }
         }
-        finally { if (Directory.Exists(root)) Directory.Delete(root, recursive: true); }
+        finally { TestShell.StopLeftovers(root); if (Directory.Exists(root)) Directory.Delete(root, recursive: true); }
     }
 
     /// <summary>The idle shell's prompt repeats the name literally: no expansion, no control characters.</summary>
@@ -76,6 +76,7 @@ public class TabTitleTests
         {
             var dir = new TabSession(root, DateTime.UtcNow).Directory;
             var psi = new ProcessStartInfo("bash") { RedirectStandardOutput = true, WorkingDirectory = dir };
+            TestShell.Configure(psi, root);
             psi.ArgumentList.Add("-c");
             psi.ArgumentList.Add(". ./tab-lib.sh . tab1 \"$1\" && PS1=$BS_PS1_TITLE && printf '%s' \"${PS1@P}\"");
             psi.ArgumentList.Add("bash");
@@ -89,6 +90,6 @@ public class TabTitleTests
             }
             finally { if (!p.HasExited) p.Kill(entireProcessTree: true); }
         }
-        finally { if (Directory.Exists(root)) Directory.Delete(root, recursive: true); }
+        finally { TestShell.StopLeftovers(root); if (Directory.Exists(root)) Directory.Delete(root, recursive: true); }
     }
 }

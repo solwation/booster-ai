@@ -110,6 +110,7 @@ public class CloseAllTests
                 + Launcher.SaveAndCloseScript(new TabConfig { Llm = "codex", Directory = root }, "saved");
             var psi = new ProcessStartInfo("bash") { WorkingDirectory = root, RedirectStandardOutput = true, RedirectStandardError = true };
             psi.ArgumentList.Add("-c"); psi.ArgumentList.Add(script);
+            TestShell.Configure(psi, root);
             using var p = Process.Start(psi)!;
             Assert.True(p.WaitForExit(30000));
             Assert.Equal(0, p.ExitCode);
@@ -119,7 +120,7 @@ public class CloseAllTests
             Assert.True(CloseAllLogic.SaveTurnDone(log, "saved"));
             Assert.Equal(0, log.CliExit);
         }
-        finally { Directory.Delete(root, true); }
+        finally { TestShell.StopLeftovers(root); Directory.Delete(root, true); }
     }
 
     [Fact]
@@ -141,7 +142,10 @@ public class CloseAllTests
     public void RealCloseStopsTheRecordedShellButPreservesAnUnrelatedProcess()
     {
         if (!OperatingSystem.IsLinux()) return;
-        using var shell = Process.Start(new ProcessStartInfo("bash") { ArgumentList = { "-c", "trap '' TERM HUP; sleep 60 & wait; while :; do :; done" }, RedirectStandardOutput = true })!;
+        var root = Directory.CreateTempSubdirectory("booster-close-identity-").FullName;
+        var psi = new ProcessStartInfo("bash") { ArgumentList = { "-c", "trap '' TERM HUP; sleep 60 & wait; while :; do :; done" }, RedirectStandardOutput = true, WorkingDirectory = root };
+        TestShell.Configure(psi, root);
+        using var shell = Process.Start(psi)!;
         using var unrelated = Process.Start("sleep", "60")!;
         try
         {
@@ -156,7 +160,11 @@ public class CloseAllTests
         finally
         {
             if (!shell.HasExited) shell.Kill(entireProcessTree: true);
-            unrelated.Kill();
+            shell.WaitForExit(5000);
+            unrelated.Kill(entireProcessTree: true);
+            unrelated.WaitForExit(5000);
+            TestShell.StopLeftovers(root);
+            Directory.Delete(root, true);
         }
     }
     [Fact]
@@ -172,6 +180,7 @@ public class CloseAllTests
         psi.ArgumentList.Add("-qefc");
         psi.ArgumentList.Add("bash --noprofile --norc -ic " + "'" + body.Replace("'", "'\\''") + "'");
         psi.ArgumentList.Add("/dev/null");
+        TestShell.Configure(psi, root);
         using var process = Process.Start(psi)!;
         try
         {
@@ -193,6 +202,8 @@ public class CloseAllTests
         finally
         {
             if (!process.HasExited) process.Kill(entireProcessTree: true);
+            process.WaitForExit(5000);
+            TestShell.StopLeftovers(root);
             Directory.Delete(root, true);
         }
     }

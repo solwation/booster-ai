@@ -134,7 +134,7 @@ public class TabStatusTests
             Assert.Equal(Activity.Idle, session.ReadActivity(track.Id, log, now));
             Assert.Equal(Activity.Busy, session.ReadActivity(track.Id, log with { Activity = Activity.Busy }, now));
         }
-        finally { if (Directory.Exists(root)) Directory.Delete(root, recursive: true); }
+        finally { TestShell.StopLeftovers(root); if (Directory.Exists(root)) Directory.Delete(root, recursive: true); }
     }
 
     [Fact]
@@ -147,6 +147,7 @@ public class TabStatusTests
             var session = new TabSession(root, DateTime.UtcNow);
             File.WriteAllText(Path.Combine(session.Directory, "tab-lib.sh"), TabSession.Lib);
             var psi = new System.Diagnostics.ProcessStartInfo("bash") { RedirectStandardOutput = true, WorkingDirectory = session.Directory };
+            TestShell.Configure(psi, root);
             psi.ArgumentList.Add("-c");
             psi.ArgumentList.Add("shopt -s expand_aliases && alias printf='printf alias:%s' && . ./tab-lib.sh . tab1 && bs_cli && bs_run 'printf sample-output'");
             using var process = System.Diagnostics.Process.Start(psi)!;
@@ -159,7 +160,7 @@ public class TabStatusTests
             Assert.DoesNotContain("sample-output", timing);
             Assert.Equal(Activity.Busy, session.ReadActivity("tab1", session.ReadLog("tab1"), DateTime.UtcNow));
         }
-        finally { if (Directory.Exists(root)) Directory.Delete(root, recursive: true); }
+        finally { TestShell.StopLeftovers(root); if (Directory.Exists(root)) Directory.Delete(root, recursive: true); }
     }
 }
 
@@ -260,6 +261,7 @@ public class DeniedCommandTests
                 {"event":"result","result":{"status":"SUCCESS","response":"","num_turns":1,"denied_actions":[{"action":"command","display_name":"RunCommand"}]}}
                 """);
             var psi = new System.Diagnostics.ProcessStartInfo("bash") { RedirectStandardOutput = true, WorkingDirectory = dir };
+            TestShell.Configure(psi, dir);
             psi.ArgumentList.Add("-c");
             psi.ArgumentList.Add(". ./tab-lib.sh . t && bs_stream cat stream.jsonl");
             using var p = System.Diagnostics.Process.Start(psi)!;
@@ -268,7 +270,7 @@ public class DeniedCommandTests
             Assert.Contains("denied without asking: git status && gh auth status", output);
             Assert.Equal(["git status && gh auth status"], TabLog.Parse(File.ReadAllText(Path.Combine(dir, "t.log"))).Denied!);
         }
-        finally { Directory.Delete(dir, recursive: true); }
+        finally { TestShell.StopLeftovers(dir); Directory.Delete(dir, recursive: true); }
     }
 
     private const string TwoTurns = """
@@ -289,6 +291,7 @@ public class DeniedCommandTests
             File.WriteAllText(Path.Combine(dir, "tab-lib.sh"), TabSession.Lib);
             File.WriteAllText(Path.Combine(dir, "stream.jsonl"), stream + "\n");
             var psi = new System.Diagnostics.ProcessStartInfo("/bin/bash") { RedirectStandardOutput = true, WorkingDirectory = dir };
+            TestShell.Configure(psi, dir);
             if (path != null) psi.Environment["PATH"] = path;
             psi.ArgumentList.Add("-c");
             psi.ArgumentList.Add(". ./tab-lib.sh . t && bs_stream sh -c 'cat stream.jsonl; exit 3'; echo \"rc=$?\"");
@@ -298,7 +301,7 @@ public class DeniedCommandTests
             var log = Path.Combine(dir, "t.log");
             return (output, File.Exists(log) ? File.ReadAllText(log) : "");
         }
-        finally { Directory.Delete(dir, recursive: true); }
+        finally { TestShell.StopLeftovers(dir); Directory.Delete(dir, recursive: true); }
     }
 
     /// <summary>bs_cap's trim loop stops with the capture: a finished bs_stream leaves no process behind.</summary>
@@ -312,6 +315,7 @@ public class DeniedCommandTests
             File.WriteAllText(Path.Combine(dir, "tab-lib.sh"), TabSession.Lib);
             File.WriteAllText(Path.Combine(dir, "stream.jsonl"), TwoTurns + "\n");
             var psi = new System.Diagnostics.ProcessStartInfo("/bin/bash") { RedirectStandardOutput = true, WorkingDirectory = dir };
+            TestShell.Configure(psi, dir);
             psi.ArgumentList.Add("-c");
             psi.ArgumentList.Add(". ./tab-lib.sh . t && bs_stream sh -c 'cat stream.jsonl; exit 3'");
             using var p = System.Diagnostics.Process.Start(psi)!;
@@ -323,7 +327,7 @@ public class DeniedCommandTests
             foreach (var pid in left) try { System.Diagnostics.Process.GetProcessById(pid).Kill(); } catch (ArgumentException) { }
             Assert.Empty(left);
         }
-        finally { Directory.Delete(dir, recursive: true); }
+        finally { TestShell.StopLeftovers(dir); Directory.Delete(dir, recursive: true); }
     }
 
     private static int[] InDirectory(string dir) => Directory.GetDirectories("/proc")
@@ -397,6 +401,7 @@ public class DeniedCommandTests
         {
             File.WriteAllText(Path.Combine(dir, "tab-lib.sh"), TabSession.Lib);
             var psi = new System.Diagnostics.ProcessStartInfo("bash") { RedirectStandardOutput = true, WorkingDirectory = dir };
+            TestShell.Configure(psi, dir);
             psi.ArgumentList.Add("-c");
             psi.ArgumentList.Add("shopt -s expand_aliases && alias printf='printf %s,%s,%s --skip' && . ./tab-lib.sh . t && bs_stream printf 'two words' x");
             using var p = System.Diagnostics.Process.Start(psi)!;
@@ -404,7 +409,7 @@ public class DeniedCommandTests
             p.WaitForExit();
             Assert.StartsWith("--skip,two words,x", output.Trim());
         }
-        finally { Directory.Delete(dir, recursive: true); }
+        finally { TestShell.StopLeftovers(dir); Directory.Delete(dir, recursive: true); }
     }
 }
 
@@ -488,7 +493,7 @@ public class InPlaceRestartTests
             Assert.NotEqual(Activity.Watching, session.ReadActivity("tab1", exited, now));
             Assert.Equal(TabState.CliExited, TabStatus.Evaluate(exited, TimeSpan.Zero, null));
         }
-        finally { Directory.Delete(dir, recursive: true); }
+        finally { TestShell.StopLeftovers(dir); Directory.Delete(dir, recursive: true); }
     }
 
     [Fact]
@@ -714,6 +719,7 @@ public class InPlaceRestartTests
             var hook = System.Text.Json.JsonDocument.Parse(TabSession.HooksJson(Path.Combine(dir, "t.log")))
                 .RootElement.GetProperty("hooks").GetProperty("UserPromptSubmit")[0].GetProperty("hooks")[0].GetProperty("command").GetString()!;
             var psi = new System.Diagnostics.ProcessStartInfo("bash") { WorkingDirectory = dir };
+            TestShell.Configure(psi, dir);
             psi.ArgumentList.Add("-c");
             psi.ArgumentList.Add(". ./tab-lib.sh . t && bs_next && sh -c \"$0\"");
             psi.ArgumentList.Add(hook);
@@ -722,7 +728,7 @@ public class InPlaceRestartTests
             Assert.False(File.Exists(Path.Combine(dir, "t.next")));
             Assert.Equal(Activity.Busy, TabLog.Parse(File.ReadAllText(Path.Combine(dir, "t.log"))).Activity);
         }
-        finally { Directory.Delete(dir, recursive: true); }
+        finally { TestShell.StopLeftovers(dir); Directory.Delete(dir, recursive: true); }
     }
 }
 
@@ -966,7 +972,7 @@ public class ExitedRestartTests
             Assert.False(Launcher.WakeIdleShell(track, "Ubuntu", seconds: 1));
             Assert.Empty(Directory.GetFiles(root, "tab1.next*")); // taken back, so it can never run later by surprise
         }
-        finally { Directory.Delete(root, true); }
+        finally { TestShell.StopLeftovers(root); Directory.Delete(root, true); }
     }
 
     [Fact]
@@ -991,6 +997,7 @@ public class ExitedRestartTests
         finally
         {
             if (!idle.HasExited) idle.Kill();
+            TestShell.StopLeftovers(root);
             Directory.Delete(root, true);
         }
     }
@@ -1026,6 +1033,7 @@ public class ExitedRestartTests
         finally
         {
             if (!process.HasExited) process.Kill(entireProcessTree: true);
+            TestShell.StopLeftovers(root);
             Directory.Delete(root, true);
         }
     }
@@ -1097,6 +1105,7 @@ public class ExitedRestartTests
         finally
         {
             if (!process.HasExited) process.Kill(entireProcessTree: true);
+            TestShell.StopLeftovers(root);
             Directory.Delete(root, true);
         }
     }

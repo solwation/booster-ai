@@ -83,6 +83,7 @@ public class OpenHandsTests
             + Launcher.TabScript(tab, track: track);
         var argsFile = Path.Combine(session.Directory, "received");
         var psi = new ProcessStartInfo("script") { RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true };
+        TestShell.Configure(psi, root);
         psi.Environment["LLM_MODEL_FILE"] = argsFile;
         psi.ArgumentList.Add("-qefc");
         psi.ArgumentList.Add("bash --noprofile --norc -ic '" + body.Replace("'", "'\\''") + "'");
@@ -125,6 +126,7 @@ public class OpenHandsTests
                         leftover.WaitForExit(5000);
                     }
                     catch (ArgumentException) { } // Already reaped by the shell.
+            TestShell.StopLeftovers(root);
             Directory.Delete(root, true);
         }
     }

@@ -122,7 +122,7 @@ public class TabOutputTests
             session.DeleteOutput("tab1");
             Assert.Empty(Directory.GetFiles(dir, "tab1.*"));
         }
-        finally { if (Directory.Exists(root)) Directory.Delete(root, recursive: true); }
+        finally { TestShell.StopLeftovers(root); if (Directory.Exists(root)) Directory.Delete(root, recursive: true); }
     }
 
     [Fact]
@@ -163,6 +163,7 @@ public class TabOutputTests
                 {"type":"result","is_error":false,"num_turns":2,"duration_ms":4000}
                 """);
             var psi = new System.Diagnostics.ProcessStartInfo("bash") { RedirectStandardOutput = true, WorkingDirectory = dir };
+            TestShell.Configure(psi, dir);
             psi.ArgumentList.Add("-c");
             psi.ArgumentList.Add(". ./tab-lib.sh . t && bs_stream cat stream.jsonl && mkdir keep && cp t.out keep/");
             using var p = System.Diagnostics.Process.Start(psi)!;
@@ -174,7 +175,7 @@ public class TabOutputTests
             Assert.Equal(shown.TrimEnd('\n').Split('\n'), lines);
             Assert.False(File.Exists(Path.Combine(dir, "t.out")));
         }
-        finally { Directory.Delete(dir, recursive: true); }
+        finally { TestShell.StopLeftovers(dir); Directory.Delete(dir, recursive: true); }
     }
 
     /// <summary>
@@ -207,6 +208,7 @@ public class TabOutputTests
             var chain = $". ./tab-lib.sh . tab1 && (bs_cli 2>/dev/null || true) && bs_run 'python3 tui.py' && (bs_done 0 2>/dev/null || true) "
                 + "&& sleep 1.5 && cp tab1.out tab1.out.1 tab1.size keep/ && exit";
             var psi = new System.Diagnostics.ProcessStartInfo("script") { RedirectStandardOutput = true, WorkingDirectory = dir };
+            TestShell.Configure(psi, dir);
             foreach (var a in new[] { "-qec", $"stty rows 30 cols 90 && bash -c \"{chain}\"", "/dev/null" }) psi.ArgumentList.Add(a);
             using var p = System.Diagnostics.Process.Start(psi)!;
             p.StandardOutput.ReadToEnd();
@@ -222,7 +224,7 @@ public class TabOutputTests
             Assert.Equal(["* Working (2999)", "+" + new string('-', 40) + "+", "| > prompt line 2999" + new string(' ', 21) + "|", "+" + new string('-', 40) + "+"],
                 lines.TakeLast(4));
         }
-        finally { if (Directory.Exists(root)) Directory.Delete(root, recursive: true); }
+        finally { TestShell.StopLeftovers(root); if (Directory.Exists(root)) Directory.Delete(root, recursive: true); }
     }
 
     /// <summary>
@@ -263,6 +265,6 @@ public class TabOutputTests
             }
             finally { if (!p.HasExited) p.Kill(entireProcessTree: true); }
         }
-        finally { if (Directory.Exists(root)) Directory.Delete(root, recursive: true); }
+        finally { TestShell.StopLeftovers(root); if (Directory.Exists(root)) Directory.Delete(root, recursive: true); }
     }
 }

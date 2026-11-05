@@ -34,7 +34,7 @@ public class TestShellTests
             Assert.False(File.Exists(marker));
             Assert.False(File.Exists(Path.Combine(root, "unexpected-agent")));
         }
-        finally { StopLeftovers(root); Directory.Delete(root, true); }
+        finally { TestShell.StopLeftovers(root); Directory.Delete(root, true); }
     }
 
     [Theory]
@@ -55,23 +55,7 @@ public class TestShellTests
             Assert.DoesNotContain("fixture-cli", result.Output);
             Assert.Equal(cli + "\n", File.ReadAllText(Path.Combine(root, "unexpected-agent")));
         }
-        finally { StopLeftovers(root); Directory.Delete(root, true); }
-    }
-
-    private static void StopLeftovers(string root)
-    {
-        foreach (var directory in Directory.GetDirectories("/proc"))
-        {
-            try
-            {
-                var cwd = new DirectoryInfo(Path.Combine(directory, "cwd")).LinkTarget;
-                if (cwd != root && cwd?.StartsWith(root + "/", StringComparison.Ordinal) != true) continue;
-                using var process = Process.GetProcessById(int.Parse(Path.GetFileName(directory)));
-                if (!process.HasExited) process.Kill(entireProcessTree: true);
-                process.WaitForExit(5000);
-            }
-            catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException) { }
-        }
+        finally { TestShell.StopLeftovers(root); Directory.Delete(root, true); }
     }
 
     private static ProcessStartInfo Start(string root, string cli)

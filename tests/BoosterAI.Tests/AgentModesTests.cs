@@ -391,10 +391,7 @@ public class AgentModesTests
                 ArgumentList = { "--noprofile", "--norc", "-c", command }, WorkingDirectory = Root,
                 RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true,
             };
-            psi.Environment.Clear();
-            psi.Environment["HOME"] = Root;
-            psi.Environment["PATH"] = Bin + ":/usr/bin:/bin";
-            psi.Environment["SHELL"] = "/bin/bash";
+            TestShell.Configure(psi, Root, bin: Bin, home: Root);
             using var process = Process.Start(psi)!;
             try
             {
@@ -410,6 +407,6 @@ public class AgentModesTests
                 process.WaitForExit();
             }
         }
-        public void Dispose() => Directory.Delete(Root, true);
+        public void Dispose() { TestShell.StopLeftovers(Root); Directory.Delete(Root, true); }
     }
 }

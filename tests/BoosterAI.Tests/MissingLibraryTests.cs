@@ -77,6 +77,6 @@ public class MissingLibraryTests
             }
             finally { if (!process.HasExited) process.Kill(entireProcessTree: true); }
         }
-        finally { Directory.Delete(root, true); }
+        finally { TestShell.StopLeftovers(root); Directory.Delete(root, true); }
     }
 }

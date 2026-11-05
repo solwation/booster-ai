@@ -25,6 +25,7 @@ public class TabTitlesTests
         {
             WorkingDirectory = root, RedirectStandardOutput = true, RedirectStandardError = true,
         };
+        TestShell.Configure(psi, root);
         psi.ArgumentList.Add("-qec");
         psi.ArgumentList.Add("bash --norc --noprofile -c 'printf \"%s %s\\n\" \"$$\" \"$(cut -d\" \" -f22 /proc/$$/stat)\" > identity; printf \"\\033]0;agent-overwrite\\007\"; while [ ! -f done ]; do if [ -f redo ] && [ ! -f overwritten ]; then printf \"\\033]0;agent-overwrite-again\\007\"; touch overwritten; fi; sleep .05; done'");
         psi.ArgumentList.Add("/dev/null");
@@ -63,6 +64,7 @@ public class TabTitlesTests
         {
             if (!terminal.HasExited) terminal.Kill(entireProcessTree: true);
             terminal.WaitForExit();
+            TestShell.StopLeftovers(root);
             Directory.Delete(root, recursive: true);
         }
 

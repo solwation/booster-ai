@@ -191,15 +191,22 @@ public class LauncherTests
             RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true,
             UseShellExecute = false
         };
-        psi.ArgumentList.Add("-c");
-        var tab = new TabConfig { Directory = Path.GetTempPath(), Llm = llm, Model = "model's name", Orkester = true };
-        psi.ArgumentList.Add(llm + "() { printf '%s\\n' \"$@\"; }\n" + Launcher.TabScript(tab, resume: true));
-        using var process = Process.Start(psi)!;
-        process.StandardInput.Close();
-        var output = process.StandardOutput.ReadToEnd();
-        Assert.True(process.WaitForExit(30000));
-        Assert.Equal(0, process.ExitCode);
-        Assert.Equal(expected + "\n--model\nmodel's name\n", output);
+        var root = Directory.CreateTempSubdirectory("booster-continue-").FullName;
+        TestShell.Configure(psi, root);
+        psi.WorkingDirectory = root;
+        try
+        {
+            psi.ArgumentList.Add("-c");
+            var tab = new TabConfig { Directory = root, Llm = llm, Model = "model's name", Orkester = true };
+            psi.ArgumentList.Add(llm + "() { printf '%s\\n' \"$@\"; }\n" + Launcher.TabScript(tab, resume: true));
+            using var process = Process.Start(psi)!;
+            process.StandardInput.Close();
+            var output = process.StandardOutput.ReadToEnd();
+            Assert.True(process.WaitForExit(30000));
+            Assert.Equal(0, process.ExitCode);
+            Assert.Equal(expected + "\n--model\nmodel's name\n", output);
+        }
+        finally { TestShell.StopLeftovers(root); Directory.Delete(root, true); }
     }
 
     [Theory]
@@ -245,6 +252,7 @@ public class LauncherTests
                 }
                 if (!OperatingSystem.IsLinux()) continue;
                 var psi = new ProcessStartInfo("bash") { UseShellExecute = false, RedirectStandardError = true };
+                psi.Environment.Clear(); // Syntax-only checks execute no generated command.
                 psi.ArgumentList.Add("-n");
                 psi.ArgumentList.Add("-c");
                 psi.ArgumentList.Add(restart);

@@ -149,7 +149,7 @@ public class AutoCompactTests
             File.SetUnixFileMode(executable, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
             using var process = new Process { StartInfo = new ProcessStartInfo("bash")
             { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false } };
-            process.StartInfo.Environment["PATH"] = dir + ":" + Environment.GetEnvironmentVariable("PATH");
+            TestShell.Configure(process.StartInfo, dir, bin: dir);
             process.StartInfo.Environment["CLAUDE_CODE_AUTO_COMPACT_WINDOW"] = overridden ? "200000" : "";
             process.StartInfo.ArgumentList.Add("-c");
             process.StartInfo.ArgumentList.Add("IFS=$'\\n'\n" + AutoCompact.GuardClaude("claude " + AutoCompact.Arguments("claude", 150000), "claude"));
@@ -169,7 +169,7 @@ public class AutoCompactTests
             }
             finally { if (!process.HasExited) process.Kill(entireProcessTree: true); process.WaitForExit(); }
         }
-        finally { Directory.Delete(dir, true); }
+        finally { TestShell.StopLeftovers(dir); Directory.Delete(dir, true); }
     }
     [Fact]
     public void EditorKeepsProfilesSeparateAndOnlyChangesOnSave()
@@ -274,6 +274,7 @@ public class AutoCompactTests
             await File.WriteAllTextAsync(Path.Combine(dir, "models_cache.json"), """
                 {"private_field":"DO_NOT_EMIT","models":[{"slug":"sample-model","context_window":200000,"effective_context_window_percent":95,"private_field":"DO_NOT_EMIT"}]}
                 """);
+            TestShell.Configure(process.StartInfo, dir);
             process.StartInfo.Environment["CODEX_HOME"] = dir;
             process.StartInfo.ArgumentList.Add("-c");
             process.StartInfo.ArgumentList.Add("printf 'login banner\\n'\n" + AutoCompactModels.Probe);
@@ -291,6 +292,7 @@ public class AutoCompactTests
         {
             if (!process.HasExited) process.Kill(entireProcessTree: true);
             process.WaitForExit();
+            TestShell.StopLeftovers(dir);
             Directory.Delete(dir, true);
         }
     }

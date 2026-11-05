@@ -62,7 +62,7 @@ public class OrchestraReloadTests
             Assert.Null(AutoClear.ClearedAt(log));
             Assert.Null(Due(log)); // Survives a BoosterAI restart: no second request for this idle period.
         }
-        finally { Directory.Delete(root, true); }
+        finally { TestShell.StopLeftovers(root); Directory.Delete(root, true); }
     }
 
     [Fact]
@@ -97,7 +97,7 @@ public class OrchestraReloadTests
             Assert.False(row.CanReloadOrchestra);
             Assert.True(row.CanContinueClosed);
         }
-        finally { Directory.Delete(root, true); }
+        finally { TestShell.StopLeftovers(root); Directory.Delete(root, true); }
     }
 
     [Fact]
@@ -138,7 +138,7 @@ public class OrchestraReloadTests
             Assert.False(vm.ReloadOrchestra(row));
             Assert.False(File.Exists(path + ".input"));
         }
-        finally { Directory.Delete(root, true); }
+        finally { TestShell.StopLeftovers(root); Directory.Delete(root, true); }
     }
 }
 
@@ -239,6 +239,7 @@ public class OrchestraReloadPtyTests
                 }
                 catch (ArgumentException) { }
             await Task.WhenAll(stdout, stderr).WaitAsync(TimeSpan.FromSeconds(10));
+            TestShell.StopLeftovers(root);
             Directory.Delete(root, true);
         }
     }

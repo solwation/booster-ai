@@ -121,7 +121,8 @@ public class CliUpdateTests
             var psi = new ProcessStartInfo("bash") { RedirectStandardOutput = true, RedirectStandardError = true, WorkingDirectory = Root };
             psi.ArgumentList.Add("-c");
             psi.ArgumentList.Add($". '{Root}/tab-lib.sh' '{Root}' tab1 && {body}");
-            psi.Environment["HOME"] = Home;
+            // Custom PATHs contain only fixture stubs and explicitly linked tools (including missing-CLI cases).
+            TestShell.Configure(psi, Root, bin: Bin, home: Home, blockAgents: path is null);
             psi.Environment["PATH"] = path ?? Bin + ":/usr/bin:/bin";
             using var p = Process.Start(psi)!;
             var output = p.StandardOutput.ReadToEndAsync();
@@ -129,7 +130,7 @@ public class CliUpdateTests
             return (output.Result, p.ExitCode);
         }
 
-        public void Dispose() => Directory.Delete(Root, true);
+        public void Dispose() { TestShell.StopLeftovers(Root); Directory.Delete(Root, true); }
     }
 
     private static bool CanRunBash => OperatingSystem.IsLinux() && File.Exists("/usr/bin/flock") && File.Exists("/usr/bin/timeout");
@@ -259,7 +260,10 @@ public class CliUpdateTests
         if (!CanRunBash) return;
         using var f = new Fakes();
         File.Delete(Path.Combine(f.Bin, "agy"));
-        Assert.Equal("started\n", f.Run("agy() { :; } && bs_update agy && echo started").Output);
+        var tools = Directory.CreateDirectory(Path.Combine(f.Root, "missing-cli-tools")).FullName;
+        foreach (var tool in new[] { "date", "cut", "rm" })
+            File.CreateSymbolicLink(Path.Combine(tools, tool), "/usr/bin/" + tool);
+        Assert.Equal("started\n", f.Run("agy() { :; } && bs_update agy && echo started", f.Bin + ":" + tools).Output);
         Assert.Equal("started\n", f.Run("bs_update skal && echo started").Output);
         Assert.False(Directory.Exists(f.StateDir));
     }

@@ -220,6 +220,6 @@ public class InterpreterTests
             }
         }
 
-        public void Dispose() => Directory.Delete(Root, true);
+        public void Dispose() { TestShell.StopLeftovers(Root); Directory.Delete(Root, true); }
     }
 }

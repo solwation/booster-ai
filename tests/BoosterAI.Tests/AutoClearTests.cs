@@ -221,6 +221,7 @@ public class AutoClearStopHookTests
             var hook = JsonDocument.Parse(TabSession.HooksJson(log)).RootElement.GetProperty("hooks").GetProperty("Stop")[0]
                 .GetProperty("hooks")[0].GetProperty("command").GetString()!;
             var psi = new System.Diagnostics.ProcessStartInfo("sh") { RedirectStandardInput = true, WorkingDirectory = dir };
+            TestShell.Configure(psi, dir);
             psi.ArgumentList.Add("-c");
             psi.ArgumentList.Add(hook);
             using var p = System.Diagnostics.Process.Start(psi)!;
@@ -236,7 +237,7 @@ public class AutoClearStopHookTests
             Assert.Equal(expected, line[1]);
             Assert.Equal(expected == "waiting" ? Activity.Busy : Activity.Idle, TabLog.Parse("1 cli-start\n" + File.ReadAllText(log)).Activity);
         }
-        finally { Directory.Delete(dir, recursive: true); }
+        finally { TestShell.StopLeftovers(dir); Directory.Delete(dir, recursive: true); }
     }
 }
 
@@ -352,6 +353,7 @@ public class AutoClearPtyTests
             process.WaitForExit(5000);
             foreach (var pid in InDirectory(session.Directory))
                 try { System.Diagnostics.Process.GetProcessById(pid).Kill(entireProcessTree: true); } catch (ArgumentException) { }
+            TestShell.StopLeftovers(root);
             Directory.Delete(root, true);
         }
     }
@@ -392,6 +394,7 @@ public class AutoClearPtyTests
             process.WaitForExit(5000);
             foreach (var pid in InDirectory(session.Directory))
                 try { System.Diagnostics.Process.GetProcessById(pid).Kill(entireProcessTree: true); } catch (ArgumentException) { }
+            TestShell.StopLeftovers(root);
             Directory.Delete(root, true);
         }
     }
@@ -433,6 +436,7 @@ public class AutoClearPtyTests
             process.WaitForExit(5000);
             foreach (var pid in InDirectory(session.Directory))
                 try { System.Diagnostics.Process.GetProcessById(pid).Kill(entireProcessTree: true); } catch (ArgumentException) { }
+            TestShell.StopLeftovers(root);
             Directory.Delete(root, true);
         }
     }
