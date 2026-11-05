@@ -1,0 +1,23 @@
+{
+  "language": "sv",
+  "theme": "light",
+  "synthetic": true,
+  "launches": 0,
+  "checks": {
+    "Mouse opens model list": true,
+    "Status refresh 0 preserves actual model control": true,
+    "Status refresh 0 leaves model popup open": true,
+    "Status refresh 1 preserves actual model control": true,
+    "Status refresh 1 leaves model popup open": true,
+    "Status refresh 2 preserves actual model control": true,
+    "Status refresh 2 leaves model popup open": true,
+    "Mouse commits model after background refreshes": true,
+    "Other project model and control remain unchanged": true,
+    "Model choice persists": true,
+    "Agent switch updates models and resets incompatible choice": true,
+    "Adding a subtab updates rendered rows": true,
+    "Collapsing hides the child row": true,
+    "Expanding restores child row": true,
+    "No CLI launches": true
+  }
+}

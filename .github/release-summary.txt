@@ -1,3 +1,3 @@
-version: 0.31.0
-sv: Byt AI-agent igen, se tydlig WSL-information och välj mindre textstorlekar: 50, 60 och 70 procent.
-en: Switch AI agents again, see clearer WSL information and choose smaller text sizes: 50, 60 and 70 percent.
+version: 0.31.1
+sv: Modellistan hålls öppen när flikarnas status uppdateras, så att du hinner välja och spara modell.
+en: The model list stays open during tab status updates, giving you time to select and save a model.
