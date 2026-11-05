@@ -1,0 +1,41 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="using:BoosterAI"
+             x:Class="BoosterAI.AutoCompactView" x:DataType="local:AutoCompactViewModel">
+  <StackPanel Spacing="8">
+    <TextBlock Text="{Binding UnitExplanation}" TextWrapping="Wrap" FontSize="12" />
+    <StackPanel Spacing="8" IsVisible="{Binding Supported}">
+      <Grid ColumnDefinitions="*,*">
+        <StackPanel Spacing="3" Margin="0,0,12,0">
+          <TextBlock Text="{local:T compact.model}" FontSize="12" />
+          <ComboBox IsEditable="True" Text="{Binding Model}" ItemsSource="{Binding Models}" HorizontalAlignment="Stretch" AutomationProperties.Name="{local:T compact.model}" />
+        </StackPanel>
+        <StackPanel Grid.Column="1" Spacing="3">
+          <TextBlock Text="{local:T compact.profile}" FontSize="12" />
+          <ComboBox ItemsSource="{Binding Profiles}" SelectedItem="{Binding Profile}" HorizontalAlignment="Stretch" AutomationProperties.Name="{local:T compact.profile}">
+            <ComboBox.ItemTemplate><DataTemplate x:DataType="local:CompactChoice"><TextBlock Text="{Binding Label}" /></DataTemplate></ComboBox.ItemTemplate>
+          </ComboBox>
+        </StackPanel>
+      </Grid>
+      <Grid ColumnDefinitions="160,*">
+        <StackPanel Spacing="3" Margin="0,0,12,0">
+          <TextBlock Text="{local:T compact.context}" FontSize="12" />
+          <TextBox Text="{Binding Context}" Watermark="{local:T compact.context.unknown}" AutomationProperties.Name="{local:T compact.context}" />
+        </StackPanel>
+        <TextBlock Grid.Column="1" Text="{Binding ContextSource}" TextWrapping="Wrap" FontSize="11.5" VerticalAlignment="Center" />
+      </Grid>
+      <Grid ColumnDefinitions="*,*">
+        <ComboBox ItemsSource="{Binding Modes}" SelectedItem="{Binding Mode}" HorizontalAlignment="Stretch" Margin="0,0,12,0" AutomationProperties.Name="{local:T compact.title}">
+          <ComboBox.ItemTemplate><DataTemplate x:DataType="local:CompactChoice"><TextBlock Text="{Binding Label}" /></DataTemplate></ComboBox.ItemTemplate>
+        </ComboBox>
+        <TextBox Grid.Column="1" Text="{Binding Custom}" IsVisible="{Binding IsCustom}" Watermark="{local:T compact.custom.tokens}" AutomationProperties.Name="{local:T compact.custom.tokens}" />
+      </Grid>
+      <TextBlock Text="{Binding Recommendation}" TextWrapping="Wrap" FontSize="12" />
+      <TextBlock Text="{local:T compact.tradeoff}" TextWrapping="Wrap" FontSize="11.5" Classes="muted" />
+      <Grid ColumnDefinitions="Auto,*">
+        <Button Content="{local:T compact.save}" Click="OnSave" IsEnabled="{Binding CanSave}" Padding="12,5" />
+        <TextBlock Grid.Column="1" Text="{Binding Status}" TextWrapping="Wrap" Margin="12,0,0,0" VerticalAlignment="Center" FontSize="12" />
+      </Grid>
+    </StackPanel>
+  </StackPanel>
+</UserControl>

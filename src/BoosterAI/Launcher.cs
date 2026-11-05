@@ -23,12 +23,12 @@ public static class Launcher
         if (track is null)
         {
             if (tab.Llm == Catalog.ShellOnly) return $"{cd} || true && exec bash";
-            return $"{cd} && {CliCommand(tab, prompt, null, resume && CanContinue(tab))} || true && exec bash";
+            return $"{cd} && {LaunchCommand(tab, prompt, null, resume && CanContinue(tab))} || true && exec bash";
         }
-        var cli = CliCommand(tab, prompt, track, resume && CanContinue(tab));
+        var cli = LaunchCommand(tab, prompt, track, resume && CanContinue(tab));
         var tracked = tab.Llm == Catalog.ShellOnly
             ? $"{cd} || true && {Hook("bs_reset")} && {Hook("bs_cli")} && bs_run {Quote("bash")}"
-            : $"{cd} && {Hook("bs_reset")} && {UpdateHook(tab, track)}{Hook("bs_cli")} && {TrackedCommand(cli, tab, track)} && {Hook("bs_done 0")} || {Hook("bs_done $?")} && {Next} && (type bs_shell >/dev/null 2>&1) && bs_shell || bash";
+            : $"{cd} && {Hook("bs_reset")} && {UpdateHook(tab, track)}{Hook("bs_cli")} && {cli} && {Hook("bs_done 0")} || {Hook("bs_done $?")} && {Next} && (type bs_shell >/dev/null 2>&1) && bs_shell || bash";
         // Select before executing: an unsuccessful CLI or a shell's exit code must never run the
         // fallback a second time. Both bodies are shell-quoted literals; eval keeps the tracked PID.
         var plain = TabScript(tab, prompt, resume: resume);
@@ -53,7 +53,7 @@ public static class Launcher
     /// </summary>
     public static string RestartScript(TabConfig tab, TabTrack track, bool resume) =>
         tab.Llm == Catalog.ShellOnly ? $"{Cd(InWsl(tab))} || true && {Hook("bs_reset")}"
-            : $"{Cd(InWsl(tab))} && {Hook("bs_reset")} && {UpdateHook(tab, track)}{Hook("bs_cli")} && {TrackedCommand(CliCommand(tab, null, track, resume), tab, track)} && {Hook("bs_done 0")} || {Hook("bs_done $?")}";
+            : $"{Cd(InWsl(tab))} && {Hook("bs_reset")} && {UpdateHook(tab, track)}{Hook("bs_cli")} && {LaunchCommand(tab, null, track, resume)} && {Hook("bs_done 0")} || {Hook("bs_done $?")}";
 
     /// <summary>
     /// The step that updates the tab's AI CLI before it starts (tab-lib.sh's bs_update, #60), or "" when the setting is off
@@ -104,12 +104,25 @@ public static class Launcher
         + "Run every queue poll and the whole idle watch in the foreground of this turn, as blocking commands that wait at most 60 seconds each, for example sleep 60, "
         + "never as a background loop or job. End your turn only when the session is finished.)";
 
-    private static string CliCommand(TabConfig tab, string? prompt, TabTrack? track, bool resume)
+    private static string LaunchCommand(TabConfig tab, string? prompt, TabTrack? track, bool resume)
+    {
+        string Build(bool compact)
+        {
+            var cli = CliCommand(tab, prompt, track, resume, compact);
+            return track is null ? cli : TrackedCommand(cli, tab, track);
+        }
+        var selected = Build(true);
+        return tab.Llm == "claude" && tab.CompactTokens is { } n && AutoCompact.ValidValue("claude", n)
+            ? AutoCompact.GuardClaude(selected, Build(false)) : selected;
+    }
+
+    private static string CliCommand(TabConfig tab, string? prompt, TabTrack? track, bool resume, bool compact = true)
     {
         // OpenHands has no --model and its --last conversation is global, not scoped to cwd.
         if (tab.Llm == "openhands") return OpenHandsCommand(tab, prompt);
         if (tab.Llm == "interpreter") return InterpreterCli.Command(tab, prompt);
         var args = new List<string>();
+        if (compact && AutoCompact.Arguments(tab.Llm, tab.CompactTokens) is { Length: > 0 } compactArgs) args.Add(compactArgs);
         if (resume && tab.Llm is "claude" or "agy") args.Add("--continue");
         if (resume && tab.Llm == "aider") args.Add("--restore-chat-history");
         if (tab.Model != Catalog.StandardModel) args.Add("--model " + Quote(tab.Model));
@@ -562,7 +575,7 @@ fi
     private static TabConfig InWsl(TabConfig t) => new()
     {
         Name = t.Name, Color = t.Color, ColorIndex = t.ColorIndex, Enabled = t.Enabled,
-        Id = t.Id, Llm = t.Llm, Model = t.Model, Orkester = t.Orkester, NonInteractive = t.NonInteractive, Directory = PathMapping.ToWslPath(t.Directory), Script = t.Script,
+        CompactTokens = t.CompactTokens, Id = t.Id, Llm = t.Llm, Model = t.Model, Orkester = t.Orkester, NonInteractive = t.NonInteractive, Directory = PathMapping.ToWslPath(t.Directory), Script = t.Script,
     };
 
     private static void LaunchWindowsTerminal(IReadOnlyList<TabConfig> tabs, string distro, string? prompt,

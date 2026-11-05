@@ -27,10 +27,14 @@ public sealed class TabConfig
     /// <summary>A one-off tab's own bash command instead of a CLI (the setup installs, #74); never saved.</summary>
     [JsonIgnore]
     public string? Script { get; set; }
+    /// <summary>Resolved per-launch auto-compaction value; never changes CLI config.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? CompactTokens { get; set; }
 }
 
 public sealed class AppConfig
 {
+    public List<AutoCompactSetting> AutoCompactSettings { get; set; } = [];
     public List<TabConfig> Tabs { get; set; } = new();
     /// <summary>Windows only: the WSL distribution the tabs run in.</summary>
     public string WslDistro { get; set; } = "Ubuntu";
@@ -164,6 +168,7 @@ public static class ConfigMerge
 
     private static readonly Setting[] Settings =
     [
+        S(c => JsonSerializer.Serialize(c.AutoCompactSettings), (c, v) => c.AutoCompactSettings = JsonSerializer.Deserialize<List<AutoCompactSetting>>(v) ?? []),
         S(c => c.WslDistro, (c, v) => c.WslDistro = v),
         S(c => c.LinuxTerminal, (c, v) => c.LinuxTerminal = v),
         S(c => c.ColorTheme, (c, v) => c.ColorTheme = v),

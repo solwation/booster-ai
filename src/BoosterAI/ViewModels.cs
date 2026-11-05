@@ -229,7 +229,8 @@ public sealed class TabViewModel : Observable
 
     /// <summary>The LLM or model differs from what the running tab was started with.</summary>
     public bool IsChanged => IsRunning && LaunchedAs is { } l && l.Llm != Catalog.ShellOnly
-        && (l.Llm != Llm || l.Model != (string.IsNullOrWhiteSpace(Model) ? Catalog.StandardModel : Model));
+        && (l.Llm != Llm || l.Model != (string.IsNullOrWhiteSpace(Model) ? Catalog.StandardModel : Model)
+            || l.CompactTokens != _owner.CompactTokens(Llm, Model));
 
     /// <summary>"Starta om när den är ledig" is waiting for the CLI's next idle.</summary>
     public bool PendingRestart
@@ -405,11 +406,13 @@ public sealed class TabViewModel : Observable
         Llm = Llm, Model = string.IsNullOrWhiteSpace(Model) ? Catalog.StandardModel : Model,
         Orkester = forLaunch ? Orkester && CanOrkester : Orkester,
         NonInteractive = NonInteractive,
+        CompactTokens = forLaunch ? _owner.CompactTokens(Llm, Model) : null,
     };
 }
 
 public sealed partial class MainViewModel : Observable
 {
+    internal int? CompactTokens(string cli, string model) => AutoCompact.ForTab(_cfg.AutoCompactSettings, cli, model);
     private readonly AppConfig _cfg;
     /// <summary>The config as this instance last loaded or saved it; see ConfigMerge.</summary>
     private AppConfig _saved;
@@ -985,6 +988,7 @@ public sealed partial class MainViewModel : Observable
             var distro = _cfg.WslDistro;
             Task.Run(() => Launcher.StopForeground(pid, distro));
             tab.LaunchedAs = next;
+            tab.Session.SaveTab(tab.Track.Id, next);
             tab.RaiseRestartTip();
             ShowStatus(Loc.Format(resume ? "status.restartedResume" : "status.restarted", tab.Name.Trim(), next.Llm,
                 next.Model == Catalog.StandardModel ? Loc.Get("restart.standardModel") : next.Model), error: false);
@@ -1068,12 +1072,16 @@ public sealed partial class MainViewModel : Observable
         }
         if (!CanRestartExited(log, TabSession.Liveness(_cfg.WslDistro))) return false;
         DismissRecoveredStatus();
+        launched = WithCurrentCompact(launched);
         var error = Launcher.Validate([launched]);
         try
         {
             if (error == "")
             {
                 session.QueueNext(track.Id, Launcher.RestartScript(launched, track with { UpdateClis = _cfg.AutoUpdateClis, AutoClear = _cfg.AutoClearIdle }, resume));
+                tab.LaunchedAs = launched;
+                session.SaveTab(track.Id, launched);
+                tab.RaiseRestartTip();
                 var distro = _cfg.WslDistro;
                 var name = tab.Name.Trim();
                 // The idle child may still be starting after cli-exit (it sources ~/.bashrc first). Its own PID/start
@@ -1105,9 +1113,17 @@ public sealed partial class MainViewModel : Observable
         return true;
     }
 
+    private TabConfig WithCurrentCompact(TabConfig tab)
+    {
+        var copy = ConfigStore.Copy(new AppConfig { Tabs = [tab] }).Tabs[0];
+        copy.CompactTokens = CompactTokens(tab.Llm, tab.Model);
+        return copy;
+    }
+
     private void RestartClosed(IReadOnlyList<(TabViewModel Row, TabConfig Tab)> rows, bool resume = false)
     {
         if (rows.Count == 0) return;
+        rows = rows.Select(r => (r.Row, WithCurrentCompact(r.Tab))).ToList();
         var cfg = new AppConfig { WslDistro = _cfg.WslDistro, LinuxTerminal = _cfg.LinuxTerminal, ZoomPercent = _cfg.ZoomPercent, Tabs = rows.Select(r => r.Tab).ToList() };
         var error = Start(cfg, rows, _session?.WindowName, resume);
         var first = rows[0];
@@ -1480,6 +1496,7 @@ public sealed record ZoomChoice(int Percent)
 /// </summary>
 public sealed class UpdateViewModel : Observable
 {
+    internal int? CompactTokens(string cli, string model) => AutoCompact.ForTab(_cfg.AutoCompactSettings, cli, model);
     private readonly AppConfig _cfg;
     private readonly Action _save;
     private readonly bool _windows = OperatingSystem.IsWindows();

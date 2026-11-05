@@ -22,6 +22,7 @@ internal static class Program
             if (at >= 0 && at + 1 < args.Length) ConfigStore.UseFile(args[at + 1]);
             var cfg = ConfigStore.Load();
             var tabs = TabGroups.Flatten(cfg.Tabs).Where(t => t.Enabled).ToList();
+            foreach (var tab in tabs) tab.CompactTokens = AutoCompact.ForTab(cfg.AutoCompactSettings, tab.Llm, tab.Model);
             // Each Start gets a session directory with a status log per tab; shown here with a placeholder.
             var root = OperatingSystem.IsWindows() ? PathMapping.ToWslPath(TabSession.DefaultRoot) : TabSession.DefaultRoot;
             var dir = root.Replace('\\', '/') + "/<session>";
