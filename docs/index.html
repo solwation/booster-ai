@@ -693,6 +693,7 @@
               <button class="tab-btn" onclick="switchPreview('settings', this)">Settings (General)</button>
               <button class="tab-btn" onclick="switchPreview('appearance', this)">Settings (Appearance)</button>
               <button class="tab-btn" onclick="switchPreview('wsl', this)">WSL & RAM Optimization</button>
+              <button class="tab-btn" onclick="switchPreview('compact', this)">Auto-compact</button>
             </div>
             <div style="width: 20px;"></div>
           </div>
@@ -890,7 +891,8 @@
         else if (mode === 'light') img.src = 'screenshot.png?v=20261105';
         else if (mode === 'settings') img.src = 'settings-general.png?v=20261105';
         else if (mode === 'appearance') img.src = 'settings-appearance.png?v=20261105';
-        else if (mode === 'wsl') img.src = 'settings-wsl.png?v=20261105';
+        else if (mode === 'wsl') img.src = 'settings-wsl.png?v=20261105-102';
+        else if (mode === 'compact') img.src = 'settings-compact.png?v=20261105-102';
         img.onload = () => { img.style.opacity = '1'; };
         // Fallback in case image is already cached
         setTimeout(() => { img.style.opacity = '1'; }, 100);

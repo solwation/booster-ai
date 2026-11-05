@@ -42,6 +42,8 @@ public partial class SettingsWindow : Window
         }
     }
 
+    private void OnShowCompactAgents(object? sender, RoutedEventArgs e) => SelectedTabIndex = 4;
+
     private void OnShowMemoryLimit(object? sender, RoutedEventArgs e) => SelectedOptimizationSectionIndex = 1;
     private void OnShowMemoryUsage(object? sender, RoutedEventArgs e) => SelectedOptimizationSectionIndex = 0;
 

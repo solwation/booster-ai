@@ -79,6 +79,23 @@ public static class AutoCompact
 
 }
 
+/// <summary>The global switch never changes or consumes manual values in Auto mode.</summary>
+public static class AutoCompactPolicy
+{
+    public const string Off = "off", Auto = "auto", Manual = "manual";
+    public static string Normalize(string? mode) => mode is Auto or Manual ? mode : Off;
+
+    public static int? Resolve(AppConfig config, string cli, string model, bool orchestra,
+        IReadOnlyDictionary<string, int>? codex = null)
+    {
+        if (Normalize(config.AutoCompactMode) == Manual) return AutoCompact.ForTab(config.AutoCompactSettings, cli, model);
+        if (Normalize(config.AutoCompactMode) != Auto || model == Catalog.StandardModel) return null;
+        int? context = cli == "claude" ? AutoCompactModels.ClaudeContext(model)
+            : cli == "codex" && codex is not null && codex.TryGetValue(model, out var n) ? n : null;
+        return context is { } capacity ? AutoCompact.Recommend(cli, capacity, orchestra ? "orchestra" : "code")?.Tokens : null;
+    }
+}
+
 /// <summary>Only public context metadata is read; never credentials, conversation contents or full cache copies.</summary>
 public static class AutoCompactModels
 {

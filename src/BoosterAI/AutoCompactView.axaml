@@ -4,11 +4,13 @@
              x:Class="BoosterAI.AutoCompactView" x:DataType="local:AutoCompactViewModel">
   <StackPanel Spacing="8">
     <TextBlock Text="{Binding UnitExplanation}" TextWrapping="Wrap" FontSize="12" />
+    <TextBlock Text="{Binding EditExplanation}" TextWrapping="Wrap" FontSize="12" />
+    <StackPanel x:Name="CompactFields" Spacing="8" IsEnabled="{Binding CanEdit}">
     <StackPanel Spacing="8" IsVisible="{Binding Supported}">
       <StackPanel Spacing="8">
         <StackPanel Spacing="3">
           <TextBlock Text="{local:T compact.model}" FontSize="12" />
-          <ComboBox IsEditable="True" Text="{Binding Model}" ItemsSource="{Binding Models}" HorizontalAlignment="Stretch" AutomationProperties.Name="{local:T compact.model}" />
+          <ComboBox x:Name="CompactModel" IsEditable="True" Text="{Binding Model}" ItemsSource="{Binding Models}" HorizontalAlignment="Stretch" AutomationProperties.Name="{local:T compact.model}" />
         </StackPanel>
         <StackPanel Spacing="3">
           <TextBlock Text="{local:T compact.profile}" FontSize="12" />
@@ -28,15 +30,16 @@
         <ComboBox ItemsSource="{Binding Modes}" SelectedItem="{Binding Mode}" HorizontalAlignment="Stretch" AutomationProperties.Name="{local:T compact.title}">
           <ComboBox.ItemTemplate><DataTemplate x:DataType="local:CompactChoice"><TextBlock Text="{Binding Label}" /></DataTemplate></ComboBox.ItemTemplate>
         </ComboBox>
-        <TextBox Text="{Binding Custom}" IsVisible="{Binding IsCustom}" Watermark="{local:T compact.custom.tokens}" AutomationProperties.Name="{local:T compact.custom.tokens}" />
+        <TextBox x:Name="CompactCustom" Text="{Binding Custom}" IsVisible="{Binding IsCustom}" Watermark="{local:T compact.custom.tokens}" AutomationProperties.Name="{local:T compact.custom.tokens}" />
       </StackPanel>
       <TextBlock Text="{Binding Validation}" TextWrapping="Wrap" FontSize="12" />
       <TextBlock Text="{Binding Recommendation}" TextWrapping="Wrap" FontSize="12" />
       <TextBlock Text="{local:T compact.tradeoff}" TextWrapping="Wrap" FontSize="11.5" Classes="muted" />
-      <Grid ColumnDefinitions="Auto,*">
-        <Button Content="{local:T compact.save}" Click="OnSave" IsEnabled="{Binding CanSave}" Padding="12,5" />
-        <TextBlock Grid.Column="1" Text="{Binding Status}" TextWrapping="Wrap" Margin="12,0,0,0" VerticalAlignment="Center" FontSize="12" />
-      </Grid>
+      <Button x:Name="SaveCompact" Content="{local:T compact.save}" Click="OnSave" IsEnabled="{Binding CanSave}" HorizontalAlignment="Left" Padding="12,5" />
+    </StackPanel>
+    <Button x:Name="ResetCompact" Content="{local:T compact.reset}" Click="OnReset" HorizontalAlignment="Left" Padding="12,5" />
+    <TextBlock Text="{local:T compact.reset.detail}" TextWrapping="Wrap" FontSize="11.5" Classes="muted" />
+    <TextBlock Text="{Binding Status}" TextWrapping="Wrap" FontSize="12" />
     </StackPanel>
   </StackPanel>
 </UserControl>

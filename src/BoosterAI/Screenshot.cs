@@ -109,7 +109,7 @@ internal static class Screenshot
             {
                 sw.SelectedTabIndex = 2;
                 vm.Optimization.ShowFakeUnoptimized(selectedGb: o.FakeMemoryCap);
-                sw.SelectedOptimizationSectionIndex = o.Section switch { "limit" => 1, "environment" => 2, _ => 0 };
+                sw.SelectedOptimizationSectionIndex = o.Section switch { "limit" => 1, "environment" => 2, "compact" => 3, _ => 0 };
                 if (o.FakeMemoryState is { } state)
                 {
                     const long gb = 1024L * 1024 * 1024;

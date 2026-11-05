@@ -226,7 +226,7 @@ public class AutoCompactTests
     [Fact]
     public void NewPreferenceOffersExplicitRestartWithoutChangingRunningSnapshot()
     {
-        var config = new AppConfig { Tabs = [new TabConfig { Llm = "codex", Model = "example-model" }] };
+        var config = new AppConfig { AutoCompactMode = AutoCompactPolicy.Manual, Tabs = [new TabConfig { Llm = "codex", Model = "example-model" }] };
         var vm = new MainViewModel(config);
         var row = Assert.Single(vm.Tabs);
         row.LaunchedAs = row.ToConfig(forLaunch: true);

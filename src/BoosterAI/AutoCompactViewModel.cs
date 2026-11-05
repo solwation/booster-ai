@@ -7,7 +7,20 @@ public sealed record CompactChoice(string Id, string Label);
 /// <summary>Edits a launch preference without touching a live CLI or its configuration.</summary>
 public sealed class AutoCompactViewModel : Observable
 {
-    private readonly IList<AutoCompactSetting> _settings;
+    private IList<AutoCompactSetting> _settings;
+    private bool _manual = true, _hasDraft;
+    public bool CanEdit => _manual;
+    public string EditExplanation => Loc.Get(_manual ? "compact.edit.manual" : "compact.edit.locked");
+    public void UpdateManualMode(bool manual)
+    {
+        _manual = manual;
+        foreach (var name in new[] { nameof(CanEdit), nameof(CanSave), nameof(Validation), nameof(EditExplanation) }) Raise(name);
+    }
+    public void UpdateSettings(IList<AutoCompactSetting> settings)
+    {
+        _settings = settings;
+        if (!_hasDraft) Load();
+    }
     private readonly Action _saved;
     private IReadOnlyDictionary<string, int> _codex = new Dictionary<string, int>();
     private string _model, _context = "", _custom = "";
@@ -34,7 +47,7 @@ public sealed class AutoCompactViewModel : Observable
     public string Context { get => _context; set { if (Set(ref _context, value ?? "")) Changed(); } }
     public string Custom { get => _custom; set { if (Set(ref _custom, value ?? "")) Changed(); } }
     public bool IsCustom => Mode.Id == "custom";
-    public string Validation => !IsCustom || CanSave ? "" : Loc.Get("compact.custom.invalid");
+    public string Validation => !CanEdit || !IsCustom || CanSave ? "" : Loc.Get("compact.custom.invalid");
     private static string Number(int value) => Loc.Language == "sv" ? value.ToString("N0", CultureInfo.InvariantCulture).Replace(',', ' ' ) : value.ToString("N0", CultureInfo.InvariantCulture);
     private int ContextValue => int.TryParse(Context, NumberStyles.None, CultureInfo.InvariantCulture, out var n) ? n : 0;
     private int CustomValue => int.TryParse(Custom, NumberStyles.None, CultureInfo.InvariantCulture, out var n) ? n : 0;
@@ -53,7 +66,7 @@ public sealed class AutoCompactViewModel : Observable
                 Number(r.ReserveTokens), Number(r.FileBudgetTokens));
         }
     }
-    public bool CanSave => Supported && Catalog.IsSafeModel(Model) && Model != Catalog.StandardModel
+    public bool CanSave => CanEdit && Supported && Catalog.IsSafeModel(Model) && Model != Catalog.StandardModel
         && (Mode.Id == "default" || Mode.Id == "recommended" && AutoCompact.Resolve(Draft()) is not null
             || Mode.Id == "custom" && (Context == "" || ContextValue is >= 1000 and <= AutoCompact.MaxContext) && AutoCompact.Resolve(Draft()) is not null);
 
@@ -72,7 +85,7 @@ public sealed class AutoCompactViewModel : Observable
         _codex = codex;
         // Metadata never replaces a manual capacity or an unsaved edit.
         if (_context.Length == 0 && KnownContext is { } known) _context = known.ToString(CultureInfo.InvariantCulture);
-        Changed();
+        Changed(edited: false);
         Raise(nameof(Context));
     }
 
@@ -87,15 +100,17 @@ public sealed class AutoCompactViewModel : Observable
         _loading = false;
         Status = "";
         foreach (var name in new[] { nameof(Mode), nameof(Context), nameof(Custom) }) Raise(name);
-        Changed();
+        _hasDraft = false;
+        Changed(edited: false);
     }
 
     private AutoCompactSetting Draft() => new()
     { Cli = Cli, Model = Model, Profile = Profile.Id, Mode = Mode.Id, ContextTokens = ContextValue, CustomTokens = CustomValue };
 
-    private void Changed()
+    private void Changed(bool edited = true)
     {
         if (_loading) return;
+        if (edited) _hasDraft = true;
         Status = "";
         foreach (var name in new[] { nameof(CanSave), nameof(IsCustom), nameof(Recommendation), nameof(ContextSource), nameof(Validation) }) Raise(name);
     }
@@ -111,9 +126,24 @@ public sealed class AutoCompactViewModel : Observable
             else setting.Active = false;
         }
         _settings.Add(Draft());
+        _hasDraft = false;
         _saved();
         Status = Loc.Get("compact.saved");
     }
+    /// <summary>Reset only this agent's complete compaction history and current unsaved draft.</summary>
+    public void Reset()
+    {
+        if (!CanEdit) return;
+        for (var i = _settings.Count - 1; i >= 0; i--)
+            if (_settings[i].Cli == Cli) _settings.RemoveAt(i);
+        _model = Catalog.ModelsFor(Cli).FirstOrDefault(m => m != Catalog.StandardModel) ?? Catalog.StandardModel;
+        _profile = Profiles[1];
+        Load();
+        Raise(nameof(Model)); Raise(nameof(Profile));
+        _saved();
+        Status = Loc.Get("compact.reset.done");
+    }
+
 }
 
 
@@ -134,15 +164,56 @@ public sealed partial class MainViewModel
             editor.UpdateMetadata(_compactCodexModels);
             _compactEditors.Add(status.Cli, editor);
         }
+        editor.UpdateManualMode(_cfg.AutoCompactMode == AutoCompactPolicy.Manual);
         editor.UpdateCliSupport(status);
         return editor;
     }
 
-    private async Task LoadCompactMetadataAsync(string distro)
+    private int _compactMetadataGeneration;
+
+    internal async Task LoadCompactMetadataAsync(string distro, Func<string, Task<IReadOnlyDictionary<string, int>>>? read = null)
     {
-        var models = await AutoCompactModels.ReadCodexAsync(distro);
-        if (_cfg.WslDistro != distro) return;
+        var generation = ++_compactMetadataGeneration;
+        var models = await (read ?? AutoCompactModels.ReadCodexAsync)(distro);
+        if (_cfg.WslDistro != distro || generation != _compactMetadataGeneration) return;
+        ApplyCompactMetadata(models);
+    }
+
+    internal void ApplyCompactMetadata(IReadOnlyDictionary<string, int> models)
+    {
         _compactCodexModels = models;
         foreach (var editor in _compactEditors.Values) editor.UpdateMetadata(models);
+        foreach (var tab in Tabs) tab.RaiseRestartTip();
+        Raise(nameof(CompactMetadataStatus));
+    }
+
+    private void InvalidateCompactMetadata()
+    {
+        _compactMetadataGeneration++;
+        ApplyCompactMetadata(new Dictionary<string, int>());
+    }
+
+    public IReadOnlyList<CompactChoice> CompactGlobalModes { get; } =
+        new[] { AutoCompactPolicy.Off, AutoCompactPolicy.Auto, AutoCompactPolicy.Manual }
+            .Select(id => new CompactChoice(id, Loc.Get("compact.global." + id))).ToArray();
+    public CompactChoice SelectedCompactMode
+    {
+        get => CompactGlobalModes.First(c => c.Id == AutoCompactPolicy.Normalize(_cfg.AutoCompactMode));
+        set
+        {
+            if (value is null || !CompactGlobalModes.Contains(value) || _cfg.AutoCompactMode == value.Id) return;
+            _cfg.AutoCompactMode = value.Id;
+            RefreshCompactMode();
+        }
+    }
+    public string CompactModeExplanation => Loc.Get("compact.global." + SelectedCompactMode.Id + ".detail");
+    public bool CompactIsAuto => SelectedCompactMode.Id == AutoCompactPolicy.Auto;
+    public string CompactMetadataStatus => Loc.Get(_compactCodexModels.Count > 0 ? "compact.global.metadata.ready" : "compact.global.metadata.missing");
+
+    private void RefreshCompactMode()
+    {
+        foreach (var editor in _compactEditors.Values) editor.UpdateManualMode(_cfg.AutoCompactMode == AutoCompactPolicy.Manual);
+        foreach (var tab in Tabs) tab.RaiseRestartTip();
+        foreach (var name in new[] { nameof(SelectedCompactMode), nameof(CompactModeExplanation), nameof(CompactIsAuto), nameof(CompactMetadataStatus) }) Raise(name);
     }
 }

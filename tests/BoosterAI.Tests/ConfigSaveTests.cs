@@ -81,7 +81,7 @@ public class ConfigMergeTests
         {
             WslDistro = "Debian", LinuxTerminal = "kitty", ColorTheme = "Other", Language = "en", AppTheme = "dark",
             AfterLaunch = "close", MinimizeToTray = false, Notifications = false, ZoomPercent = 80, AutoUpdateClis = false, CheckForUpdates = false,
-            AutoClearIdle = true, AutoClearMinutes = 10,
+            AutoClearIdle = true, AutoClearMinutes = 10, AutoCompactMode = AutoCompactPolicy.Auto,
             SkippedVersion = "9.9.9", LastUpdateCheck = new DateTime(2026, 10, 29, 9, 18, 39, DateTimeKind.Utc),
             DismissedWslOptimization = true,
             AutoCompactSettings = [new AutoCompactSetting { Cli = "codex", Model = "example", Mode = "custom", CustomTokens = 64000 }],

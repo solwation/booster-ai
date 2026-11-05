@@ -120,6 +120,7 @@ public sealed class TabViewModel : Observable
             Raise(nameof(CanOrkester));
             Raise(nameof(CanInstallOrkester));
             Raise(nameof(CanNonInteractive));
+            RaiseRestart();
         }
     }
 
@@ -230,7 +231,7 @@ public sealed class TabViewModel : Observable
     /// <summary>The LLM or model differs from what the running tab was started with.</summary>
     public bool IsChanged => IsRunning && LaunchedAs is { } l && l.Llm != Catalog.ShellOnly
         && (l.Llm != Llm || l.Model != (string.IsNullOrWhiteSpace(Model) ? Catalog.StandardModel : Model)
-            || l.CompactTokens != _owner.CompactTokens(Llm, Model));
+            || l.CompactTokens != _owner.CompactTokens(Llm, Model, Orkester && CanOrkester));
 
     /// <summary>"Starta om när den är ledig" is waiting for the CLI's next idle.</summary>
     public bool PendingRestart
@@ -406,13 +407,14 @@ public sealed class TabViewModel : Observable
         Llm = Llm, Model = string.IsNullOrWhiteSpace(Model) ? Catalog.StandardModel : Model,
         Orkester = forLaunch ? Orkester && CanOrkester : Orkester,
         NonInteractive = NonInteractive,
-        CompactTokens = forLaunch ? _owner.CompactTokens(Llm, Model) : null,
+        CompactTokens = forLaunch ? _owner.CompactTokens(Llm, Model, Orkester && CanOrkester) : null,
     };
 }
 
 public sealed partial class MainViewModel : Observable
 {
-    internal int? CompactTokens(string cli, string model) => AutoCompact.ForTab(_cfg.AutoCompactSettings, cli, model);
+    internal int? CompactTokens(string cli, string model, bool orchestra = false) =>
+        AutoCompactPolicy.Resolve(_cfg, cli, model, orchestra, _compactCodexModels);
     private readonly AppConfig _cfg;
     /// <summary>The config as this instance last loaded or saved it; see ConfigMerge.</summary>
     private AppConfig _saved;
@@ -501,7 +503,7 @@ public sealed partial class MainViewModel : Observable
     public string WslDistro
     {
         get => _cfg.WslDistro;
-        set { _cfg.WslDistro = value.Trim(); Raise(); _ = InitAsync(); }
+        set { if (_cfg.WslDistro == value.Trim()) return; _cfg.WslDistro = value.Trim(); InvalidateCompactMetadata(); Raise(); _ = InitAsync(); }
     }
 
     public string LinuxTerminal { get => _cfg.LinuxTerminal; set { _cfg.LinuxTerminal = value; Raise(); } }
@@ -845,8 +847,9 @@ public sealed partial class MainViewModel : Observable
     /// <summary>Shows the settings another instance saved (ConfigMerge) in this one's windows.</summary>
     private void SettingsTakenOver()
     {
-        _compactEditors.Clear();
-        Setup.ConfigureCompact(CompactEditor);
+        if (_saved.WslDistro != _cfg.WslDistro) InvalidateCompactMetadata();
+        foreach (var editor in _compactEditors.Values) editor.UpdateSettings(_cfg.AutoCompactSettings);
+        RefreshCompactMode();
         foreach (var name in new[] { nameof(WslDistro), nameof(LinuxTerminal), nameof(Theme), nameof(SelectedTheme), nameof(SelectedLanguage),
             nameof(SelectedAppearance), nameof(SelectedAfterLaunch), nameof(MinimizeToTray), nameof(Notifications), nameof(SelectedZoom), nameof(AutoUpdateClis), nameof(AutoClearIdle), nameof(AutoClearMinutes), nameof(CheckForUpdates) })
             Raise(name);
@@ -1118,9 +1121,9 @@ public sealed partial class MainViewModel : Observable
 
     private TabConfig WithCurrentCompact(TabConfig tab)
     {
-        if (tab.CompactTokens == CompactTokens(tab.Llm, tab.Model)) return tab;
+        if (tab.CompactTokens == CompactTokens(tab.Llm, tab.Model, tab.Orkester)) return tab;
         var copy = ConfigStore.Copy(new AppConfig { Tabs = [tab] }).Tabs[0];
-        copy.CompactTokens = CompactTokens(tab.Llm, tab.Model);
+        copy.CompactTokens = CompactTokens(tab.Llm, tab.Model, tab.Orkester);
         return copy;
     }
 
@@ -1500,7 +1503,6 @@ public sealed record ZoomChoice(int Percent)
 /// </summary>
 public sealed class UpdateViewModel : Observable
 {
-    internal int? CompactTokens(string cli, string model) => AutoCompact.ForTab(_cfg.AutoCompactSettings, cli, model);
     private readonly AppConfig _cfg;
     private readonly Action _save;
     private readonly bool _windows = OperatingSystem.IsWindows();

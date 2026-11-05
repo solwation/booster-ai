@@ -22,7 +22,10 @@ internal static class Program
             if (at >= 0 && at + 1 < args.Length) ConfigStore.UseFile(args[at + 1]);
             var cfg = ConfigStore.Load();
             var tabs = TabGroups.Flatten(cfg.Tabs).Where(t => t.Enabled).ToList();
-            foreach (var tab in tabs) tab.CompactTokens = AutoCompact.ForTab(cfg.AutoCompactSettings, tab.Llm, tab.Model);
+            // Dry-run stays read-only and reports the same known-capacity policy as a new launch.
+            var compactModels = cfg.AutoCompactMode == AutoCompactPolicy.Auto && tabs.Any(t => t.Llm == "codex")
+                ? AutoCompactModels.ReadCodexAsync(cfg.WslDistro).GetAwaiter().GetResult() : null;
+            foreach (var tab in tabs) tab.CompactTokens = AutoCompactPolicy.Resolve(cfg, tab.Llm, tab.Model, tab.Orkester, compactModels);
             // Each Start gets a session directory with a status log per tab; shown here with a placeholder.
             var root = OperatingSystem.IsWindows() ? PathMapping.ToWslPath(TabSession.DefaultRoot) : TabSession.DefaultRoot;
             var dir = root.Replace('\\', '/') + "/<session>";

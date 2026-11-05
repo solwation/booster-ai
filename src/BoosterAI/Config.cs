@@ -35,6 +35,8 @@ public sealed class TabConfig
 public sealed class AppConfig
 {
     public List<AutoCompactSetting> AutoCompactSettings { get; set; } = [];
+    /// <summary>Off uses CLI defaults, Auto uses known capacity, Manual uses saved per-model values.</summary>
+    public string AutoCompactMode { get; set; } = AutoCompactPolicy.Off;
     public List<TabConfig> Tabs { get; set; } = new();
     /// <summary>Windows only: the WSL distribution the tabs run in.</summary>
     public string WslDistro { get; set; } = "Ubuntu";
@@ -124,6 +126,10 @@ public static class ConfigStore
             && root.TryGetProperty("CloseAfterLaunch", out var old) && old.ValueKind == JsonValueKind.True)
             cfg.AfterLaunch = AfterLaunchPolicy.Close;
         cfg.AfterLaunch = AfterLaunchPolicy.Normalize(cfg.AfterLaunch);
+        if (!root.TryGetProperty(nameof(AppConfig.AutoCompactMode), out _))
+            cfg.AutoCompactMode = cfg.AutoCompactSettings.Any(s => AutoCompact.Resolve(s) is not null)
+                ? AutoCompactPolicy.Manual : AutoCompactPolicy.Off;
+        cfg.AutoCompactMode = AutoCompactPolicy.Normalize(cfg.AutoCompactMode);
         return cfg;
     }
 
@@ -168,6 +174,7 @@ public static class ConfigMerge
 
     private static readonly Setting[] Settings =
     [
+        S(c => c.AutoCompactMode, (c, v) => c.AutoCompactMode = v),
         S(c => JsonSerializer.Serialize(c.AutoCompactSettings), (c, v) => c.AutoCompactSettings = JsonSerializer.Deserialize<List<AutoCompactSetting>>(v) ?? []),
         S(c => c.WslDistro, (c, v) => c.WslDistro = v),
         S(c => c.LinuxTerminal, (c, v) => c.LinuxTerminal = v),
