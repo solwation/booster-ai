@@ -59,3 +59,16 @@ belong to conductor integration; they were not performed by this worker.
 For an isolated headless confirmation screenshot, use
 `BoosterAI --screenshot confirmation.png --window remove-project --config neutral.json`.
 The first configured project's name/count supplies the example; no removal runs.
+
+## Integrated delivery
+
+Integrated as `2a017ea` alongside WSL confirmation `fec0914`. The combined Release
+build passed with zero warnings/errors, and the synced Windows mirror passed all
+740 tests. Existing worker WSL evidence (738 tests, including 14 new group-removal
+regressions) applies to this source; the other delivery adds two independent WSL
+confirmation tests. Localization conflicts were resolved by retaining both sets of
+keys; both screenshot window cases and Settings handlers are present.
+
+The normal installer left one new background process `0.29.0+2a017ea`, old process
+exited, with unchanged focus, restored 80% zoom (font 9.6) and a matching executable
+hash. See [installation evidence](installation.json). No real session was stopped.

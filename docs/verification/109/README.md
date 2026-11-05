@@ -23,3 +23,12 @@ verification never invokes the real command.
 
 Run the probe with `dotnet run --project docs/verification/109/probe/probe.csproj -c Release`.
 Native Windows verification and normal background installation follow integration.
+
+## Integrated delivery
+
+Integrated as `fec0914`; combined with project removal `2a017ea`. Native Windows
+full suite passed 726 tests on `fec0914`, then 740 tests on the combined revision.
+The combined Release build has no warnings/errors. The normal installer left one
+new background process `0.29.0+2a017ea`, old process exited, with unchanged focus,
+restored 80% zoom (font 9.6) and matching installed/published executable hashes.
+See [installation evidence](installation.json). No real WSL shutdown was run.
