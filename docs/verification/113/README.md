@@ -52,5 +52,43 @@ actions call it zero times and confirmation once; no actual shutdown runs.
 
 Normal background installation delivered `0.30.0+5febd5a` with one new process,
 unchanged focus, restored 80% zoom/font9.6 and matching hashes; see
-[installation.json](installation.json). The real isolated Terminal marker gate
-is still pending; this record does not claim it passed.
+[installation.json](installation.json). The isolated real Terminal marker gate passed; see below.
+
+## Real Windows Terminal marker
+
+[Result](terminal-marker.json): a fresh named terminal window ran the current
+TabSession library in WSL, replaced a custom Codex function with the exact Auto
+Approve alias, then cleared it for No alias. The unrelated helper alias stayed
+unchanged, and an outside `touch` command in the synthetic startup file never ran.
+Only after all assertions did it write `booster-wt113-ok` and exit.
+
+A private portable Windows Terminal1.25.2733.0 was extracted from the official
+Microsoft release asset (SHA256
+`bf3ef2012f6c44d8340a4c58125acc9498d19b580f9890dc043cdf831852e796`,
+matching GitHub's digest; executable Authenticode signature Valid). A unique
+unpackaged path isolates Terminal's instance routing from the installed process.
+The conductor, not a worker, launched it suspended on a non-input desktop,
+assigned its own kill-on-close job and resumed it. One owned named window was
+observed and closed through WM_CLOSE. Foreground focus/input desktop stayed
+unchanged; the root exited, zero owned processes remained and all handles and
+the private desktop closed. No forced cleanup was needed in the successful run.
+
+The initial observer treated a false empty-desktop enumeration as failure; its
+cleanup was complete, but a marker appeared afterward. A stale-marker preflight
+then refused to launch. The final run used a separate fresh fixture and runtime;
+it observed one empty poll with native error0 before the window appeared. Only
+the final fresh result is used as delivery evidence.
+
+The [fixture generator](terminal-fixture/Program.cs) consumes the actual library
+and permission writer. It can recreate the isolated Bash checks without a model:
+
+```sh
+dotnet run --project docs/verification/113/terminal-fixture -- '/tmp/booster alias fixture'
+bash '/tmp/booster alias fixture/run.sh'
+cat '/tmp/booster alias fixture/marker'
+```
+
+This standalone reproduction is not a real Terminal test. The Windows harness
+was private and separately reviewed; the result records library/script hashes
+and the official Terminal executable hash without publishing personal paths.
+No real model, CLI update, user startup edit or WSL shutdown occurred.
