@@ -1,0 +1,20 @@
+{
+  "received": [
+    "interpreter:/tmp",
+    "--oss",
+    "--local-provider",
+    "ollama",
+    "--model",
+    "test-model",
+    "/orkester",
+    "openhands:/tmp:provider/test-model",
+    "--override-with-envs",
+    "--task",
+    "/orkester"
+  ],
+  "outcome": "passed",
+  "marker": "booster-93-94-quoted-marker",
+  "scriptHasSemicolon": false,
+  "namedWindow": "BoosterAI-93-94-marker-f06ba59fdbaa40c69efd9b1a21efd9bb",
+  "isolatedDesktop": true
+}
