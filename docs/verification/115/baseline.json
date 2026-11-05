@@ -1,0 +1,8 @@
+{
+  "base": "5eb2871",
+  "change": "Only the fix was reverted to synchronous Llms notification",
+  "exitCode": 134,
+  "failedAssertion": "Mouse commits agent: codex",
+  "observed": "Selection re-enters from codex to null to the prior claude item",
+  "launches": 0
+}

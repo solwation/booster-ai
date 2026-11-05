@@ -180,7 +180,9 @@ public sealed class TabViewModel : Observable
         set
         {
             if (value is null || !Set(ref _llm, value)) return;
-            Raise(nameof(Llms));
+            // Replacing ItemsSource during ComboBox selection re-enters its binding and restores the old item.
+            // Refresh after the selection commits, including removal of a previously selected missing CLI.
+            Dispatcher.UIThread.Post(RaiseLlms);
             Raise(nameof(Models));
             Raise(nameof(IsAi));
             Raise(nameof(CanOrkester));
