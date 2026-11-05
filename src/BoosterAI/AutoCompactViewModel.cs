@@ -15,7 +15,13 @@ public sealed class AutoCompactViewModel : Observable
     private bool _loading;
     private string _status = "";
     public string Cli { get; }
-    public bool Supported => AutoCompact.Supports(Cli);
+    private bool _currentInterpreter;
+    public bool Supported => AutoCompact.Supports(Cli) && (Cli != "interpreter" || _currentInterpreter);
+    public void UpdateCliSupport(CliStatus status)
+    {
+        _currentInterpreter = status.Installed && status.Help.Contains("--oss", StringComparison.Ordinal) && status.Help.Contains("--config", StringComparison.Ordinal);
+        Raise(nameof(Supported)); Raise(nameof(UnitExplanation)); Raise(nameof(CanSave));
+    }
     public bool IsExpanded { get; set; }
     public IReadOnlyList<string> Models => Catalog.ModelsFor(Cli);
     public IReadOnlyList<CompactChoice> Profiles { get; } = Choices("profile", "questions", "code", "orchestra");
@@ -28,6 +34,8 @@ public sealed class AutoCompactViewModel : Observable
     public string Context { get => _context; set { if (Set(ref _context, value ?? "")) Changed(); } }
     public string Custom { get => _custom; set { if (Set(ref _custom, value ?? "")) Changed(); } }
     public bool IsCustom => Mode.Id == "custom";
+    public string Validation => !IsCustom || CanSave ? "" : Loc.Get("compact.custom.invalid");
+    private static string Number(int value) => Loc.Language == "sv" ? value.ToString("N0", CultureInfo.InvariantCulture).Replace(',', ' ' ) : value.ToString("N0", CultureInfo.InvariantCulture);
     private int ContextValue => int.TryParse(Context, NumberStyles.None, CultureInfo.InvariantCulture, out var n) ? n : 0;
     private int CustomValue => int.TryParse(Custom, NumberStyles.None, CultureInfo.InvariantCulture, out var n) ? n : 0;
     private int? KnownContext => Cli == "claude" ? AutoCompactModels.ClaudeContext(Model) : Cli == "codex" && _codex.TryGetValue(Model, out var n) ? n : null;
@@ -41,8 +49,8 @@ public sealed class AutoCompactViewModel : Observable
         {
             if (Model == Catalog.StandardModel || !Catalog.IsSafeModel(Model)) return Loc.Get("compact.model.required");
             if (AutoCompact.Recommend(Cli, ContextValue, Profile.Id) is not { } r) return Loc.Get("compact.unknown");
-            return Loc.Format("compact.recommendation", r.Tokens.ToString("N0"), r.ContextTokens.ToString("N0"),
-                r.ReserveTokens.ToString("N0"), r.FileBudgetTokens.ToString("N0"));
+            return Loc.Format("compact.recommendation", Number(r.Tokens), Number(r.ContextTokens),
+                Number(r.ReserveTokens), Number(r.FileBudgetTokens));
         }
     }
     public bool CanSave => Supported && Catalog.IsSafeModel(Model) && Model != Catalog.StandardModel
@@ -52,6 +60,7 @@ public sealed class AutoCompactViewModel : Observable
     public AutoCompactViewModel(string cli, IList<AutoCompactSetting> settings, Action saved, string? model = null)
     {
         Cli = cli; _settings = settings; _saved = saved;
+        IsExpanded = settings.Any(s => s.Cli == cli && s.Mode != "default");
         _model = model ?? settings.LastOrDefault(s => s.Cli == cli && s.Active)?.Model ?? Catalog.ModelsFor(cli).FirstOrDefault(m => m != Catalog.StandardModel) ?? Catalog.StandardModel;
         _profile = Profiles.FirstOrDefault(p => p.Id == settings.LastOrDefault(s => s.Cli == cli && s.Model == _model && s.Active)?.Profile) ?? Profiles[1];
         _mode = Modes[0];
@@ -88,7 +97,7 @@ public sealed class AutoCompactViewModel : Observable
     {
         if (_loading) return;
         Status = "";
-        foreach (var name in new[] { nameof(CanSave), nameof(IsCustom), nameof(Recommendation), nameof(ContextSource) }) Raise(name);
+        foreach (var name in new[] { nameof(CanSave), nameof(IsCustom), nameof(Recommendation), nameof(ContextSource), nameof(Validation) }) Raise(name);
     }
 
     public void Save()
@@ -104,5 +113,36 @@ public sealed class AutoCompactViewModel : Observable
         _settings.Add(Draft());
         _saved();
         Status = Loc.Get("compact.saved");
+    }
+}
+
+
+public sealed partial class MainViewModel
+{
+    private readonly Dictionary<string, AutoCompactViewModel> _compactEditors = [];
+    private IReadOnlyDictionary<string, int> _compactCodexModels = new Dictionary<string, int>();
+
+    private AutoCompactViewModel CompactEditor(CliStatus status)
+    {
+        if (!_compactEditors.TryGetValue(status.Cli, out var editor))
+        {
+            editor = new AutoCompactViewModel(status.Cli, _cfg.AutoCompactSettings, () =>
+            {
+                foreach (var tab in Tabs) tab.RaiseRestartTip();
+                Save();
+            });
+            editor.UpdateMetadata(_compactCodexModels);
+            _compactEditors.Add(status.Cli, editor);
+        }
+        editor.UpdateCliSupport(status);
+        return editor;
+    }
+
+    private async Task LoadCompactMetadataAsync(string distro)
+    {
+        var models = await AutoCompactModels.ReadCodexAsync(distro);
+        if (_cfg.WslDistro != distro) return;
+        _compactCodexModels = models;
+        foreach (var editor in _compactEditors.Values) editor.UpdateMetadata(models);
     }
 }

@@ -153,15 +153,21 @@ internal static class Screenshot
             window.UpdateLayout();
             AvaloniaHeadlessPlatform.ForceRenderTimerTick();
         }
-        if (o.Tab is "agents" or "agenter" && o.Section is { } cli
-            && window.FindControl<ScrollViewer>("AgentsScroll") is { } agentsScroll
-            && window.GetVisualDescendants().OfType<Border>().FirstOrDefault(b => b.DataContext is AgentInfo a && a.Cli == cli) is { } card
-            && card.TranslatePoint(default, agentsScroll) is { } position)
+        if (o.Tab is "agents" or "agenter" && o.Section is { } section
+            && window.FindControl<ScrollViewer>("AgentsScroll") is { } agentsScroll)
         {
-            agentsScroll.Offset = new Vector(0, agentsScroll.Offset.Y + position.Y);
-            Dispatcher.UIThread.RunJobs();
-            window.UpdateLayout();
-            AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+            var compact = section.EndsWith("-compact", StringComparison.Ordinal);
+            var cli = compact ? section[..^"-compact".Length] : section;
+            Control? target = compact
+                ? window.GetVisualDescendants().OfType<AutoCompactView>().FirstOrDefault(v => v.DataContext is AutoCompactViewModel c && c.Cli == cli)
+                : window.GetVisualDescendants().OfType<Border>().FirstOrDefault(b => b.DataContext is AgentInfo a && a.Cli == cli);
+            if (target?.TranslatePoint(default, agentsScroll) is { } position)
+            {
+                agentsScroll.Offset = new Vector(0, agentsScroll.Offset.Y + position.Y);
+                Dispatcher.UIThread.RunJobs();
+                window.UpdateLayout();
+                AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+            }
         }
         var frame = window.CaptureRenderedFrame() ?? throw new InvalidOperationException("No frame was rendered");
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(o.File))!);

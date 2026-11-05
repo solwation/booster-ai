@@ -474,6 +474,9 @@
                       </Grid>
                       <TextBlock Text="{Binding ModeExplanation}" TextWrapping="Wrap" LineHeight="19" FontSize="12.5" />
                       <TextBlock Text="{Binding ModeCommand}" Classes="path" TextWrapping="Wrap" FontSize="11.5" IsVisible="{Binding HasModeCommand}" />
+                      <Expander Header="{local:T compact.title}" IsExpanded="{Binding Compact.IsExpanded}" HorizontalAlignment="Stretch">
+                        <local:AutoCompactView DataContext="{Binding Compact}" Margin="0,6,0,0" />
+                      </Expander>
                     </StackPanel>
                   </Border>
                 </DataTemplate>

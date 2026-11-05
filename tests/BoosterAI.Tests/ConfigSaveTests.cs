@@ -84,6 +84,7 @@ public class ConfigMergeTests
             AutoClearIdle = true, AutoClearMinutes = 10,
             SkippedVersion = "9.9.9", LastUpdateCheck = new DateTime(2026, 10, 29, 9, 18, 39, DateTimeKind.Utc),
             DismissedWslOptimization = true,
+            AutoCompactSettings = [new AutoCompactSetting { Cli = "codex", Model = "example", Mode = "custom", CustomTokens = 64000 }],
         };
         var mine = new AppConfig();
 

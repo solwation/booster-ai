@@ -450,6 +450,7 @@ public sealed partial class MainViewModel : Observable
         {
             foreach (var t in Tabs) t.RaiseLlms();
         };
+        Setup.ConfigureCompact(CompactEditor);
         _ = InitAsync();
     }
 
@@ -844,6 +845,8 @@ public sealed partial class MainViewModel : Observable
     /// <summary>Shows the settings another instance saved (ConfigMerge) in this one's windows.</summary>
     private void SettingsTakenOver()
     {
+        _compactEditors.Clear();
+        Setup.ConfigureCompact(CompactEditor);
         foreach (var name in new[] { nameof(WslDistro), nameof(LinuxTerminal), nameof(Theme), nameof(SelectedTheme), nameof(SelectedLanguage),
             nameof(SelectedAppearance), nameof(SelectedAfterLaunch), nameof(MinimizeToTray), nameof(Notifications), nameof(SelectedZoom), nameof(AutoUpdateClis), nameof(AutoClearIdle), nameof(AutoClearMinutes), nameof(CheckForUpdates) })
             Raise(name);
@@ -1115,6 +1118,7 @@ public sealed partial class MainViewModel : Observable
 
     private TabConfig WithCurrentCompact(TabConfig tab)
     {
+        if (tab.CompactTokens == CompactTokens(tab.Llm, tab.Model)) return tab;
         var copy = ConfigStore.Copy(new AppConfig { Tabs = [tab] }).Tabs[0];
         copy.CompactTokens = CompactTokens(tab.Llm, tab.Model);
         return copy;

@@ -409,5 +409,7 @@
   "agents.update.agy": "Uppdatering använder det officiella installationsskriptet i flikens miljö.",
   "agents.update.aider": "Uppdatering använder Aiders officiella installation. Lokala modeller konfigureras separat.",
   "agents.update.interpreter": "Installerar aktuell standalone-version. Äldre Python-installation migreras inte automatiskt; lägen väljs efter detekterade flaggor.",
-  "agents.update.openhands": "Installerar OpenHands CLI. LLM och lokal-/containermiljö ställs in i agenten."
+  "agents.update.openhands": "Installerar OpenHands CLI. LLM och lokal-/containermiljö ställs in i agenten.",
+  "compact.unit.interpreter": "Aktuell Open Interpreter: tokenbudget för automatisk historikkomprimering, via tillfällig -c-inställning. Äldre Python-CLI stöds inte. Bekräfta den lokala modellens kontextkapacitet.",
+  "compact.custom.invalid": "Ange ett helt tokenantal: Claude 100 000–1 000 000, övriga 1–10 000 000 (appens säkerhetsgräns), högst angiven kapacitet. Välj ett exakt modell-ID."
 }

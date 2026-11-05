@@ -30,6 +30,7 @@
         </ComboBox>
         <TextBox Grid.Column="1" Text="{Binding Custom}" IsVisible="{Binding IsCustom}" Watermark="{local:T compact.custom.tokens}" AutomationProperties.Name="{local:T compact.custom.tokens}" />
       </Grid>
+      <TextBlock Text="{Binding Validation}" TextWrapping="Wrap" FontSize="12" />
       <TextBlock Text="{Binding Recommendation}" TextWrapping="Wrap" FontSize="12" />
       <TextBlock Text="{local:T compact.tradeoff}" TextWrapping="Wrap" FontSize="11.5" Classes="muted" />
       <Grid ColumnDefinitions="Auto,*">

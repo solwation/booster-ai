@@ -9,6 +9,7 @@ public sealed record CliOffer(string Cli, string Label, string Tip);
 /// <summary>One supported AI CLI listed in the Settings agents hub (#91).</summary>
 public sealed class AgentInfo : Observable
 {
+    public AutoCompactViewModel? Compact { get; init; }
     public CliStatus Detected { get; }
     public string Cli => Detected.Cli;
     public string Name => Loc.Display("llm", Cli);
@@ -66,6 +67,8 @@ public sealed class SetupViewModel : Observable
     public Action? OnStatusChanged { get; set; }
 
     public IReadOnlyList<AgentInfo> Agents { get; private set; } = [];
+    private Func<CliStatus, AutoCompactViewModel>? _compactFactory;
+    public void ConfigureCompact(Func<CliStatus, AutoCompactViewModel> factory) { _compactFactory = factory; Refresh(); }
 
     public SetupViewModel()
     {
@@ -141,7 +144,11 @@ public sealed class SetupViewModel : Observable
         Missing = Prerequisites.MissingToOffer(_status, _rowLlms)
             .Select(c => new CliOffer(c, Loc.Format("setup.cli.install", c), Loc.Format("setup.cli.install.tip", Prerequisites.InstallScript(c)))).ToList();
         Aliases = Prerequisites.AliasesToOffer(_status, _dismissedAliases);
-        Agents = Prerequisites.Clis.Select(c => new AgentInfo(_status.Cli(c) ?? new CliStatus(c, "none", null))).ToList();
+        Agents = Prerequisites.Clis.Select(c =>
+        {
+            var status = _status.Cli(c) ?? new CliStatus(c, "none", null);
+            return new AgentInfo(status) { Compact = _compactFactory?.Invoke(status) };
+        }).ToList();
         foreach (var name in new[] { nameof(Status), nameof(WslVisible), nameof(CanInstallWsl), nameof(WslText), nameof(Missing), nameof(MissingVisible),
                      nameof(MissingText), nameof(Aliases), nameof(AliasVisible), nameof(AliasText), nameof(AliasTip), nameof(Agents), nameof(Summary), nameof(CheckNotice) })
             Raise(name);
@@ -196,6 +203,7 @@ public sealed partial class MainViewModel
             Setup.IsChecking = false;
             if (!t.IsCompletedSuccessfully) return;
             Setup.Apply(t.Result, distro);
+            if (t.Result.Cli("codex")?.Installed == true) _ = LoadCompactMetadataAsync(distro);
             SetupRowsChanged();
             var done = _installing.Where(c => t.Result.Cli(c) is { Installed: true }).ToList();
             if (done.Count > 0)
@@ -294,10 +302,10 @@ public sealed partial class MainViewModel
     /// <summary>Neutral, deterministic versions and permission states; never reads an installed CLI or a user file.</summary>
     public void ShowSampleAgents()
     {
-        const string modern = "--approve-for-me --ask-for-approval --sandbox --dangerously-bypass-approvals-and-sandbox --oss";
+        const string modern = "--approve-for-me --ask-for-approval --sandbox --dangerously-bypass-approvals-and-sandbox --oss --config";
         Setup.Apply(new SetupStatus(WslState.Ok, ["Ubuntu"],
         [
-            new("claude", "alias", "/sample/bin/claude") { Version = "2.1.0", Help = "acceptEdits --permission-mode --dangerously-skip-permissions", AliasDefinition = "alias claude='claude --permission-mode acceptEdits'", ManagedAlias = "alias claude='claude --permission-mode acceptEdits'" },
+            new("claude", "alias", "/sample/bin/claude") { Version = "2.1.304", Help = "--autocompact acceptEdits --permission-mode --dangerously-skip-permissions", AliasDefinition = "alias claude='claude --permission-mode acceptEdits'", ManagedAlias = "alias claude='claude --permission-mode acceptEdits'" },
             new("codex", "file", "/sample/bin/codex") { Version = "0.170.0", Help = modern },
             new("agy", "function", "/sample/bin/agy") { Version = "1.4.0", Help = "--mode auto --dangerously-skip-permissions" },
             new("aider", "file", "/sample/bin/aider") { Help = "--yes-always" },

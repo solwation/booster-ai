@@ -33,7 +33,7 @@ public class AutoCompactTests
     [InlineData("codex", 200000, "unknown")]
     [InlineData("agy", 1000000, "code")]
     [InlineData("openhands", 1000000, "code")]
-    [InlineData("interpreter", 1000000, "code")]
+
     public void UnknownUnsupportedOrInsufficientContextHasNoRecommendation(string cli, int context, string profile) =>
         Assert.Null(AutoCompact.Recommend(cli, context, profile));
 
@@ -42,7 +42,8 @@ public class AutoCompactTests
     [InlineData("claude", 100000, true)]
     [InlineData("claude", 1000000, true)]
     [InlineData("claude", 1000001, false)]
-    [InlineData("codex", 999, false)]
+    [InlineData("codex", 0, false)]
+    [InlineData("codex", 1, true)]
     [InlineData("codex", 1000, true)]
     [InlineData("aider", 10000001, false)]
     public void BoundsAreCliSpecific(string cli, int value, bool valid) => Assert.Equal(valid, AutoCompact.ValidValue(cli, value));
@@ -89,6 +90,7 @@ public class AutoCompactTests
     [InlineData("codex", "-c model_auto_compact_token_limit=150000")]
     [InlineData("aider", "--max-chat-history-tokens 150000")]
     [InlineData("claude", "--autocompact 150000")]
+    [InlineData("interpreter", "-c model_auto_compact_token_limit=150000")]
     public void ArgumentsReachNewOnceAndRestartWithoutChangingOrchestra(string cli, string expected)
     {
         var tab = new TabConfig { Llm = cli, Model = "example-model", Orkester = true, CompactTokens = 150000 };
@@ -109,7 +111,7 @@ public class AutoCompactTests
             Assert.Equal("", AutoCompact.Arguments(cli, -1));
             Assert.Equal("", AutoCompact.Arguments(cli, null));
         }
-        Assert.Equal("", AutoCompact.Arguments("interpreter", 200000));
+        Assert.Equal("", AutoCompact.Arguments("openhands", 200000));
     }
 
     [Fact]
@@ -125,6 +127,8 @@ public class AutoCompactTests
         Assert.Equal(475000, models["example"]);
         Assert.Empty(AutoCompactModels.ParseCodex("broken"));
         Assert.Empty(AutoCompactModels.ParseCodex(new string(' ', 2_000_001)));
+        Assert.Empty(AutoCompactModels.ParseCodex("[]"));
+        Assert.Empty(AutoCompactModels.ParseCodex("{\"models\":[1,null]}"));
         Assert.Null(AutoCompactModels.ClaudeContext("gateway-alias"));
         Assert.Null(AutoCompactModels.ClaudeContext(Catalog.StandardModel));
     }
@@ -141,7 +145,7 @@ public class AutoCompactTests
         try
         {
             var executable = Path.Combine(dir, "claude");
-            await File.WriteAllTextAsync(executable, "#!/bin/bash\nif [[ $1 == --help ]]; then\n echo " + (supported ? "--autocompact" : "--model") + "\n exit 0\nfi\nprintf '%s\\n' \"$@\"\n");
+            await File.WriteAllTextAsync(executable, "#!/bin/bash\nif [[ $1 == --help ]]; then\n echo " + (supported ? "--autocompact" : "--model") + "\n exit 0\nfi\nprintf '%s\\n' \"$@\"\nexit 7\n");
             File.SetUnixFileMode(executable, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
             using var process = new Process { StartInfo = new ProcessStartInfo("bash")
             { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false } };
@@ -156,6 +160,7 @@ public class AutoCompactTests
                 var error = process.StandardError.ReadToEndAsync();
                 using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
                 await process.WaitForExitAsync(timeout.Token);
+                Assert.Equal(7, process.ExitCode);
                 var stdout = await output;
                 var stderr = await error;
                 Assert.Equal(supported, stdout.Contains("--autocompact\n150000"));
@@ -184,7 +189,7 @@ public class AutoCompactTests
         editor.Mode = editor.Modes.Single(m => m.Id == "recommended");
         editor.Save();
         Assert.Equal(2, settings.Count);
-        Assert.Single(settings.Where(s => s.Active));
+        Assert.Single(settings, s => s.Active);
         Assert.Equal(600000, AutoCompact.ForTab(settings, "claude", "claude-sonnet-5-5"));
         editor.Profile = editor.Profiles.Single(p => p.Id == "code");
         Assert.Equal("recommended", editor.Mode.Id);
@@ -225,7 +230,7 @@ public class AutoCompactTests
         var vm = new MainViewModel(config);
         var row = Assert.Single(vm.Tabs);
         row.LaunchedAs = row.ToConfig(forLaunch: true);
-        row.SetState(TabState.Running, null, activity: Activity.Idle);
+        row.SetState(TabState.Running, null, activity: BoosterAI.Activity.Idle);
         Assert.False(row.IsChanged);
         config.AutoCompactSettings.Add(Setting());
         Assert.True(row.IsChanged);
@@ -236,6 +241,58 @@ public class AutoCompactTests
         Assert.False(row.PendingRestart);
         var recovered = ConfigStore.Copy(new AppConfig { Tabs = [row.ToConfig(forLaunch: true)] }).Tabs[0];
         Assert.Equal(150000, recovered.CompactTokens);
+    }
+
+    [Fact]
+    public void InterpreterControlsRequireCurrentExecutableAndVerifiedCapacity()
+    {
+        var editor = new AutoCompactViewModel("interpreter", [], () => { }, "ollama/example:7b");
+        editor.UpdateCliSupport(new CliStatus("interpreter", "file", "/example/interpreter") { Help = "--local --context_window" });
+        Assert.False(editor.Supported);
+        editor.UpdateCliSupport(new CliStatus("interpreter", "file", "/example/interpreter") { Help = "--oss --config" });
+        Assert.True(editor.Supported);
+        Assert.Equal("", editor.Context);
+        editor.Mode = editor.Modes.Single(m => m.Id == "recommended");
+        Assert.False(editor.CanSave);
+        editor.Context = "128000";
+        Assert.True(editor.CanSave);
+        var script = Launcher.TabScript(new TabConfig { Llm = "interpreter", Model = "example-model", CompactTokens = 64000 });
+        Assert.Contains("--oss", script);
+        Assert.Contains("-c model_auto_compact_token_limit=64000", script);
+        Assert.Contains("Using legacy defaults", script);
+    }
+
+    [Fact]
+    public async Task MetadataProbeProjectsOnlyContextFieldsAndIgnoresLoginBanners()
+    {
+        if (OperatingSystem.IsWindows()) return;
+        var dir = Directory.CreateTempSubdirectory("booster-compact-metadata-").FullName;
+        using var process = new Process { StartInfo = new ProcessStartInfo("bash")
+        { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false } };
+        try
+        {
+            await File.WriteAllTextAsync(Path.Combine(dir, "models_cache.json"), """
+                {"private_field":"DO_NOT_EMIT","models":[{"slug":"sample-model","context_window":200000,"effective_context_window_percent":95,"private_field":"DO_NOT_EMIT"}]}
+                """);
+            process.StartInfo.Environment["CODEX_HOME"] = dir;
+            process.StartInfo.ArgumentList.Add("-c");
+            process.StartInfo.ArgumentList.Add("printf 'login banner\\n'\n" + AutoCompactModels.Probe);
+            process.Start();
+            var output = process.StandardOutput.ReadToEndAsync();
+            var errors = process.StandardError.ReadToEndAsync();
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            await process.WaitForExitAsync(timeout.Token);
+            var text = await output;
+            Assert.Equal("", await errors);
+            Assert.DoesNotContain("DO_NOT_EMIT", text);
+            Assert.Equal(190000, AutoCompactModels.ParseProbeOutput(text)["sample-model"]);
+        }
+        finally
+        {
+            if (!process.HasExited) process.Kill(entireProcessTree: true);
+            process.WaitForExit();
+            Directory.Delete(dir, true);
+        }
     }
 
 }

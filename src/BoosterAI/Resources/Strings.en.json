@@ -409,5 +409,7 @@
   "agents.update.agy": "Update uses the official installer in the tab’s environment.",
   "agents.update.aider": "Update uses Aider’s official installer. Configure local models separately.",
   "agents.update.interpreter": "Installs the current standalone version. Legacy Python installations are not migrated automatically; modes follow detected flags.",
-  "agents.update.openhands": "Installs OpenHands CLI. Configure its LLM and local/container environment in the agent."
+  "agents.update.openhands": "Installs OpenHands CLI. Configure its LLM and local/container environment in the agent.",
+  "compact.unit.interpreter": "Current Open Interpreter: token budget for automatic history compaction, through a per-run -c override. Legacy Python CLI is unsupported. Confirm the local model’s context capacity.",
+  "compact.custom.invalid": "Enter a whole token count: Claude 100,000–1,000,000, others 1–10,000,000 (app safety bound), at most the specified capacity. Choose an exact model ID."
 }

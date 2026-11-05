@@ -5,7 +5,7 @@ using System.Text.Json;
 namespace BoosterAI;
 
 /// <summary>A per-model launch preference. No CLI configuration file is modified.</summary>
-public sealed class AutoCompactSetting
+public sealed record AutoCompactSetting
 {
     public string Cli { get; set; } = "";
     public string Model { get; set; } = Catalog.StandardModel;
@@ -21,8 +21,8 @@ public sealed record CompactRecommendation(int Tokens, int ContextTokens, int Re
 public static class AutoCompact
 {
     public const int MaxContext = 10_000_000;
-    public static bool Supports(string cli) => cli is "claude" or "codex" or "aider";
-    public static bool ValidValue(string cli, int value) => Supports(cli) && value >= (cli == "claude" ? 100_000 : 1_000)
+    public static bool Supports(string cli) => cli is "claude" or "codex" or "aider" or "interpreter";
+    public static bool ValidValue(string cli, int value) => Supports(cli) && value >= (cli == "claude" ? 100_000 : 1)
         && value <= (cli == "claude" ? 1_000_000 : MaxContext);
 
     /// <summary>Deliberate heuristic: reserve 10/25/40% for the next turn, at least 16k/32k/64k.
@@ -44,7 +44,7 @@ public static class AutoCompact
 
     public static int? Resolve(AutoCompactSetting? setting)
     {
-        if (setting is null || !setting.Active || setting.Model == Catalog.StandardModel || !Catalog.IsSafeModel(setting.Model)) return null;
+        if (setting is null || setting.ContextTokens is < 0 or > MaxContext || !setting.Active || setting.Model == Catalog.StandardModel || !Catalog.IsSafeModel(setting.Model)) return null;
         var value = setting.Mode switch
         {
             "recommended" => Recommend(setting.Cli, setting.ContextTokens, setting.Profile)?.Tokens,
@@ -65,6 +65,7 @@ public static class AutoCompact
         {
             "codex" => "-c model_auto_compact_token_limit=" + value + " -c 'model_auto_compact_token_limit_scope=\"total\"'",
             "aider" => "--max-chat-history-tokens " + value,
+            "interpreter" => "-c model_auto_compact_token_limit=" + value,
             "claude" => "--autocompact " + value,
             _ => "",
         };
@@ -91,10 +92,10 @@ public static class AutoCompactModels
         try
         {
             using var document = JsonDocument.Parse(json);
-            if (!document.RootElement.TryGetProperty("models", out var models) || models.ValueKind != JsonValueKind.Array) return result;
+            if (document.RootElement.ValueKind != JsonValueKind.Object || !document.RootElement.TryGetProperty("models", out var models) || models.ValueKind != JsonValueKind.Array) return result;
             foreach (var model in models.EnumerateArray().Take(500))
             {
-                if (!model.TryGetProperty("slug", out var slug) || slug.ValueKind != JsonValueKind.String
+                if (model.ValueKind != JsonValueKind.Object || !model.TryGetProperty("slug", out var slug) || slug.ValueKind != JsonValueKind.String
                     || slug.GetString() is not { } id || !Catalog.IsSafeModel(id)
                     || !model.TryGetProperty("context_window", out var window) || window.ValueKind != JsonValueKind.Number || !window.TryGetInt32(out var context)
                     || !model.TryGetProperty("effective_context_window_percent", out var percent) || percent.ValueKind != JsonValueKind.Number || !percent.TryGetInt32(out var effective)
@@ -108,6 +109,12 @@ public static class AutoCompactModels
 
     // Run in the same login shell/WSL distro as tabs. Emit a bounded projection, never the personal cache itself.
     internal const string Probe = "python3 - <<'PY'\nimport json,os\ntry:\n p=os.path.join(os.environ.get('CODEX_HOME') or os.path.expanduser('~/.codex'),'models_cache.json')\n with open(p,'rb') as f: raw=f.read(2000001)\n if len(raw)>2000000: raise ValueError('size')\n data=json.loads(raw)\n models=data.get('models',[])\n print('BOOSTER_COMPACT_METADATA='+json.dumps({'models':[{k:m.get(k) for k in ('slug','context_window','effective_context_window_percent')} for m in models[:500] if isinstance(m,dict)]}))\nexcept Exception: print('BOOSTER_COMPACT_METADATA={}')\nPY";
+
+    internal static IReadOnlyDictionary<string, int> ParseProbeOutput(string output)
+    {
+        var line = output.Split('\n').LastOrDefault(l => l.StartsWith("BOOSTER_COMPACT_METADATA=", StringComparison.Ordinal));
+        return ParseCodex(line?["BOOSTER_COMPACT_METADATA=".Length..] ?? "{}");
+    }
 
     public static async Task<IReadOnlyDictionary<string, int>> ReadCodexAsync(string distro)
     {
@@ -123,8 +130,7 @@ public static class AutoCompactModels
             using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(8));
             await process.WaitForExitAsync(timeout.Token);
             await errors;
-            var line = (await output).Split('\n').LastOrDefault(l => l.StartsWith("BOOSTER_COMPACT_METADATA=", StringComparison.Ordinal));
-            return ParseCodex(line?["BOOSTER_COMPACT_METADATA=".Length..] ?? "{}");
+            return ParseProbeOutput(await output);
         }
         catch (Exception e) when (e is IOException or System.ComponentModel.Win32Exception or OperationCanceledException) { return new Dictionary<string, int>(); }
         finally
