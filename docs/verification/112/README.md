@@ -27,3 +27,11 @@ unchanged.
 Only synthetic detection data and temporary app config are used in verification.
 No real aliases, CLI settings, installs or model sessions are changed.
 Windows verification and normal background installation follow integration.
+
+## Delivery
+
+Integrated as `9efc1c3`. The synced Windows mirror passed all742 tests, with no
+failures/skips. Normal installation left one new background process
+`0.29.0+9efc1c3`, old process exited, with unchanged foreground focus, restored80%
+zoom (font9.6) and identical installed/published executable hashes. See
+[installation evidence](installation.json). Publish retained the existing IL3000 warning.
