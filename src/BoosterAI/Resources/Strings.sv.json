@@ -491,10 +491,8 @@
   "project.remove.confirm.body": "Tar bort projektet och dess sparade flikinställningar från BoosterAI.\nUndertabbar som också tas bort, inklusive deras inställningar: {0}.",
   "project.remove.confirm.files": "Mappar och filer på datorn påverkas inte.",
   "project.remove.confirm.button": "Ta bort projekt",
-  "setup.environment.check": "Kontrollera miljön",
-  "setup.environment.windows": "Kontrollerar WSL och installerade distributioner samt vilka AI-program som finns i vald distributions inloggningsmiljö. Läser även programversioner och stöd för agentinställningar. Installerar inget och ändrar inga inställningar. Resultatet visas nedan; versioner och val finns under AI-agenter.",
-  "setup.environment.linux": "Kontrollerar vilka AI-program som finns i flikarnas lokala inloggningsmiljö. Läser även programversioner och stöd för agentinställningar. Installerar inget och ändrar inga inställningar. Resultatet visas nedan; versioner och val finns under AI-agenter.",
-  "setup.environment.result": "Resultat från miljökontrollen",
+  "setup.environment.windows": "WSL-informationen uppdateras automatiskt när BoosterAI startar och när huvudfönstret aktiveras. Uppgifterna ovan gäller senast kontrollerad distribution. Installation, versioner och manuell uppdatering av AI-program finns under AI-agenter.",
+  "setup.environment.linux": "Projektflikarna körs direkt i den lokala Linux-miljön; WSL används inte. Installerade AI-program kontrolleras automatiskt vid start och när huvudfönstret aktiveras. Se AI-agenter för versioner, installation och manuell uppdatering.",
   "setup.environment.agents": "Visa installation och inställningar för AI-agenter",
   "output.action": "Visa status och terminalutmatning för {0}: {1}",
   "agents.alias.override.none": "Efter bekräftelse startar denna agent utan alias eller skalfunktion. Ursprungliga definitionsrader bevaras.",
@@ -503,5 +501,13 @@
   "agents.alias.confirm.title": "Applicera alias för {0}?",
   "agents.alias.confirm.replace": "Vill du ersätta den egna startdefinitionen med det valda förvalet? Andra agenters definitioner ändras inte.",
   "agents.alias.confirm.apply": "Vill du applicera detta behörighetsförval? Det gäller även vanliga terminaler som läser samma skalinställningar.",
-  "agents.alias.confirm.preview": "Upptäckt nu → efter applicering:"
+  "agents.alias.confirm.preview": "Upptäckt nu → efter applicering:",
+  "wsl.info.status": "WSL-status",
+  "wsl.info.ready": "WSL är tillgängligt och distributionen hittades.",
+  "wsl.info.missing": "WSL eller en installerad distribution kunde inte hittas.",
+  "wsl.info.distroMissing": "Den valda distributionen hittades inte.",
+  "wsl.info.checkedDistro": "Senast kontrollerad distribution",
+  "wsl.info.distros": "Upptäckta distributioner",
+  "wsl.info.unknown": "Inte kontrollerat",
+  "wsl.info.none": "Inga distributioner hittades"
 }

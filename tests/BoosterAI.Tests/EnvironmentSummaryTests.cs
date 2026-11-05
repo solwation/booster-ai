@@ -36,4 +36,30 @@ public class EnvironmentSummaryTests
         setup.Apply(new SetupStatus(WslState.DistroMissing, ["Other"], [], false, false), "Ubuntu");
         Assert.Equal(setup.WslText, setup.Summary);
     }
+
+    [Fact]
+    public void WslFactsDescribeTheLastCheckedDistributionAndDistinctFailureStates()
+    {
+        var setup = new SetupViewModel();
+        Assert.Equal(Loc.Get("setup.summary.none"), setup.WslInstallationStatus);
+        Assert.Equal("—", setup.CheckedWslDistro);
+        Assert.Equal(Loc.Get("wsl.info.unknown"), setup.InstalledWslDistros);
+        setup.Apply(new SetupStatus(WslState.Ok, ["Ubuntu", "Debian"], [], false, false), " Ubuntu ");
+        Assert.Equal(Loc.Get("wsl.info.ready"), setup.WslInstallationStatus);
+        Assert.Equal("Ubuntu", setup.CheckedWslDistro);
+        Assert.Equal("Ubuntu\nDebian", setup.InstalledWslDistros);
+        setup.IsChecking = true;
+        Assert.Equal(Loc.Get("setup.summary.checking"), setup.WslInstallationStatus);
+        Assert.Equal("Ubuntu", setup.CheckedWslDistro);
+        setup.IsChecking = false;
+        setup.Apply(new SetupStatus(WslState.DistroMissing, ["Debian"], [], false, false), "Ubuntu");
+        Assert.Equal(Loc.Get("wsl.info.distroMissing"), setup.WslInstallationStatus);
+        Assert.Equal("Debian", setup.InstalledWslDistros);
+        setup.Apply(new SetupStatus(WslState.Missing, [], [], false, false), "Ubuntu");
+        Assert.Equal(Loc.Get("wsl.info.missing"), setup.WslInstallationStatus);
+        Assert.Equal(Loc.Get("wsl.info.none"), setup.InstalledWslDistros);
+        setup.Apply(SetupStatus.Empty, "Ubuntu");
+        Assert.Equal(Loc.Get("setup.summary.failed"), setup.WslInstallationStatus);
+        Assert.Equal(Loc.Get("wsl.info.unknown"), setup.InstalledWslDistros);
+    }
 }

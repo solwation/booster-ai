@@ -1,0 +1,37 @@
+{
+  "synthetic": true,
+  "results": [
+    {
+      "lang": "sv",
+      "minimum": false,
+      "installationFacts": true,
+      "noDuplicateCheck": true,
+      "states": 4,
+      "scrollAndAgentLink": true
+    },
+    {
+      "lang": "sv",
+      "minimum": true,
+      "installationFacts": true,
+      "noDuplicateCheck": true,
+      "states": 4,
+      "scrollAndAgentLink": true
+    },
+    {
+      "lang": "en",
+      "minimum": false,
+      "installationFacts": true,
+      "noDuplicateCheck": true,
+      "states": 4,
+      "scrollAndAgentLink": true
+    },
+    {
+      "lang": "en",
+      "minimum": true,
+      "installationFacts": true,
+      "noDuplicateCheck": true,
+      "states": 4,
+      "scrollAndAgentLink": true
+    }
+  ]
+}

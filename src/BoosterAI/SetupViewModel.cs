@@ -93,7 +93,7 @@ public sealed class SetupViewModel : Observable
     private IReadOnlyList<string> _rowLlms = [];
 
     public SetupStatus Status => _status;
-    public bool IsChecking { get => _checking; set { if (Set(ref _checking, value)) { Raise(nameof(Summary)); Raise(nameof(CheckNotice)); } } }
+    public bool IsChecking { get => _checking; set { if (Set(ref _checking, value)) { Raise(nameof(Summary)); Raise(nameof(CheckNotice)); Raise(nameof(WslInstallationStatus)); } } }
     public string CheckNotice => IsChecking || !_status.Checked || WslVisible ? Summary : "";
     public Action? OnStatusChanged { get; set; }
 
@@ -126,6 +126,22 @@ public sealed class SetupViewModel : Observable
         ? Loc.Format("setup.wsl.distroMissing", _distro, string.Join(", ", _status.Distros))
         : Loc.Get("setup.wsl.missing");
     private string _distro = "";
+
+    /// <summary>WSL facts from the last automatic check, separate from AI program detection.</summary>
+    public string WslInstallationStatus => IsChecking ? Loc.Get("setup.summary.checking")
+        : !_checked ? Loc.Get("setup.summary.none")
+        : Loc.Get(_status.Wsl switch
+        {
+            WslState.Ok => "wsl.info.ready",
+            WslState.Missing => "wsl.info.missing",
+            WslState.DistroMissing => "wsl.info.distroMissing",
+            _ => "setup.summary.failed",
+        });
+    public string CheckedWslDistro => _checked && _distro.Length > 0 ? _distro : "—";
+    public string InstalledWslDistros => !_checked || _status.Wsl == WslState.Unknown
+        ? Loc.Get("wsl.info.unknown")
+        : _status.Distros.Count == 0 ? Loc.Get("wsl.info.none") : string.Join("\n", _status.Distros);
+
 
     public IReadOnlyList<CliOffer> Missing { get; private set; } = [];
     public bool MissingVisible => Missing.Count > 0 && !_missingDismissed;
@@ -190,7 +206,7 @@ public sealed class SetupViewModel : Observable
         Raise(nameof(Agents));
         SelectedAgent = Agents.FirstOrDefault(a => a.Cli == selectedCli);
         foreach (var name in new[] { nameof(Status), nameof(WslVisible), nameof(CanInstallWsl), nameof(WslText), nameof(Missing), nameof(MissingVisible),
-                     nameof(MissingText), nameof(Summary), nameof(CheckNotice) })
+                     nameof(MissingText), nameof(Summary), nameof(CheckNotice), nameof(WslInstallationStatus), nameof(CheckedWslDistro), nameof(InstalledWslDistros) })
             Raise(name);
     }
 }

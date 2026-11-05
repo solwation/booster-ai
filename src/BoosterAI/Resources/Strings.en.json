@@ -491,10 +491,8 @@
   "project.remove.confirm.body": "Removes the project and its saved tab settings from BoosterAI.\nNumber of subtabs also removed, including their settings: {0}.",
   "project.remove.confirm.files": "Folders and files on your computer are unaffected.",
   "project.remove.confirm.button": "Remove project",
-  "setup.environment.check": "Check environment",
-  "setup.environment.windows": "Checks WSL, installed distributions and which AI programs are available in the selected distribution’s login environment. Also reads program versions and support for agent settings. Installs nothing and changes no settings. Results appear below; versions and choices are under AI agents.",
-  "setup.environment.linux": "Checks which AI programs are available in the tabs’ local login environment. Also reads program versions and support for agent settings. Installs nothing and changes no settings. Results appear below; versions and choices are under AI agents.",
-  "setup.environment.result": "Environment check results",
+  "setup.environment.windows": "WSL information refreshes automatically when BoosterAI starts and when the main window is activated. The information above refers to the last checked distribution. See AI agents for program installation, versions and manual refresh.",
+  "setup.environment.linux": "Project tabs run directly in the local Linux environment; WSL is not used. Installed AI programs are checked automatically at startup and when the main window is activated. See AI agents for versions, installation and manual refresh.",
   "setup.environment.agents": "View AI agent installation and settings",
   "output.action": "Show status and terminal output for {0}: {1}",
   "agents.alias.override.none": "After confirmation this agent starts without an alias or shell function. Original definition lines are preserved.",
@@ -503,5 +501,13 @@
   "agents.alias.confirm.title": "Apply alias for {0}?",
   "agents.alias.confirm.replace": "Replace the custom startup definition with the selected preset? Definitions for other agents stay unchanged.",
   "agents.alias.confirm.apply": "Apply this permission preset? It also affects ordinary terminals reading the same shell settings.",
-  "agents.alias.confirm.preview": "Currently detected → after applying:"
+  "agents.alias.confirm.preview": "Currently detected → after applying:",
+  "wsl.info.status": "WSL status",
+  "wsl.info.ready": "WSL is available and the distribution was found.",
+  "wsl.info.missing": "WSL or an installed distribution could not be found.",
+  "wsl.info.distroMissing": "The selected distribution was not found.",
+  "wsl.info.checkedDistro": "Last checked distribution",
+  "wsl.info.distros": "Detected distributions",
+  "wsl.info.unknown": "Not checked",
+  "wsl.info.none": "No distributions found"
 }
