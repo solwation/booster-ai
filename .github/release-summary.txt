@@ -1,3 +1,3 @@
-version: 0.27.0
-sv: Ny agentflik med versioner, behörighetslägen och auto-compact, fler agenter och reload för Claude-orkester.
-en: Agent settings with versions, permission modes and auto-compaction, more agents and Claude orchestra reload.
+version: 0.27.1
+sv: AI-agenter har egna underflikar och tydliga inställningsgrupper. Osparade val bevaras när du byter flik.
+en: AI agents get individual subtabs and clear setting groups. Unsaved choices survive tab navigation.
