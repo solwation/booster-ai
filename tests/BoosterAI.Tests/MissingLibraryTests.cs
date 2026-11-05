@@ -41,6 +41,7 @@ public class MissingLibraryTests
             psi.ArgumentList.Add("-qefc");
             psi.ArgumentList.Add("bash --noprofile --norc -ic " + Quote(body));
             psi.ArgumentList.Add("/dev/null");
+            TestShell.Configure(psi, root);
             using var process = Process.Start(psi)!;
             try
             {

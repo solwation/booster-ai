@@ -246,7 +246,7 @@ public class TabOutputTests
             var track = new TabTrack(dir + "/tab-lib.sh", dir, "tab1", UpdateClis: false);
             session.QueueNext("tab1", Launcher.RestartScript(new TabConfig { Llm = "claude", Directory = dir }, track, resume: false));
             var psi = new System.Diagnostics.ProcessStartInfo("script") { RedirectStandardOutput = true, WorkingDirectory = dir };
-            psi.Environment["PATH"] = bin + ":" + Environment.GetEnvironmentVariable("PATH");
+            TestShell.Configure(psi, root, bin: bin);
             foreach (var a in new[] { "-qec", ". ./tab-lib.sh . tab1 && bs_next && exit", "/dev/null" }) psi.ArgumentList.Add(a);
             using var p = System.Diagnostics.Process.Start(psi)!;
             try

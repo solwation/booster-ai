@@ -193,9 +193,7 @@ public class InterpreterTests
 
         public void SetEnvironment(ProcessStartInfo psi)
         {
-            psi.Environment["PATH"] = Bin + ":/usr/bin:/bin";
-            // An idle shell must not source the developer's shell startup files.
-            psi.Environment["HOME"] = Root;
+            TestShell.Configure(psi, Root, bin: Bin, home: Root);
         }
 
         public (int Code, string Output, string Error) Run(string script)

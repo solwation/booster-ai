@@ -163,6 +163,7 @@ public class OrchestraReloadPtyTests
         psi.ArgumentList.Add("-qefc");
         psi.ArgumentList.Add("bash --noprofile --norc -ic '" + body.Replace("'", "'\\''") + "'");
         psi.ArgumentList.Add("/dev/null");
+        TestShell.Configure(psi, root);
         using var process = Process.Start(psi)!;
         var stdout = process.StandardOutput.ReadToEndAsync();
         var stderr = process.StandardError.ReadToEndAsync();

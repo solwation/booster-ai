@@ -1011,6 +1011,7 @@ public class ExitedRestartTests
         psi.ArgumentList.Add("-qefc");
         psi.ArgumentList.Add("bash --noprofile --norc -ic '" + body.Replace("'", "'\\''") + "'");
         psi.ArgumentList.Add("/dev/null");
+        TestShell.Configure(psi, root);
         using var process = System.Diagnostics.Process.Start(psi)!;
         try
         {
@@ -1050,7 +1051,7 @@ public class ExitedRestartTests
         psi.ArgumentList.Add("-qefc");
         psi.ArgumentList.Add("bash --noprofile --norc -ic '" + body.Replace("'", "'\\''") + "'");
         psi.ArgumentList.Add("/dev/null");
-        if (slowRcRestartAtOnce) psi.Environment["HOME"] = home;
+        TestShell.Configure(psi, root, home: slowRcRestartAtOnce ? home : null);
         using var process = System.Diagnostics.Process.Start(psi)!;
         try
         {

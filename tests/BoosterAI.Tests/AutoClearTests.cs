@@ -318,6 +318,7 @@ public class AutoClearPtyTests
         psi.ArgumentList.Add("-qefc");
         psi.ArgumentList.Add("stty rows 30 cols 101 && bash --noprofile --norc -ic '" + body.Replace("'", "'\\''") + "'");
         psi.ArgumentList.Add("/dev/null");
+        TestShell.Configure(psi, root);
         using var process = System.Diagnostics.Process.Start(psi)!;
         string Lines() => File.Exists(got) ? File.ReadAllText(got) : "";
         try
@@ -371,6 +372,7 @@ public class AutoClearPtyTests
         psi.ArgumentList.Add("-qefc");
         psi.ArgumentList.Add("bash --noprofile --norc -ic '" + body.Replace("'", "'\\''") + "'");
         psi.ArgumentList.Add("/dev/null");
+        TestShell.Configure(psi, root);
         using var process = System.Diagnostics.Process.Start(psi)!;
         try
         {
@@ -413,6 +415,7 @@ public class AutoClearPtyTests
         psi.ArgumentList.Add("-qefc");
         psi.ArgumentList.Add("bash --noprofile --norc -ic '" + body.Replace("'", "'\\''") + "'");
         psi.ArgumentList.Add("/dev/null");
+        TestShell.Configure(psi, root);
         using var process = System.Diagnostics.Process.Start(psi)!;
         try
         {
