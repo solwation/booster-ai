@@ -21,3 +21,13 @@ and low-level helpers remain recognized for existing installations.
   Main README screenshots refreshed; minimum content scrolls.
 
 Windows verification and normal background installation follow integration.
+
+## Delivery
+
+Integrated as `dfa2101`. Combined Release build passed without warnings/errors;
+740/740 Windows tests passed on the synced mirror, including project removal and
+WSL confirmation integrated alongside this change. The normal installer left one
+new background process `0.29.0+dfa2101`, old process exited, focus unchanged, saved
+80% zoom restored (font 9.6) and installed executable hash equal to the publish.
+See [installation evidence](installation.json). The original 726 WSL results apply
+to this component; the combined source adds 14 independent project-removal tests.
