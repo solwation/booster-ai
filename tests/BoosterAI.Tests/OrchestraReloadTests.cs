@@ -171,8 +171,17 @@ public class OrchestraReloadPtyTests
         string Lines() => File.Exists(received) ? File.ReadAllText(received) : "";
         try
         {
-            Assert.True(SpinWait.SpinUntil(() => session.ReadLog(track.Id) is { InputProtocol: 2 } && File.Exists(Path.Combine(session.Directory, "cli-pid")), 30000));
-            var cliPid = File.ReadAllText(Path.Combine(session.Directory, "cli-pid"));
+            string? cliPid = null;
+            Assert.True(SpinWait.SpinUntil(() =>
+            {
+                var pidPath = Path.Combine(session.Directory, "cli-pid");
+                if (session.ReadLog(track.Id) is not { InputProtocol: 2 } || !File.Exists(pidPath)) return false;
+                var written = File.ReadAllText(pidPath);
+                // Redirection creates the file before printf writes the PID. Capture only its complete line.
+                if (!written.EndsWith('\n') || !int.TryParse(written, out var pid) || pid <= 0) return false;
+                cliPid = written;
+                return true;
+            }, 30000));
             var idle = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             File.AppendAllText(logPath, $"{idle - 1} busy\n{idle} idle\n");
             var expected = session.ReadLog(track.Id)!;
