@@ -25,3 +25,12 @@ This fixes the reproduced recovery gap; the user's original desktop scenario was
 not directly reproduced. Existing session cleanup still bounds history: a tab whose
 metadata has already been removed can be opened with Start but cannot be recovered.
 No layout, translations, terminal argument generation or tab scripts changed.
+
+## Delivery
+
+Integrated as `9bfa40b`. The synced Windows mirror passed all 724 tests, with no
+failures/skips. Self-contained win-x64 publish succeeded with the existing IL3000
+warning. The normal background install was verified: one new installed process
+`0.29.0+9bfa40b`, old process exited, unchanged foreground focus, restored 80% zoom
+(font 9.6) and identical installed/published executable hashes. See
+[installation evidence](installation.json).
