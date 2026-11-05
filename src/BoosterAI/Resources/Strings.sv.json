@@ -325,10 +325,10 @@
   "settings.optimization.save": "Spara till .wslconfig",
   "settings.optimization.saved": "Inställningarna sparades till .wslconfig. Starta om WSL för att ändringarna ska gälla.",
   "settings.optimization.saveFailed": "Kunde inte spara till .wslconfig: {0}",
-  "settings.optimization.restartWsl": "Starta om WSL",
-  "settings.optimization.restartWsl.tip": "Kör wsl --shutdown för att läsa in nya resursinställningar. Öppna terminaler stängs.",
-  "settings.optimization.restarted": "WSL har startats om.",
-  "settings.optimization.restartFailed": "Kunde inte starta om WSL: {0}",
+  "settings.optimization.restartWsl": "Stäng av WSL…",
+  "settings.optimization.restartWsl.tip": "Bekräfta först. Alla WSL-distributioner stoppas; nästa användning startar WSL med de sparade inställningarna.",
+  "settings.optimization.restarted": "WSL har stängts av. Startar igen vid nästa användning.",
+  "settings.optimization.restartFailed": "Kunde inte stänga av WSL: {0}",
   "settings.optimization.linuxNote": "BoosterAI körs inbyggt på Linux. Resurshantering via .wslconfig gäller endast Windows med WSL.",
   "settings.optimization.selectedCap": "Valt tak: {0} GB",
   "settings.optimization.rangeHint": "Tumregel utifrån totalt RAM. Hyper-V och andra VM:ars behov är inte uppmätta.",
@@ -482,5 +482,9 @@
   "agents.alias.scope": "Valet ändras först när du sparar. YOLO kräver extra bekräftelse. Gäller nya terminaler/flikar och omstart där BoosterAI äger aliaset; pågående körningar ändras inte.",
   "agents.alias.definitionMissing": "Definitionen kunde inte läsas. Använd kontrollkommandot nedan för att granska den i terminalen.",
   "agents.alias.recommend.basic": "Rekommenderad startpunkt: Inget alias. Det behåller CLI:ns egna inställningar. YOLO är ett uttryckligt val för körning utan vanliga godkännandefrågor.",
-  "agents.alias.preview.external": "Endast förhandsvisning: din egen definition måste ändras först. BoosterAI skriver inte över den."
+  "agents.alias.preview.external": "Endast förhandsvisning: din egen definition måste ändras först. BoosterAI skriver inte över den.",
+  "shutdownWsl.heading": "Stäng av alla WSL-distributioner?",
+  "shutdownWsl.body": "Alla WSL-distributioner stoppas, även de som inte används av BoosterAI. Terminaler, AI-sessioner och bakgrundsprocesser avslutas. Spara ditt arbete först.",
+  "shutdownWsl.code": "Kommandot som körs efter bekräftelse:",
+  "shutdownWsl.detail": "Åtgärden sparar inte arbete åt dig. WSL startar igen vid nästa användning och läser då de sparade resursinställningarna. Att bara spara minnesgränsen stänger inte av WSL."
 }

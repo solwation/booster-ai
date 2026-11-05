@@ -243,11 +243,14 @@ public sealed class OptimizationViewModel : Observable
         Raise(nameof(StatusIsError));
     }
 
-    public void RestartWsl()
+    internal Action ShutdownWsl { get; set; } = WslOptimization.ShutdownWsl;
+
+    public void RestartWsl(bool confirmed = false)
     {
+        if (!confirmed) return;
         try
         {
-            WslOptimization.ShutdownWsl();
+            ShutdownWsl();
             _statusIsError = false;
             StatusMessage = Loc.Get("settings.optimization.restarted");
             Raise(nameof(StatusColorBrush));

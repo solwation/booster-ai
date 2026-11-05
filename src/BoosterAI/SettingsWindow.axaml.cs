@@ -97,7 +97,11 @@ public partial class SettingsWindow : Window
 
     private void OnSaveOptimization(object? sender, RoutedEventArgs e) => _vm.Optimization.SaveConfig();
 
-    private void OnRestartWsl(object? sender, RoutedEventArgs e) => _vm.Optimization.RestartWsl();
+    private async void OnRestartWsl(object? sender, RoutedEventArgs e)
+    {
+        var confirmed = await ConfirmSetupWindow.ShutdownWsl().ShowDialog<bool>(this);
+        _vm.Optimization.RestartWsl(confirmed);
+    }
 
     private async void OnBrowse(object? sender, RoutedEventArgs e)
     {

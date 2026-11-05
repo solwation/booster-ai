@@ -98,6 +98,7 @@ internal static class Screenshot
             "import" => new ImportProjectsWindow(SampleImport()),
             "restart" => new ConfirmRestartWindow(vm.Tabs.First(t => t.IsChanged)),
             "alias" => ConfirmSetupWindow.Aliases(["claude", "codex"]),
+            "wsl-shutdown" => ConfirmSetupWindow.ShutdownWsl(),
             "agent-yolo" => ConfirmSetupWindow.AgentMode(SampleYolo()),
             "wsl" => ConfirmSetupWindow.Wsl(),
             _ => throw new ArgumentException($"Unknown --window '{o.Window}' (main, settings, install, import, restart, alias or wsl)"),

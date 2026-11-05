@@ -1,0 +1,32 @@
+{
+  "synthetic": true,
+  "saveWithoutShutdown": true,
+  "totalShutdownCalls": 1,
+  "results": [
+    {
+      "action": "escape",
+      "shutdownCalls": 0,
+      "defaultCancel": true
+    },
+    {
+      "action": "cancel",
+      "shutdownCalls": 0,
+      "defaultCancel": true
+    },
+    {
+      "action": "close",
+      "shutdownCalls": 0,
+      "defaultCancel": true
+    },
+    {
+      "action": "enter-default",
+      "shutdownCalls": 0,
+      "defaultCancel": true
+    },
+    {
+      "action": "confirm",
+      "shutdownCalls": 1,
+      "defaultCancel": true
+    }
+  ]
+}

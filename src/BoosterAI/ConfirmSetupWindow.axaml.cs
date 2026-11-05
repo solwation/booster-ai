@@ -23,6 +23,10 @@ public partial class ConfirmSetupWindow : Window
         Loc.Get("setupConfirm.wsl.code"), Prerequisites.WslInstall.Exe + " " + string.Join(' ', Prerequisites.WslInstall.Args.Select(a => a.Contains(' ') ? $"\"{a}\"" : a)),
         Loc.Get("setupConfirm.wsl.detail"), Loc.Get("setupConfirm.wsl.button"), Loc.Get("cancel"));
 
+    public static ConfirmSetupWindow ShutdownWsl() => new(Loc.Get("shutdownWsl.heading"), Loc.Get("shutdownWsl.body"),
+        Loc.Get("shutdownWsl.code"), "wsl --shutdown", Loc.Get("shutdownWsl.detail"),
+        Loc.Get("settings.optimization.restartWsl"), Loc.Get("cancel"));
+
     public static ConfirmSetupWindow Aliases(IReadOnlyList<string> clis) => new(Loc.Get("setupConfirm.alias.heading"),
         Loc.Format("setupConfirm.alias.body", string.Join(", ", clis)), Loc.Get("setupConfirm.alias.code"),
         Prerequisites.BlockStart + "\n" + string.Join("\n", clis.Select(Prerequisites.AliasLine)) + "\n" + Prerequisites.BlockEnd,

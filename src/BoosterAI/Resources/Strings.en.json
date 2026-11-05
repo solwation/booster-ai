@@ -325,10 +325,10 @@
   "settings.optimization.save": "Save to .wslconfig",
   "settings.optimization.saved": "Settings saved to .wslconfig. Restart WSL for changes to take effect.",
   "settings.optimization.saveFailed": "Failed to save to .wslconfig: {0}",
-  "settings.optimization.restartWsl": "Restart WSL",
-  "settings.optimization.restartWsl.tip": "Runs wsl --shutdown to apply new resource settings. Open terminals will close.",
-  "settings.optimization.restarted": "WSL has been restarted.",
-  "settings.optimization.restartFailed": "Failed to restart WSL: {0}",
+  "settings.optimization.restartWsl": "Shut down WSL…",
+  "settings.optimization.restartWsl.tip": "Confirmation required. All WSL distributions stop; next use starts WSL with the saved settings.",
+  "settings.optimization.restarted": "WSL has shut down. It starts again on next use.",
+  "settings.optimization.restartFailed": "Failed to shut down WSL: {0}",
   "settings.optimization.linuxNote": "BoosterAI is running natively on Linux. Resource configuration via .wslconfig only applies to Windows with WSL.",
   "settings.optimization.selectedCap": "Selected cap: {0} GB",
   "settings.optimization.rangeHint": "A rule of thumb based on total RAM. Hyper-V and other VMs’ needs have not been measured.",
@@ -482,5 +482,9 @@
   "agents.alias.scope": "The choice changes only when saved. YOLO requires extra confirmation. Applies to new terminals/tabs and restarts where BoosterAI owns the alias; running turns are unchanged.",
   "agents.alias.definitionMissing": "The definition could not be read. Use the inspection command below to review it in the terminal.",
   "agents.alias.recommend.basic": "Recommended starting point: No alias. This keeps the CLI’s own settings. YOLO is an explicit choice to run without ordinary approval prompts.",
-  "agents.alias.preview.external": "Preview only: your custom definition must be changed first. BoosterAI does not overwrite it."
+  "agents.alias.preview.external": "Preview only: your custom definition must be changed first. BoosterAI does not overwrite it.",
+  "shutdownWsl.heading": "Shut down all WSL distributions?",
+  "shutdownWsl.body": "All WSL distributions will stop, including those not used by BoosterAI. Terminals, AI sessions and background processes will end. Save your work first.",
+  "shutdownWsl.code": "Command run after confirmation:",
+  "shutdownWsl.detail": "This action does not save your work. WSL starts again on next use and reads the saved resource settings. Saving the memory limit alone does not shut down WSL."
 }
