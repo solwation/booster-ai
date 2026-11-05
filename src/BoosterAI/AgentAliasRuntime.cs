@@ -1,6 +1,6 @@
 namespace BoosterAI;
 
-/// <summary>Refresh only aliases whose ownership was established when the tab's library was sourced.</summary>
+/// <summary>Refresh exact confirmed overrides or aliases with established, unchanged ownership.</summary>
 internal static class AgentAliasRuntime
 {
     public static string Script => "\n" + """

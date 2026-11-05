@@ -8,7 +8,7 @@ public sealed record AgentModeChoice(AgentMode Mode, string Arguments, string Ex
     public string Explanation => Loc.Get(ExplanationKey);
 }
 
-/// <summary>Reviewed CLI permission presets and conservative edits of BoosterAI's existing alias block.</summary>
+/// <summary>Reviewed CLI presets, managed alias edits and explicitly confirmed custom replacements.</summary>
 public static class AgentModes
 {
     public static IReadOnlyList<AgentModeChoice> Choices(CliStatus status)
@@ -68,7 +68,7 @@ public static class AgentModes
         return AllKnownChoices(status.Cli).FirstOrDefault(c => AliasLine(status.Cli, c) == status.ManagedAlias)?.Mode ?? AgentMode.Custom;
     }
 
-    /// <summary>Only recognized aliases inside one well-formed block are editable; preserve every other byte.</summary>
+    /// <summary>Edit owned aliases or add an explicitly confirmed per-CLI override, preserving other definitions.</summary>
     public static string Change(string? bashrc, CliStatus status, AgentModeChoice choice, bool replaceCustomConfirmed = false)
     {
         var text = bashrc ?? "";
