@@ -31,12 +31,33 @@ public sealed class AgentInfo : Observable
     public string UpdateInfo => Loc.Get("agents.update." + Cli);
     public IReadOnlyList<AgentModeChoice> ModeChoices { get; }
     public AgentMode CurrentMode { get; }
-    public string CurrentModeText => Loc.Get("agents.mode." + CurrentMode);
-    public bool CanSelectMode => IsInstalled && CurrentMode != AgentMode.Custom;
-    public bool CanApply => CanSelectMode && SelectedMode.Mode != CurrentMode;
-    public string ModeExplanation => CurrentMode == AgentMode.Custom ? Loc.Get("agents.mode.custom.detail") : SelectedMode.Explanation;
+    public bool HasExternalDefinition => CurrentMode == AgentMode.Custom;
+    public string CurrentModeText => Loc.Get(!IsInstalled ? "agents.alias.unverified" : CurrentMode != AgentMode.Custom
+        ? "agents.mode." + CurrentMode : Detected.Kind == "function" ? "agents.alias.function" : Detected.Kind == "alias" ? "agents.alias.external" : "agents.alias.block");
+    public string CurrentAliasCommand => Detected.Kind switch
+    {
+        "alias" => Detected.AliasDefinition ?? "",
+        "function" => Detected.FunctionDefinition ?? "",
+        "file" => Cli,
+        _ => "",
+    };
+    public bool MissingDefinition => Detected.HasAlias && CurrentAliasCommand.Length == 0;
+    public bool HasCurrentAliasCommand => CurrentAliasCommand.Length > 0;
+    public string CurrentAliasExplanation => Loc.Get(!IsInstalled ? "agents.alias.unverified.detail"
+        : Detected.Kind == "function" ? "agents.alias.function.detail"
+        : Detected.Kind == "alias" ? HasExternalDefinition ? "agents.alias.external.detail" : "agents.alias.managed.detail"
+        : HasExternalDefinition ? "agents.alias.block.detail" : "agents.alias.none.detail");
+    public bool DefinitionTruncated => Detected.Kind == "function" && System.Text.Encoding.UTF8.GetByteCount(CurrentAliasCommand) >= 8192;
+    public string AliasInspectCommand => "type " + Cli + (Detected.Kind == "function" ? "; declare -f " + Cli : "; alias " + Cli);
+    public string AliasRecommendation => Loc.Get(ModeChoices.Any(c => c.Mode == AgentMode.AutoApprove) ? "agents.alias.recommend" : "agents.alias.recommend.basic");
+    public bool CanSelectMode => IsInstalled;
+    public bool CanApply => CanSelectMode && !HasExternalDefinition && SelectedMode.Mode != CurrentMode;
+    public bool HasPresetPreview => SelectedMode.Mode != AgentMode.Custom;
+    public string ModeExplanation => SelectedMode.Explanation;
     public string ModeCommand => AgentModes.AliasLine(Cli, SelectedMode);
     public bool HasModeCommand => ModeCommand != "";
+    public string ModePreview => SelectedMode.Mode == AgentMode.Standard ? Cli : ModeCommand;
+    public string ModePreviewEffect => Loc.Get(HasExternalDefinition ? "agents.alias.preview.external" : SelectedMode.Mode == AgentMode.Standard ? "agents.alias.remove" : "agents.alias.write");
     private AgentModeChoice _selectedMode;
     public AgentModeChoice SelectedMode
     {
@@ -44,7 +65,7 @@ public sealed class AgentInfo : Observable
         set
         {
             if (value is null || !Set(ref _selectedMode, value)) return;
-            Raise(nameof(IsYolo)); Raise(nameof(CanApply)); Raise(nameof(ModeExplanation)); Raise(nameof(ModeCommand)); Raise(nameof(HasModeCommand));
+            Raise(nameof(IsYolo)); Raise(nameof(CanApply)); Raise(nameof(HasPresetPreview)); Raise(nameof(ModePreview)); Raise(nameof(ModePreviewEffect)); Raise(nameof(ModeExplanation)); Raise(nameof(ModeCommand)); Raise(nameof(HasModeCommand));
         }
     }
 
@@ -53,7 +74,7 @@ public sealed class AgentInfo : Observable
         Detected = status;
         CurrentMode = AgentModes.Current(status);
         ModeChoices = CurrentMode == AgentMode.Custom
-            ? [new AgentModeChoice(AgentMode.Custom, "", "agents.mode.custom.detail")]
+            ? [new AgentModeChoice(AgentMode.Custom, "", "agents.mode.custom.detail"), .. AgentModes.Choices(status)]
             : AgentModes.Choices(status);
         _selectedMode = ModeChoices.FirstOrDefault(c => c.Mode == CurrentMode) ?? ModeChoices[0];
     }
@@ -334,7 +355,7 @@ public sealed partial class MainViewModel
         [
             new("claude", "alias", "/sample/bin/claude") { Version = "2.1.304", Help = "--autocompact acceptEdits --permission-mode --dangerously-skip-permissions", AliasDefinition = "alias claude='claude --permission-mode acceptEdits'", ManagedAlias = "alias claude='claude --permission-mode acceptEdits'" },
             new("codex", "file", "/sample/bin/codex") { Version = "0.170.0", Help = modern },
-            new("agy", "function", "/sample/bin/agy") { Version = "1.4.0", Help = "--mode auto --dangerously-skip-permissions" },
+            new("agy", "function", "/sample/bin/agy") { Version = "1.4.0", Help = "--mode auto --dangerously-skip-permissions", FunctionDefinition = "agy () {\n    command agy --mode=auto \"$@\";\n}" },
             new("aider", "file", "/sample/bin/aider") { Help = "--yes-always" },
             new("interpreter", "file", "/sample/bin/interpreter") { Version = "0.0.59", Help = modern },
             new("openhands", "none", null),

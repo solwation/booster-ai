@@ -488,7 +488,7 @@
                           <StackPanel Spacing="10">
                             <StackPanel Orientation="Horizontal" Spacing="10"><local:AgentIcon Cli="{Binding Cli}" Width="28" Height="28" /><TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap" MaxWidth="140" /></StackPanel>
                             <StackPanel Orientation="Horizontal" Spacing="8"><Ellipse Width="7" Height="7" Fill="#28A56A" IsVisible="{Binding IsInstalled}" /><TextBlock Text="{Binding StatusText}" FontSize="12" /><TextBlock Text="{Binding VersionText}" Classes="muted" FontSize="12" /></StackPanel>
-                            <TextBlock Text="{Binding CurrentModeText}" Classes="muted" FontSize="12" />
+                            <TextBlock Text="{Binding CurrentModeText}" Classes="muted" FontSize="12" TextWrapping="Wrap" />
                           </StackPanel>
                         </Button>
                       </DataTemplate>
@@ -529,17 +529,43 @@
                           </Expander>
                           <TextBlock Text="{Binding $parent[Window].((local:MainViewModel)DataContext).Setup.CheckNotice}" Classes="muted" TextWrapping="Wrap" FontSize="12" />
                         </StackPanel>
-                        <StackPanel Spacing="14" IsVisible="{Binding IsPermissions}">
-                          <TextBlock Text="{local:T agents.permissions.hint}" Classes="muted" TextWrapping="Wrap" />
-                          <ListBox Classes="permission-choices" ItemsSource="{Binding ModeChoices}" SelectedItem="{Binding SelectedMode}" IsEnabled="{Binding CanSelectMode}" Background="Transparent" BorderThickness="0" AutomationProperties.Name="{local:T agents.mode.title}">
-                            <ListBox.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ListBox.ItemsPanel>
-                            <ListBox.ItemTemplate><DataTemplate x:DataType="local:AgentModeChoice"><TextBlock Text="{Binding Label}" FontWeight="SemiBold" /></DataTemplate></ListBox.ItemTemplate>
-                          </ListBox>
-                          <Border Background="#20DD7536" CornerRadius="6" Padding="12" IsVisible="{Binding IsYolo}"><TextBlock Text="{local:T agents.permissions.warning}" TextWrapping="Wrap" FontWeight="SemiBold" /></Border>
-                          <TextBlock Text="{Binding ModeExplanation}" TextWrapping="Wrap" LineHeight="20" />
+                        <StackPanel Spacing="12" IsVisible="{Binding IsPermissions}">
+                          <TextBlock Text="{local:T agents.alias.what}" Classes="muted" TextWrapping="Wrap" FontSize="12" />
+                          <Border Classes="agent-group">
+                            <StackPanel Spacing="6">
+                              <WrapPanel><TextBlock Text="{local:T agents.alias.current}" FontWeight="SemiBold" Margin="0,0,8,0" /><TextBlock Text="{Binding CurrentModeText}" /></WrapPanel>
+                              <ScrollViewer MaxHeight="100" IsVisible="{Binding HasCurrentAliasCommand}" HorizontalScrollBarVisibility="Disabled"><SelectableTextBlock Text="{Binding CurrentAliasCommand}" Classes="path" TextWrapping="Wrap" FontSize="12" /></ScrollViewer>
+                              <TextBlock Text="{local:T agents.alias.truncated}" IsVisible="{Binding DefinitionTruncated}" Classes="muted" TextWrapping="Wrap" FontSize="12" />
+                              <TextBlock Text="{local:T agents.alias.definitionMissing}" IsVisible="{Binding MissingDefinition}" TextWrapping="Wrap" FontSize="12" />
+                              <TextBlock Text="{Binding CurrentAliasExplanation}" TextWrapping="Wrap" FontSize="12" />
+                            </StackPanel>
+                          </Border>
+                          <StackPanel Spacing="6">
+                            <TextBlock Text="{local:T agents.alias.choose}" FontWeight="SemiBold" />
+                            <ComboBox ItemsSource="{Binding ModeChoices}" SelectedItem="{Binding SelectedMode}" IsEnabled="{Binding CanSelectMode}" HorizontalAlignment="Stretch" AutomationProperties.Name="{local:T agents.alias.choose}">
+                              <ComboBox.ItemTemplate><DataTemplate x:DataType="local:AgentModeChoice"><TextBlock Text="{Binding Label}" /></DataTemplate></ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <TextBlock Text="{Binding AliasRecommendation}" Classes="muted" TextWrapping="Wrap" FontSize="12" />
+                          </StackPanel>
+                          <Border Background="#20DD7536" CornerRadius="6" Padding="10" IsVisible="{Binding IsYolo}"><TextBlock Text="{local:T agents.permissions.warning}" TextWrapping="Wrap" FontWeight="SemiBold" /></Border>
+                          <TextBlock Text="{Binding ModeExplanation}" TextWrapping="Wrap" FontSize="12" />
+                          <StackPanel Spacing="5" IsVisible="{Binding HasPresetPreview}">
+                            <TextBlock Text="{local:T agents.alias.preview}" FontWeight="SemiBold" FontSize="12" />
+                            <SelectableTextBlock Text="{Binding ModePreview}" Classes="path" TextWrapping="Wrap" FontSize="12" />
+                            <TextBlock Text="{Binding ModePreviewEffect}" Classes="muted" TextWrapping="Wrap" FontSize="12" />
+                          </StackPanel>
+                          <StackPanel Spacing="8" IsVisible="{Binding HasExternalDefinition}">
+                            <TextBlock Text="{local:T agents.alias.external.help}" TextWrapping="Wrap" FontSize="12" />
+                            <Expander Header="{local:T agents.alias.external.steps}" HorizontalAlignment="Stretch">
+                              <StackPanel Spacing="8">
+                                <TextBlock Text="{local:T agents.alias.external.instructions}" TextWrapping="Wrap" FontSize="12" />
+                                <SelectableTextBlock Text="{Binding AliasInspectCommand}" Classes="path" TextWrapping="Wrap" FontSize="12" />
+                                <Button Content="{local:T agents.check.short}" Click="OnCheckSetup" HorizontalAlignment="Left" IsEnabled="{Binding !$parent[Window].((local:MainViewModel)DataContext).Setup.IsChecking}" />
+                              </StackPanel>
+                            </Expander>
+                          </StackPanel>
                           <Button Classes="accent" Content="{local:T agents.mode.apply}" Click="OnApplyAgentMode" IsEnabled="{Binding CanApply}" HorizontalAlignment="Left" />
-                          <TextBlock Text="{local:T agents.permissions.applyHint}" Classes="muted" TextWrapping="Wrap" FontSize="12" />
-                          <Expander Header="{local:T agents.details.command}" HorizontalAlignment="Stretch"><StackPanel Spacing="10"><TextBlock Text="{Binding ModeCommand}" Classes="path" TextWrapping="Wrap" FontSize="12" IsVisible="{Binding HasModeCommand}" /><TextBlock Text="{local:T agents.applies}" TextWrapping="Wrap" FontSize="12" /></StackPanel></Expander>
+                          <TextBlock Text="{local:T agents.alias.scope}" Classes="muted" TextWrapping="Wrap" FontSize="12" />
                         </StackPanel>
                         <StackPanel Spacing="12" IsVisible="{Binding IsContext}">
                           <WrapPanel><TextBlock Text="{Binding $parent[Window].((local:MainViewModel)DataContext).SelectedCompactMode.Label}" FontWeight="SemiBold" Margin="0,6,12,6" /><Button Classes="link" Content="{local:T agents.context.global}" Click="OnAgentCompactSettings" /></WrapPanel>

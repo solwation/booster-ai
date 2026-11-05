@@ -1,3 +1,3 @@
-version: 0.29.0
-sv: Agentikoner, en samlad översikt och tydliga underflikar för behörigheter och kontext i Inställningar.
-en: Agent icons, an overview dashboard and separate settings sections for permissions and context budgets.
+version: 0.29.1
+sv: Se aktuellt behörighetsalias, välj förval i en dropdown och förstå skillnaden mot egna skaldefinitioner.
+en: See the active permission alias, choose presets in a dropdown and understand custom shell definitions.
