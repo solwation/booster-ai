@@ -30,3 +30,18 @@ metadata is limited to 8 KiB, with a truncation notice and command for full insp
 Only synthetic definitions were used in tests and screenshots. No real aliases or
 CLI settings were edited, and no model was invoked. Launchers, tab scripts and
 terminal arguments are unchanged.
+
+## Resumed delivery
+
+The interrupted implementation `7a880de` was preserved and integrated as `ae90842`.
+The conductor reviewed the complete diff and all seven images. The original Release
+build, 722-test WSL suite and headless interaction evidence apply unchanged to the
+integrated source tree; the concurrent Orchestra import changes instructions only.
+
+The Windows mirror was synced to `ae90842`; all 722 Windows tests passed with no
+failures or skips. The self-contained win-x64 publish succeeded with the existing
+single-file `IL3000` warning. The normal installer replaced the installed copy and
+left exactly one new background process running, version `0.29.0+ae90842`. Foreground
+focus stayed unchanged, saved 80% zoom was restored (font size 9.6), the old process
+exited, and the installed executable hash matches the published build. See
+[installation evidence](installation.json). No real terminal tab was opened.
