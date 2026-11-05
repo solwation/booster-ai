@@ -64,10 +64,10 @@ public class PrerequisitesTests
     }
 
     [Fact]
-    public void NewUserWithoutAnyCliIsOfferedAllFour()
+    public void NewUserWithoutAnyCliIsOfferedEverySupportedCli()
     {
         var s = Status(new CliStatus("claude", "none", null), new CliStatus("codex", "none", null), new CliStatus("agy", "none", null), new CliStatus("aider", "none", null));
-        Assert.Equal(["claude", "codex", "agy", "aider", "openhands"], Prerequisites.MissingToOffer(s, []));
+        Assert.Equal(Prerequisites.Clis, Prerequisites.MissingToOffer(s, []));
         Assert.Empty(Prerequisites.MissingToOffer(SetupStatus.Empty, ["claude"]));
     }
 
@@ -132,6 +132,7 @@ public class PrerequisitesTests
     [InlineData("codex", "npm install -g @openai/codex", "run codex login here")]
     [InlineData("agy", "curl -fsSL https://antigravity.google/cli/install.sh | bash", "run agy here")]
     [InlineData("aider", "curl -LsSf https://aider.chat/install.sh | bash", "run aider here")]
+    [InlineData("interpreter", "curl -fsSL https://www.openinterpreter.com/install | sh", "run interpreter here")]
     public void InstallScriptUsesTheOfficialInstaller(string cli, string command, string login)
     {
         var script = Prerequisites.InstallScript(cli);
@@ -199,6 +200,7 @@ public class PrerequisitesTests
         using var home = new TempHome();
         home.Stub("claude", "exit 0");
         home.Stub("codex", "exit 0");
+        home.Stub("interpreter", "exit 0");
         // Like Ubuntu's default ~/.profile: a login shell reads .bashrc through it.
         File.WriteAllText(Path.Combine(home.Home, ".profile"), "[ -f ~/.bashrc ] && . ~/.bashrc\n");
         File.WriteAllText(Path.Combine(home.Home, ".bashrc"),
@@ -213,6 +215,7 @@ public class PrerequisitesTests
         Assert.Equal(new CliStatus("claude", "alias", Path.Combine(home.Bin, "claude")), clis[0]);
         Assert.Equal(new CliStatus("codex", "file", Path.Combine(home.Bin, "codex")), clis[1]);
         Assert.Equal(new CliStatus("agy", "function", null), clis[2]);
+        Assert.Equal(new CliStatus("interpreter", "file", Path.Combine(home.Bin, "interpreter")), clis.Single(c => c.Cli == "interpreter"));
     }
 
     [Fact]
@@ -249,7 +252,7 @@ public class PrerequisitesTests
     public void SetupViewModelListsSupportedAgents()
     {
         var vm = new SetupViewModel();
-        Assert.Equal(["claude", "codex", "agy", "aider", "openhands"], vm.Agents.Select(a => a.Cli));
+        Assert.Equal(Prerequisites.Clis, vm.Agents.Select(a => a.Cli));
         Assert.All(vm.Agents, a => Assert.False(a.IsInstalled));
 
         vm.Apply(Status(

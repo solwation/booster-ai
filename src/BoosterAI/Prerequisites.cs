@@ -31,7 +31,7 @@ public sealed record SetupStatus(WslState Wsl, IReadOnlyList<string> Distros, IR
 /// </summary>
 public static partial class Prerequisites
 {
-    public static readonly IReadOnlyList<string> Clis = ["claude", "codex", "agy", "aider", "openhands"];
+    public static readonly IReadOnlyList<string> Clis = ["claude", "codex", "agy", "aider", "interpreter", "openhands"];
 
     /// <summary>Lines of the detection output start with this; everything else (login banners, .bashrc output) is ignored.</summary>
     private const string Marker = "bsdetect";
@@ -41,7 +41,7 @@ public static partial class Prerequisites
 
     /// <summary>The bash a check runs in an interactive login shell (<c>bash -lic</c>), so aliases, functions and PATH match a tab's.</summary>
     public const string DetectScript =
-        "for c in claude codex agy aider openhands npm; do t=$(type -t \"$c\" 2>/dev/null | head -n1); p=$(type -P \"$c\" 2>/dev/null); "
+        "for c in claude codex agy aider interpreter openhands npm; do t=$(type -t \"$c\" 2>/dev/null | head -n1); p=$(type -P \"$c\" 2>/dev/null); "
         + "printf '" + Marker + " %s %s %s\\n' \"$c\" \"${t:-none}\" \"${p:--}\"; done; "
         + "grep -qF '" + BlockStart + "' ~/.bashrc 2>/dev/null && echo '" + Marker + "-block yes'; true";
 
@@ -98,7 +98,7 @@ public static partial class Prerequisites
     public static IReadOnlyList<string> AliasesToOffer(SetupStatus s, IEnumerable<string> dismissed)
     {
         var skip = dismissed.ToHashSet();
-        return s.Clis.Where(c => c.Installed && !c.HasAlias && !skip.Contains(c.Cli)).Select(c => c.Cli).ToList();
+        return s.Clis.Where(c => c.Installed && c.Cli != "interpreter" && !c.HasAlias && !skip.Contains(c.Cli)).Select(c => c.Cli).ToList();
     }
 
     /// <summary>The full-auto alias for a CLI: it then runs commands and edits files without asking.</summary>
@@ -128,7 +128,7 @@ public static partial class Prerequisites
     {
         var text = bashrc ?? "";
         var defined = Defined(text);
-        var lines = clis.Distinct().Where(c => Clis.Contains(c) && !defined.Contains(c)).Select(AliasLine).ToList();
+        var lines = clis.Distinct().Where(c => Clis.Contains(c) && c != "interpreter" && !defined.Contains(c)).Select(AliasLine).ToList();
         if (lines.Count == 0) return text;
         var end = text.IndexOf(BlockEnd, StringComparison.Ordinal);
         if (text.Contains(BlockStart, StringComparison.Ordinal) && end >= 0)
@@ -162,6 +162,8 @@ public static partial class Prerequisites
             "aider" => ("installing Aider with the official script", "set -o pipefail && curl -LsSf https://aider.chat/install.sh | bash", ""),
             // https://github.com/OpenHands/OpenHands-CLI (standalone CLI, not the GUI server)
             "openhands" => ("installing OpenHands CLI with the official script", "set -o pipefail && curl -fsSL https://install.openhands.dev/install.sh | sh", ""),
+            // The current standalone CLI replaces the legacy Python package.
+            "interpreter" => ("installing Open Interpreter with the official script", "set -o pipefail && curl -fsSL https://www.openinterpreter.com/install | sh", ""),
             _ => throw new ArgumentException("No installer for " + cli, nameof(cli)),
         };
         return $"cd ~ && echo 'BoosterAI: {intro}' && echo && {body}"

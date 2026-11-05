@@ -108,6 +108,7 @@ public static class Launcher
     {
         // OpenHands has no --model and its --last conversation is global, not scoped to cwd.
         if (tab.Llm == "openhands") return OpenHandsCommand(tab, prompt);
+        if (tab.Llm == "interpreter") return InterpreterCli.Command(tab, prompt);
         var args = new List<string>();
         if (resume && tab.Llm is "claude" or "agy") args.Add("--continue");
         if (resume && tab.Llm == "aider") args.Add("--restore-chat-history");
