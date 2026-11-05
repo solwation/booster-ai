@@ -819,6 +819,69 @@ public class FindRunningTabsTests
     }
 
     [Fact]
+    public void EndedDiscoveryRequiresARecordedStartAndCheckableLiveness()
+    {
+        var root = Directory.CreateTempSubdirectory("bs-ended").FullName;
+        try
+        {
+            Session(root, "20261105-090000",
+                ("tab1", "1 start pid=11 starttime=5\n2 cli-start\n3 exit\n", new() { Name = "closed" }),
+                ("tab2", "1 start pid=20 starttime=999\n2 cli-start\n", new() { Name = "reused" }),
+                ("tab3", "1 start pid=10 starttime=100\n2 cli-start\n", new() { Name = "live" }),
+                ("tab4", "", new() { Name = "never-started" }));
+            var found = TabSession.FindRunning(root, Live, includeEnded: true);
+            Assert.Equal(["live", "closed", "reused"], found.Select(t => t.Tab.Name));
+            Assert.True(found[0].ShellAlive);
+            Assert.All(found.Skip(1), tab => Assert.False(tab.ShellAlive));
+            Assert.Empty(TabSession.FindRunning(root, null, includeEnded: true));
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
+    [Fact]
+    public void RecoveryRestoresClosedOrdinaryAndOrchestraTabsAndRestartsThemTogether()
+    {
+        var root = Directory.CreateTempSubdirectory("bs-ended-restart").FullName;
+        var key = Guid.NewGuid().ToString("N");
+        var plain = new TabConfig { Id = "plain-" + key, Name = "plain-" + key, Llm = "codex" };
+        var orchestra = new TabConfig { Id = "orchestra-" + key, Name = "orchestra-" + key, Llm = "claude", Orkester = true };
+        var live = new TabConfig { Id = "live-" + key, Name = "live-" + key, Llm = "codex" };
+        try
+        {
+            Session(root, "20261105-080000",
+                ("tab1", "1 start pid=10 starttime=100\n2 cli-start\n", live),
+                ("tab2", "1 start pid=11 starttime=5\n2 exit\n", plain));
+            Session(root, "20261105-090000",
+                ("tab1", "1 start pid=12 starttime=6\n2 exit\n", plain),
+                ("tab2", "1 start pid=13 starttime=7\n2 cli-start\n", orchestra),
+                ("tab3", "1 start pid=14 starttime=8\n2 exit\n", live));
+            var vm = new MainViewModel(new AppConfig { Tabs = [plain, orchestra, live, new() { Name = "never-" + key }] });
+            var found = TabSession.FindRunning(root, Live, includeEnded: true);
+            Assert.Equal(3, vm.RestoreTabs(found).Count);
+            Assert.True(vm.Tabs[2].IsAlive); // Older live shell beats its newer closed history.
+            Assert.Contains("080000", vm.Tabs[2].Session!.Directory);
+            Assert.Null(vm.Tabs[0].Session); // Dead shells are not watched or reused.
+            Assert.False(vm.Tabs[3].HasStatus);
+            Assert.Equal(2, vm.RestartableCount);
+            Assert.True(vm.CanRestartAll);
+            Assert.Equal(Loc.Format("restartAll.label", 2), vm.RestartAllLabel);
+            Assert.Empty(vm.RestoreTabs(found)); // Repeated recovery cannot attach or restart twice.
+            Assert.Empty(TestTerminal.For(plain.Name)); // Recovery itself starts nothing.
+
+            var plan = vm.PlanRestartAll();
+            Assert.Equal([vm.Tabs[0], vm.Tabs[1]], plan.Now);
+            Assert.Empty(plan.Busy);
+            vm.RestartAll(plan, RestartChoice.WhenIdle);
+            var request = Assert.Single(TestTerminal.For(plain.Name));
+            Assert.Equal([plain.Name, orchestra.Name], request.Tabs.Select(t => t.Name));
+            Assert.False(request.Tabs[0].Orkester);
+            Assert.True(request.Tabs[1].Orkester);
+            Assert.Empty(TestTerminal.For(live.Name));
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
+    [Fact]
     public void CleanUpKeepsOldSessionsWhoseTabsStillRun()
     {
         var root = Directory.CreateTempSubdirectory("bs-clean").FullName;

@@ -762,14 +762,19 @@ for line in sys.stdin:
         catch (Exception e) when (e is IOException or UnauthorizedAccessException) { /* not found again after a restart */ }
     }
 
-    /// <summary>A tab from an earlier BoosterAI run whose shell still runs.</summary>
-    public sealed record RunningTab(string SessionDirectory, string Id, TabConfig Tab, TabLog Log);
+    /// <summary>A known tab from an earlier BoosterAI run, with liveness checked during discovery.</summary>
+    public sealed record RunningTab(string SessionDirectory, string Id, TabConfig Tab, TabLog Log)
+    {
+        public bool ShellAlive { get; init; } = true;
+    }
 
     /// <summary>
     /// The tabs under <paramref name="root"/> whose shell is still alive (same PID and start time, no "exit"),
-    /// newest session first. Nothing when liveness cannot be checked (<paramref name="live"/> null).
+    /// newest session first. With <paramref name="includeEnded"/>, also recover previously started ended tabs,
+    /// after live tabs so a historical closed session cannot hide a running one. Nothing when liveness
+    /// cannot be checked (<paramref name="live"/> null).
     /// </summary>
-    public static List<RunningTab> FindRunning(string root, Func<int, long?>? live)
+    public static List<RunningTab> FindRunning(string root, Func<int, long?>? live, bool includeEnded = false)
     {
         var found = new List<RunningTab>();
         if (live is null || !System.IO.Directory.Exists(root)) return found;
@@ -782,13 +787,14 @@ for line in sys.stdin:
                     var logPath = Path.Combine(dir, id + ".log");
                     if (!File.Exists(logPath)) continue;
                     var log = TabLog.Parse(File.ReadAllText(logPath));
-                    if (!IsAlive(log, live)) continue;
+                    var alive = IsAlive(log, live);
+                    if (!alive && (!includeEnded || log.Pid is null || log.StartTime is null)) continue;
                     if (JsonSerializer.Deserialize(File.ReadAllText(meta), ConfigJsonContext.Default.TabConfig) is { } tab)
-                        found.Add(new RunningTab(dir, id, tab, log));
+                        found.Add(new RunningTab(dir, id, tab, log) { ShellAlive = alive });
                 }
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException) { }
-        return found;
+        return found.OrderByDescending(tab => tab.ShellAlive).ToList();
     }
 
     internal static bool IsAlive(TabLog log, Func<int, long?> live) =>

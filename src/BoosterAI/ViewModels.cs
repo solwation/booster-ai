@@ -1182,44 +1182,57 @@ public sealed partial class MainViewModel : Observable
     }
 
     /// <summary>
-    /// At start: finds the tabs an earlier BoosterAI run opened that still run, and watches them again on the
-    /// configured tab with the same identity (old metadata: main-tab name and directory). Start opens only the others.
+    /// At start: rejoins live tabs and restores known ended tabs for explicit restart, regardless of orchestra.
+    /// Matches stable identity (old metadata: main-tab name and directory). Never starts anything by itself.
     /// </summary>
     public void FindRunningTabs()
     {
         var statusRevision = StatusRevision;
         var distro = _cfg.WslDistro;
-        Task.Run(() => TabSession.FindRunning(TabSession.DefaultRoot, TabSession.Liveness(distro))).ContinueWith(t =>
+        Task.Run(() => TabSession.FindRunning(TabSession.DefaultRoot, TabSession.Liveness(distro), includeEnded: true)).ContinueWith(t =>
         {
             if (!t.IsCompletedSuccessfully || t.Result.Count == 0) return;
-            var sessions = new Dictionary<string, TabSession>();
-            var joined = new List<TabViewModel>();
-            foreach (var found in t.Result)
-            {
-                if (Match(found.Tab) is not { } row) continue;
-                try
-                {
-                    if (!sessions.TryGetValue(found.SessionDirectory, out var session))
-                        sessions[found.SessionDirectory] = session = TabSession.Open(found.SessionDirectory);
-                    // The newest session is first: new tabs and reopened ones join its window.
-                    _session ??= session;
-                    row.LaunchedAs = found.Tab;
-                    row.Session = session;
-                    row.Track = session.Track(found.Id);
-                    row.ShellPid = found.Log.Pid;
-                    row.LaunchedAt = DateTime.UtcNow - TabStatus.StartTimeout;
-                    row.RaiseRestartTip();
-                    row.SetState(TabStatus.Evaluate(found.Log, TabStatus.StartTimeout, null), found.Log.CliExit, null,
-                        session.ReadActivity(found.Id, found.Log, DateTime.UtcNow), found.Log.WatchingSince);
-                    joined.Add(row);
-                }
-                catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }
-            }
+            var joined = RestoreTabs(t.Result);
             if (joined.Count == 0) return;
             StartPolling();
             TabsChanged();
             ShowRecoveredStatus(joined, statusRevision);
         }, TaskScheduler.FromCurrentSynchronizationContext());
+    }
+
+    internal List<TabViewModel> RestoreTabs(IReadOnlyList<TabSession.RunningTab> foundTabs)
+    {
+        var sessions = new Dictionary<string, TabSession>();
+        var joined = new List<TabViewModel>();
+        foreach (var found in foundTabs)
+        {
+            if (Match(found.Tab) is not { } row) continue;
+            if (!found.ShellAlive)
+            {
+                row.LaunchedAs = found.Tab;
+                row.SetState(found.Log.Exited ? TabState.Closed : TabState.Lost, found.Log.CliExit);
+                joined.Add(row);
+                continue;
+            }
+            try
+            {
+                if (!sessions.TryGetValue(found.SessionDirectory, out var session))
+                    sessions[found.SessionDirectory] = session = TabSession.Open(found.SessionDirectory);
+                // The newest session is first: new tabs and reopened ones join its window.
+                _session ??= session;
+                row.LaunchedAs = found.Tab;
+                row.Session = session;
+                row.Track = session.Track(found.Id);
+                row.ShellPid = found.Log.Pid;
+                row.LaunchedAt = DateTime.UtcNow - TabStatus.StartTimeout;
+                row.RaiseRestartTip();
+                row.SetState(TabStatus.Evaluate(found.Log, TabStatus.StartTimeout, null), found.Log.CliExit, null,
+                    session.ReadActivity(found.Id, found.Log, DateTime.UtcNow), found.Log.WatchingSince);
+                joined.Add(row);
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }
+        }
+        return joined;
     }
 
     private TabViewModel? _outputTab;
