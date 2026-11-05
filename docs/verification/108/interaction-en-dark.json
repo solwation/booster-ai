@@ -1,0 +1,19 @@
+{
+  "language": "en",
+  "theme": "dark",
+  "synthetic": true,
+  "checks": {
+    "Active child disables removal and focus": true,
+    "Blocked reason visible": true,
+    "Open idle shell remains blocked": true,
+    "Closed shell permits confirmation": true,
+    "Inactive remove control enabled": true,
+    "Dialog receives exact group scope": true,
+    "Cancel is default and Escape action": true,
+    "Initial focus stays on Cancel": true,
+    "Group preserved after cancel": true,
+    "Escape closes confirmation": true,
+    "Explicit keyboard confirmation removes only the target group": true,
+    "Removal persisted": true
+  }
+}

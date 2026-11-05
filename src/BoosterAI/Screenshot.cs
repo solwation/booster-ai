@@ -97,6 +97,7 @@ internal static class Screenshot
             "install" => new ConfirmInstallWindow(vm.Tabs.First()),
             "import" => new ImportProjectsWindow(SampleImport()),
             "restart" => new ConfirmRestartWindow(vm.Tabs.First(t => t.IsChanged)),
+            "remove-project" => new ConfirmRemoveProjectWindow(new(vm.Projects.First().Name, vm.Tabs.Count(t => t.Parent == vm.Projects.First()))),
             "alias" => ConfirmSetupWindow.Aliases(["claude", "codex"]),
             "wsl-shutdown" => ConfirmSetupWindow.ShutdownWsl(),
             "agent-yolo" => ConfirmSetupWindow.AgentMode(SampleYolo()),

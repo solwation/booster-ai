@@ -30,7 +30,7 @@
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="local:TabViewModel">
                   <Border Classes="row" Padding="0,6">
-                    <Grid ColumnDefinitions="4,14,220,*,36">
+                    <Grid ColumnDefinitions="4,14,220,*,36" RowDefinitions="Auto,Auto">
                       <Button Grid.Column="0" Classes="stripe" Background="{Binding ColorBrush}"
                               Click="OnNextColor" ToolTip.Tip="{local:T color.change}" AutomationProperties.Name="{local:T color.change}" />
                       <TextBox Grid.Column="2" Classes="inline name" Text="{Binding Name}" Watermark="{local:T col.tabname}"
@@ -46,9 +46,11 @@
                         </Button>
                       </Grid>
                       <Button Grid.Column="4" Classes="icon remove" Click="OnRemoveTab" ToolTip.Tip="{local:T project.remove}" AutomationProperties.Name="{local:T project.remove}"
-                              VerticalAlignment="Center" HorizontalAlignment="Right">
+                              IsEnabled="{Binding CanRemoveProject}" VerticalAlignment="Center" HorizontalAlignment="Right">
                         <Path Data="{StaticResource CloseIcon}" Width="10" Height="10" />
                       </Button>
+                      <TextBlock Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="3" Text="{Binding ProjectRemovalHint}"
+                                 IsVisible="{Binding !CanRemoveProject}" Classes="muted" FontSize="12" TextWrapping="Wrap" Margin="0,6,0,2" />
                     </Grid>
                   </Border>
                 </DataTemplate>

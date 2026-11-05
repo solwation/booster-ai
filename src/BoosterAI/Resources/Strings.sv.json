@@ -486,5 +486,12 @@
   "shutdownWsl.heading": "Stäng av alla WSL-distributioner?",
   "shutdownWsl.body": "Alla WSL-distributioner stoppas, även de som inte används av BoosterAI. Terminaler, AI-sessioner och bakgrundsprocesser avslutas. Spara ditt arbete först.",
   "shutdownWsl.code": "Kommandot som körs efter bekräftelse:",
-  "shutdownWsl.detail": "Åtgärden sparar inte arbete åt dig. WSL startar igen vid nästa användning och läser då de sparade resursinställningarna. Att bara spara minnesgränsen stänger inte av WSL."
+  "shutdownWsl.detail": "Åtgärden sparar inte arbete åt dig. WSL startar igen vid nästa användning och läser då de sparade resursinställningarna. Att bara spara minnesgränsen stänger inte av WSL.",
+  "project.remove.blocked": "Stäng först alla flikar i projektet. En AI-session eller ett terminalskal är fortfarande öppet.",
+  "project.remove.changed": "Projektets flikar har ändrats. Kontrollera gruppen och välj Ta bort igen.",
+  "project.remove.confirm.windowTitle": "Ta bort projekt",
+  "project.remove.confirm.title": "Ta bort {0}?",
+  "project.remove.confirm.body": "Tar bort projektet och dess sparade flikinställningar från BoosterAI.\nUndertabbar som också tas bort, inklusive deras inställningar: {0}.",
+  "project.remove.confirm.files": "Mappar och filer på datorn påverkas inte.",
+  "project.remove.confirm.button": "Ta bort projekt"
 }

@@ -1,0 +1,19 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="using:BoosterAI"
+        x:Class="BoosterAI.ConfirmRemoveProjectWindow"
+        x:DataType="local:ProjectRemovalConfirmation"
+        Title="{local:T project.remove.confirm.windowTitle}"
+        Icon="avares://BoosterAI/Assets/boosterai.ico"
+        Width="520" SizeToContent="Height" CanResize="False"
+        WindowStartupLocation="CenterOwner">
+  <StackPanel Margin="28,24,28,22" Spacing="14">
+    <TextBlock Classes="title" FontSize="20" Text="{Binding Heading}" TextWrapping="Wrap" />
+    <TextBlock Text="{Binding Body}" TextWrapping="Wrap" LineHeight="21" />
+    <TextBlock Classes="muted" Text="{local:T project.remove.confirm.files}" TextWrapping="Wrap" />
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,6,0,0">
+      <Button x:Name="CancelRemoval" Content="{local:T cancel}" Click="OnCancel" IsCancel="True" IsDefault="True" Padding="18,8" />
+      <Button x:Name="ConfirmRemoval" Content="{local:T project.remove.confirm.button}" Click="OnConfirm" Padding="18,8" />
+    </StackPanel>
+  </StackPanel>
+</Window>

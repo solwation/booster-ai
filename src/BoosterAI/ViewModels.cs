@@ -44,8 +44,14 @@ public sealed class TabViewModel : Observable
     }
     public string ExpandGlyph => Expanded ? "▾" : "▸";
     public bool CanRemoveSubTab => IsSubTab && !HasOpenTerminal && !IsAlive;
+    public bool CanRemoveProject => _owner.CanRemoveProject(this);
+    public string ProjectRemovalHint => Loc.Get("project.remove.blocked");
     public string SubTabSummary => Loc.Format("subtab.summary", _owner.Tabs.Count(t => t.Parent == this));
-    internal void GroupChanged() => Raise(nameof(SubTabSummary));
+    internal void GroupChanged()
+    {
+        Raise(nameof(SubTabSummary));
+        Raise(nameof(CanRemoveProject));
+    }
 
     private string _name, _directory, _llm, _model;
     private int _colorIndex;
@@ -208,7 +214,17 @@ public sealed class TabViewModel : Observable
     internal TabConfig? LaunchedAs { get; set; }
     /// <summary>The session the tab's log is in; an earlier BoosterAI run's for a tab found running at start.</summary>
     internal TabSession? Session { get; set; }
-    internal TabTrack? Track { get; set; }
+    private TabTrack? _track;
+    internal TabTrack? Track
+    {
+        get => _track;
+        set
+        {
+            if (!Set(ref _track, value)) return;
+            Raise(nameof(CanRemoveSubTab));
+            (Parent ?? this).GroupChanged();
+        }
+    }
     internal string? TrackId => Track?.Id;
     internal DateTime LaunchedAt { get; set; }
     /// <summary>The tab's shell, from its log; what an in-place restart stops the foreground of.</summary>
@@ -397,6 +413,7 @@ public sealed class TabViewModel : Observable
         foreach (var n in new[] { nameof(HasStatus), nameof(IsRunning), nameof(IsAlive), nameof(Activity), nameof(StatusText), nameof(StatusTip), nameof(StatusBrush),
             nameof(ShowsOutput), nameof(HasOutput), nameof(OutputNote), nameof(HasOutputNote), nameof(CanRemoveSubTab) }) Raise(n);
         RaiseRestart();
+        (Parent ?? this).GroupChanged();
         if (stateChanged) _owner.RecoveredTabChanged(this);
         return stateChanged;
     }
@@ -745,12 +762,6 @@ public sealed partial class MainViewModel : Observable
         Tabs.Remove(tab);
         Save();
         return true;
-    }
-
-    public void RemoveProject(TabViewModel project)
-    {
-        if (!project.IsProject) return;
-        foreach (var tab in Tabs.Where(t => t == project || t.Parent == project).ToList()) Tabs.Remove(tab);
     }
 
     public void AddTab()

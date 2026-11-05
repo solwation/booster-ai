@@ -66,4 +66,6 @@ git tag v0.2.0 && git push origin v0.2.0
 
 Development is issue-driven and run with the orchestra itself. See [AGENTS.md](../AGENTS.md) and [.orchestra/project.md](../.orchestra/project.md).
 
+The project-removal confirmation can be rendered with `--window remove-project`; it uses the neutral config’s first project name and child count, without removing anything. The Projects page disables removal and shows an inline explanation for synthetic running sample rows.
+
 The agent settings screenshot (`--window settings --tab agents`) uses fixed neutral versions, installed/missing states and managed/custom aliases without running detection. `--section claude|codex|agy|aider|interpreter|openhands` selects that agent’s page; append `-permissions` or `-compact` to scroll to its corresponding group for minimum-window checks; `--window agent-yolo` renders its explicit YOLO confirmation without writing settings.

@@ -76,9 +76,10 @@ public partial class SettingsWindow : Window
 
     private async void OnFindProjects(object? sender, RoutedEventArgs e) => await ImportProjectsWindow.FindProjects(this, _vm);
 
-    private void OnRemoveTab(object? sender, RoutedEventArgs e)
+    private async void OnRemoveTab(object? sender, RoutedEventArgs e)
     {
-        if ((sender as Control)?.DataContext is TabViewModel tab) _vm.RemoveProject(tab);
+        if ((sender as Control)?.DataContext is TabViewModel tab)
+            await _vm.RemoveProjectAsync(tab, request => new ConfirmRemoveProjectWindow(request).ShowDialog<bool>(this));
     }
 
     private void OnNextColor(object? sender, RoutedEventArgs e) =>

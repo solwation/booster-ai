@@ -486,5 +486,12 @@
   "shutdownWsl.heading": "Shut down all WSL distributions?",
   "shutdownWsl.body": "All WSL distributions will stop, including those not used by BoosterAI. Terminals, AI sessions and background processes will end. Save your work first.",
   "shutdownWsl.code": "Command run after confirmation:",
-  "shutdownWsl.detail": "This action does not save your work. WSL starts again on next use and reads the saved resource settings. Saving the memory limit alone does not shut down WSL."
+  "shutdownWsl.detail": "This action does not save your work. WSL starts again on next use and reads the saved resource settings. Saving the memory limit alone does not shut down WSL.",
+  "project.remove.blocked": "Close all tabs in this project first. An AI session or terminal shell is still open.",
+  "project.remove.changed": "The project tabs have changed. Review the group and choose Remove again.",
+  "project.remove.confirm.windowTitle": "Remove project",
+  "project.remove.confirm.title": "Remove {0}?",
+  "project.remove.confirm.body": "Removes the project and its saved tab settings from BoosterAI.\nNumber of subtabs also removed, including their settings: {0}.",
+  "project.remove.confirm.files": "Folders and files on your computer are unaffected.",
+  "project.remove.confirm.button": "Remove project"
 }
