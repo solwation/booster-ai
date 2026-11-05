@@ -69,3 +69,18 @@ to production. Windows verification and installation belong to the conductor.
 Native popup placement, screen readers and display scaling remain platform checks;
 the headless pass establishes keyboard routing, content, bounds and watch behavior.
 The shared README screenshots are left to the conductor's combined UI delivery.
+
+## Integrated delivery
+
+Integrated as `2554f42`, combined with #110/#112/#113. The combined Release build
+has zero warnings/errors and the synced Windows mirror passes all **760** tests.
+The keyboard/hover/timer probe was rerun on the combined source in Swedish/light:
+all checks pass, with zero launcher calls. Shared [light](../../screenshot.png) and
+[dark](../../screenshot-dark.png) main screenshots were regenerated and inspected.
+
+Normal Windows installation delivered `0.30.0+5febd5a`: one new installed process
+running in the background, old process exited, unchanged focus, restored 80% zoom
+(font 9.6) and matching published/installed hashes. See the shared
+[installation record](../113/installation.json). Native popup positioning, screen
+reader output and DPI behavior were not exercised; no user desktop window was
+opened by the headless checks.

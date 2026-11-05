@@ -40,8 +40,11 @@ try
         Pump();
         var apply = owner.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, Loc.Get("agents.mode.apply")));
         Require(apply.IsEnabled && agent.CanApply, "Preset cannot be applied over a custom function");
-        Require(!owner.GetVisualDescendants().OfType<Expander>().Any(e => Equals(e.Header, Loc.Get("agents.alias.manual.title"))), "Manual shell instructions are still visible");
         if (action == "confirm") Capture(owner, "preview");
+        apply.BringIntoView(); Pump();
+        var location = apply.TranslatePoint(new Point(apply.Bounds.Width / 2, apply.Bounds.Height / 2), owner);
+        Require(location is { } point && point.Y > 0 && point.Y < owner.ClientSize.Height - 80, "Apply cannot be reached by scrolling");
+        if (action == "confirm") Capture(owner, "apply-ready");
         apply.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump();
         var dialog = owner.OwnedWindows.OfType<ConfirmSetupWindow>().Single();
         Require(File.ReadAllText(bashrc) == original, "Write happened before confirmation");

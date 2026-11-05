@@ -40,3 +40,17 @@ reports their actual result.
 No personal startup/configuration files, model sessions or real CLI updates are
 used in these tests. Combined Windows tests, isolated real Terminal marker and
 normal background installation are integration gates recorded separately below.
+
+## Combined Windows delivery
+
+The combined Release build has zero warnings/errors. The synced Windows mirror
+passes **760** tests, including #111's two new regressions. The integrated real
+Settings probe passes in sv/light and en/dark, including scroll-to-Apply checks
+and inspected [sv](apply-ready-sv-light.png)/[en](apply-ready-en-dark.png) views.
+The shared WSL-shutdown dialog was rechecked with its isolated stub: cancelled
+actions call it zero times and confirmation once; no actual shutdown runs.
+
+Normal background installation delivered `0.30.0+5febd5a` with one new process,
+unchanged focus, restored 80% zoom/font9.6 and matching hashes; see
+[installation.json](installation.json). The real isolated Terminal marker gate
+is still pending; this record does not claim it passed.
