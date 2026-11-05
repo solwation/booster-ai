@@ -160,9 +160,24 @@ Only the lines for the offered CLIs are written; a later CLI joins the same bloc
 
 ### Agent versions and permission modes
 
-Settings → **AI agents** opens an overview of all six supported programs, with local theme-aware icons, installation status, version and current permission mode. Select a card or a sidebar entry to open **Overview**, **Permissions** or **Context**. Installation details, generated commands and context calculations are collapsible. Each page scrolls independently; switching agents or sections keeps the same editors and unsaved selections. The same icons identify agents in the main window selectors. The alias **Apply** action and compaction **Save for model** action remain separate. Versions are program versions, not model versions. Detection runs in the background in the tab's login environment. Each executable's `--version` and `--help` probe is bounded to two seconds (plus 0.2 seconds to force termination), with bounded output; the overall check remains limited to 30 seconds. A failed version probe leaves an installed CLI marked installed with **Unknown** version. Help failure hides unverified presets. No model or account is contacted intentionally by BoosterAI.
+Settings → **AI agents** opens an overview of all six supported programs, with local theme-aware icons, installation status, version and current permission mode. Select a card or a sidebar entry to open **Overview**, **Permission alias** or **Context**. Installation details and context calculations are collapsible; the actual detected alias and selected preset preview stay visible. Each page scrolls independently; switching agents or sections keeps the same editors and unsaved selections. The same icons identify agents in the main window selectors. The alias **Save alias choice** action and compaction **Save for model** action remain separate. Versions are program versions, not model versions. Detection runs in the background in the tab's login environment. Each executable's `--version` and `--help` probe is bounded to two seconds (plus 0.2 seconds to force termination), with bounded output; the overall check remains limited to 30 seconds. A failed version probe leaves an installed CLI marked installed with **Unknown** version. Help failure hides unverified presets. No model or account is contacted intentionally by BoosterAI.
 
-**Standard** removes only the recognized BoosterAI alias. It does not reset the agent's own configuration or organization policies. **Auto Approve** and **YOLO** are offered only when the installed executable advertises the required flags. Selecting a value does not write anything: **Apply** saves it; YOLO additionally requires an explicit confirmation showing the exact alias and its effect. Approval and sandbox behavior differ by CLI:
+An alias is a shell shortcut that expands a CLI name into a command with extra flags.
+The permission page separates **Currently detected** (the actual shell alias or
+function, or a direct CLI command) from the **Preview of selected option**. The
+picker offers the installed CLI's supported presets and explains their effect.
+**No alias** is the recommended starting point, not a guarantee of approval prompts:
+external CLI configuration and organization policy still apply.
+
+Custom aliases and shell functions have explicit labels rather than a generic
+"Custom" permission level. Their definitions are shown as selectable text. Function
+inspection uses `declare -f`, capped at 8 KiB, without executing the function; a
+truncation notice directs the user to the full inspection command. Custom definitions
+can preview supported presets but cannot be overwritten from this screen. Expand
+**Change custom definition** for steps to edit/remove the definition in shell startup
+files, refresh detection and then save a BoosterAI preset. No source filename is guessed.
+
+**No alias** (internally `Standard`) removes only the recognized BoosterAI alias. It does not reset the agent's own configuration or organization policies. **Auto Approve** and **YOLO** are offered only when the installed executable advertises the required flags. Selecting a value does not write anything: **Save alias choice** saves it; YOLO additionally requires an explicit confirmation showing the exact alias and its effect. Approval and sandbox behavior differ by CLI:
 
 | CLI | Auto Approve | YOLO | Official reference |
 | --- | --- | --- | --- |

@@ -14,6 +14,7 @@ public sealed record CliStatus(string Cli, string Kind, string? Path)
     public string Help { get; init; } = "";
     public string? AliasDefinition { get; init; }
     public string? ManagedAlias { get; init; }
+    public string? FunctionDefinition { get; init; }
     /// <summary>An executable is on PATH; an alias or function alone does not make a CLI installed.</summary>
     public bool Installed => Path is not null;
     /// <summary>The user's shell already defines the name as an alias or function: BoosterAI never adds one then.</summary>
@@ -62,6 +63,10 @@ do
   then
     a=$(alias "$c" 2>/dev/null | base64 -w0)
     printf 'bsdetect-alias %s %s\n' "$c" "$a"
+  elif [ "$t" = function ]
+  then
+    f=$(declare -f "$c" 2>/dev/null | head -c 8192 | base64 -w0)
+    printf 'bsdetect-function %s %s\n' "$c" "$f"
   fi
 done
 if [ -f ~/.bashrc ]
@@ -91,14 +96,14 @@ true
             if (name == "npm") npm = file is not null;
             else if (Clis.Contains(name) && clis.All(c => c.Cli != name)) clis.Add(new CliStatus(name, kind, file));
         }
-        string Decode(string value)
+        string Decode(string value, bool trim = true)
         {
-            try { return Encoding.UTF8.GetString(Convert.FromBase64String(value)).TrimEnd('\r', '\n'); }
+            try { var decoded = Encoding.UTF8.GetString(Convert.FromBase64String(value)); return trim ? decoded.TrimEnd('\r', '\n') : decoded; }
             catch (FormatException) { return ""; }
         }
         var metadata = output.Split('\n').Select(l => l.TrimEnd('\r').Split(' ', 3))
             .Where(p => p.Length == 3 && p[0].StartsWith(Marker + "-", StringComparison.Ordinal))
-            .GroupBy(p => (p[0], p[1])).ToDictionary(g => g.Key, g => Decode(g.First()[2]));
+            .GroupBy(p => (p[0], p[1])).ToDictionary(g => g.Key, g => Decode(g.First()[2], trim: g.Key.Item1 != Marker + "-function"));
         var managed = output.Split('\n').FirstOrDefault(l => l.StartsWith(Marker + "-managed ", StringComparison.Ordinal));
         var managedText = managed is null ? "" : Decode(managed[(Marker.Length + 9)..]);
         for (var i = 0; i < clis.Count; i++)
@@ -109,7 +114,7 @@ true
             clis[i] = cli with
             {
                 Version = ParseVersion(Meta("version")), Help = Meta("help") ?? "",
-                AliasDefinition = Meta("alias"), ManagedAlias = definitions.Length == 1 ? definitions[0] : definitions.Length > 1 ? "custom" : null,
+                AliasDefinition = Meta("alias"), FunctionDefinition = Meta("function"), ManagedAlias = definitions.Length == 1 ? definitions[0] : definitions.Length > 1 ? "custom" : null,
             };
         }
         return (clis, npm, block);

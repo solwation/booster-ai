@@ -123,12 +123,67 @@ public class AgentModesTests
         Assert.Equal(Loc.Get("agents.version.unknown"), unknown.VersionText);
         var custom = new AgentInfo(Codex with { Kind = "function" });
         Assert.Equal(AgentMode.Custom, custom.CurrentMode);
-        Assert.False(custom.CanSelectMode);
+        Assert.True(custom.CanSelectMode);
+        Assert.False(custom.CanApply);
         var agent = new AgentInfo(Codex) { SelectedMode = Choice(Codex, AgentMode.Yolo) };
         Assert.True(agent.CanApply);
         var vm = new MainViewModel(new AppConfig());
         // The rejection happens before any user's file path is resolved or written.
         Assert.False(vm.ApplyAgentMode(agent, yoloConfirmed: false));
+    }
+
+    [Fact]
+    public void PermissionPreviewNeverChangesTheDetectedAlias()
+    {
+        var status = Managed(Codex, Choice(Codex, AgentMode.AutoApprove));
+        var agent = new AgentInfo(status);
+        agent.SelectedMode = agent.ModeChoices.Single(c => c.Mode == AgentMode.Yolo);
+        Assert.True(agent.CanApply);
+        Assert.True(agent.IsYolo);
+        Assert.Equal(status.AliasDefinition, agent.CurrentAliasCommand);
+        Assert.Equal(AgentMode.AutoApprove, agent.CurrentMode);
+        Assert.Contains("--dangerously-bypass", agent.ModePreview);
+        agent.SelectedMode = agent.ModeChoices.Single(c => c.Mode == AgentMode.Standard);
+        Assert.Equal("codex", agent.ModePreview);
+        Assert.Equal(status.AliasDefinition, agent.CurrentAliasCommand);
+    }
+
+    [Theory]
+    [InlineData("alias", "alias codex='codex --my-options'")]
+    [InlineData("function", "codex () { command codex --my-options \"$@\"; }")]
+    public void CustomDefinitionsCanPreviewPresetsButNeverWriteThem(string kind, string definition)
+    {
+        var agent = new AgentInfo(Codex with { Kind = kind,
+            AliasDefinition = kind == "alias" ? definition : null,
+            FunctionDefinition = kind == "function" ? definition : null });
+        Assert.True(agent.HasExternalDefinition);
+        Assert.Equal(definition, agent.CurrentAliasCommand);
+        foreach (var choice in agent.ModeChoices)
+        {
+            agent.SelectedMode = choice;
+            Assert.False(agent.CanApply);
+            Assert.Equal(definition, agent.CurrentAliasCommand);
+            Assert.Equal(choice.Explanation, agent.ModeExplanation);
+            Assert.False(new MainViewModel(new AppConfig()).ApplyAgentMode(agent, yoloConfirmed: true));
+        }
+        var missing = new AgentInfo(Codex with { Kind = "function" });
+        Assert.True(missing.MissingDefinition);
+        Assert.Contains("declare -f codex", missing.AliasInspectCommand);
+    }
+
+    [Fact]
+    public void DetectionReadsFunctionDefinitionWithoutExecutingIt()
+    {
+        if (!OperatingSystem.IsLinux()) return;
+        using var f = new Shell();
+        f.Write("codex", "if [ \"$1\" = --version ]; then echo 'codex-cli 0.170.0'; else echo --approve-for-me; fi");
+        var result = f.Run("codex() { touch function-must-not-run; command codex --mine \"$@\"; }\n" + Prerequisites.DetectScript);
+        Assert.Equal(0, result.Code);
+        var cli = Prerequisites.ParseDetect(result.Output).Clis.Single(c => c.Cli == "codex");
+        Assert.Equal("function", cli.Kind);
+        Assert.Contains("command codex --mine", cli.FunctionDefinition);
+        Assert.Contains("function-must-not-run", new AgentInfo(cli).CurrentAliasCommand);
+        Assert.False(File.Exists(Path.Combine(f.Root, "function-must-not-run")));
     }
 
     [Fact]
