@@ -212,7 +212,7 @@ public class PrerequisitesTests
         Assert.Equal(0, code);
         var (clis, _, block) = Prerequisites.ParseDetect(output!);
         Assert.True(block);
-        Assert.Equal(new CliStatus("claude", "alias", Path.Combine(home.Bin, "claude")), clis[0]);
+        Assert.Equal(new CliStatus("claude", "alias", Path.Combine(home.Bin, "claude")) { AliasDefinition = "alias claude='claude --permission-mode auto'" }, clis[0]);
         Assert.Equal(new CliStatus("codex", "file", Path.Combine(home.Bin, "codex")), clis[1]);
         Assert.Equal(new CliStatus("agy", "function", null), clis[2]);
         Assert.Equal(new CliStatus("interpreter", "file", Path.Combine(home.Bin, "interpreter")), clis.Single(c => c.Cli == "interpreter"));

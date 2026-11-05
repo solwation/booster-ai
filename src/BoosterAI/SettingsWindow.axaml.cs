@@ -41,6 +41,14 @@ public partial class SettingsWindow : Window
             _vm.InstallCli(agent.Cli);
     }
 
+    private async void OnApplyAgentMode(object? sender, RoutedEventArgs e)
+    {
+        if ((sender as Control)?.DataContext is not AgentInfo agent || !agent.CanApply) return;
+        var confirmed = agent.SelectedMode.Mode != AgentMode.Yolo
+            || await ConfirmSetupWindow.AgentMode(agent).ShowDialog<bool>(this);
+        if (confirmed) _vm.ApplyAgentMode(agent, yoloConfirmed: true);
+    }
+
     private void OnAddTab(object? sender, RoutedEventArgs e) => _vm.AddTab();
 
     private async void OnFindProjects(object? sender, RoutedEventArgs e) => await ImportProjectsWindow.FindProjects(this, _vm);

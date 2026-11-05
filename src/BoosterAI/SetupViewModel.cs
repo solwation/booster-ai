@@ -7,7 +7,47 @@ namespace BoosterAI;
 public sealed record CliOffer(string Cli, string Label, string Tip);
 
 /// <summary>One supported AI CLI listed in the Settings agents hub (#91).</summary>
-public sealed record AgentInfo(string Cli, string Name, string StatusText, bool IsInstalled, string InstallButtonText, string InstallTip);
+public sealed class AgentInfo : Observable
+{
+    public CliStatus Detected { get; }
+    public string Cli => Detected.Cli;
+    public string Name => Loc.Display("llm", Cli);
+    public string Description => Loc.Get("agents.description." + Cli);
+    public bool IsInstalled => Detected.Installed;
+    public string StatusText => Loc.Get(IsInstalled ? "setup.status.installed" : "setup.status.missing");
+    public string VersionText => IsInstalled ? Detected.Version ?? Loc.Get("agents.version.unknown") : "—";
+    public string InstallButtonText => Loc.Format(IsInstalled ? "agents.update" : "setup.cli.install", Cli);
+    public string InstallTip => Loc.Format("setup.cli.install.tip", Prerequisites.InstallScript(Cli));
+    public string UpdateInfo => Loc.Get("agents.update." + Cli);
+    public IReadOnlyList<AgentModeChoice> ModeChoices { get; }
+    public AgentMode CurrentMode { get; }
+    public string CurrentModeText => Loc.Get("agents.mode." + CurrentMode);
+    public bool CanSelectMode => IsInstalled && CurrentMode != AgentMode.Custom;
+    public bool CanApply => CanSelectMode && SelectedMode.Mode != CurrentMode;
+    public string ModeExplanation => CurrentMode == AgentMode.Custom ? Loc.Get("agents.mode.custom.detail") : SelectedMode.Explanation;
+    public string ModeCommand => AgentModes.AliasLine(Cli, SelectedMode);
+    public bool HasModeCommand => ModeCommand != "";
+    private AgentModeChoice _selectedMode;
+    public AgentModeChoice SelectedMode
+    {
+        get => _selectedMode;
+        set
+        {
+            if (value is null || !Set(ref _selectedMode, value)) return;
+            Raise(nameof(CanApply)); Raise(nameof(ModeExplanation)); Raise(nameof(ModeCommand)); Raise(nameof(HasModeCommand));
+        }
+    }
+
+    public AgentInfo(CliStatus status)
+    {
+        Detected = status;
+        CurrentMode = AgentModes.Current(status);
+        ModeChoices = CurrentMode == AgentMode.Custom
+            ? [new AgentModeChoice(AgentMode.Custom, "", "agents.mode.custom.detail")]
+            : AgentModes.Choices(status);
+        _selectedMode = ModeChoices.FirstOrDefault(c => c.Mode == CurrentMode) ?? ModeChoices[0];
+    }
+}
 
 /// <summary>
 /// The quiet setup bars in the main window (#74): WSL missing (Windows), CLIs missing in the tabs' shell with an
@@ -21,7 +61,8 @@ public sealed class SetupViewModel : Observable
     private readonly HashSet<string> _dismissedAliases = [];
 
     public SetupStatus Status => _status;
-    public bool IsChecking { get => _checking; set { if (Set(ref _checking, value)) Raise(nameof(Summary)); } }
+    public bool IsChecking { get => _checking; set { if (Set(ref _checking, value)) { Raise(nameof(Summary)); Raise(nameof(CheckNotice)); } } }
+    public string CheckNotice => IsChecking || !_status.Checked || WslVisible ? Summary : "";
     public Action? OnStatusChanged { get; set; }
 
     public IReadOnlyList<AgentInfo> Agents { get; private set; } = [];
@@ -100,19 +141,9 @@ public sealed class SetupViewModel : Observable
         Missing = Prerequisites.MissingToOffer(_status, _rowLlms)
             .Select(c => new CliOffer(c, Loc.Format("setup.cli.install", c), Loc.Format("setup.cli.install.tip", Prerequisites.InstallScript(c)))).ToList();
         Aliases = Prerequisites.AliasesToOffer(_status, _dismissedAliases);
-        Agents = Prerequisites.Clis.Select(c =>
-        {
-            var installed = _status.Cli(c)?.Installed == true;
-            return new AgentInfo(
-                c,
-                Loc.Display("llm", c),
-                Loc.Get(installed ? "setup.status.installed" : "setup.status.missing"),
-                installed,
-                Loc.Format("setup.cli.install", c),
-                Loc.Format("setup.cli.install.tip", Prerequisites.InstallScript(c)));
-        }).ToList();
+        Agents = Prerequisites.Clis.Select(c => new AgentInfo(_status.Cli(c) ?? new CliStatus(c, "none", null))).ToList();
         foreach (var name in new[] { nameof(Status), nameof(WslVisible), nameof(CanInstallWsl), nameof(WslText), nameof(Missing), nameof(MissingVisible),
-                     nameof(MissingText), nameof(Aliases), nameof(AliasVisible), nameof(AliasText), nameof(AliasTip), nameof(Agents), nameof(Summary) })
+                     nameof(MissingText), nameof(Aliases), nameof(AliasVisible), nameof(AliasText), nameof(AliasTip), nameof(Agents), nameof(Summary), nameof(CheckNotice) })
             Raise(name);
     }
 }
@@ -237,6 +268,42 @@ public sealed partial class MainViewModel
         {
             ShowStatus(Loc.Format("status.aliasesFailed", path, e.Message), error: true);
         }
+    }
+
+    /// <summary>Called only by the Apply action after its required confirmation; never changes a running CLI.</summary>
+    public bool ApplyAgentMode(AgentInfo agent, bool yoloConfirmed)
+    {
+        if (!agent.CanApply || (agent.SelectedMode.Mode == AgentMode.Yolo && !yoloConfirmed)) return false;
+        if (BashrcFile is not { } path) { ShowStatus(Loc.Get("status.wslHomeMissing"), error: true); return false; }
+        try
+        {
+            var current = File.Exists(path) ? File.ReadAllText(path) : null;
+            var updated = AgentModes.Change(current, agent.Detected, agent.SelectedMode);
+            if (updated != (current ?? "")) File.WriteAllText(path, updated);
+            ShowStatus(Loc.Format("agents.mode.applied", agent.Name, agent.SelectedMode.Label), error: false);
+            CheckSetup();
+            return true;
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            ShowStatus(Loc.Format("agents.mode.failed", e.Message), error: true);
+            return false;
+        }
+    }
+
+    /// <summary>Neutral, deterministic versions and permission states; never reads an installed CLI or a user file.</summary>
+    public void ShowSampleAgents()
+    {
+        const string modern = "--approve-for-me --ask-for-approval --sandbox --dangerously-bypass-approvals-and-sandbox --oss";
+        Setup.Apply(new SetupStatus(WslState.Ok, ["Ubuntu"],
+        [
+            new("claude", "alias", "/sample/bin/claude") { Version = "2.1.0", Help = "acceptEdits --permission-mode --dangerously-skip-permissions", AliasDefinition = "alias claude='claude --permission-mode acceptEdits'", ManagedAlias = "alias claude='claude --permission-mode acceptEdits'" },
+            new("codex", "file", "/sample/bin/codex") { Version = "0.170.0", Help = modern },
+            new("agy", "function", "/sample/bin/agy") { Version = "1.4.0", Help = "--mode auto --dangerously-skip-permissions" },
+            new("aider", "file", "/sample/bin/aider") { Help = "--yes-always" },
+            new("interpreter", "file", "/sample/bin/interpreter") { Version = "0.0.59", Help = modern },
+            new("openhands", "none", null),
+        ], true, true), _cfg.WslDistro);
     }
 
     /// <summary>For --screenshot --fake-setup: codex and agy missing (no npm), claude installed without an alias.</summary>

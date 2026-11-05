@@ -54,6 +54,14 @@ internal static class Screenshot
         return vm;
     }
 
+    private static AgentInfo SampleYolo()
+    {
+        var agent = new AgentInfo(new("codex", "file", "/sample/bin/codex")
+        { Help = "--dangerously-bypass-approvals-and-sandbox" });
+        agent.SelectedMode = agent.ModeChoices.Single(c => c.Mode == AgentMode.Yolo);
+        return agent;
+    }
+
     public static int Run(ScreenshotOptions o)
     {
         AppBuilder.Configure<App>()
@@ -90,6 +98,7 @@ internal static class Screenshot
             "import" => new ImportProjectsWindow(SampleImport()),
             "restart" => new ConfirmRestartWindow(vm.Tabs.First(t => t.IsChanged)),
             "alias" => ConfirmSetupWindow.Aliases(["claude", "codex"]),
+            "agent-yolo" => ConfirmSetupWindow.AgentMode(SampleYolo()),
             "wsl" => ConfirmSetupWindow.Wsl(),
             _ => throw new ArgumentException($"Unknown --window '{o.Window}' (main, settings, install, import, restart, alias or wsl)"),
         };
@@ -115,6 +124,11 @@ internal static class Screenshot
                     });
                 }
             }
+            else if (o.Tab is "agents" or "agenter")
+            {
+                vm.ShowSampleAgents();
+                sw.SelectedTabIndex = 4;
+            }
             else if (o.Tab is "appearance" or "utseende") sw.SelectedTabIndex = 3;
             else if (o.Tab is "projects" or "projekt") sw.SelectedTabIndex = 0;
             else if (o.FakeSetup is not null && o.Tab is null) sw.SelectedTabIndex = 1;
@@ -135,6 +149,16 @@ internal static class Screenshot
         for (var i = 0; i < 3; i++)
         {
             Thread.Sleep(30);
+            Dispatcher.UIThread.RunJobs();
+            window.UpdateLayout();
+            AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+        }
+        if (o.Tab is "agents" or "agenter" && o.Section is { } cli
+            && window.FindControl<ScrollViewer>("AgentsScroll") is { } agentsScroll
+            && window.GetVisualDescendants().OfType<Border>().FirstOrDefault(b => b.DataContext is AgentInfo a && a.Cli == cli) is { } card
+            && card.TranslatePoint(default, agentsScroll) is { } position)
+        {
+            agentsScroll.Offset = new Vector(0, agentsScroll.Offset.Y + position.Y);
             Dispatcher.UIThread.RunJobs();
             window.UpdateLayout();
             AvaloniaHeadlessPlatform.ForceRenderTimerTick();

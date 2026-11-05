@@ -124,35 +124,6 @@
               </StackPanel>
             </StackPanel>
 
-            <!-- AI-agenter och verktyg -->
-            <StackPanel Spacing="8">
-              <TextBlock Classes="sectionhead" Text="{local:T settings.section.agents}" />
-              <TextBlock Classes="muted" Text="{local:T settings.agents.hint}" TextWrapping="Wrap" />
-
-              <Border Background="{DynamicResource RowHoverBrush}" CornerRadius="8" Padding="14,10" Margin="0,4,0,0">
-                <StackPanel Spacing="10">
-                  <ItemsControl ItemsSource="{Binding Setup.Agents}">
-                    <ItemsControl.ItemTemplate>
-                      <DataTemplate x:DataType="local:AgentInfo">
-                        <Grid ColumnDefinitions="140,*,Auto" Margin="0,4">
-                          <TextBlock Grid.Column="0" Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center" />
-                          <TextBlock Grid.Column="1" Text="{Binding StatusText}" Classes="muted" VerticalAlignment="Center" />
-                          <Button Grid.Column="2" Content="{Binding InstallButtonText}" Click="OnInstallAgent"
-                                  IsVisible="{Binding !IsInstalled}" ToolTip.Tip="{Binding InstallTip}" Padding="10,4" VerticalAlignment="Center" />
-                        </Grid>
-                      </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                  </ItemsControl>
-
-                  <Grid ColumnDefinitions="Auto,*" Margin="0,6,0,0">
-                    <Button Grid.Column="0" Content="{local:T setup.check}" Click="OnCheckSetup" Padding="12,6" VerticalAlignment="Center"
-                            IsEnabled="{Binding !Setup.IsChecking}" ToolTip.Tip="{local:T setup.check.tip}" />
-                    <TextBlock Grid.Column="1" Classes="muted" Text="{Binding Setup.Summary}" TextWrapping="Wrap" VerticalAlignment="Center" Margin="14,0,0,0" />
-                  </Grid>
-                </StackPanel>
-              </Border>
-            </StackPanel>
-
             <!-- Miljö och terminal (Linux) -->
             <StackPanel Spacing="8" IsVisible="{Binding IsLinux}">
               <TextBlock Classes="sectionhead" Text="{local:T settings.section.environment}" />
@@ -457,6 +428,64 @@
 
           </StackPanel>
         </ScrollViewer>
+      </TabItem>
+
+      <!-- Agent management is separate from general app preferences. -->
+      <TabItem x:Name="AgentsTab" Header="{local:T settings.tab.agents}">
+        <Grid RowDefinitions="*,Auto" Margin="0,16,0,0">
+          <ScrollViewer x:Name="AgentsScroll" HorizontalScrollBarVisibility="Disabled">
+          <StackPanel>
+          <StackPanel Spacing="6" Margin="0,0,0,12">
+            <TextBlock Classes="title" Text="{local:T settings.section.agents}" TextWrapping="Wrap" />
+            <TextBlock Classes="muted" Text="{local:T agents.intro}" TextWrapping="Wrap" />
+            <Button Content="{local:T agents.check}" Click="OnCheckSetup" HorizontalAlignment="Left" Padding="12,6"
+                    IsEnabled="{Binding !Setup.IsChecking}" />
+            <TextBlock Classes="muted" Text="{Binding Setup.CheckNotice}" TextWrapping="Wrap" FontSize="12" />
+          </StackPanel>
+            <ItemsControl ItemsSource="{Binding Setup.Agents}" Margin="0,0,12,0">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="local:AgentInfo">
+                  <Border Background="{DynamicResource RowHoverBrush}" CornerRadius="8" Padding="14,12" Margin="0,0,0,12">
+                    <StackPanel Spacing="8">
+                      <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel Spacing="3" Margin="0,0,14,0">
+                          <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="15" />
+                          <TextBlock Text="{Binding Description}" TextWrapping="Wrap" />
+                          <StackPanel Orientation="Horizontal" Spacing="10">
+                            <TextBlock Text="{Binding StatusText}" Classes="muted" />
+                            <TextBlock Text="{local:T agents.version}" Classes="muted" />
+                            <TextBlock Text="{Binding VersionText}" Classes="muted" />
+                          </StackPanel>
+                        </StackPanel>
+                        <Button Grid.Column="1" Content="{Binding InstallButtonText}" Click="OnInstallAgent" ToolTip.Tip="{Binding InstallTip}"
+                                Padding="12,6" VerticalAlignment="Top" />
+                      </Grid>
+                      <TextBlock Text="{Binding UpdateInfo}" Classes="muted" FontSize="12" TextWrapping="Wrap" />
+                      <Grid ColumnDefinitions="140,180,Auto,*">
+                        <StackPanel Spacing="2" VerticalAlignment="Center">
+                          <TextBlock Text="{local:T agents.mode.title}" FontWeight="SemiBold" />
+                          <TextBlock Text="{Binding CurrentModeText}" Classes="muted" FontSize="12" />
+                        </StackPanel>
+                        <ComboBox Grid.Column="1" ItemsSource="{Binding ModeChoices}" SelectedItem="{Binding SelectedMode}"
+                                  IsEnabled="{Binding CanSelectMode}" HorizontalAlignment="Stretch" AutomationProperties.Name="{local:T agents.mode.title}">
+                          <ComboBox.ItemTemplate><DataTemplate x:DataType="local:AgentModeChoice"><TextBlock Text="{Binding Label}" /></DataTemplate></ComboBox.ItemTemplate>
+                        </ComboBox>
+                        <Button Grid.Column="2" Content="{local:T agents.mode.apply}" Click="OnApplyAgentMode" IsEnabled="{Binding CanApply}" Margin="10,0,0,0" Padding="12,6" />
+                      </Grid>
+                      <TextBlock Text="{Binding ModeExplanation}" TextWrapping="Wrap" LineHeight="19" FontSize="12.5" />
+                      <TextBlock Text="{Binding ModeCommand}" Classes="path" TextWrapping="Wrap" FontSize="11.5" IsVisible="{Binding HasModeCommand}" />
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+          </ScrollViewer>
+          <StackPanel Grid.Row="1" Spacing="5" Margin="0,6,0,0">
+            <TextBlock Classes="muted" Text="{local:T agents.applies}" TextWrapping="Wrap" FontSize="12" />
+            <TextBlock Text="{Binding Status}" TextWrapping="Wrap" FontSize="12" />
+          </StackPanel>
+        </Grid>
       </TabItem>
 
     </TabControl>

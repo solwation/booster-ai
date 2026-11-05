@@ -28,6 +28,11 @@ public partial class ConfirmSetupWindow : Window
         Prerequisites.BlockStart + "\n" + string.Join("\n", clis.Select(Prerequisites.AliasLine)) + "\n" + Prerequisites.BlockEnd,
         Loc.Get("setupConfirm.alias.detail"), Loc.Get("setupConfirm.alias.button"), Loc.Get("setup.dismiss"));
 
+    public static ConfirmSetupWindow AgentMode(AgentInfo agent) => new(
+        Loc.Format("agents.yolo.title", agent.Name), Loc.Get("agents.yolo.warning"),
+        Loc.Get("agents.yolo.code"), agent.ModeCommand, agent.ModeExplanation + "\n\n" + Loc.Get("agents.applies"),
+        Loc.Get("agents.yolo.confirm"), Loc.Get("cancel"));
+
     public string Heading { get; }
     public string Body { get; }
     public string CodeLabel { get; }

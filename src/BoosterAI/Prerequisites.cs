@@ -10,6 +10,10 @@ public enum WslState { Ok, Missing, DistroMissing, Unknown }
 /// <summary>One CLI as the tab's login shell sees it: what <c>type -t</c> says and the file <c>type -P</c> finds.</summary>
 public sealed record CliStatus(string Cli, string Kind, string? Path)
 {
+    public string? Version { get; init; }
+    public string Help { get; init; } = "";
+    public string? AliasDefinition { get; init; }
+    public string? ManagedAlias { get; init; }
     /// <summary>An executable is on PATH; an alias or function alone does not make a CLI installed.</summary>
     public bool Installed => Path is not null;
     /// <summary>The user's shell already defines the name as an alias or function: BoosterAI never adds one then.</summary>
@@ -40,10 +44,34 @@ public static partial class Prerequisites
     public const string BlockEnd = "# <<< BoosterAI full-auto aliases <<<";
 
     /// <summary>The bash a check runs in an interactive login shell (<c>bash -lic</c>), so aliases, functions and PATH match a tab's.</summary>
-    public const string DetectScript =
-        "for c in claude codex agy aider interpreter openhands npm; do t=$(type -t \"$c\" 2>/dev/null | head -n1); p=$(type -P \"$c\" 2>/dev/null); "
-        + "printf '" + Marker + " %s %s %s\\n' \"$c\" \"${t:-none}\" \"${p:--}\"; done; "
-        + "grep -qF '" + BlockStart + "' ~/.bashrc 2>/dev/null && echo '" + Marker + "-block yes'; true";
+    public static readonly string DetectScript = """
+for c in claude codex agy aider interpreter openhands npm
+do
+  t=$(type -t "$c" 2>/dev/null | head -n1)
+  p=$(type -P "$c" 2>/dev/null)
+  printf 'bsdetect %s %s %s\n' "$c" "${t:-none}" "${p:--}"
+  [ "$c" != npm ] || continue
+  if [ -n "$p" ] && command -v timeout >/dev/null
+  then
+    v=$(set -o pipefail; timeout -k 0.2 2 "$p" --version </dev/null 2>/dev/null | head -c 512 | base64 -w0) || v=
+    printf 'bsdetect-version %s %s\n' "$c" "$v"
+    h=$(set -o pipefail; timeout -k 0.2 2 "$p" --help </dev/null 2>/dev/null | head -c 64000 | base64 -w0) || h=
+    printf 'bsdetect-help %s %s\n' "$c" "$h"
+  fi
+  if [ "$t" = alias ]
+  then
+    a=$(alias "$c" 2>/dev/null | base64 -w0)
+    printf 'bsdetect-alias %s %s\n' "$c" "$a"
+  fi
+done
+if [ -f ~/.bashrc ]
+then
+  grep -qF '# >>> BoosterAI full-auto aliases >>>' ~/.bashrc && echo 'bsdetect-block yes'
+  b=$(sed -n '/^# >>> BoosterAI full-auto aliases >>>$/,/^# <<< BoosterAI full-auto aliases <<<$/{p;}' ~/.bashrc | head -c 20000 | base64 -w0)
+  printf 'bsdetect-managed %s\n' "$b"
+fi
+true
+""";
 
     /// <summary>Reads the detection output; lines without the marker are noise from the user's shell startup.</summary>
     public static (IReadOnlyList<CliStatus> Clis, bool NpmFound, bool HasBlock) ParseDetect(string output)
@@ -63,7 +91,37 @@ public static partial class Prerequisites
             if (name == "npm") npm = file is not null;
             else if (Clis.Contains(name) && clis.All(c => c.Cli != name)) clis.Add(new CliStatus(name, kind, file));
         }
+        string Decode(string value)
+        {
+            try { return Encoding.UTF8.GetString(Convert.FromBase64String(value)).TrimEnd('\r', '\n'); }
+            catch (FormatException) { return ""; }
+        }
+        var metadata = output.Split('\n').Select(l => l.TrimEnd('\r').Split(' ', 3))
+            .Where(p => p.Length == 3 && p[0].StartsWith(Marker + "-", StringComparison.Ordinal))
+            .GroupBy(p => (p[0], p[1])).ToDictionary(g => g.Key, g => Decode(g.First()[2]));
+        var managed = output.Split('\n').FirstOrDefault(l => l.StartsWith(Marker + "-managed ", StringComparison.Ordinal));
+        var managedText = managed is null ? "" : Decode(managed[(Marker.Length + 9)..]);
+        for (var i = 0; i < clis.Count; i++)
+        {
+            var cli = clis[i];
+            string? Meta(string type) => metadata.GetValueOrDefault((Marker + "-" + type, cli.Cli));
+            var definitions = managedText.Split('\n').Where(l => Defined(l).Contains(cli.Cli)).ToArray();
+            clis[i] = cli with
+            {
+                Version = ParseVersion(Meta("version")), Help = Meta("help") ?? "",
+                AliasDefinition = Meta("alias"), ManagedAlias = definitions.Length == 1 ? definitions[0] : definitions.Length > 1 ? "custom" : null,
+            };
+        }
         return (clis, npm, block);
+    }
+
+    /// <summary>Only a CLI version token, never a model ID, build date or an entire diagnostic line.</summary>
+    public static string? ParseVersion(string? output)
+    {
+        if (string.IsNullOrWhiteSpace(output)) return null;
+        var clean = Regex.Replace(output, @"\x1B\[[0-?]*[ -/]*[@-~]", "");
+        var match = Regex.Match(clean, @"^\s*(?:(?:claude(?: code)?|codex(?:-cli)?|agy|antigravity(?: cli)?|aider|open interpreter|openinterpreter|interpreter|openhands(?: cli)?)\s*(?:version)?\s*:?\s+)?v?(\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?)(?=\s|$)", RegexOptions.Multiline | RegexOptions.IgnoreCase);
+        return match.Success ? match.Groups[1].Value : null;
     }
 
     /// <summary>The distribution names from <c>wsl.exe -l -q</c> (UTF-16 or UTF-8, with stray NULs, CRs and blank lines).</summary>
@@ -236,7 +294,7 @@ public static partial class Prerequisites
         catch (Exception e) when (e is IOException or InvalidOperationException) { return (true, -1, null); }
         finally
         {
-            try { if (p is { HasExited: false }) p.Kill(entireProcessTree: true); }
+            try { if (p is { HasExited: false }) { p.Kill(entireProcessTree: true); p.WaitForExit(); } }
             catch (Exception e) when (e is InvalidOperationException or System.ComponentModel.Win32Exception) { }
             p?.Dispose();
         }

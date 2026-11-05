@@ -158,6 +158,27 @@ Only the lines for the offered CLIs are written; a later CLI joins the same bloc
 
 `--dry-run` prints the check, the WSL install command, each CLI's install script (also as the `wt.exe` arguments of its tab) and the alias block.
 
+### Agent versions and permission modes
+
+Settings → **AI agents** lists each supported program, installation state, detected CLI version, installation/update action and permission mode. Versions are program versions, not model versions. Detection runs in the background in the tab's login environment. Each executable's `--version` and `--help` probe is bounded to two seconds (plus 0.2 seconds to force termination), with bounded output; the overall check remains limited to 30 seconds. A failed version probe leaves an installed CLI marked installed with **Unknown** version. Help failure hides unverified presets. No model or account is contacted intentionally by BoosterAI.
+
+**Standard** removes only the recognized BoosterAI alias. It does not reset the agent's own configuration or organization policies. **Auto Approve** and **YOLO** are offered only when the installed executable advertises the required flags. Selecting a value does not write anything: **Apply** saves it; YOLO additionally requires an explicit confirmation showing the exact alias and its effect. Approval and sandbox behavior differ by CLI:
+
+| CLI | Auto Approve | YOLO | Official reference |
+| --- | --- | --- | --- |
+| Claude Code | `--permission-mode acceptEdits`: edits/common filesystem commands accepted; other tools may ask; sandbox unchanged | `--dangerously-skip-permissions`: permission prompts skipped, not an isolation layer | [Permissions](https://code.claude.com/docs/en/permissions) |
+| Codex | `--approve-for-me`: automatic approval review with workspace-write sandbox | `--dangerously-bypass-approvals-and-sandbox`: approvals and CLI sandbox disabled | [CLI reference](https://developers.openai.com/codex/cli/reference/) |
+| Antigravity | `--mode=auto`: automatic handling with terminal sandbox, subject to account/environment support and CLI fallback | `--dangerously-skip-permissions`: approves tools; separate sandbox setting unchanged | [Modes](https://antigravity.google/docs/cli/modes), [permissions](https://antigravity.google/docs/permissions?tab=cli) |
+| Aider | Not offered: no distinct verified safer automatic mode | `--yes-always`: yes to confirmations, no added isolation | [Options](https://aider.chat/docs/config/options) |
+| OpenHands | `--llm-approve`: LLM security analyzer; execution environment unchanged | `--always-approve`: approves all actions; execution environment unchanged | [CLI README](https://github.com/OpenHands/OpenHands-CLI) |
+| Open Interpreter, current standalone (`--oss` capability) | `--ask-for-approval never --sandbox workspace-write`: no prompts inside the selected sandbox | `--dangerously-bypass-approvals-and-sandbox` | [Sandbox](https://www.openinterpreter.com/docs/terminal/sandbox) |
+| Open Interpreter, legacy Python (`--local`/`--auto_run` capabilities) | Not offered | `--auto_run`: generated code runs without confirmation; no added sandbox | [Legacy parser](https://github.com/openinterpreter/openinterpreter/blob/v0.4.2/interpreter/terminal_interface/start_terminal_interface.py) |
+
+Only exact recognized alias lines inside one well-formed BoosterAI block are changed. Duplicate/malformed blocks, custom definitions, functions, and aliases outside that block are preserved and reported as custom or refused at save. Standard is repeatable and keeps unrelated block content. This affects regular terminals that read the same `.bashrc` too.
+
+New tabs inherit the mode. Explicit starts/restarts in tabs opened with this version refresh an alias only when its original ownership was proven and its shell value remains unchanged. The hook reads exact known rows; it never sources `.bashrc` again or evaluates file text. It can remove the previously owned alias when switching back to Standard. Running CLI turns are unchanged. Custom functions/aliases and uncertain ownership are left alone; tabs opened by older BoosterAI builds may need closing and reopening. Install/update buttons use the existing official installer path; the Interpreter standalone installer does not migrate a legacy Python environment automatically.
+
+
 ## OpenHands CLI
 
 `openhands` uses the [OpenHands CLI](https://github.com/OpenHands/OpenHands-CLI), not the GUI server. Settings detects its executable in the tab's login shell and offers the official standalone installer (`curl -fsSL https://install.openhands.dev/install.sh | sh`). Start it once to configure its provider and credentials.

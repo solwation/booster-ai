@@ -174,7 +174,7 @@ public static class TabStatus
 /// </summary>
 public sealed class TabSession
 {
-    public const string Lib = """
+    public static readonly string Lib = """
 # BoosterAI tab status log, sourced by the tab's shell: . tab-lib.sh <dir> <tab-id>
 bs_log="$1/$2.log"
 bs_timing="$1/$2.timing"
@@ -276,8 +276,18 @@ bs_run() {
     bs_stream\ *) eval "$cmd"; return $? ;;
   esac
   local name="${cmd%% *}"
+  case "$name" in
+    '{') bs_refresh_aliases interpreter ;;
+    LLM_MODEL=*) bs_refresh_aliases openhands ;;
+    *) bs_refresh_aliases "$name" ;;
+  esac
   if [ -n "${BASH_ALIASES[$name]+x}" ]; then cmd="${BASH_ALIASES[$name]}${cmd#"$name"}"; fi
   if declare -F "$name" >/dev/null; then export -f "$name"; fi
+  if [ "$name" = '{' ] || [[ $name = LLM_MODEL=* ]]; then
+    local aliases
+    aliases=$(alias -p)
+    cmd=$'shopt -s expand_aliases\n'"$aliases"$'\n'"$cmd"
+  fi
   if ! command -v script >/dev/null 2>&1; then rm -f "$bs_timing"; bs_fg eval "$cmd"; return $?; fi
   if [ "$2" = input ] && [ -t 0 ] && command -v python3 >/dev/null 2>&1; then
     BS_COMMAND="$cmd" bs_fg bs_pty script --quiet --flush --return --log-out >(bs_cap) --log-timing "$bs_timing" --command 'eval "$BS_COMMAND"'
@@ -579,6 +589,7 @@ bs_update() (
 # here, so bash does not expand the user's alias for it (agy='agy --dangerously-skip-permissions'):
 # apply it explicitly, as a typed command would.
 bs_stream() {
+  bs_refresh_aliases "$1"
   if [ -n "${BASH_ALIASES[$1]+x}" ]; then eval "set -- ${BASH_ALIASES[$1]}"' "${@:2}"'; fi
   local t0=$SECONDS rc
   # The group runs in this shell (rc stays set); its output also goes to the capture. bs_fg: see there.
@@ -704,7 +715,7 @@ for line in sys.stdin:
   fi
 }
 
-""";
+""" + AgentAliasRuntime.Script;
 
     private int _next;
 
