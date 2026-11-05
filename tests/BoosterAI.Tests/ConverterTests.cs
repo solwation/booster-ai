@@ -6,6 +6,7 @@ using Xunit;
 
 namespace BoosterAI.Tests;
 
+[Collection(ConfigFileCollection.Name)]
 public class ConverterTests
 {
     [Fact]
@@ -20,6 +21,7 @@ public class ConverterTests
     [Fact]
     public void LlmNameShowsMissingTagWhenCliIsMissing()
     {
+        var previousLanguage = Loc.Language;
         Loc.Use("sv");
         Converters.IsCliMissing = id => id == "codex";
         try
@@ -36,6 +38,7 @@ public class ConverterTests
         finally
         {
             Converters.IsCliMissing = null;
+            Loc.Use(previousLanguage);
         }
     }
 }
