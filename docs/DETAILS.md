@@ -144,6 +144,14 @@ Only the lines for the offered CLIs are written; a later CLI joins the same bloc
 
 `--dry-run` prints the check, the WSL install command, each CLI's install script (also as the `wt.exe` arguments of its tab) and the alias block.
 
+## OpenHands CLI
+
+`openhands` uses the [OpenHands CLI](https://github.com/OpenHands/OpenHands-CLI), not the GUI server. Settings detects its executable in the tab's login shell and offers the official standalone installer (`curl -fsSL https://install.openhands.dev/install.sh | sh`). Start it once to configure its provider and credentials.
+
+Tabs run in the selected project directory. `standard` uses OpenHands' saved settings. A custom model is passed as `LLM_MODEL='<model>' openhands --override-with-envs`; this also enables OpenHands' other environment overrides (`LLM_API_KEY` and `LLM_BASE_URL`). Initial prompts use `--task`. Run once uses `--headless --task` and **OpenHands automatically approves actions in this mode**. Interactive tabs retain OpenHands' confirmation policy; the optional full-auto alias adds `--always-approve` only after the existing alias confirmation.
+
+In-place restart starts a new conversation. OpenHands' `--resume --last` is global across projects, so BoosterAI does not select it automatically or offer Continue. Close all leaves a running OpenHands tab open with a manual-save message: save and exit in its terminal, or choose Force close. Exited tabs close normally. Output/status tracking and process-tree cleanup use the same tab lifecycle as the other agents. Automatic CLI updates are not enabled for OpenHands; update it using its installation method.
+
 ## AI CLI updates
 
 With **Update AI CLIs automatically** on (the default, `"AutoUpdateClis": true` in `config.json`), a tab that starts claude, codex, agy or aider first runs `bs_update <cli>` from its `tab-lib.sh`, in the tab's own login shell (WSL on Windows, the local shell on Linux), so it uses the same PATH, nvm and installation as the CLI. An in-place restart (new model or AI, or restarting an exited CLI) runs it again before the new CLI; shell-only tabs, the *Install* link and a tab whose session library is unavailable skip it. `--dry-run` shows the `bs_update` step in each tab script and lists the commands below. The setting is read at each start and restart.

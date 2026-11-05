@@ -67,7 +67,7 @@ public class PrerequisitesTests
     public void NewUserWithoutAnyCliIsOfferedAllFour()
     {
         var s = Status(new CliStatus("claude", "none", null), new CliStatus("codex", "none", null), new CliStatus("agy", "none", null), new CliStatus("aider", "none", null));
-        Assert.Equal(["claude", "codex", "agy", "aider"], Prerequisites.MissingToOffer(s, []));
+        Assert.Equal(["claude", "codex", "agy", "aider", "openhands"], Prerequisites.MissingToOffer(s, []));
         Assert.Empty(Prerequisites.MissingToOffer(SetupStatus.Empty, ["claude"]));
     }
 
@@ -249,7 +249,7 @@ public class PrerequisitesTests
     public void SetupViewModelListsSupportedAgents()
     {
         var vm = new SetupViewModel();
-        Assert.Equal(["claude", "codex", "agy", "aider"], vm.Agents.Select(a => a.Cli));
+        Assert.Equal(["claude", "codex", "agy", "aider", "openhands"], vm.Agents.Select(a => a.Cli));
         Assert.All(vm.Agents, a => Assert.False(a.IsInstalled));
 
         vm.Apply(Status(

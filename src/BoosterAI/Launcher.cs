@@ -106,6 +106,8 @@ public static class Launcher
 
     private static string CliCommand(TabConfig tab, string? prompt, TabTrack? track, bool resume)
     {
+        // OpenHands has no --model and its --last conversation is global, not scoped to cwd.
+        if (tab.Llm == "openhands") return OpenHandsCommand(tab, prompt);
         var args = new List<string>();
         if (resume && tab.Llm is "claude" or "agy") args.Add("--continue");
         if (resume && tab.Llm == "aider") args.Add("--restore-chat-history");
@@ -143,6 +145,22 @@ public static class Launcher
             cli = "bs_stream " + cli + (tab.Llm == "claude" ? " --output-format stream-json --verbose" : " --output-format stream-json");
         return cli;
     }
+
+    private static string OpenHandsCommand(TabConfig tab, string? prompt)
+    {
+        var command = tab.Model == Catalog.StandardModel ? "openhands"
+            : "LLM_MODEL=" + Quote(tab.Model) + " openhands --override-with-envs";
+        // Restart starts fresh: choosing --resume --last could resume another project's work.
+        var task = prompt ?? (tab.Orkester ? "/orkester" : null);
+        if (tab.NonInteractive && tab.Orkester && prompt is null)
+            command += " --headless --task " + Quote("/orkester " + ForegroundWatchNote);
+        else if (task is not null)
+            command += " --task " + Quote(task);
+        return command;
+    }
+
+    /// <summary>Whether Close all can safely target the tab's own conversation for a save turn.</summary>
+    public static bool CanSaveAndClose(TabConfig tab) => tab.Llm is "claude" or "codex" or "agy" or "aider";
 
     /// <summary>
     /// Stops what runs in the foreground of the tab whose shell is <paramref name="shellPid"/> (the CLI's process

@@ -167,6 +167,8 @@ public sealed class CloseAllOperation : Observable
             if (tab is null) { item.Fail(Loc.Get("close.noTrack")); return; }
             if (!CloseAllLogic.NeedsSave(tab, state, item.Tab.Activity))
             { await Close(item, session, id, pid, start, log.CanCloseCleanly); return; }
+            if (!Launcher.CanSaveAndClose(tab))
+            { item.Fail(Loc.Get("close.manualSave")); return; }
             // --continue/--last is per directory, so never choose between two open conversations implicitly.
             if (Tabs.Count(t => t.Tab.LaunchedAs is { } other && other.Llm == tab.Llm
                 && t.Phase != ClosePhase.Closed && SameDirectory(other.Directory, tab.Directory)) > 1)

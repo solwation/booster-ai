@@ -233,7 +233,7 @@ public class LauncherTests
                 Assert.Contains(expectedCd.Replace("'", "'\\''"), Launcher.WindowsTerminalArgs([tab], "Ubuntu", tracks: [track], resume: resume)
                     .Single(arg => arg.Contains("bs_cli")));
                 Assert.DoesNotContain(';', restart);
-                if (resume && llm != Catalog.ShellOnly)
+                if (resume && Launcher.CanContinue(tab))
                 {
                     Assert.Contains(llm switch
                     {

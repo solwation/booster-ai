@@ -9,7 +9,7 @@ public static class Catalog
     /// <summary>No AI CLI, just a shell in the directory.</summary>
     public const string ShellOnly = "skal";
 
-    public static readonly IReadOnlyList<string> Llms = ["claude", "codex", "agy", "aider", ShellOnly];
+    public static readonly IReadOnlyList<string> Llms = ["claude", "codex", "agy", "aider", "openhands", ShellOnly];
 
     // Lists from `agy models` and the Codex model cache, 2026-10-26.
     private static readonly Dictionary<string, string[]> Models = new()
@@ -27,6 +27,7 @@ public static class Catalog
         [
             StandardModel, "claude-3-7-sonnet", "deepseek/deepseek-chat", "ollama/qwen2.5-coder", "ollama/llama3", "gpt-4o",
         ],
+        ["openhands"] = [StandardModel],
         [ShellOnly] = [StandardModel],
     };
 
