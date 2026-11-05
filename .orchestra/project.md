@@ -5,6 +5,12 @@ Read [AGENTS.md](../AGENTS.md), then [the shared core](shared/ORCHESTRA.md), the
 [queue coordination](shared/COORDINATION.md). The slash command and Codex skill are
 thin adapters. Reading or improving the instructions does not start an unattended queue.
 
+Apply the core's [chat intake](shared/ORCHESTRA.md#turn-chat-requests-into-work):
+record change requests as issues and start or resume their scoped work, including
+when no run is active or a previous idle watch ended. Reuse an active conductor and
+respect explicit deferrals. An ordinary scoped request does not enable queue timers;
+an explicit `/orkester` or `$orkester` starts the queue session configured below.
+
 ## Settings
 
 | Setting | Value |
@@ -108,7 +114,7 @@ the repository; personal tabs live only in the user's local `config.json`.
 
 ## Shared version
 
-Shared release: **v0.8.0**, commit **6ee6dd23ed85e5a91641d1939d553e4f789027d4**, imported as a
+Shared release: **v0.8.1**, commit **264e867d17b4f938b09cdb01794025e7b0113c5d**, imported as a
 squashed subtree at `.orchestra/shared`. Improve the core in
 `solwation/dirigenten-och-orkestern`, never in this subtree. At conductor startup and
 resume, check that repository's stable releases/tags against this pin (reuse a

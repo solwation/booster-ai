@@ -15,6 +15,11 @@ leftovers with `Kill(entireProcessTree: true)` in `finally`, and in tab-lib.sh n
 `$BASHPID` on a line ending in `&` (it expands in the background child, not the caller).
 The user writes Swedish; reply in Swedish. Code, comments and docs are English; UI text is Swedish.
 
+Apply the core's [chat intake](.orchestra/shared/ORCHESTRA.md#turn-chat-requests-into-work)
+to change requests: create or reuse issues and resolve them within the requested
+scope, even when no run is active or a previous idle watch ended. Reuse an active
+conductor and respect explicit deferrals; scoped requests do not enable queue timers.
+
 When the user writes `/orkester` or `$orkester`, run the orchestra for the requested
 scope through [.claude/commands/orkester.md](.claude/commands/orkester.md) (Claude) or
 [.agents/skills/orkester/SKILL.md](.agents/skills/orkester/SKILL.md) (Codex and others).
