@@ -148,7 +148,6 @@ public sealed class SetupViewModel : Observable
             if (!_status.Checked) return Loc.Get("setup.summary.failed");
             return string.Join(" · ", Prerequisites.Clis.Select(c => _status.Cli(c) switch
             {
-                { Installed: true, HasAlias: true } => Loc.Format("setup.summary.alias", c),
                 { Installed: true } => Loc.Format("setup.summary.installed", c),
                 _ => Loc.Format("setup.summary.missing", c),
             }));

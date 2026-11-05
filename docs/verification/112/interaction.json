@@ -1,0 +1,21 @@
+{
+  "synthetic": true,
+  "results": [
+    {
+      "lang": "sv",
+      "readOnlyScopeExplained": true,
+      "aliasDetailsAbsent": true,
+      "runningDisablesButton": true,
+      "resultsRetained": true,
+      "agentOverviewLink": true
+    },
+    {
+      "lang": "en",
+      "readOnlyScopeExplained": true,
+      "aliasDetailsAbsent": true,
+      "runningDisablesButton": true,
+      "resultsRetained": true,
+      "agentOverviewLink": true
+    }
+  ]
+}

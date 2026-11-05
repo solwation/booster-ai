@@ -302,7 +302,7 @@
   "settings.optimization.editCap": "Change memory limit →",
   "settings.optimization.showUsage": "← View RAM usage",
   "settings.optimization.measurementDetails": "About this data",
-  "settings.optimization.environmentIntro": "Choose the WSL distribution for project tabs and check WSL and your AI CLIs.",
+  "settings.optimization.environmentIntro": "The environment where project tabs run. On Windows, choose which WSL distribution they use.",
   "settings.optimization.usageCurrent": "WSL is using {0} GB now",
   "settings.optimization.usageNotRunning": "WSL memory: no running WSL2 process found",
   "settings.optimization.usageUnavailable": "WSL memory: measurement unavailable",
@@ -493,5 +493,10 @@
   "project.remove.confirm.title": "Remove {0}?",
   "project.remove.confirm.body": "Removes the project and its saved tab settings from BoosterAI.\nNumber of subtabs also removed, including their settings: {0}.",
   "project.remove.confirm.files": "Folders and files on your computer are unaffected.",
-  "project.remove.confirm.button": "Remove project"
+  "project.remove.confirm.button": "Remove project",
+  "setup.environment.check": "Check environment",
+  "setup.environment.windows": "Checks WSL, installed distributions and which AI programs are available in the selected distribution’s login environment. Also reads program versions and support for agent settings. Installs nothing and changes no settings. Results appear below; versions and choices are under AI agents.",
+  "setup.environment.linux": "Checks which AI programs are available in the tabs’ local login environment. Also reads program versions and support for agent settings. Installs nothing and changes no settings. Results appear below; versions and choices are under AI agents.",
+  "setup.environment.result": "Environment check results",
+  "setup.environment.agents": "View AI agent installation and settings"
 }

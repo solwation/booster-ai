@@ -337,9 +337,15 @@
                   <TextBox Text="{Binding WslDistro}" HorizontalAlignment="Left" Width="300"
                            FontFamily="{StaticResource MonoFont}" AutomationProperties.Name="{local:T wsl.distro}" />
                 </StackPanel>
-                <Button Content="{local:T setup.check}" Click="OnCheckSetup" Padding="12,8" HorizontalAlignment="Left"
+                <TextBlock Text="{local:T setup.environment.windows}" IsVisible="{Binding Optimization.IsWindows}" TextWrapping="Wrap" />
+                <TextBlock Text="{local:T setup.environment.linux}" IsVisible="{Binding Optimization.IsLinux}" TextWrapping="Wrap" />
+                <Button Content="{local:T setup.environment.check}" Click="OnCheckSetup" Padding="12,8" HorizontalAlignment="Left"
                         IsEnabled="{Binding !Setup.IsChecking}" ToolTip.Tip="{local:T setup.check.tip}" />
-                <TextBlock Classes="muted" Text="{Binding Setup.Summary}" TextWrapping="Wrap" />
+                <StackPanel Spacing="6">
+                  <TextBlock Text="{local:T setup.environment.result}" FontWeight="SemiBold" />
+                  <TextBlock Text="{Binding Setup.Summary}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
+                </StackPanel>
+                <Button Classes="link" Content="{local:T setup.environment.agents}" Click="OnShowEnvironmentAgents" HorizontalAlignment="Left" />
                 <TextBlock Classes="muted" Text="{local:T settings.optimization.linuxNote}" IsVisible="{Binding Optimization.IsLinux}" TextWrapping="Wrap" />
               </StackPanel>
             </ScrollViewer>
