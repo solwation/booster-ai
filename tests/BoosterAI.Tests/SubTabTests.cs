@@ -15,6 +15,35 @@ public sealed class SubTabTests : IDisposable
     public void Dispose() => Directory.Delete(_root, recursive: true);
 
     [Fact]
+    public void StatusRefreshKeepsVisibleRowsStableUntilMembershipOrOrderChanges()
+    {
+        var vm = new MainViewModel(new AppConfig { Tabs = [new() { Name = "A" }, new() { Name = "B" }] });
+        var a = vm.Tabs[0];
+        var initial = vm.VisibleTabs;
+        var changes = 0;
+        vm.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(vm.VisibleTabs)) changes++; };
+        a.SetState(TabState.Running, null, activity: Activity.Busy);
+        vm.TabsChanged();
+        a.SetState(TabState.Running, null, activity: Activity.Idle);
+        vm.TabsChanged();
+        a.Enabled = false;
+        Assert.Same(initial, vm.VisibleTabs);
+        Assert.Equal(0, changes);
+
+        var child = vm.AddSubTab(a);
+        Assert.Contains(child, vm.VisibleTabs);
+        a.Expanded = false;
+        Assert.DoesNotContain(child, vm.VisibleTabs);
+        a.Expanded = true;
+        Assert.Contains(child, vm.VisibleTabs);
+        vm.MoveTabRelative(vm.Tabs.Single(t => t.Name == "B"), a, after: false);
+        Assert.Equal(["B", "A", child.Name], vm.VisibleTabs.Select(t => t.Name));
+        Assert.True(vm.RemoveSubTab(child));
+        Assert.DoesNotContain(child, vm.VisibleTabs);
+        Assert.True(changes > 0);
+    }
+
+    [Fact]
     public void LegacyProjectsKeepAllChoicesAndAcquireStableIdsWithoutExtraTabs()
     {
         var config = ConfigStore.Parse("""{"Tabs":[{"Name":"Alpha","Directory":"~/alpha","Enabled":false,"Llm":"codex","Model":"custom-model","Orkester":true,"NonInteractive":true}]}""")!;

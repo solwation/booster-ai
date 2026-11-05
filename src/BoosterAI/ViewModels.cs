@@ -463,6 +463,7 @@ public sealed partial class MainViewModel : Observable
             }
             Tabs.Add(new TabViewModel(tab, this, Tabs.Count) { Parent = parent });
         }
+        _visibleTabs = Tabs.Where(IsVisibleTab).ToArray();
         Tabs.CollectionChanged += (_, _) => TabsChanged();
         Update = new UpdateViewModel(cfg, Save);
         Denial = new DenialViewModel();
@@ -478,7 +479,9 @@ public sealed partial class MainViewModel : Observable
 
     public ObservableCollection<TabViewModel> Tabs { get; }
     public IEnumerable<TabViewModel> Projects => Tabs.Where(t => t.IsProject);
-    public IEnumerable<TabViewModel> VisibleTabs => Tabs.Where(t => t.Parent is null || t.Parent.Expanded);
+    private IReadOnlyList<TabViewModel> _visibleTabs = [];
+    public IReadOnlyList<TabViewModel> VisibleTabs => _visibleTabs;
+    private static bool IsVisibleTab(TabViewModel tab) => tab.Parent is null || tab.Parent.Expanded;
     public bool IsWindows => OperatingSystem.IsWindows();
     public bool IsLinux => !OperatingSystem.IsWindows();
     public IReadOnlyList<string> LinuxTerminals => Launcher.LinuxTerminals;
@@ -654,7 +657,13 @@ public sealed partial class MainViewModel : Observable
     public void TabsChanged()
     {
         Raise(nameof(Projects));
-        Raise(nameof(VisibleTabs));
+        // Status polling must not replace ItemsSource and destroy an open row editor or popup.
+        var visible = Tabs.Where(IsVisibleTab).ToArray();
+        if (!_visibleTabs.SequenceEqual(visible))
+        {
+            _visibleTabs = visible;
+            Raise(nameof(VisibleTabs));
+        }
         foreach (var project in Projects) project.GroupChanged();
         RefreshConversationChoices();
         Raise(nameof(HasTabs));
