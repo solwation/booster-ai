@@ -10,6 +10,7 @@ using System.Text.Json;
 var language = args.FirstOrDefault() ?? "sv";
 var theme = args.Skip(1).FirstOrDefault() ?? "light";
 var output = Path.GetFullPath("docs/verification/119");
+var suffix = args.Length > 2 ? "-" + args[2] : "";
 var temporary = Directory.CreateTempSubdirectory("booster-model-popup-").FullName;
 ConfigStore.UseFile(Path.Combine(temporary, "config.json"));
 var cfg = new AppConfig { Language = language, AppTheme = theme, CheckForUpdates = false, MinimizeToTray = false,
@@ -63,7 +64,7 @@ try
     Require(ModelSelector(child).IsVisible, "Expanding restores child row");
     Require(launches == 0, "No CLI launches");
     Directory.CreateDirectory(output);
-    File.WriteAllText(Path.Combine(output, $"interaction-{language}-{theme}.json"), JsonSerializer.Serialize(new { language, theme, synthetic = true, launches, checks }, new JsonSerializerOptions { WriteIndented = true }));
+    File.WriteAllText(Path.Combine(output, $"interaction-{language}-{theme}{suffix}.json"), JsonSerializer.Serialize(new { language, theme, synthetic = true, launches, checks }, new JsonSerializerOptions { WriteIndented = true }));
     Console.WriteLine($"PASS {checks.Count} checks ({language}/{theme})");
 }
 finally { window.Close(); Pump(); Directory.Delete(temporary, true); }
@@ -75,5 +76,5 @@ void Capture(string name)
     window.UpdateLayout(); Pump(); AvaloniaHeadlessPlatform.ForceRenderTimerTick();
     Directory.CreateDirectory(output);
     using var frame = window.CaptureRenderedFrame() ?? throw new InvalidOperationException("No headless frame");
-    frame.Save(Path.Combine(output, $"{name}-{language}-{theme}.png"));
+    frame.Save(Path.Combine(output, $"{name}-{language}-{theme}{suffix}.png"));
 }
