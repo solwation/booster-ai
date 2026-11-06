@@ -45,7 +45,8 @@ public static partial class Prerequisites
     public const string BlockStart = "# >>> BoosterAI full-auto aliases >>>";
     public const string BlockEnd = "# <<< BoosterAI full-auto aliases <<<";
 
-    /// <summary>The bash a check runs in an interactive login shell (<c>bash -lic</c>), so aliases, functions and PATH match a tab's.</summary>
+    /// <summary>The bash a check runs in an interactive login shell (<c>bash -lic</c>), so aliases, functions and PATH match a tab's.
+    /// The help probe merges stderr into stdout because some CLIs (agy, a Go flag usage) print <c>--help</c> to stderr (#125).</summary>
     public static readonly string DetectScript = """
 for c in claude codex agy aider interpreter openhands npm
 do
@@ -57,7 +58,7 @@ do
   then
     v=$(set -o pipefail; timeout -k 0.2 2 "$p" --version </dev/null 2>/dev/null | head -c 512 | base64 -w0) || v=
     printf 'bsdetect-version %s %s\n' "$c" "$v"
-    h=$(set -o pipefail; timeout -k 0.2 2 "$p" --help </dev/null 2>/dev/null | head -c 64000 | base64 -w0) || h=
+    h=$(set -o pipefail; timeout -k 0.2 2 "$p" --help </dev/null 2>&1 | head -c 64000 | base64 -w0) || h=
     printf 'bsdetect-help %s %s\n' "$c" "$h"
   fi
   if [ "$t" = alias ]

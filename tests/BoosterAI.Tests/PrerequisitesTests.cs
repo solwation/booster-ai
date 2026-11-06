@@ -221,6 +221,30 @@ public class PrerequisitesTests
 
     [Fact]
     [System.Runtime.Versioning.UnsupportedOSPlatform("windows")]
+    public void DetectScriptCapturesHelpWrittenToStderr()
+    {
+        if (!OperatingSystem.IsLinux()) return;
+        using var home = new TempHome();
+        // Like agy (a Go flag usage): the help goes to stderr, nothing to stdout.
+        home.Stub("agy", "case \"$1\" in --version) echo 'agy 1.5.2';; *) echo '  --mode  Set the mode (accept-edits, auto, plan)' >&2; echo '  --dangerously-skip-permissions  Auto-approve' >&2;; esac");
+        home.Stub("claude", "case \"$1\" in --version) echo '2.0.0';; *) echo '  --permission-mode  acceptEdits';; esac");
+        var psi = home.Bash("-lic", Prerequisites.DetectScript);
+        psi.Environment["PATH"] = home.Bin + ":/usr/bin:/bin";
+        var (started, code, output) = Prerequisites.Run(psi, TimeSpan.FromSeconds(20));
+        Assert.True(started);
+        Assert.Equal(0, code);
+        var (clis, _, _) = Prerequisites.ParseDetect(output!);
+        var agy = clis.Single(c => c.Cli == "agy");
+        Assert.Contains("--dangerously-skip-permissions", agy.Help);
+        Assert.Equal("1.5.2", agy.Version);
+        var modes = AgentModes.Choices(agy).Select(c => c.Mode).ToArray();
+        Assert.Contains(AgentMode.AutoApprove, modes);
+        Assert.Contains(AgentMode.Yolo, modes);
+        Assert.Contains("--permission-mode", clis.Single(c => c.Cli == "claude").Help);
+    }
+
+    [Fact]
+    [System.Runtime.Versioning.UnsupportedOSPlatform("windows")]
     public void InstallScriptReportsSuccessAndFailureAndKeepsAShell()
     {
         if (!OperatingSystem.IsLinux()) return;
