@@ -287,4 +287,54 @@ public class WslOptimizationTests
             if (File.Exists(tempIni)) File.Delete(tempIni);
         }
     }
+
+    [Fact]
+    public void SaveIsOnlyEnabledWhenTheSelectedCapDiffersFromTheSavedOne()
+    {
+        var file = Path.GetTempFileName();
+        try
+        {
+            WslConfigFile.UseCustomPath(file);
+            File.WriteAllText(file, "[wsl2]\nmemory=24GB\nprocessors=4\n");
+            var vm = new OptimizationViewModel(new AppConfig());
+            var changes = new List<string?>();
+            vm.PropertyChanged += (_, e) => changes.Add(e.PropertyName);
+            Assert.Equal(24, vm.SliderMemoryGb);
+            Assert.False(vm.CanSave);
+
+            var before = File.GetLastWriteTimeUtc(file);
+            var content = File.ReadAllText(file);
+            vm.SaveConfig(); // unchanged: nothing is written and no status appears
+            Assert.Equal(content, File.ReadAllText(file));
+            Assert.Equal(before, File.GetLastWriteTimeUtc(file));
+            Assert.False(vm.HasStatusMessage);
+
+            vm.SliderMemoryGb = vm.SliderMemoryGb + 2;
+            Assert.True(vm.CanSave);
+            Assert.Contains(nameof(OptimizationViewModel.CanSave), changes);
+            vm.SliderMemoryGb = 24;
+            Assert.False(vm.CanSave);
+
+            vm.SliderMemoryGb = 26;
+            vm.SaveConfig();
+            Assert.Equal(26, WslConfigFile.Load().MemoryGb);
+            Assert.False(vm.CanSave);
+        }
+        finally { WslConfigFile.UseCustomPath(null); File.Delete(file); }
+    }
+
+    [Fact]
+    public void SaveIsEnabledWhenWslconfigHasNoMemoryCap()
+    {
+        var file = Path.GetTempFileName();
+        try
+        {
+            WslConfigFile.UseCustomPath(file);
+            File.WriteAllText(file, "[wsl2]\nprocessors=4\n");
+            var vm = new OptimizationViewModel(new AppConfig());
+            Assert.Null(vm.CurrentAllocatedGb);
+            Assert.True(vm.CanSave);
+        }
+        finally { WslConfigFile.UseCustomPath(null); File.Delete(file); }
+    }
 }

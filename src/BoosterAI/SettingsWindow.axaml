@@ -311,7 +311,8 @@
                         ToolTip.Tip="{local:T settings.optimization.useRecommendation}" />
 
                 <WrapPanel Orientation="Horizontal" Margin="0,14,0,0">
-                  <Button Classes="accent" Content="{local:T settings.optimization.save}" Click="OnSaveOptimization" Padding="14,7" Margin="0,0,8,8" />
+                  <Button Classes="accent" Content="{local:T settings.optimization.save}" Click="OnSaveOptimization"
+                          IsEnabled="{Binding Optimization.CanSave}" Padding="14,7" Margin="0,0,8,8" />
                   <Button Content="{local:T settings.optimization.restartWsl}" Click="OnRestartWsl" Padding="14,7" Margin="0,0,0,8" ToolTip.Tip="{local:T settings.optimization.restartWsl.tip}" />
                 </WrapPanel>
 

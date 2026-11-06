@@ -40,9 +40,13 @@ public sealed class OptimizationViewModel : Observable
             if (Set(ref _sliderMemoryGb, clamped))
             {
                 Raise(nameof(SliderMemoryText));
+                Raise(nameof(CanSave));
             }
         }
     }
+
+    /// <summary>Saving only does something when the selected cap differs from the one in .wslconfig (or none is set).</summary>
+    public bool CanSave => _currentAllocatedGb != _sliderMemoryGb;
 
     public string SliderMemoryText => Loc.Format("settings.optimization.selectedCap", _sliderMemoryGb);
 
@@ -201,6 +205,7 @@ public sealed class OptimizationViewModel : Observable
         Raise(nameof(CurrentConfigText));
         Raise(nameof(SliderMemoryGb));
         Raise(nameof(SliderMemoryText));
+        Raise(nameof(CanSave));
         Raise(nameof(RecommendedGb));
         Raise(nameof(RecommendationText));
         Raise(nameof(RecommendedLowerGb));
@@ -221,6 +226,7 @@ public sealed class OptimizationViewModel : Observable
 
     public void SaveConfig()
     {
+        if (!CanSave) return;
         try
         {
             WslConfigFile.Save(SliderMemoryGb);
@@ -231,6 +237,7 @@ public sealed class OptimizationViewModel : Observable
             StatusMessage = Loc.Get("settings.optimization.saved");
             Raise(nameof(CurrentAllocatedGb));
             Raise(nameof(CurrentConfigText));
+            Raise(nameof(CanSave));
             RaiseMemoryScale();
             Raise(nameof(StatusColorBrush));
         }
@@ -272,13 +279,14 @@ public sealed class OptimizationViewModel : Observable
     }
 
     /// <summary>Forces the optimization banner to display for screenshot verification.</summary>
-    public void ShowFakeUnoptimized(int totalGb = 64, int? selectedGb = null)
+    /// <param name="savedGb">A cap already in the sample .wslconfig (no banner); null for an unoptimized setup.</param>
+    public void ShowFakeUnoptimized(int totalGb = 64, int? selectedGb = null, int? savedGb = null)
     {
         _fakeWindows = true;
         _totalSystemMemoryGb = totalGb;
-        _currentAllocatedGb = null;
-        _sliderMemoryGb = selectedGb ?? RecommendedLowerGb;
-        _bannerVisible = true;
+        _currentAllocatedGb = savedGb;
+        _sliderMemoryGb = selectedGb ?? savedGb ?? RecommendedLowerGb;
+        _bannerVisible = savedGb is null;
         Raise(nameof(IsWindows));
         Raise(nameof(IsLinux));
         Raise(nameof(TotalSystemMemoryGb));
@@ -289,6 +297,7 @@ public sealed class OptimizationViewModel : Observable
         Raise(nameof(CurrentConfigText));
         Raise(nameof(SliderMemoryGb));
         Raise(nameof(SliderMemoryText));
+        Raise(nameof(CanSave));
         Raise(nameof(RecommendedGb));
         Raise(nameof(RecommendationText));
         Raise(nameof(RecommendedLowerGb));
