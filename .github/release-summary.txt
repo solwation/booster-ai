@@ -1,3 +1,3 @@
-version: 0.31.2
-sv: AI-agenter som saknas visar bara Installera; behörigheter och kontext visas när agenten är installerad.
-en: Missing AI agents show only Install; permissions and context appear once the program is installed.
+version: 0.31.3
+sv: Starta fungerar igen på Windows: flikarna stängdes direkt när Windows Terminal tog bort skriptets citattecken. Saknade AI-agenter visar bara Installera.
+en: Start works again on Windows: tabs closed at once when Windows Terminal dropped the script's quotes. Missing AI agents show only Install.
