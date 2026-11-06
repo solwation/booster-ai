@@ -8,7 +8,14 @@
         Width="720" Height="560" MinWidth="520" MinHeight="320"
         WindowStartupLocation="CenterOwner">
 
-  <!-- Columns: check 36 · name/path * · kind 90. -->
+  <Window.Styles>
+    <!-- A project with the orchestra reads in normal text; one without stays muted. -->
+    <Style Selector="TextBlock.muted.orchestra">
+      <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+    </Style>
+  </Window.Styles>
+
+  <!-- Columns: check 36 · name/path/orchestra status * · kind 90. -->
   <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="28,22,28,20">
 
     <StackPanel Grid.Row="0" Spacing="2" Margin="0,0,0,16">
@@ -35,6 +42,8 @@
                   <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center" Margin="0,0,12,0">
                     <TextBlock Classes="name" Text="{Binding Name}" />
                     <TextBlock Classes="path" Text="{Binding Path}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Path}" />
+                    <TextBlock Classes="muted" Classes.orchestra="{Binding HasOrchestra}" Text="{Binding Orchestra}"
+                               FontSize="12.5" TextWrapping="Wrap" />
                   </StackPanel>
                   <TextBlock Grid.Column="2" Classes="muted" Text="{Binding Kind}" VerticalAlignment="Center" FontSize="12.5" />
                 </Grid>

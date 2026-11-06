@@ -1,7 +1,10 @@
 namespace BoosterAI;
 
 /// <summary>A folder that looks like a project: a git checkout and/or an AI instruction file in its root.</summary>
-public sealed record FoundProject(string Path, string Name, bool Git, bool Ai);
+/// <param name="Orchestra">Whether the project has the shared orchestra (<see cref="PathMapping.HasOrkester"/>).</param>
+/// <param name="OrchestraVersion">The project's own pinned orchestra version ("0.9.0"), or null when it cannot be
+/// determined; see <see cref="ProjectScanner.OrchestraVersion"/>.</param>
+public sealed record FoundProject(string Path, string Name, bool Git, bool Ai, bool Orchestra = false, string? OrchestraVersion = null);
 
 /// <summary>
 /// "Hitta projekt": walks a few levels below Documents looking for project folders. A folder
@@ -43,7 +46,73 @@ public static class ProjectScanner
     {
         var git = Directory.Exists(System.IO.Path.Combine(path, ".git")) || File.Exists(System.IO.Path.Combine(path, ".git"));
         var ai = AiMarkers.Any(m => File.Exists(System.IO.Path.Combine(path, m)) || Directory.Exists(System.IO.Path.Combine(path, m)));
-        return git || ai ? new FoundProject(path, System.IO.Path.GetFileName(path.TrimEnd('\\', '/')), git, ai) : null;
+        if (!git && !ai) return null;
+        var orchestra = PathMapping.HasOrkester(path);
+        return new FoundProject(path, System.IO.Path.GetFileName(path.TrimEnd('\\', '/')), git, ai,
+            orchestra, orchestra ? OrchestraVersion(path) : null);
+    }
+
+    /// <summary>The policy file whose bold pin (<c>Shared release: **v0.9.0**</c>) names the imported release.</summary>
+    public const string PinFile = ".orchestra/project.md";
+
+    /// <summary>The imported subtree's changelog; its first released heading (<c>## 0.9.0 — date</c>) is the installed content.</summary>
+    public const string ChangelogFile = ".orchestra/shared/CHANGELOG.md";
+
+    private const int MaxPinBytes = 512 * 1024, MaxChangelogLines = 80;
+
+    private static readonly System.Text.RegularExpressions.Regex PinPattern =
+        new(@"\*\*v(\d+\.\d+\.\d+(?:-[0-9A-Za-z.]+)?)\*\*", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+    private static readonly System.Text.RegularExpressions.Regex ReleaseHeading =
+        new(@"^##\s+\[?v?(\d+\.\d+\.\d+(?:-[0-9A-Za-z.]+)?)\]?(?:\s|$)", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+    /// <summary>
+    /// The orchestra version the project itself has installed, read from local files only: the bold
+    /// <c>**vX.Y.Z**</c> pin in <see cref="PinFile"/> and the first released heading of <see cref="ChangelogFile"/>.
+    /// One source is enough; when both exist they must agree. Null (version unknown) when neither names a
+    /// version, the pin names several, the two disagree, or a file that exists cannot be read. Never throws.
+    /// </summary>
+    public static string? OrchestraVersion(string path)
+    {
+        string? pin, changelog;
+        try
+        {
+            pin = ReadPin(System.IO.Path.Combine(path, PinFile), out var pinOk);
+            changelog = ReadChangelog(System.IO.Path.Combine(path, ChangelogFile), out var changelogOk);
+            if (!pinOk || !changelogOk) return null;
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.Security.SecurityException) { return null; }
+        if (pin is not null && changelog is not null) return pin == changelog ? pin : null;
+        return pin ?? changelog;
+    }
+
+    /// <summary>The single bold version pin; <paramref name="ok"/> is false when it is contradictory or unreadable.</summary>
+    private static string? ReadPin(string file, out bool ok)
+    {
+        ok = true;
+        if (!File.Exists(file)) return null;
+        string text;
+        using (var stream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+        {
+            if (stream.Length > MaxPinBytes) { ok = false; return null; }
+            using var reader = new StreamReader(stream);
+            text = reader.ReadToEnd();
+        }
+        var versions = PinPattern.Matches(text).Select(m => m.Groups[1].Value).Distinct(StringComparer.Ordinal).ToList();
+        if (versions.Count > 1) ok = false;
+        return versions.Count == 1 ? versions[0] : null;
+    }
+
+    /// <summary>The first released (non-"Unreleased") version heading of the shared changelog.</summary>
+    private static string? ReadChangelog(string file, out bool ok)
+    {
+        ok = true;
+        if (!File.Exists(file)) return null;
+        using var stream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+        using var reader = new StreamReader(stream);
+        for (var i = 0; i < MaxChangelogLines && reader.ReadLine() is { } line; i++)
+            if (ReleaseHeading.Match(line) is { Success: true } m) return m.Groups[1].Value;
+        return null;
     }
 
     private static readonly EnumerationOptions Children = new() { IgnoreInaccessible = true, AttributesToSkip = FileAttributes.System };

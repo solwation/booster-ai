@@ -1724,15 +1724,23 @@ public sealed class UpdateViewModel : Observable
     }
 }
 
-/// <summary>One folder in the "Hitta projekt" list.</summary>
+/// <summary>One folder in the "Hitta projekt" list; it starts unticked so nothing is imported unless chosen.</summary>
 public sealed class ImportItem(FoundProject project, Action changed) : Observable
 {
-    private bool _selected = true;
+    private bool _selected;
 
     public FoundProject Project { get; } = project;
     public string Name => Project.Name;
     public string Path => Project.Path;
     public string Kind => Project switch { { Git: true, Ai: true } => "git · AI", { Git: true } => "git", _ => "AI" };
+    /// <summary>"Saknar orkester", "Har orkester, version okänd" or "Har orkester, version 0.9.0".</summary>
+    public string Orchestra => Project switch
+    {
+        { Orchestra: false } => Loc.Get("import.orchestra.none"),
+        { OrchestraVersion: { } v } => Loc.Format("import.orchestra.version", v),
+        _ => Loc.Get("import.orchestra.unknown"),
+    };
+    public bool HasOrchestra => Project.Orchestra;
     public bool Selected { get => _selected; set { if (Set(ref _selected, value)) changed(); } }
 }
 
@@ -1803,12 +1811,11 @@ public sealed class ImportViewModel : Observable
         Root = root;
         var sep = System.IO.Path.DirectorySeparatorChar;
         Show([
-            new(root + sep + "webshop", "webshop", Git: true, Ai: true),
+            new(root + sep + "webshop", "webshop", Git: true, Ai: true, Orchestra: true, OrchestraVersion: "0.9.0"),
             new(root + sep + "recipes", "recipes", Git: true, Ai: false),
-            new(root + sep + "notes" + sep + "research", "research", Git: false, Ai: true),
-            new(root + sep + "work" + sep + "intranet", "intranet", Git: true, Ai: false),
+            new(root + sep + "notes" + sep + "research", "research", Git: false, Ai: true, Orchestra: true),
+            new(root + sep + "work" + sep + "intranet", "intranet", Git: true, Ai: true, Orchestra: true, OrchestraVersion: "0.8.2"),
         ]);
-        Items[3].Selected = false;
     }
 
     private void Show(IReadOnlyList<FoundProject> projects)
