@@ -1,0 +1,728 @@
+{
+  "synthetic": true,
+  "realInstallerProcesses": 0,
+  "recordedInstallActions": 24,
+  "cases": 72,
+  "results": [
+    {
+      "language": "sv",
+      "theme": "light",
+      "minimum": false,
+      "cli": "claude",
+      "section": 0,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "sv",
+      "theme": "light",
+      "minimum": false,
+      "cli": "claude",
+      "section": 1,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "sv",
+      "theme": "light",
+      "minimum": false,
+      "cli": "claude",
+      "section": 2,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "sv",
+      "theme": "light",
+      "minimum": false,
+      "cli": "codex",
+      "section": 0,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "sv",
+      "theme": "light",
+      "minimum": false,
+      "cli": "codex",
+      "section": 1,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "sv",
+      "theme": "light",
+      "minimum": false,
+      "cli": "codex",
+      "section": 2,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "sv",
+      "theme": "light",
+      "minimum": false,
+      "cli": "agy",
+      "section": 0,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "sv",
+      "theme": "light",
+      "minimum": false,
+      "cli": "agy",
+      "section": 1,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "sv",
+      "theme": "light",
+      "minimum": false,
+      "cli": "agy",
+      "section": 2,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "sv",
+      "theme": "light",
+      "minimum": false,
+      "cli": "aider",
+      "section": 0,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "sv",
+      "theme": "light",
+      "minimum": false,
+      "cli": "aider",
+      "section": 1,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "sv",
+      "theme": "light",
+      "minimum": false,
+      "cli": "aider",
+      "section": 2,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "sv",
+      "theme": "light",
+      "minimum": false,
+      "cli": "interpreter",
+      "section": 0,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "sv",
+      "theme": "light",
+      "minimum": false,
+      "cli": "interpreter",
+      "section": 1,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "sv",
+      "theme": "light",
+      "minimum": false,
+      "cli": "interpreter",
+      "section": 2,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "sv",
+      "theme": "light",
+      "minimum": false,
+      "cli": "openhands",
+      "section": 0,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "sv",
+      "theme": "light",
+      "minimum": false,
+      "cli": "openhands",
+      "section": 1,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "sv",
+      "theme": "light",
+      "minimum": false,
+      "cli": "openhands",
+      "section": 2,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "sv",
+      "theme": "light",
+      "minimum": true,
+      "cli": "claude",
+      "section": 0,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "sv",
+      "theme": "light",
+      "minimum": true,
+      "cli": "claude",
+      "section": 1,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "sv",
+      "theme": "light",
+      "minimum": true,
+      "cli": "claude",
+      "section": 2,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "sv",
+      "theme": "light",
+      "minimum": true,
+      "cli": "codex",
+      "section": 0,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "sv",
+      "theme": "light",
+      "minimum": true,
+      "cli": "codex",
+      "section": 1,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "sv",
+      "theme": "light",
+      "minimum": true,
+      "cli": "codex",
+      "section": 2,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "sv",
+      "theme": "light",
+      "minimum": true,
+      "cli": "agy",
+      "section": 0,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "sv",
+      "theme": "light",
+      "minimum": true,
+      "cli": "agy",
+      "section": 1,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "sv",
+      "theme": "light",
+      "minimum": true,
+      "cli": "agy",
+      "section": 2,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "sv",
+      "theme": "light",
+      "minimum": true,
+      "cli": "aider",
+      "section": 0,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "sv",
+      "theme": "light",
+      "minimum": true,
+      "cli": "aider",
+      "section": 1,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "sv",
+      "theme": "light",
+      "minimum": true,
+      "cli": "aider",
+      "section": 2,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "sv",
+      "theme": "light",
+      "minimum": true,
+      "cli": "interpreter",
+      "section": 0,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "sv",
+      "theme": "light",
+      "minimum": true,
+      "cli": "interpreter",
+      "section": 1,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "sv",
+      "theme": "light",
+      "minimum": true,
+      "cli": "interpreter",
+      "section": 2,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "sv",
+      "theme": "light",
+      "minimum": true,
+      "cli": "openhands",
+      "section": 0,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "sv",
+      "theme": "light",
+      "minimum": true,
+      "cli": "openhands",
+      "section": 1,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "sv",
+      "theme": "light",
+      "minimum": true,
+      "cli": "openhands",
+      "section": 2,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "en",
+      "theme": "dark",
+      "minimum": false,
+      "cli": "claude",
+      "section": 0,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "en",
+      "theme": "dark",
+      "minimum": false,
+      "cli": "claude",
+      "section": 1,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "en",
+      "theme": "dark",
+      "minimum": false,
+      "cli": "claude",
+      "section": 2,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "en",
+      "theme": "dark",
+      "minimum": false,
+      "cli": "codex",
+      "section": 0,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "en",
+      "theme": "dark",
+      "minimum": false,
+      "cli": "codex",
+      "section": 1,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "en",
+      "theme": "dark",
+      "minimum": false,
+      "cli": "codex",
+      "section": 2,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "en",
+      "theme": "dark",
+      "minimum": false,
+      "cli": "agy",
+      "section": 0,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "en",
+      "theme": "dark",
+      "minimum": false,
+      "cli": "agy",
+      "section": 1,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "en",
+      "theme": "dark",
+      "minimum": false,
+      "cli": "agy",
+      "section": 2,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "en",
+      "theme": "dark",
+      "minimum": false,
+      "cli": "aider",
+      "section": 0,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "en",
+      "theme": "dark",
+      "minimum": false,
+      "cli": "aider",
+      "section": 1,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "en",
+      "theme": "dark",
+      "minimum": false,
+      "cli": "aider",
+      "section": 2,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "en",
+      "theme": "dark",
+      "minimum": false,
+      "cli": "interpreter",
+      "section": 0,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "en",
+      "theme": "dark",
+      "minimum": false,
+      "cli": "interpreter",
+      "section": 1,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "en",
+      "theme": "dark",
+      "minimum": false,
+      "cli": "interpreter",
+      "section": 2,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "en",
+      "theme": "dark",
+      "minimum": false,
+      "cli": "openhands",
+      "section": 0,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "en",
+      "theme": "dark",
+      "minimum": false,
+      "cli": "openhands",
+      "section": 1,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "en",
+      "theme": "dark",
+      "minimum": false,
+      "cli": "openhands",
+      "section": 2,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "en",
+      "theme": "dark",
+      "minimum": true,
+      "cli": "claude",
+      "section": 0,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "en",
+      "theme": "dark",
+      "minimum": true,
+      "cli": "claude",
+      "section": 1,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "en",
+      "theme": "dark",
+      "minimum": true,
+      "cli": "claude",
+      "section": 2,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "en",
+      "theme": "dark",
+      "minimum": true,
+      "cli": "codex",
+      "section": 0,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "en",
+      "theme": "dark",
+      "minimum": true,
+      "cli": "codex",
+      "section": 1,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "en",
+      "theme": "dark",
+      "minimum": true,
+      "cli": "codex",
+      "section": 2,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "en",
+      "theme": "dark",
+      "minimum": true,
+      "cli": "agy",
+      "section": 0,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "en",
+      "theme": "dark",
+      "minimum": true,
+      "cli": "agy",
+      "section": 1,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "en",
+      "theme": "dark",
+      "minimum": true,
+      "cli": "agy",
+      "section": 2,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "en",
+      "theme": "dark",
+      "minimum": true,
+      "cli": "aider",
+      "section": 0,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "en",
+      "theme": "dark",
+      "minimum": true,
+      "cli": "aider",
+      "section": 1,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "en",
+      "theme": "dark",
+      "minimum": true,
+      "cli": "aider",
+      "section": 2,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "en",
+      "theme": "dark",
+      "minimum": true,
+      "cli": "interpreter",
+      "section": 0,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "en",
+      "theme": "dark",
+      "minimum": true,
+      "cli": "interpreter",
+      "section": 1,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "en",
+      "theme": "dark",
+      "minimum": true,
+      "cli": "interpreter",
+      "section": 2,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "en",
+      "theme": "dark",
+      "minimum": true,
+      "cli": "openhands",
+      "section": 0,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "en",
+      "theme": "dark",
+      "minimum": true,
+      "cli": "openhands",
+      "section": 1,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    },
+    {
+      "language": "en",
+      "theme": "dark",
+      "minimum": true,
+      "cli": "openhands",
+      "section": 2,
+      "onlyInstallWhenMissing": true,
+      "installedEditorsRestored": true,
+      "removedEditorsHiddenAgain": true
+    }
+  ]
+}

@@ -36,3 +36,23 @@ No launcher/path/terminal command logic changed, so no real Terminal gate applie
 Main-window screenshots remain representative. Windows tests and release/update
 publication are integration gates; local installation is reported separately under
 the automatic-update delivery policy from #120.
+
+## Windows and integration
+
+Integrated as `6b168ec`. The synced Windows mirror passed **780 tests**, 0 failed/
+skipped. Its headless probe Release build has zero warnings/errors and the same
+**72 UI cases / 24 recorded Install actions / zero real installers** pass on Windows.
+[Windows results](windows/interaction.json) and all six Windows images were inspected,
+including [missing Aider](windows/missing-sv-light.png),
+[minimum dark](windows/missing-en-dark-minimum.png) and
+[installed Aider](windows/installed-en-dark.png).
+
+The conductor reviewed the combined diff against acceptance, documentation, existing
+agent selection/refresh behavior and the inspected images; no concrete findings.
+No second worker or routine rerun was used. Startup/planning took about4minutes,
+implementation/WSL/UI verification about5minutes, Windows verification about2minutes;
+these are coarse phase observations, not performance comparisons.
+
+Publication is through the app's normal automatic update. No manual Windows
+installation was requested or attempted, and no local update success is claimed.
+Native desktop placement and real agent installation are outside the headless proof.
