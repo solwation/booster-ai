@@ -25,7 +25,7 @@
 
   <!-- Settings tab navigation -->
   <Style Selector="TabControl.settings-tabs TabControl.optimization-sections TabItem">
-    <Setter Property="Width" Value="150" />
+    <Setter Property="MinWidth" Value="150" />
     <Setter Property="MinHeight" Value="44" />
     <Setter Property="FontSize" Value="13" />
     <Setter Property="Padding" Value="10,12" />
