@@ -72,7 +72,8 @@ public static class AutoCompact
         };
     }
     public static string GuardClaude(string selected, string fallback) =>
-        "{ [ -z \"${CLAUDE_CODE_AUTO_COMPACT_WINDOW:-}\" ] || printf '%s\\n' 'BoosterAI: CLAUDE_CODE_AUTO_COMPACT_WINDOW overrides the selected auto-compact window.' >&2\n"
+        // ${X:+1} expands to 1 or nothing, so the test needs no double quotes (Windows Terminal drops them, #124).
+        "{ [ -z ${CLAUDE_CODE_AUTO_COMPACT_WINDOW:+1} ] || printf '%s\\n' 'BoosterAI: CLAUDE_CODE_AUTO_COMPACT_WINDOW overrides the selected auto-compact window.' >&2\n"
         + "if (set -o pipefail\ncommand timeout --kill-after=1s 5s claude --help 2>/dev/null | command grep -E -- '(^|[[:space:]])--autocompact([[:space:]=]|$)' >/dev/null)\nthen "
         + selected + "\nelse printf '%s\\n' 'BoosterAI: --autocompact support could not be verified. Using CLI defaults.' >&2\n"
         + fallback + "\nfi\n}";

@@ -31,7 +31,7 @@ public class CliUpdateTests
         Assert.DoesNotContain("bs_update", Launcher.RestartScript(new TabConfig { Llm = Catalog.ShellOnly }, Track, resume: false));
         // The fallback for a missing library (and an untracked start) has no bs_update to call.
         Assert.DoesNotContain("bs_update", Launcher.TabScript(codex));
-        Assert.DoesNotContain("bs_update", Launcher.TabScript(codex, null, Track).Split("bs_command=")[1]);
+        Assert.DoesNotContain("bs_update", Launcher.TabScript(codex, null, Track).Split("\nelse ")[1]);
     }
 
     [Fact]

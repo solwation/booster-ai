@@ -32,6 +32,63 @@ public class LauncherTests
     private static TabConfig Once(string llm, bool orkester = true, string model = "x") =>
         new() { Directory = "~/proj", Llm = llm, Model = model, Orkester = orkester, NonInteractive = true };
 
+    /// <summary>
+    /// Windows Terminal wraps a new-tab argument in "…" without escaping embedded double quotes; wsl.exe then drops
+    /// them and splits the rest on whitespace, so a tab command with a raw '"' never starts its CLI (#124).
+    /// </summary>
+    [Fact]
+    public void WindowsTerminalArgumentsHaveNoDoubleQuotes()
+    {
+        var track = new TabTrack("/s/lib.sh", "/s", "tab1", true, true);
+        var tabs = new List<TabConfig>
+        {
+            new() { Name = "Say \"hi\"", Directory = "/srv/\"quoted\" dir", Llm = "claude", Model = "claude-opus-5-5", CompactTokens = 150000 },
+            new() { Name = "Once", Directory = "~/proj", Llm = "codex", Model = "x", Orkester = true, NonInteractive = true, CompactTokens = 150000 },
+            new() { Name = "Agy", Directory = "~/proj", Llm = "agy", Orkester = true },
+            new() { Name = "Install", Directory = "~", Llm = Catalog.ShellOnly, Script = Prerequisites.InstallScript("claude") },
+        };
+        var tracks = tabs.Select(_ => (TabTrack?)track).ToList();
+        foreach (var prompt in new[] { null, "say \"hi\" to 'them'" })
+        {
+            var args = Launcher.WindowsTerminalArgs(tabs, "Ubuntu", prompt, tracks, "BoosterAI-test", 80);
+            Assert.All(args, a => Assert.DoesNotContain('"', a));
+            Assert.Contains("Say ”hi”", args);
+        }
+        var script = Launcher.TabScript(tabs[0], null, track);
+        Assert.DoesNotContain('"', script);
+        Assert.StartsWith("if . '/s/lib.sh' '/s' 'tab1' 'Say '$'\\x22''hi'$'\\x22''' 2>/dev/null\nthen ", script);
+        Assert.Contains("\nelse ", script);
+        Assert.EndsWith("\nfi", script);
+        Assert.DoesNotContain("eval", script);
+    }
+
+    [Fact]
+    public void DoubleQuotesSurviveTabScriptQuoting()
+    {
+        if (OperatingSystem.IsWindows()) return; // The actual scripts run in Linux/WSL.
+        var psi = new ProcessStartInfo("bash")
+        {
+            RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true,
+            UseShellExecute = false
+        };
+        var root = Directory.CreateTempSubdirectory("booster-quotes-").FullName;
+        TestShell.Configure(psi, root);
+        psi.WorkingDirectory = root;
+        try
+        {
+            psi.ArgumentList.Add("-c");
+            var tab = new TabConfig { Directory = root, Llm = "claude", Model = "model \"name\"" };
+            psi.ArgumentList.Add("claude() { printf '%s\\n' \"$@\"; }\n" + Launcher.TabScript(tab, "say \"hi\" to 'them'"));
+            using var process = Process.Start(psi)!;
+            process.StandardInput.Close();
+            var output = process.StandardOutput.ReadToEnd();
+            Assert.True(process.WaitForExit(30000));
+            Assert.Equal(0, process.ExitCode);
+            Assert.Equal("--model\nmodel \"name\"\nsay \"hi\" to 'them'\n", output);
+        }
+        finally { TestShell.StopLeftovers(root); Directory.Delete(root, true); }
+    }
+
     [Fact]
     public void OneShotClaudeUsesPrint() => Assert.Equal(
         "cd ~/'proj' && claude --model 'x' -p '/orkester' || true && exec bash",
@@ -44,7 +101,7 @@ public class LauncherTests
 
     [Fact]
     public void OneShotCodexUsesExec() => Assert.Equal(
-        "cd ~/'proj' && codex exec --model 'x' \"$(test -d .agents/skills/orkester && echo '$orkester' || echo /orkester)\"' "
+        "cd ~/'proj' && codex exec --model 'x' $(test -d .agents/skills/orkester && echo '$orkester' || echo /orkester)' "
         + Launcher.ForegroundWatchNote + "' || true && exec bash",
         Launcher.TabScript(Once("codex")));
 
@@ -146,7 +203,7 @@ public class LauncherTests
     public void OneShotWithTrackingShowsLiveProgress(string llm, string expected)
     {
         var script = Launcher.TabScript(Once(llm), null, new TabTrack("/s/lib.sh", "/s", "tab1"));
-        Assert.Contains(expected.Replace("'", "'\\''"), script);
+        Assert.Contains(expected, script);
         Assert.DoesNotContain(';', script);
     }
 
@@ -237,7 +294,7 @@ public class LauncherTests
                 var tab = new TabConfig { Directory = directory, Llm = llm, Model = "model's name", Orkester = true };
                 var restart = Launcher.RestartScript(tab, track, resume);
                 Assert.StartsWith(expectedCd + (llm == Catalog.ShellOnly ? " || true" : " && "), restart);
-                Assert.Contains(expectedCd.Replace("'", "'\\''"), Launcher.WindowsTerminalArgs([tab], "Ubuntu", tracks: [track], resume: resume)
+                Assert.Contains(expectedCd, Launcher.WindowsTerminalArgs([tab], "Ubuntu", tracks: [track], resume: resume)
                     .Single(arg => arg.Contains("bs_cli")));
                 Assert.DoesNotContain(';', restart);
                 if (resume && Launcher.CanContinue(tab))

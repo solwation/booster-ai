@@ -9,7 +9,8 @@ public static class Launcher
     /// <summary>
     /// The bash command a tab runs: cd into its directory, start the CLI through an
     /// interactive login shell (so ~/.bashrc aliases and PATH apply), then leave a shell.
-    /// It contains no ';' because Windows Terminal splits its command line on it.
+    /// It contains no ';' because Windows Terminal splits its command line on it, and no raw '"' because Windows
+    /// Terminal drops those from a new-tab command and wsl.exe then splits it on whitespace (#124; Quote encodes them).
     /// With a <paramref name="track"/>, the shell first sources tab-lib.sh with the tab's name (its title, #66), which logs start, CLI
     /// start and exit code, tracks terminal output timing and captures a bounded output tail (bs_run, bs_cap), formats the run-once event stream
     /// (bs_stream), and logs the shell's own exit (see TabSession); the closing shell is then a
@@ -29,10 +30,11 @@ public static class Launcher
         var tracked = tab.Llm == Catalog.ShellOnly
             ? $"{cd} || true && {Hook("bs_reset")} && {Hook("bs_cli")} && bs_run {Quote("bash")}"
             : $"{cd} && {Hook("bs_reset")} && {UpdateHook(tab, track)}{Hook("bs_cli")} && {cli} && {Hook("bs_done 0")} || {Hook("bs_done $?")} && {Next} && (type bs_shell >/dev/null 2>&1) && bs_shell || bash";
-        // Select before executing: an unsuccessful CLI or a shell's exit code must never run the
-        // fallback a second time. Both bodies are shell-quoted literals; eval keeps the tracked PID.
+        // Select before executing: an unsuccessful CLI or a shell's exit code must never run the fallback a second
+        // time. if/then/else runs the chosen body in the tab's own shell (the tracked PID) and, unlike the earlier
+        // eval "$bs_command", needs no double quotes, which Windows Terminal drops from the command (#124, see Quote).
         var plain = TabScript(tab, prompt, resume: resume);
-        return $"bs_command={Quote(plain)} && . {Quote(track.Lib)} {Quote(track.Dir)} {Quote(track.Id)} {Quote(tab.Name)} 2>/dev/null && bs_command={Quote(tracked)} || true && eval \"$bs_command\"";
+        return $"if . {Quote(track.Lib)} {Quote(track.Dir)} {Quote(track.Id)} {Quote(tab.Name)} 2>/dev/null\nthen {tracked}\nelse {plain}\nfi";
     }
 
     // In the tab's own shell, not a subshell: stopping a restarted CLI's process group must not take bs_next's loop with it.
@@ -141,7 +143,8 @@ public static class Launcher
             {
                 "agy" => once ? "-p " + Quote("/orkester " + ForegroundWatchNote) : "-i " + Quote("/orkester"),
                 // Codex invokes repository skills as $name; repositories without one get the slash text.
-                "codex" when once => "\"" + CodexOrkester + "\"" + Quote(" " + ForegroundWatchNote),
+                // The substitution yields one word without whitespace, so it is safe unquoted (no raw '"', see Quote).
+                "codex" when once => CodexOrkester + Quote(" " + ForegroundWatchNote),
                 "codex" => CodexOrkester,
                 "aider" => "-m " + Quote(once ? "/orkester " + ForegroundWatchNote : "/orkester"),
                 _ when once => "-p " + Quote("/orkester"),
@@ -425,7 +428,8 @@ fi
         {
             var t = tabs[i];
             if (a.Count > 2) a.Add(";");
-            a.AddRange(["new-tab", .. profile, "--title", t.Name, "--tabColor", t.Color, "--suppressApplicationTitle",
+            // A raw '"' anywhere in the wt.exe command line breaks every later argument (#124); the title shows a typographic one.
+            a.AddRange(["new-tab", .. profile, "--title", t.Name.Replace('"', '\u201D'), "--tabColor", t.Color, "--suppressApplicationTitle",
                 "wsl.exe", "-d", distro, "--exec", "bash", "-lic", TabScript(InWsl(t), prompt, tracks?[i], resume)]);
         }
         a.AddRange([";", "focus-tab", "-t", "0"]);
@@ -778,5 +782,10 @@ fi
         (Environment.GetEnvironmentVariable("PATH") ?? "").Split(':')
             .Any(dir => dir != "" && File.Exists(Path.Combine(dir, exe)));
 
-    internal static string Quote(string s) => "'" + s.Replace("'", "'\\''") + "'";
+    /// <summary>
+    /// A bash single-quoted literal. A double quote is written as the ANSI-C literal $'\x22' between the single-quoted
+    /// parts: Windows Terminal wraps a new-tab argument in "…" without escaping embedded double quotes, and wsl.exe then
+    /// drops them and splits the rest on whitespace (#124), so nothing sent through wt.exe may contain a raw '"'.
+    /// </summary>
+    internal static string Quote(string s) => "'" + s.Replace("'", "'\\''").Replace("\"", "'$'\\x22''") + "'";
 }
