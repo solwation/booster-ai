@@ -123,7 +123,7 @@ public class InterpreterTests
     }
 
     [Fact]
-    public void RealPtyRestartsInterpreterInPlaceAndClosesItsShell()
+    public async Task RealPtyRestartsInterpreterInPlaceAndClosesItsShell()
     {
         if (!OperatingSystem.IsLinux() || !File.Exists("/usr/bin/script")) return;
         using var fake = new FakeInterpreter(true);
@@ -137,16 +137,17 @@ public class InterpreterTests
         };
         fake.SetEnvironment(psi);
         using var process = Process.Start(psi)!;
+        var output = process.StandardOutput.ReadToEndAsync();
+        var error = process.StandardError.ReadToEndAsync();
         try
         {
-            _ = process.StandardOutput.ReadToEndAsync();
-            _ = process.StandardError.ReadToEndAsync();
-            Assert.True(SpinWait.SpinUntil(() => session.ReadLog(track.Id) is { CliExit: 0, CanRestartExited: true }, 20000));
+            await Require(SpinWait.SpinUntil(() => session.ReadLog(track.Id) is { CliExit: 0, CanRestartExited: true }, 20000), "initial CLI exit");
             var original = session.ReadLog(track.Id)!;
-            Assert.True(SpinWait.SpinUntil(() => File.Exists(Path.Combine(session.Directory, track.Id + ".next.idle")), 20000));
+            await Require(SpinWait.SpinUntil(() => File.Exists(Path.Combine(session.Directory, track.Id + ".next.idle")), 20000), "idle shell ready");
+            var before = State();
             session.QueueNext(track.Id, Launcher.RestartScript(tab, track, resume: false));
             Launcher.RunTabControl(Launcher.WakeIdleShellScript(track), "Ubuntu");
-            Assert.True(SpinWait.SpinUntil(() => File.ReadAllLines(fake.Cwd).Length == 2 && session.ReadLog(track.Id)?.CliExit == 0, 20000));
+            await Require(SpinWait.SpinUntil(() => File.ReadAllLines(fake.Cwd).Length == 2 && session.ReadLog(track.Id)?.CliExit == 0, 20000), "queued restart", before);
             Assert.Equal(original.Pid, session.ReadLog(track.Id)!.Pid);
             Launcher.RunTabControl(Launcher.CloseTabScript(original.Pid!.Value, original.StartTime!.Value, exitCleanly: true), "Ubuntu");
             Assert.True(process.WaitForExit(20000));
@@ -156,6 +157,36 @@ public class InterpreterTests
         {
             if (!process.HasExited) process.Kill(entireProcessTree: true);
             process.WaitForExit();
+        }
+
+        async Task Require(bool condition, string phase, string? before = null)
+        {
+            if (condition) return;
+            var after = State();
+            if (!process.HasExited) process.Kill(entireProcessTree: true);
+            process.WaitForExit();
+            TestShell.StopLeftovers(fake.Root);
+            async Task<string> Drain(Task<string> stream)
+            {
+                try { return await stream.WaitAsync(TimeSpan.FromSeconds(5)); }
+                catch (TimeoutException) { return "<capture did not close after fixture cleanup>"; }
+            }
+            Assert.True(condition, System.Text.Json.JsonSerializer.Serialize(new { phase, before, after,
+                output = await Drain(output), error = await Drain(error) }));
+        }
+
+        string State()
+        {
+            string Read(string path) { try { return File.ReadAllText(path); } catch (IOException) { return "<absent>"; } }
+            var idle = Read(Path.Combine(session.Directory, track.Id + ".next.idle"));
+            var pids = new[] { session.ReadLog(track.Id)?.Pid?.ToString(), idle.Split(' ')[0], process.Id.ToString() }
+                .Where(p => int.TryParse(p, out _)).Distinct();
+            var signals = pids.ToDictionary(p => p!, p => new { stat = Read("/proc/" + p + "/stat"),
+                status = string.Join('\n', Read("/proc/" + p + "/status").Split('\n').Where(l =>
+                    new[] { "Name:", "State:", "Pid:", "PPid:", "NSpgid:", "SigBlk:", "SigIgn:", "SigCgt:", "SigPnd:", "ShdPnd:" }.Any(l.StartsWith))) });
+            return System.Text.Json.JsonSerializer.Serialize(new { idle, signals,
+                next = Read(Path.Combine(session.Directory, track.Id + ".next")),
+                log = Read(Path.Combine(session.Directory, track.Id + ".log")), cwd = Read(fake.Cwd) });
         }
     }
 

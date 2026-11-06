@@ -1,0 +1,26 @@
+name: PTY diagnostics
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Runtime versions
+        run: |
+          uname -r
+          bash --version
+          script --version
+      - name: Isolated Interpreter PTY restart
+        run: dotnet test tests/BoosterAI.Tests -c Release --filter FullyQualifiedName~InterpreterTests.RealPtyRestartsInterpreterInPlaceAndClosesItsShell
+      - name: Full suite if the isolated case passes
+        run: dotnet test tests/BoosterAI.Tests -c Release --no-build
