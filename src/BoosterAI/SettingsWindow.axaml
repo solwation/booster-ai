@@ -523,59 +523,63 @@
                           <local:AgentIcon Cli="{Binding Cli}" Width="36" Height="36" Margin="0,0,12,0" />
                           <StackPanel Grid.Column="1" Spacing="3">
                             <TextBlock Classes="title" Text="{Binding DisplayName}" />
-                            <WrapPanel><TextBlock Text="{Binding StatusText}" FontSize="12" Margin="0,0,10,0" /><TextBlock Text="{local:T agents.version}" Classes="muted" FontSize="12" Margin="0,0,5,0" /><TextBlock Text="{Binding VersionText}" FontSize="12" /></WrapPanel>
+                            <WrapPanel IsVisible="{Binding IsInstalled}"><TextBlock Text="{Binding StatusText}" FontSize="12" Margin="0,0,10,0" /><TextBlock Text="{local:T agents.version}" Classes="muted" FontSize="12" Margin="0,0,5,0" /><TextBlock Text="{Binding VersionText}" FontSize="12" /></WrapPanel>
                           </StackPanel>
                         </Grid>
-                        <WrapPanel>
-                          <Button Classes="agent-nav" Classes.chosen="{Binding IsOverview}" Content="{local:T agents.section.overview}" Tag="0" Click="OnAgentSection" Margin="0,0,6,0" />
-                          <Button Classes="agent-nav" Classes.chosen="{Binding IsPermissions}" Content="{local:T agents.section.permissions}" Tag="1" Click="OnAgentSection" Margin="0,0,6,0" />
-                          <Button Classes="agent-nav" Classes.chosen="{Binding IsContext}" Content="{local:T agents.section.context}" Tag="2" Click="OnAgentSection" />
-                        </WrapPanel>
-                        <StackPanel Spacing="14" IsVisible="{Binding IsOverview}">
-                          <TextBlock Text="{Binding Description}" Classes="muted" TextWrapping="Wrap" />
-                          <Button Classes="agent-card" Click="OnAgentSection" Tag="1" HorizontalAlignment="Stretch">
-                            <Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="5"><TextBlock Text="{local:T agents.section.permissions}" FontWeight="SemiBold" /><TextBlock Text="{Binding CurrentModeText}" Classes="muted" /></StackPanel><TextBlock Grid.Column="1" Text="›" FontSize="25" VerticalAlignment="Center" /></Grid>
-                          </Button>
-                          <Button Classes="agent-card" Click="OnAgentSection" Tag="2" HorizontalAlignment="Stretch">
-                            <Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="5"><TextBlock Text="{local:T agents.section.context}" FontWeight="SemiBold" /><TextBlock Text="{Binding $parent[Window].((local:MainViewModel)DataContext).SelectedCompactMode.Label}" Classes="muted" /></StackPanel><TextBlock Grid.Column="1" Text="›" FontSize="25" VerticalAlignment="Center" /></Grid>
-                          </Button>
-                          <WrapPanel><Button Content="{Binding InstallButtonText}" Click="OnInstallAgent" ToolTip.Tip="{Binding InstallTip}" Margin="0,0,8,8" /><Button Content="{local:T agents.check.short}" Click="OnCheckSetup" Margin="0,0,0,8" IsEnabled="{Binding !$parent[Window].((local:MainViewModel)DataContext).Setup.IsChecking}" /></WrapPanel>
-                          <Expander Header="{local:T agents.details.installation}" HorizontalAlignment="Stretch">
-                            <StackPanel Spacing="8"><TextBlock Text="{local:T agents.intro}" TextWrapping="Wrap" FontSize="12" /><TextBlock Text="{Binding UpdateInfo}" TextWrapping="Wrap" FontSize="12" /></StackPanel>
-                          </Expander>
-                          <TextBlock Text="{Binding $parent[Window].((local:MainViewModel)DataContext).Setup.CheckNotice}" Classes="muted" TextWrapping="Wrap" FontSize="12" />
-                        </StackPanel>
-                        <StackPanel Spacing="12" IsVisible="{Binding IsPermissions}">
-                          <TextBlock Text="{local:T agents.alias.what}" Classes="muted" TextWrapping="Wrap" FontSize="12" />
-                          <Border Classes="agent-group">
+                        <Button Classes="accent" Content="{Binding InstallButtonText}" Click="OnInstallAgent"
+                                ToolTip.Tip="{Binding InstallTip}" IsVisible="{Binding !IsInstalled}" HorizontalAlignment="Left" />
+                        <StackPanel Spacing="16" IsVisible="{Binding IsInstalled}">
+                          <WrapPanel>
+                            <Button Classes="agent-nav" Classes.chosen="{Binding IsOverview}" Content="{local:T agents.section.overview}" Tag="0" Click="OnAgentSection" Margin="0,0,6,0" />
+                            <Button Classes="agent-nav" Classes.chosen="{Binding IsPermissions}" Content="{local:T agents.section.permissions}" Tag="1" Click="OnAgentSection" Margin="0,0,6,0" />
+                            <Button Classes="agent-nav" Classes.chosen="{Binding IsContext}" Content="{local:T agents.section.context}" Tag="2" Click="OnAgentSection" />
+                          </WrapPanel>
+                          <StackPanel Spacing="14" IsVisible="{Binding IsOverview}">
+                            <TextBlock Text="{Binding Description}" Classes="muted" TextWrapping="Wrap" />
+                            <Button Classes="agent-card" Click="OnAgentSection" Tag="1" HorizontalAlignment="Stretch">
+                              <Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="5"><TextBlock Text="{local:T agents.section.permissions}" FontWeight="SemiBold" /><TextBlock Text="{Binding CurrentModeText}" Classes="muted" /></StackPanel><TextBlock Grid.Column="1" Text="›" FontSize="25" VerticalAlignment="Center" /></Grid>
+                            </Button>
+                            <Button Classes="agent-card" Click="OnAgentSection" Tag="2" HorizontalAlignment="Stretch">
+                              <Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="5"><TextBlock Text="{local:T agents.section.context}" FontWeight="SemiBold" /><TextBlock Text="{Binding $parent[Window].((local:MainViewModel)DataContext).SelectedCompactMode.Label}" Classes="muted" /></StackPanel><TextBlock Grid.Column="1" Text="›" FontSize="25" VerticalAlignment="Center" /></Grid>
+                            </Button>
+                            <WrapPanel><Button Content="{Binding InstallButtonText}" Click="OnInstallAgent" ToolTip.Tip="{Binding InstallTip}" Margin="0,0,8,8" /><Button Content="{local:T agents.check.short}" Click="OnCheckSetup" Margin="0,0,0,8" IsEnabled="{Binding !$parent[Window].((local:MainViewModel)DataContext).Setup.IsChecking}" /></WrapPanel>
+                            <Expander Header="{local:T agents.details.installation}" HorizontalAlignment="Stretch">
+                              <StackPanel Spacing="8"><TextBlock Text="{local:T agents.intro}" TextWrapping="Wrap" FontSize="12" /><TextBlock Text="{Binding UpdateInfo}" TextWrapping="Wrap" FontSize="12" /></StackPanel>
+                            </Expander>
+                            <TextBlock Text="{Binding $parent[Window].((local:MainViewModel)DataContext).Setup.CheckNotice}" Classes="muted" TextWrapping="Wrap" FontSize="12" />
+                          </StackPanel>
+                          <StackPanel Spacing="12" IsVisible="{Binding IsPermissions}">
+                            <TextBlock Text="{local:T agents.alias.what}" Classes="muted" TextWrapping="Wrap" FontSize="12" />
+                            <Border Classes="agent-group">
+                              <StackPanel Spacing="6">
+                                <WrapPanel><TextBlock Text="{local:T agents.alias.current}" FontWeight="SemiBold" Margin="0,0,8,0" /><TextBlock Text="{Binding CurrentModeText}" /></WrapPanel>
+                                <ScrollViewer MaxHeight="100" IsVisible="{Binding HasCurrentAliasCommand}" HorizontalScrollBarVisibility="Disabled"><SelectableTextBlock Text="{Binding CurrentAliasCommand}" Classes="path" TextWrapping="Wrap" FontSize="12" /></ScrollViewer>
+                                <TextBlock Text="{local:T agents.alias.truncated}" IsVisible="{Binding DefinitionTruncated}" Classes="muted" TextWrapping="Wrap" FontSize="12" />
+                                <TextBlock Text="{local:T agents.alias.definitionMissing}" IsVisible="{Binding MissingDefinition}" TextWrapping="Wrap" FontSize="12" />
+                                <TextBlock Text="{Binding CurrentAliasExplanation}" TextWrapping="Wrap" FontSize="12" />
+                              </StackPanel>
+                            </Border>
                             <StackPanel Spacing="6">
-                              <WrapPanel><TextBlock Text="{local:T agents.alias.current}" FontWeight="SemiBold" Margin="0,0,8,0" /><TextBlock Text="{Binding CurrentModeText}" /></WrapPanel>
-                              <ScrollViewer MaxHeight="100" IsVisible="{Binding HasCurrentAliasCommand}" HorizontalScrollBarVisibility="Disabled"><SelectableTextBlock Text="{Binding CurrentAliasCommand}" Classes="path" TextWrapping="Wrap" FontSize="12" /></ScrollViewer>
-                              <TextBlock Text="{local:T agents.alias.truncated}" IsVisible="{Binding DefinitionTruncated}" Classes="muted" TextWrapping="Wrap" FontSize="12" />
-                              <TextBlock Text="{local:T agents.alias.definitionMissing}" IsVisible="{Binding MissingDefinition}" TextWrapping="Wrap" FontSize="12" />
-                              <TextBlock Text="{Binding CurrentAliasExplanation}" TextWrapping="Wrap" FontSize="12" />
+                              <TextBlock Text="{local:T agents.alias.choose}" FontWeight="SemiBold" />
+                              <ComboBox ItemsSource="{Binding ModeChoices}" SelectedItem="{Binding SelectedMode}" IsEnabled="{Binding CanSelectMode}" HorizontalAlignment="Stretch" AutomationProperties.Name="{local:T agents.alias.choose}">
+                                <ComboBox.ItemTemplate><DataTemplate x:DataType="local:AgentModeChoice"><TextBlock Text="{Binding Label}" /></DataTemplate></ComboBox.ItemTemplate>
+                              </ComboBox>
+                              <TextBlock Text="{Binding AliasRecommendation}" Classes="muted" TextWrapping="Wrap" FontSize="12" />
                             </StackPanel>
-                          </Border>
-                          <StackPanel Spacing="6">
-                            <TextBlock Text="{local:T agents.alias.choose}" FontWeight="SemiBold" />
-                            <ComboBox ItemsSource="{Binding ModeChoices}" SelectedItem="{Binding SelectedMode}" IsEnabled="{Binding CanSelectMode}" HorizontalAlignment="Stretch" AutomationProperties.Name="{local:T agents.alias.choose}">
-                              <ComboBox.ItemTemplate><DataTemplate x:DataType="local:AgentModeChoice"><TextBlock Text="{Binding Label}" /></DataTemplate></ComboBox.ItemTemplate>
-                            </ComboBox>
-                            <TextBlock Text="{Binding AliasRecommendation}" Classes="muted" TextWrapping="Wrap" FontSize="12" />
+                            <Border Background="#20DD7536" CornerRadius="6" Padding="10" IsVisible="{Binding IsYolo}"><TextBlock Text="{local:T agents.permissions.warning}" TextWrapping="Wrap" FontWeight="SemiBold" /></Border>
+                            <TextBlock Text="{Binding ModeExplanation}" TextWrapping="Wrap" FontSize="12" />
+                            <StackPanel Spacing="5" IsVisible="{Binding HasPresetPreview}">
+                              <TextBlock Text="{local:T agents.alias.preview}" FontWeight="SemiBold" FontSize="12" />
+                              <SelectableTextBlock Text="{Binding ModePreview}" Classes="path" TextWrapping="Wrap" FontSize="12" />
+                              <TextBlock Text="{Binding ModePreviewEffect}" Classes="muted" TextWrapping="Wrap" FontSize="12" />
+                            </StackPanel>
+                            <Button Classes="accent" Content="{local:T agents.mode.apply}" Click="OnApplyAgentMode" IsEnabled="{Binding CanApply}" HorizontalAlignment="Left" />
+                            <TextBlock Text="{local:T agents.alias.scope}" Classes="muted" TextWrapping="Wrap" FontSize="12" />
                           </StackPanel>
-                          <Border Background="#20DD7536" CornerRadius="6" Padding="10" IsVisible="{Binding IsYolo}"><TextBlock Text="{local:T agents.permissions.warning}" TextWrapping="Wrap" FontWeight="SemiBold" /></Border>
-                          <TextBlock Text="{Binding ModeExplanation}" TextWrapping="Wrap" FontSize="12" />
-                          <StackPanel Spacing="5" IsVisible="{Binding HasPresetPreview}">
-                            <TextBlock Text="{local:T agents.alias.preview}" FontWeight="SemiBold" FontSize="12" />
-                            <SelectableTextBlock Text="{Binding ModePreview}" Classes="path" TextWrapping="Wrap" FontSize="12" />
-                            <TextBlock Text="{Binding ModePreviewEffect}" Classes="muted" TextWrapping="Wrap" FontSize="12" />
+                          <StackPanel Spacing="12" IsVisible="{Binding IsContext}">
+                            <WrapPanel><TextBlock Text="{Binding $parent[Window].((local:MainViewModel)DataContext).SelectedCompactMode.Label}" FontWeight="SemiBold" Margin="0,6,12,6" /><Button Classes="link" Content="{local:T agents.context.global}" Click="OnAgentCompactSettings" /></WrapPanel>
+                            <local:AutoCompactView DataContext="{Binding Compact}" />
                           </StackPanel>
-                          <Button Classes="accent" Content="{local:T agents.mode.apply}" Click="OnApplyAgentMode" IsEnabled="{Binding CanApply}" HorizontalAlignment="Left" />
-                          <TextBlock Text="{local:T agents.alias.scope}" Classes="muted" TextWrapping="Wrap" FontSize="12" />
-                        </StackPanel>
-                        <StackPanel Spacing="12" IsVisible="{Binding IsContext}">
-                          <WrapPanel><TextBlock Text="{Binding $parent[Window].((local:MainViewModel)DataContext).SelectedCompactMode.Label}" FontWeight="SemiBold" Margin="0,6,12,6" /><Button Classes="link" Content="{local:T agents.context.global}" Click="OnAgentCompactSettings" /></WrapPanel>
-                          <local:AutoCompactView DataContext="{Binding Compact}" />
                         </StackPanel>
                       </StackPanel>
                     </ScrollViewer>
