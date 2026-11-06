@@ -295,11 +295,14 @@ public class WslOptimizationTests
         try
         {
             WslConfigFile.UseCustomPath(file);
-            File.WriteAllText(file, "[wsl2]\nmemory=24GB\nprocessors=4\n");
+            // Values inside this machine's slider bounds: CI runners have less RAM than a desktop.
+            var (min, max) = WslOptimization.GetSliderBounds(WslOptimization.GetTotalMemoryGb());
+            Assert.True(max > min);
+            File.WriteAllText(file, $"[wsl2]\nmemory={min}GB\nprocessors=4\n");
             var vm = new OptimizationViewModel(new AppConfig());
             var changes = new List<string?>();
             vm.PropertyChanged += (_, e) => changes.Add(e.PropertyName);
-            Assert.Equal(24, vm.SliderMemoryGb);
+            Assert.Equal(min, vm.SliderMemoryGb);
             Assert.False(vm.CanSave);
 
             var before = File.GetLastWriteTimeUtc(file);
@@ -309,15 +312,15 @@ public class WslOptimizationTests
             Assert.Equal(before, File.GetLastWriteTimeUtc(file));
             Assert.False(vm.HasStatusMessage);
 
-            vm.SliderMemoryGb = vm.SliderMemoryGb + 2;
+            vm.SliderMemoryGb = min + 1;
             Assert.True(vm.CanSave);
             Assert.Contains(nameof(OptimizationViewModel.CanSave), changes);
-            vm.SliderMemoryGb = 24;
+            vm.SliderMemoryGb = min;
             Assert.False(vm.CanSave);
 
-            vm.SliderMemoryGb = 26;
+            vm.SliderMemoryGb = min + 1;
             vm.SaveConfig();
-            Assert.Equal(26, WslConfigFile.Load().MemoryGb);
+            Assert.Equal(min + 1, WslConfigFile.Load().MemoryGb);
             Assert.False(vm.CanSave);
         }
         finally { WslConfigFile.UseCustomPath(null); File.Delete(file); }
