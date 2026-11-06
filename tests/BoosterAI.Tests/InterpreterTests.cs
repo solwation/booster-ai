@@ -136,6 +136,7 @@ public class InterpreterTests
             RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true,
         };
         fake.SetEnvironment(psi);
+        var starter = Status("/proc/thread-self/status"); // the starting thread's signal mask is what script inherits
         using var process = Process.Start(psi)!;
         var output = process.StandardOutput.ReadToEndAsync();
         var error = process.StandardError.ReadToEndAsync();
@@ -168,23 +169,36 @@ public class InterpreterTests
             TestShell.StopLeftovers(fake.Root);
             async Task<string> Drain(Task<string> stream)
             {
-                try { return await stream.WaitAsync(TimeSpan.FromSeconds(5)); }
+                // The prompt shows the account and host: keep neither in a published test result.
+                try { return (await stream.WaitAsync(TimeSpan.FromSeconds(5))).Replace(Environment.UserName, "<user>").Replace(Environment.MachineName, "<host>"); }
                 catch (TimeoutException) { return "<capture did not close after fixture cleanup>"; }
             }
             Assert.True(condition, System.Text.Json.JsonSerializer.Serialize(new { phase, before, after,
                 output = await Drain(output), error = await Drain(error) }));
         }
 
+        static string Read(string path) { try { return File.ReadAllText(path); } catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return "<absent>"; } }
+        static string Status(string path) => string.Join(' ', Read(path).Split('\n').Where(l =>
+            new[] { "State:", "SigBlk:", "SigIgn:", "SigCgt:", "SigPnd:", "ShdPnd:" }.Any(l.StartsWith)).Select(l => l.Replace('\t', ' ')));
+
         string State()
         {
-            string Read(string path) { try { return File.ReadAllText(path); } catch (IOException) { return "<absent>"; } }
             var idle = Read(Path.Combine(session.Directory, track.Id + ".next.idle"));
-            var pids = new[] { session.ReadLog(track.Id)?.Pid?.ToString(), idle.Split(' ')[0], process.Id.ToString() }
-                .Where(p => int.TryParse(p, out _)).Distinct();
-            var signals = pids.ToDictionary(p => p!, p => new { stat = Read("/proc/" + p + "/stat"),
-                status = string.Join('\n', Read("/proc/" + p + "/status").Split('\n').Where(l =>
-                    new[] { "Name:", "State:", "Pid:", "PPid:", "NSpgid:", "SigBlk:", "SigIgn:", "SigCgt:", "SigPnd:", "ShdPnd:" }.Any(l.StartsWith))) });
-            return System.Text.Json.JsonSerializer.Serialize(new { idle, signals,
+            // Every process of the fixture (script and all below it share the session of script's child) with its job-control
+            // and signal state: stat has state, ppid, pgrp, session, tty and tpgid.
+            var processes = new List<string>();
+            foreach (var dir in Directory.GetDirectories("/proc").Where(d => int.TryParse(Path.GetFileName(d), out _)))
+            {
+                var cmd = Read(dir + "/cmdline").Replace('\0', ' ');
+                var stat = Read(dir + "/stat");
+                var pid = Path.GetFileName(dir);
+                var fields = stat.Contains(") ") ? stat[(stat.LastIndexOf(") ", StringComparison.Ordinal) + 2)..].Split(' ') : [];
+                if (pid != process.Id.ToString() && (fields.Length < 2 || fields[1] != process.Id.ToString()) && !cmd.Contains(fake.Root, StringComparison.Ordinal)
+                    && !(new DirectoryInfo(dir + "/cwd").LinkTarget?.StartsWith(fake.Root, StringComparison.Ordinal) ?? false)) continue;
+                processes.Add(pid + " [" + string.Join(' ', fields.Take(6)) + "] " + Status(dir + "/status") + " wchan=" + Read(dir + "/wchan")
+                    + " cmd=" + (cmd.Length > 80 ? cmd[..80] + "…" : cmd));
+            }
+            return System.Text.Json.JsonSerializer.Serialize(new { idle, processes, starter,
                 next = Read(Path.Combine(session.Directory, track.Id + ".next")),
                 log = Read(Path.Combine(session.Directory, track.Id + ".log")), cwd = Read(fake.Cwd) });
         }
