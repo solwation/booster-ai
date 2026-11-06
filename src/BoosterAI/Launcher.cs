@@ -235,20 +235,25 @@ g=${bs_fields[5]}
     /// queued meanwhile on its own, and this wait covers tabs of older builds. When the child never becomes idle the
     /// queued command is renamed away (atomic: bs_next either already took it or never will) and the script exits
     /// <see cref="WakeUndelivered"/>, so the restart is reported instead of silently lost or run late.
+    /// The child records itself before readline waits for input, and bash only notes a HUP that arrives in between (#122):
+    /// it then waits at its prompt as if nothing happened. So the HUP is repeated until the child is gone or the
+    /// queue was consumed; a HUP after readline is waiting ends the child at once.
     /// </summary>
     internal static string WakeIdleShellScript(TabTrack track, int seconds = WakeIdleSeconds) => $$"""
 bs_next_f={{Quote(track.Dir + "/" + track.Id + ".next")}}
+bs_idle_pid=
 for ((i=0; i<{{seconds * 20}}; i++))
 do
   [ -f "$bs_next_f" ] || exit 0
-  if read -r bs_idle_pid bs_idle_start 2>/dev/null < "$bs_next_f.idle"
+  # Keep the first complete record: the identity check below must see the same child on every repeat.
+  [ -n "$bs_idle_pid" ] || { read -r bs_p bs_s 2>/dev/null < "$bs_next_f.idle" && bs_idle_pid=$bs_p bs_idle_start=$bs_s; }
+  if [ -n "$bs_idle_pid" ]
   then
     bs_stat=$(cat /proc/$bs_idle_pid/stat 2>/dev/null) || exit 0
     bs_stat=${bs_stat##*) }
     read -ra bs_fields <<< "$bs_stat"
     [ "${bs_fields[19]}" = "$bs_idle_start" ] || exit 0
     kill -HUP -- -$bs_idle_pid 2>/dev/null || true
-    exit 0
   fi
   sleep 0.05
 done

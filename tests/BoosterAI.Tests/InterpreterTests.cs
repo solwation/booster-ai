@@ -122,8 +122,15 @@ public class InterpreterTests
         Assert.Equal(["--oss"], File.ReadAllLines(fake.Args));
     }
 
-    [Fact]
-    public async Task RealPtyRestartsInterpreterInPlaceAndClosesItsShell()
+    /// <summary>
+    /// <paramref name="slowPrompt"/> (#122): readline's ~/.inputrc is a FIFO nobody writes, so the idle shell has recorded
+    /// itself but is not yet waiting at its prompt when the wake arrives, the window in which bash only notes a HUP.
+    /// On CI runners a cold disk opened the same window.
+    /// </summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task RealPtyRestartsInterpreterInPlaceAndClosesItsShell(bool slowPrompt)
     {
         if (!OperatingSystem.IsLinux() || !File.Exists("/usr/bin/script")) return;
         using var fake = new FakeInterpreter(true);
@@ -136,6 +143,12 @@ public class InterpreterTests
             RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true,
         };
         fake.SetEnvironment(psi);
+        if (slowPrompt)
+        {
+            var inputrc = Path.Combine(fake.Root, "inputrc");
+            using (var mkfifo = Process.Start("mkfifo", [inputrc])) Assert.True(mkfifo.WaitForExit(10000) && mkfifo.ExitCode == 0);
+            psi.Environment["INPUTRC"] = inputrc;
+        }
         var starter = Status("/proc/thread-self/status"); // the starting thread's signal mask is what script inherits
         using var process = Process.Start(psi)!;
         var output = process.StandardOutput.ReadToEndAsync();
