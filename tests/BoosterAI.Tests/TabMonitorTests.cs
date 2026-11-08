@@ -223,6 +223,31 @@ public class NotifierTests
         Assert.Equal(["-NoProfile", "-NonInteractive", "-WindowStyle", "Hidden", "-EncodedCommand"], args[..5]);
         Assert.Equal(Notifier.ToastScript("T", "B"), Encoding.Unicode.GetString(Convert.FromBase64String(args[5])));
     }
+
+    [Fact]
+    public void ToastClickLaunchesTheShowProtocol()
+    {
+        var script = Notifier.ToastScript("T", "B");
+        Assert.Contains("<toast activationType=\"protocol\" launch=\"boosterai:show\">", script);
+    }
+
+    [Fact]
+    public void ProtocolCommandStartsThisCopyWithTheUri()
+    {
+        Assert.Equal("\"C:\\Apps\\BoosterAI.exe\" \"%1\"", Notifier.LaunchCommand(@"C:\Apps\BoosterAI.exe"));
+        Assert.Equal("\"C:\\dotnet\\dotnet.exe\" \"C:\\src\\BoosterAI.dll\" \"%1\"",
+            Notifier.LaunchCommand(@"C:\dotnet\dotnet.exe", @"C:\src\BoosterAI.dll"));
+        Assert.Null(Notifier.LaunchCommand(""));
+    }
+
+    [Fact]
+    public void LinuxNotificationWaitsForItsDefaultAction()
+    {
+        var args = Notifier.LinuxClickableArgs("T", "B");
+        Assert.Contains("--wait", args);
+        Assert.Contains(args, a => a.StartsWith("--action=default="));
+        Assert.Equal(["T", "B"], args[^2..]);
+    }
 }
 
 public class DeniedCommandTests

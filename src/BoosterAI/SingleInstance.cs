@@ -83,7 +83,8 @@ internal sealed class SingleInstance : IDisposable
         if (pending) activate();
     }
 
-    private void RequestActivation()
+    /// <summary>Shows the main window now, or once it has opened.</summary>
+    internal void RequestActivation()
     {
         Action? activate;
         lock (_gate)
