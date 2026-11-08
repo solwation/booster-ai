@@ -44,6 +44,40 @@ public sealed class SubTabTests : IDisposable
     }
 
     [Fact]
+    public void StatusRefreshKeepsProjectsRowsStableUntilMembershipOrOrderChanges()
+    {
+        var vm = new MainViewModel(new AppConfig { Tabs = [new() { Name = "A" }, new() { Name = "B" }] });
+        var a = vm.Tabs[0];
+        var initial = vm.Projects;
+        var changes = 0;
+        vm.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(vm.Projects)) changes++; };
+        a.SetState(TabState.Running, null, activity: Activity.Busy);
+        vm.TabsChanged();
+        a.SetState(TabState.Running, null, activity: Activity.Idle);
+        vm.TabsChanged();
+        a.Enabled = false;
+        a.Name = "A Renamed";
+        Assert.Same(initial, vm.Projects);
+        Assert.Equal(0, changes);
+
+        var child = vm.AddSubTab(a);
+        Assert.Same(initial, vm.Projects);
+        Assert.Equal(0, changes);
+        Assert.True(vm.RemoveSubTab(child));
+        Assert.Same(initial, vm.Projects);
+        Assert.Equal(0, changes);
+
+        vm.AddTab();
+        Assert.NotSame(initial, vm.Projects);
+        Assert.Equal(1, changes);
+        Assert.Equal(3, vm.Projects.Count);
+
+        vm.MoveTabRelative(vm.Tabs.Single(t => t.Name == "B"), a, after: false);
+        Assert.Equal(2, changes);
+        Assert.Equal("B", vm.Projects[0].Name);
+    }
+
+    [Fact]
     public void LegacyProjectsKeepAllChoicesAndAcquireStableIdsWithoutExtraTabs()
     {
         var config = ConfigStore.Parse("""{"Tabs":[{"Name":"Alpha","Directory":"~/alpha","Enabled":false,"Llm":"codex","Model":"custom-model","Orkester":true,"NonInteractive":true}]}""")!;

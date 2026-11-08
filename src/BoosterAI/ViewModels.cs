@@ -463,6 +463,7 @@ public sealed partial class MainViewModel : Observable
             }
             Tabs.Add(new TabViewModel(tab, this, Tabs.Count) { Parent = parent });
         }
+        _projects = Tabs.Where(t => t.IsProject).ToArray();
         _visibleTabs = Tabs.Where(IsVisibleTab).ToArray();
         Tabs.CollectionChanged += (_, _) => TabsChanged();
         Update = new UpdateViewModel(cfg, Save);
@@ -478,7 +479,8 @@ public sealed partial class MainViewModel : Observable
     }
 
     public ObservableCollection<TabViewModel> Tabs { get; }
-    public IEnumerable<TabViewModel> Projects => Tabs.Where(t => t.IsProject);
+    private IReadOnlyList<TabViewModel> _projects = [];
+    public IReadOnlyList<TabViewModel> Projects => _projects;
     private IReadOnlyList<TabViewModel> _visibleTabs = [];
     public IReadOnlyList<TabViewModel> VisibleTabs => _visibleTabs;
     private static bool IsVisibleTab(TabViewModel tab) => tab.Parent is null || tab.Parent.Expanded;
@@ -656,8 +658,13 @@ public sealed partial class MainViewModel : Observable
 
     public void TabsChanged()
     {
-        Raise(nameof(Projects));
         // Status polling must not replace ItemsSource and destroy an open row editor or popup.
+        var projects = Tabs.Where(t => t.IsProject).ToArray();
+        if (!_projects.SequenceEqual(projects))
+        {
+            _projects = projects;
+            Raise(nameof(Projects));
+        }
         var visible = Tabs.Where(IsVisibleTab).ToArray();
         if (!_visibleTabs.SequenceEqual(visible))
         {
