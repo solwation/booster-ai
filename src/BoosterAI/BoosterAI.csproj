@@ -7,7 +7,7 @@
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <ApplicationIcon>../../assets/boosterai.ico</ApplicationIcon>
     <AssemblyName>BoosterAI</AssemblyName>
-    <Version>0.32.1</Version>
+    <Version>0.32.2</Version>
     <Product>BoosterAI</Product>
     <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
