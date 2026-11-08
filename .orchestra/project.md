@@ -85,6 +85,12 @@ handoff remains owned; reconcile its checkout/revision/evidence, never duplicate
 or infer a takeover from silence. Directories without a
 `.git` (evidence folders) are not work; leave them.
 
+Worktree root and cleanup: `~/booster-ai-wt/`. The integration owner removes an issue's
+worktree and work branch after closure; the session review and startup prune the root with
+`.orchestra/shared/scripts/prune-worktrees.sh ~/booster-ai-wt` (dry run first, `--apply`
+only for `integrated`). Unproven work is preserved as a private branch in `~/booster-ai`;
+no archive directory.
+
 Requires the .NET 10 SDK (WSL: `/usr/lib/dotnet`; Windows: `dotnet` on PATH). If it is missing, install it user-locally using the steps in [Development](../docs/DEVELOPMENT.md#build-from-source), then open a new PowerShell session before Windows tests.
 
 ## Project phase hooks
@@ -114,7 +120,7 @@ the repository; personal tabs live only in the user's local `config.json`.
 
 ## Shared version
 
-Shared release: **v0.9.0**, commit **070ebf43e25c2bc7885e387712edd18a2e97da1c**, imported as a
+Shared release: **v0.10.0**, commit **358c01f2d3a187c17e1b1c180bff7ecb06cb51a8**, imported as a
 squashed subtree at `.orchestra/shared`. Improve the core in
 `solwation/dirigenten-och-orkestern`, never in this subtree. At conductor startup and
 resume, check that repository's stable releases/tags against this pin (reuse a
