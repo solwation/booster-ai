@@ -24,10 +24,12 @@ Start your whole working day with one click: BoosterAI opens every project you w
 
 ## Quick Install
 
-Download the self-contained archive from [Releases](https://github.com/solwation/booster-ai/releases/latest) (no .NET runtime required):
+Download from [Releases](https://github.com/solwation/booster-ai/releases/latest); everything is self-contained (no .NET runtime required).
 
-### Windows 11 (PowerShell)
-Extract `BoosterAI-*-win-x64.zip` and run the installer (no admin rights needed):
+### Windows 11
+Download and run `BoosterAI-Setup-*-win-x64.exe` (no admin rights needed). The setup guide lets you choose the language, appearance and AI CLI, find your projects, then installs BoosterAI for your user in `%LOCALAPPDATA%\Programs\BoosterAI` with Start menu and desktop shortcuts and an entry in *Apps & features* for uninstalling. Every step except the installation itself can be skipped; running a newer setup later upgrades in place and keeps your projects and settings.
+
+Alternatively, extract `BoosterAI-*-win-x64.zip` and run the installer script in PowerShell:
 ```powershell
 powershell -ExecutionPolicy Bypass -File install-windows.ps1
 ```

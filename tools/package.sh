@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Builds release archives and checksums into dist/release/ (used by the release workflow).
 #   tools/package.sh 0.2.0     # or v0.2.0
-# Produces BoosterAI-<version>-win-x64.zip, BoosterAI-<version>-linux-x64.tar.gz, SHA256SUMS.
+# Produces BoosterAI-Setup-<version>-win-x64.exe, BoosterAI-<version>-win-x64.zip,
+# BoosterAI-<version>-linux-x64.tar.gz, SHA256SUMS.
 # SKIP_PUBLISH=1 packages the binaries already in dist/win-x64 and dist/linux-x64 (the release
 # workflow signs the Windows files in between); a signed dist/win-x64/install-windows.ps1 is
 # used instead of tools/install-windows.ps1 when present.
@@ -32,6 +33,11 @@ cp dist/win-x64/BoosterAI.exe "$installer" "$win/"
 mkdir -p "$win/licenses/agent-icons"
 cp assets/agents/LICENSE-*.txt assets/agents/README.md "$win/licenses/agent-icons/"
 (cd dist/stage && python3 -m zipfile -c "$out/BoosterAI-$ver-win-x64.zip" "BoosterAI-$ver-win-x64")
+
+# Windows setup: the same (already signed, when signing is on) exe under a BoosterAI-Setup name, which makes
+# it open the install wizard. Authenticode lives inside the file, so the copy keeps the signature. The updater
+# only downloads the exact BoosterAI-<ver>-win-x64.zip name, never this file.
+cp dist/win-x64/BoosterAI.exe "$out/BoosterAI-Setup-$ver-win-x64.exe"
 
 # Linux: binary, installer, icons. The script finds them next to itself.
 lin="dist/stage/BoosterAI-$ver-linux-x64"

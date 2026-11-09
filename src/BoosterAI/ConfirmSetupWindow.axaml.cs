@@ -39,6 +39,14 @@ public partial class ConfirmSetupWindow : Window
         (agent.IsYolo ? Loc.Get("agents.yolo.warning") + "\n\n" : "") + agent.ModeExplanation + "\n\n" + Loc.Get("agents.alias.scope"),
         Loc.Get("agents.mode.apply"), Loc.Get("cancel"));
 
+    /// <summary>The uninstall confirmation (#131): what goes, and that the config stays.</summary>
+    public static ConfirmSetupWindow Uninstall(InstallPlan plan) => new(Loc.Get("uninstall.heading"), Loc.Get("uninstall.body"),
+        Loc.Get("uninstall.code"), string.Join("\n", [plan.InstallDir, .. plan.Shortcuts.Select(s => s.Path), "HKCU\\" + plan.UninstallKey]),
+        Loc.Format("uninstall.detail", plan.ConfigPath), Loc.Get("uninstall.button"), Loc.Get("cancel"));
+
+    /// <summary>True once the confirm button closed the window (for a window shown without an owner).</summary>
+    public bool Confirmed { get; private set; }
+
     public string Heading { get; }
     public string Body { get; }
     public string CodeLabel { get; }
@@ -47,6 +55,10 @@ public partial class ConfirmSetupWindow : Window
     public string Button { get; }
     public string CancelText { get; }
 
-    private void OnConfirm(object? sender, RoutedEventArgs e) => Close(true);
+    private void OnConfirm(object? sender, RoutedEventArgs e)
+    {
+        Confirmed = true;
+        Close(true);
+    }
     private void OnCancel(object? sender, RoutedEventArgs e) => Close(false);
 }

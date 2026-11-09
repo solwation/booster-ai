@@ -1,0 +1,192 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="using:BoosterAI"
+             x:Class="BoosterAI.InstallWizardView"
+             x:DataType="local:InstallWizardViewModel">
+
+  <UserControl.Styles>
+    <Style Selector="Border.step">
+      <Setter Property="Width" Value="22" />
+      <Setter Property="Height" Value="22" />
+      <Setter Property="CornerRadius" Value="11" />
+      <Setter Property="BorderThickness" Value="1.5" />
+      <Setter Property="BorderBrush" Value="{DynamicResource FaintBrush}" />
+    </Style>
+    <Style Selector="Border.step.current, Border.step.past">
+      <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColor}" />
+      <Setter Property="Background" Value="{DynamicResource SystemAccentColor}" />
+    </Style>
+    <Style Selector="Border.step TextBlock">
+      <Setter Property="FontSize" Value="11.5" />
+      <Setter Property="Foreground" Value="{DynamicResource MutedBrush}" />
+    </Style>
+    <Style Selector="Border.step.current TextBlock, Border.step.past TextBlock">
+      <Setter Property="Foreground" Value="White" />
+    </Style>
+    <Style Selector="TextBlock.stepname">
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="Foreground" Value="{DynamicResource MutedBrush}" />
+    </Style>
+    <Style Selector="TextBlock.stepname.current">
+      <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+  </UserControl.Styles>
+
+  <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="28,22,28,20">
+
+    <!-- Header: icon, title, step indicator -->
+    <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="12">
+      <Image Source="avares://BoosterAI/Assets/boosterai.png" Width="30" Height="30" VerticalAlignment="Center" />
+      <TextBlock Classes="title" FontSize="20" Text="{local:T setup.title}" VerticalAlignment="Center" />
+    </StackPanel>
+
+    <ItemsControl Grid.Row="1" ItemsSource="{Binding Steps}" Margin="0,18,0,0" IsVisible="{Binding ShowSteps}"
+                  AutomationProperties.Name="{Binding StepText}">
+      <ItemsControl.ItemsPanel>
+        <ItemsPanelTemplate>
+          <StackPanel Orientation="Horizontal" Spacing="22" />
+        </ItemsPanelTemplate>
+      </ItemsControl.ItemsPanel>
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="local:WizardStepItem">
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Border Classes="step" Classes.current="{Binding IsCurrent}" Classes.past="{Binding IsPast}">
+              <TextBlock Text="{Binding Number}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+            <TextBlock Classes="stepname" Classes.current="{Binding IsCurrent}" Text="{Binding Label}" VerticalAlignment="Center" />
+          </StackPanel>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+
+    <Panel Grid.Row="2" Margin="0,26,0,0">
+
+      <!-- 1. Welcome -->
+      <StackPanel Spacing="14" IsVisible="{Binding IsWelcome}">
+        <TextBlock Classes="sectionhead" FontSize="17" Text="{local:T setup.welcome.heading}" />
+        <TextBlock TextWrapping="Wrap" LineHeight="21" Text="{local:T setup.welcome.body}" />
+        <TextBlock Classes="muted" TextWrapping="Wrap" LineHeight="20" Text="{local:T setup.welcome.skip}" />
+        <Border Background="{DynamicResource RowHoverBrush}" CornerRadius="6" Padding="12,9" IsVisible="{Binding IsUpgrade}">
+          <TextBlock TextWrapping="Wrap" LineHeight="20" Text="{local:T setup.welcome.upgrade}" />
+        </Border>
+      </StackPanel>
+
+      <!-- 2. Settings -->
+      <StackPanel Spacing="14" IsVisible="{Binding IsSettings}">
+        <TextBlock Classes="sectionhead" FontSize="17" Text="{local:T setup.settings.heading}" />
+        <TextBlock Classes="muted" TextWrapping="Wrap" LineHeight="20" Text="{local:T setup.settings.body}" />
+        <Grid ColumnDefinitions="120,180,*" RowDefinitions="Auto,Auto,Auto" Margin="0,6,0,0">
+          <TextBlock Grid.Row="0" Grid.Column="0" Classes="colhead" Text="{local:T language.title}" Margin="0,0,14,0" />
+          <ComboBox Grid.Row="0" Grid.Column="1" ItemsSource="{Binding LanguageChoices}" SelectedItem="{Binding SelectedLanguage}" Width="180"
+                    AutomationProperties.Name="{local:T language.name}">
+            <ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="local:LanguageChoice">
+                <TextBlock Text="{Binding Label}" />
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+          <TextBlock Grid.Row="0" Grid.Column="2" Classes="muted" Text="{local:T setup.language.hint}" VerticalAlignment="Center"
+                     TextWrapping="Wrap" Margin="14,0,0,0" />
+
+          <TextBlock Grid.Row="1" Grid.Column="0" Classes="colhead" Text="{local:T theme.title}" Margin="0,12,14,0" />
+          <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding AppearanceChoices}" SelectedItem="{Binding SelectedAppearance}" Width="180" Margin="0,12,0,0"
+                    AutomationProperties.Name="{local:T theme.name}">
+            <ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="local:ThemeChoice">
+                <TextBlock Text="{Binding Label}" />
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+          <TextBlock Grid.Row="1" Grid.Column="2" Classes="muted" Text="{local:T theme.hint}" VerticalAlignment="Center"
+                     TextWrapping="Wrap" Margin="14,12,0,0" />
+
+          <TextBlock Grid.Row="2" Grid.Column="0" Classes="colhead" Text="{local:T setup.llm.title}" Margin="0,12,14,0" />
+          <ComboBox Grid.Row="2" Grid.Column="1" ItemsSource="{Binding LlmChoices}" SelectedItem="{Binding SelectedLlm}" Width="180" Margin="0,12,0,0"
+                    AutomationProperties.Name="{local:T setup.llm.name}">
+            <ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="local:LlmChoice">
+                <TextBlock Text="{Binding Label}" />
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+          <TextBlock Grid.Row="2" Grid.Column="2" Classes="muted" Text="{local:T setup.llm.hint}" VerticalAlignment="Center"
+                     TextWrapping="Wrap" Margin="14,12,0,0" />
+        </Grid>
+      </StackPanel>
+
+      <!-- 3. Projects: the existing "Hitta projekt" dialog does the search -->
+      <Grid RowDefinitions="Auto,Auto,Auto,Auto,*" IsVisible="{Binding IsProjects}">
+        <TextBlock Grid.Row="0" Classes="sectionhead" FontSize="17" Text="{local:T setup.projects.heading}" />
+        <TextBlock Grid.Row="1" Classes="muted" TextWrapping="Wrap" LineHeight="20" Margin="0,14,0,0" Text="{local:T setup.projects.body}" />
+        <Button Grid.Row="2" Click="OnFindProjects" Padding="12,8" Margin="0,14,0,0" HorizontalAlignment="Left">
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Path Data="{StaticResource FolderIcon}" Width="15" Height="13" Stretch="Uniform" StrokeThickness="1.4"
+                  StrokeJoin="Round" Stroke="{DynamicResource TextBrush}" VerticalAlignment="Center" />
+            <TextBlock Text="{local:T setup.projects.find}" />
+          </StackPanel>
+        </Button>
+        <TextBlock Grid.Row="3" Classes="muted" Text="{Binding ProjectsText}" TextWrapping="Wrap" Margin="0,16,0,6" />
+        <ScrollViewer Grid.Row="4" HorizontalScrollBarVisibility="Disabled" IsVisible="{Binding HasProjects}">
+          <ItemsControl ItemsSource="{Binding Projects}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="local:FoundProject">
+                <Border Classes="row" Padding="12,6">
+                  <StackPanel Spacing="2">
+                    <TextBlock Classes="name" Text="{Binding Name}" />
+                    <TextBlock Classes="path" Text="{Binding Path}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Path}" />
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </Grid>
+
+      <!-- 4. Install -->
+      <StackPanel Spacing="12" IsVisible="{Binding IsInstall}">
+        <TextBlock Classes="sectionhead" FontSize="17" Text="{local:T setup.install.heading}" />
+        <TextBlock Classes="muted" Text="{local:T setup.install.body}" />
+        <ItemsControl ItemsSource="{Binding InstallLines}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="x:String">
+              <Grid ColumnDefinitions="18,*" Margin="0,0,0,7">
+                <TextBlock Grid.Column="0" Text="•" Foreground="{DynamicResource MutedBrush}" />
+                <TextBlock Grid.Column="1" Text="{Binding}" TextWrapping="Wrap" LineHeight="20" />
+              </Grid>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <StackPanel Spacing="8" IsVisible="{Binding IsWorking}">
+          <ProgressBar IsIndeterminate="True" />
+          <TextBlock Classes="muted" Text="{Binding Status}" />
+        </StackPanel>
+        <TextBlock TextWrapping="Wrap" LineHeight="20" Foreground="#D20F39" Text="{Binding Error}" IsVisible="{Binding HasError}" />
+      </StackPanel>
+
+      <!-- 5. Done -->
+      <StackPanel Spacing="14" IsVisible="{Binding IsDone}">
+        <TextBlock Classes="sectionhead" FontSize="17" Text="{local:T setup.done.heading}" />
+        <TextBlock TextWrapping="Wrap" LineHeight="21" Text="{local:T setup.done.body}" />
+        <Border Background="{DynamicResource RowHoverBrush}" CornerRadius="6" Padding="12,9" IsVisible="{Binding HasDoneNote}">
+          <TextBlock TextWrapping="Wrap" LineHeight="20" Text="{Binding DoneNote}" />
+        </Border>
+      </StackPanel>
+    </Panel>
+
+    <!-- Footer -->
+    <Grid Grid.Row="3" ColumnDefinitions="Auto,*,Auto" Margin="0,18,0,0">
+      <Button Grid.Column="0" Content="{local:T setup.button.back}" Click="OnBack" Padding="18,8"
+              IsVisible="{Binding CanBack}" />
+      <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10">
+        <Button Content="{Binding SkipLabel}" Click="OnSkip" Padding="18,8" IsVisible="{Binding CanSkip}" />
+        <Button Classes="accent" Content="{local:T setup.button.next}" Click="OnNext" IsDefault="True" Padding="18,8"
+                IsVisible="{Binding ShowNext}" />
+        <Button Classes="accent" Content="{local:T setup.button.install}" Click="OnInstall" Padding="18,8"
+                IsVisible="{Binding ShowInstall}" IsEnabled="{Binding CanInstall}" />
+        <Button Content="{local:T setup.button.close}" Click="OnClose" Padding="18,8" IsVisible="{Binding IsDone}" />
+        <Button Classes="accent" Content="{local:T setup.button.open}" Click="OnOpen" Padding="18,8" IsVisible="{Binding IsDone}" />
+      </StackPanel>
+    </Grid>
+  </Grid>
+</UserControl>

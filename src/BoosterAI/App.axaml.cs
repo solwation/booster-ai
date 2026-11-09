@@ -45,6 +45,13 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
+        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime setup && !Screenshot.Active && Program.Setup != SetupMode.None)
+        {
+            setup.ShutdownMode = ShutdownMode.OnMainWindowClose;
+            setup.MainWindow = Program.Setup == SetupMode.Install ? CreateWizard() : CreateUninstall();
+            base.OnFrameworkInitializationCompleted();
+            return;
+        }
         // --screenshot builds its window itself (Screenshot.Run), headless and never shown.
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop && !Screenshot.Active)
         {
@@ -58,6 +65,7 @@ public partial class App : Application
             main.Opened += (_, _) => Program.Instance?.RegisterActivation(() =>
                 Avalonia.Threading.Dispatcher.UIThread.Post(() => Restore(main)));
             Launcher.RestoreZoomOnStartup(_config.ZoomPercent);
+            if (OperatingSystem.IsWindows()) Installer.RefreshUninstallEntry();
             vm.Update.Start();
             vm.FindRunningTabs();
             vm.StartSetupChecks();
@@ -65,6 +73,33 @@ public partial class App : Application
             desktop.Exit += (_, _) => vm.Optimization.StopMemoryMonitoring();
         }
         base.OnFrameworkInitializationCompleted();
+    }
+
+    /// <summary>The setup wizard for this user (#131), prefilled from the config on disk; also used by --screenshot.</summary>
+    public InstallWizardWindow CreateWizard(InstallPlan? plan = null, bool? installed = null)
+    {
+        plan ??= Installer.CurrentPlan();
+        var vm = new InstallWizardViewModel(plan, ConfigStore.TryRead(), installed ?? File.Exists(plan.Exe),
+            Screenshot.Active ? _ => { } : id => RequestedThemeVariant = ThemeFor(id));
+        return new InstallWizardWindow(vm);
+    }
+
+    /// <summary>The --uninstall confirmation; confirming removes the install and ends the app.</summary>
+    private static Window CreateUninstall()
+    {
+        var plan = Installer.CurrentPlan();
+        var confirm = ConfirmSetupWindow.Uninstall(plan);
+        confirm.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+        confirm.Closed += (_, _) =>
+        {
+            if (!confirm.Confirmed || !OperatingSystem.IsWindows()) return;
+            var problems = Installer.Uninstall(plan);
+            if (problems.Count == 0) return;
+            try { File.AppendAllText(Path.Combine(Path.GetDirectoryName(ConfigStore.PathOnDisk)!, "uninstall.log"),
+                DateTime.Now.ToString("o") + " " + string.Join("; ", problems) + Environment.NewLine); }
+            catch (Exception) { }
+        };
+        return confirm;
     }
 
     private TrayIcon? _tray;

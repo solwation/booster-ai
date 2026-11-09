@@ -8,7 +8,7 @@ using Avalonia.Threading;
 namespace BoosterAI;
 
 /// <summary>
-/// <c>--screenshot file.png [--window main|settings|install|import|restart] [--theme light|dark] [--config file.json] [--fake-update [manual:]0.3.0] [--fake-status [error:]text] [--fake-denied] [--fake-changed] [--fake-restartable N] [--fake-output [N]] [--fake-setup [cli|wsl|alias]]</c>:
+/// <c>--screenshot file.png [--window main|settings|install|import|restart|setup|uninstall] [--theme light|dark] [--config file.json] [--fake-update [manual:]0.3.0] [--fake-status [error:]text] [--fake-denied] [--fake-changed] [--fake-restartable N] [--fake-output [N]] [--fake-setup [cli|wsl|alias]]</c>:
 /// renders a window with Avalonia's headless Skia platform. Nothing is shown on the desktop and no
 /// focus changes. The window frame (title bar) is not drawn; only the client area.
 /// </summary>
@@ -63,6 +63,29 @@ internal static class Screenshot
         return agent;
     }
 
+    /// <summary>
+    /// --window setup [--section welcome|settings|projects|install|progress|done|upgrade]: the setup wizard with a
+    /// neutral sample plan (C:\Users\me\...) and, for projects and later, a fixed project list; no disk scan, nothing installed.
+    /// </summary>
+    private static InstallWizardWindow SampleWizard(App app, string? section)
+    {
+        var window = app.CreateWizard(Installer.SamplePlan(), installed: section == "upgrade");
+        var vm = (InstallWizardViewModel)((Control)window.Content!).DataContext!;
+        var step = section switch
+        {
+            null or "welcome" or "upgrade" => InstallWizardViewModel.Step.Welcome,
+            "settings" => InstallWizardViewModel.Step.Settings,
+            "projects" => InstallWizardViewModel.Step.Projects,
+            "install" or "progress" => InstallWizardViewModel.Step.Install,
+            "done" => InstallWizardViewModel.Step.Done,
+            _ => throw new ArgumentException($"Unknown --section '{section}' for --window setup (welcome, settings, projects, install, progress, done or upgrade)"),
+        };
+        if (step >= InstallWizardViewModel.Step.Projects) vm.ShowSampleProjects(@"C:\Users\me\Documents");
+        if (section == "progress") vm.ShowSampleProgress();
+        vm.Current = step;
+        return window;
+    }
+
     public static int Run(ScreenshotOptions o)
     {
         AppBuilder.Configure<App>()
@@ -103,7 +126,9 @@ internal static class Screenshot
             "wsl-shutdown" => ConfirmSetupWindow.ShutdownWsl(),
             "agent-yolo" => ConfirmSetupWindow.AgentMode(SampleYolo()),
             "wsl" => ConfirmSetupWindow.Wsl(),
-            _ => throw new ArgumentException($"Unknown --window '{o.Window}' (main, settings, install, import, restart, alias or wsl)"),
+            "setup" => SampleWizard(app, o.Section),
+            "uninstall" => ConfirmSetupWindow.Uninstall(Installer.SamplePlan()),
+            _ => throw new ArgumentException($"Unknown --window '{o.Window}' (main, settings, install, import, restart, alias, wsl, setup or uninstall)"),
         };
         if (window is SettingsWindow sw)
         {

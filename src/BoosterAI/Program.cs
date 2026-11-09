@@ -6,6 +6,9 @@ internal static class Program
 {
     internal static SingleInstance? Instance { get; private set; }
 
+    /// <summary>Setup (wizard) or uninstall instead of the main window (#131); None for every ordinary start.</summary>
+    internal static SetupMode Setup { get; private set; }
+
     [STAThread]
     public static void Main(string[] args)
     {
@@ -70,10 +73,34 @@ internal static class Program
             Console.WriteLine("Close recorded tab (example PID/starttime):\n" + Launcher.CloseTabScript(12345, 67890, exitCleanly: true));
             return;
         }
+        // --dry-run-install prints what the setup wizard's Install and --uninstall would do; nothing changes.
+        if (args.Contains(Installer.DryRunFlag))
+        {
+            var at = Array.IndexOf(args, "--config");
+            if (at >= 0 && at + 1 < args.Length) ConfigStore.UseFile(args[at + 1]);
+            Loc.Init(ConfigStore.TryRead()?.Language);
+            Console.WriteLine("setup mode of this start: " + Installer.Detect(args.Where(a => a != Installer.DryRunFlag).ToArray(), Environment.ProcessPath));
+            Console.Write(Installer.DryRun(Installer.CurrentPlan()));
+            return;
+        }
         var shot = Screenshot.Parse(args);
         if (shot is not null)
         {
             Environment.ExitCode = Screenshot.Run(shot);
+            return;
+        }
+        // A BoosterAI-Setup*.exe, --install or --uninstall: the wizard or the uninstall confirmation. They do not
+        // enter the single-instance guard, so they run beside a running BoosterAI (which the install then replaces).
+        Setup = Installer.Detect(args, Environment.ProcessPath);
+        if (Setup != SetupMode.None)
+        {
+            if (!OperatingSystem.IsWindows())
+            {
+                Console.Error.WriteLine(Loc.Get("setup.error.windowsOnly"));
+                Environment.ExitCode = 1;
+                return;
+            }
+            BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
             return;
         }
         SingleInstance? instance;
