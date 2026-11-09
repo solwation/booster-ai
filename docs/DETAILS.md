@@ -265,6 +265,8 @@ Each CLI is checked at most every six hours: the time is the stamp `~/.local/sha
 
 ## Auto-clear when idle
 
+Settings → **General** explains before the switch that auto-clear empties Claude's active context **without a summary**. It applies only to new or explicitly restarted Claude sessions. The **Optimization → Auto-compact** link opens the summary-based alternative without changing either setting; expandable details explain the idle guards.
+
 With **Auto-clear when idle for N min** on in Settings (`"AutoClearIdle": true` and `"AutoClearMinutes": 5` in `config.json`; off and 5 minutes when missing, 1 to 240 minutes), BoosterAI types `/clear` and Enter into an interactive claude tab once its claude has been idle for N minutes. Idle means all of:
 
 - the last turn ended with nothing left running in the background: claude's `Stop` hook logged *idle*, not *waiting*, and no new prompt started since;

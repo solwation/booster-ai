@@ -123,13 +123,22 @@
             <!-- Automatisk rensning -->
             <StackPanel Spacing="8">
               <TextBlock Classes="sectionhead" Text="{local:T settings.section.autoClear}" />
-              <StackPanel Orientation="Horizontal" Spacing="8" ToolTip.Tip="{local:T settings.autoClear.tip}">
-                <CheckBox IsChecked="{Binding AutoClearIdle}" Content="{local:T settings.autoClear}" VerticalAlignment="Center" />
+              <TextBlock Text="{local:T settings.autoClear.effect}" TextWrapping="Wrap" />
+              <TextBlock Classes="muted" Text="{local:T settings.autoClear.scope}" TextWrapping="Wrap" />
+              <Button Classes="link" Click="OnAgentCompactSettings" HorizontalAlignment="Left">
+                <TextBlock Text="{local:T settings.autoClear.compactLink}" TextWrapping="Wrap" />
+              </Button>
+              <WrapPanel Orientation="Horizontal">
+                <CheckBox IsChecked="{Binding AutoClearIdle}" Content="{local:T settings.autoClear}" VerticalAlignment="Center" Margin="0,0,8,0"
+                          AutomationProperties.HelpText="{local:T settings.autoClear.effect}" />
                 <NumericUpDown Value="{Binding AutoClearMinutes}" Minimum="1" Maximum="240" Increment="1" FormatString="0"
                                Width="110" IsEnabled="{Binding AutoClearIdle}" VerticalAlignment="Center"
-                               AutomationProperties.Name="{local:T settings.autoClear.name}" />
+                               AutomationProperties.Name="{local:T settings.autoClear.name}" Margin="0,0,8,0" />
                 <TextBlock Text="{local:T settings.autoClear.minutes}" VerticalAlignment="Center" />
-              </StackPanel>
+              </WrapPanel>
+              <Expander Header="{local:T settings.autoClear.details}" HorizontalAlignment="Stretch">
+                <TextBlock Classes="muted" Text="{local:T settings.autoClear.tip}" TextWrapping="Wrap" />
+              </Expander>
             </StackPanel>
 
             <!-- Uppdateringar -->
