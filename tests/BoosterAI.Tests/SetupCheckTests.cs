@@ -96,6 +96,9 @@ public class SetupCheckTests
         Assert.Equal(1, agent.Section);
         Assert.False(vm.Setup.IsChecking);
         Assert.Equal(Loc.Get("agents.status.failed.previous"), vm.Setup.CheckNotice);
+        Assert.Equal(Loc.Get("setup.summary.failed"), vm.Setup.WslInstallationStatus);
+        Assert.Equal(Loc.Get("wsl.info.unknown"), vm.Setup.InstalledWslDistros);
+        Assert.Equal(Loc.Get("setup.summary.failed"), vm.Setup.Summary);
         vm.SetupAgentsOpened();
         Assert.Equal(1, calls);
         vm.DetectSetupAsync = _ => { calls++; return Task.FromResult(Installed("2.0")); };

@@ -111,6 +111,7 @@ public sealed class AgentInfo : Observable
 public sealed class SetupViewModel : Observable
 {
     private SetupStatus _status = SetupStatus.Empty;
+    private SetupStatus _wslStatus = SetupStatus.Empty;
     private bool _checking, _checked, _missingDismissed, _checkFailed;
     private IReadOnlyList<string> _rowLlms = [];
 
@@ -144,17 +145,17 @@ public sealed class SetupViewModel : Observable
         Refresh();
     }
 
-    public bool WslVisible => _status.Wsl is WslState.Missing or WslState.DistroMissing;
-    public bool CanInstallWsl => _status.Wsl == WslState.Missing;
-    public string WslText => _status.Wsl == WslState.DistroMissing
-        ? Loc.Format("setup.wsl.distroMissing", _distro, string.Join(", ", _status.Distros))
+    public bool WslVisible => _wslStatus.Wsl is WslState.Missing or WslState.DistroMissing;
+    public bool CanInstallWsl => _wslStatus.Wsl == WslState.Missing;
+    public string WslText => _wslStatus.Wsl == WslState.DistroMissing
+        ? Loc.Format("setup.wsl.distroMissing", _distro, string.Join(", ", _wslStatus.Distros))
         : Loc.Get("setup.wsl.missing");
     private string _distro = "";
 
     /// <summary>WSL facts from the last automatic check, separate from AI program detection.</summary>
     public string WslInstallationStatus => IsChecking ? Loc.Get("setup.summary.checking")
         : !_checked ? Loc.Get("setup.summary.none")
-        : Loc.Get(_status.Wsl switch
+        : Loc.Get(_wslStatus.Wsl switch
         {
             WslState.Ok => "wsl.info.ready",
             WslState.Missing => "wsl.info.missing",
@@ -162,9 +163,9 @@ public sealed class SetupViewModel : Observable
             _ => "setup.summary.failed",
         });
     public string CheckedWslDistro => _checked && _distro.Length > 0 ? _distro : "—";
-    public string InstalledWslDistros => !_checked || _status.Wsl == WslState.Unknown
+    public string InstalledWslDistros => !_checked || _wslStatus.Wsl == WslState.Unknown
         ? Loc.Get("wsl.info.unknown")
-        : _status.Distros.Count == 0 ? Loc.Get("wsl.info.none") : string.Join("\n", _status.Distros);
+        : _wslStatus.Distros.Count == 0 ? Loc.Get("wsl.info.none") : string.Join("\n", _wslStatus.Distros);
 
 
     public IReadOnlyList<CliOffer> Missing { get; private set; } = [];
@@ -186,7 +187,8 @@ public sealed class SetupViewModel : Observable
         {
             if (IsChecking) return Loc.Get("setup.summary.checking");
             if (!_checked) return Loc.Get("setup.summary.none");
-            if (_status.Wsl is WslState.Missing or WslState.DistroMissing) return WslText;
+            if (_checkFailed) return Loc.Get("setup.summary.failed");
+            if (_wslStatus.Wsl is WslState.Missing or WslState.DistroMissing) return WslText;
             if (!_status.Checked) return Loc.Get("setup.summary.failed");
             return string.Join(" · ", Prerequisites.Clis.Select(c => _status.Cli(c) switch
             {
@@ -199,9 +201,11 @@ public sealed class SetupViewModel : Observable
     public void Apply(SetupStatus status, string distro)
     {
         distro = distro.Trim();
+        // WSL diagnostics describe this attempt even when previous CLI facts remain usable.
+        _wslStatus = status;
         if (!status.Checked && status.Wsl is WslState.Ok or WslState.Unknown)
         {
-            if (_distro != distro) _status = status;
+            if (_distro != distro || !_status.Checked) _status = status;
             _distro = distro;
             _checked = true;
             _checkFailed = true;
