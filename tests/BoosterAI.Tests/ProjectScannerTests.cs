@@ -78,6 +78,24 @@ public sealed class ProjectScannerTests : IDisposable
     }
 
     [Fact]
+    public async Task DefaultHomeWithGlobalCliConfigurationStillFindsItsProjects()
+    {
+        Dir(".claude");
+        Dir("work", "atlas", ".git");
+        var import = new ImportViewModel([]);
+
+        await import.ScanAsync(_root, includeRoot: false);
+
+        var item = Assert.Single(import.Items);
+        Assert.Equal("atlas", item.Name);
+        Assert.False(item.Selected);
+        Assert.False(import.CanImport);
+        // Explicitly choosing the same folder still allows an AI-only root.
+        await import.ScanAsync(_root);
+        Assert.Equal(_root, Assert.Single(import.Items).Path);
+    }
+
+    [Fact]
     public void CancelledSearchDoesNotReturnAProjectRootOrWalkACollection()
     {
         using var cancel = new CancellationTokenSource();

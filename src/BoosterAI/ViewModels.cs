@@ -1800,7 +1800,7 @@ public sealed class ImportViewModel : Observable
         Raise(nameof(AllSelected));
     }
 
-    public async Task ScanAsync(string root)
+    public async Task ScanAsync(string root, bool includeRoot = true)
     {
         _scan?.Cancel();
         var cancel = (_scan = new CancellationTokenSource()).Token;
@@ -1818,7 +1818,7 @@ public sealed class ImportViewModel : Observable
         Message = Loc.Format("import.scanning", root);
         try
         {
-            var found = await Task.Run(() => ProjectScanner.Scan(root, cancel: cancel), cancel);
+            var found = await Task.Run(() => ProjectScanner.Scan(root, cancel: cancel, includeRoot: includeRoot), cancel);
             if (cancel.IsCancellationRequested) return;
             var fresh = found.Where(f => !_existing.Contains(ProjectScanner.Key(f.Path))).ToList();
             Show(fresh);

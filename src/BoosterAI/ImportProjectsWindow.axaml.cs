@@ -25,7 +25,8 @@ public partial class ImportProjectsWindow : Window
     {
         var vm = new ImportViewModel(main.ProjectPaths);
         var dialog = new ImportProjectsWindow(vm);
-        _ = vm.ScanAsync(ProjectScanner.ResolveRoot(main.ProjectSearchRoot, out _));
+        var root = ProjectScanner.ResolveRoot(main.ProjectSearchRoot, out var isDefault);
+        _ = vm.ScanAsync(root, includeRoot: !isDefault);
         if (await dialog.ShowDialog<IReadOnlyList<FoundProject>?>(owner) is { } picked) main.Import(picked);
     }
 
