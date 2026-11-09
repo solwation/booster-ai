@@ -1,0 +1,106 @@
+{
+  "checkedAt": "2026-11-09T10:02:34.517Z",
+  "browser": "Headless Chromium 145.0.7632.6",
+  "appSource": "19d4b38",
+  "previewCorrection": "6f7f3f9",
+  "source": "docs/index.html",
+  "sourceSha256": "334f78c66299835fbba0623ddd44038f3d15970ad459018b6260683c621cb6e1",
+  "viewports": [
+    {
+      "width": 1280,
+      "previews": [
+        {
+          "mode": "dark",
+          "file": "screenshot-dark.png",
+          "alt": "BoosterAI with six AI CLIs selected across example projects, dark theme"
+        },
+        {
+          "mode": "light",
+          "file": "screenshot.png",
+          "alt": "BoosterAI with six AI CLIs selected across example projects, light theme"
+        },
+        {
+          "mode": "settings",
+          "file": "settings-general.png",
+          "alt": "General settings in BoosterAI"
+        },
+        {
+          "mode": "appearance",
+          "file": "settings-appearance.png",
+          "alt": "Appearance settings in BoosterAI"
+        },
+        {
+          "mode": "memory",
+          "file": "settings-ram.png",
+          "alt": "WSL RAM usage with current memory, 30-minute history and the configured cap"
+        },
+        {
+          "mode": "wsl",
+          "file": "settings-wsl.png",
+          "alt": "WSL environment settings and detected distributions"
+        },
+        {
+          "mode": "compact",
+          "file": "settings-compact.png",
+          "alt": "Auto-compact context settings in BoosterAI"
+        }
+      ],
+      "offscreen": [],
+      "pageErrors": [],
+      "brokenImages": [],
+      "sixClis": true,
+      "plainShell": true,
+      "windowsLinuxTabs": true,
+      "zipDetails": true,
+      "copyControls": true
+    },
+    {
+      "width": 390,
+      "previews": [
+        {
+          "mode": "dark",
+          "file": "screenshot-dark.png",
+          "alt": "BoosterAI with six AI CLIs selected across example projects, dark theme"
+        },
+        {
+          "mode": "light",
+          "file": "screenshot.png",
+          "alt": "BoosterAI with six AI CLIs selected across example projects, light theme"
+        },
+        {
+          "mode": "settings",
+          "file": "settings-general.png",
+          "alt": "General settings in BoosterAI"
+        },
+        {
+          "mode": "appearance",
+          "file": "settings-appearance.png",
+          "alt": "Appearance settings in BoosterAI"
+        },
+        {
+          "mode": "memory",
+          "file": "settings-ram.png",
+          "alt": "WSL RAM usage with current memory, 30-minute history and the configured cap"
+        },
+        {
+          "mode": "wsl",
+          "file": "settings-wsl.png",
+          "alt": "WSL environment settings and detected distributions"
+        },
+        {
+          "mode": "compact",
+          "file": "settings-compact.png",
+          "alt": "Auto-compact context settings in BoosterAI"
+        }
+      ],
+      "offscreen": [],
+      "pageErrors": [],
+      "brokenImages": [],
+      "sixClis": true,
+      "plainShell": true,
+      "windowsLinuxTabs": true,
+      "zipDetails": true,
+      "copyControls": true
+    }
+  ]
+}

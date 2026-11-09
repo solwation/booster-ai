@@ -643,6 +643,7 @@
     .install-alternative p { margin: 14px 0 12px; }
 
     @media (max-width: 640px) {
+      .showcase-media-container { min-height: 0; }
       .install-content { padding: 22px 18px; }
       .install-tabs { padding: 6px; }
       .install-tab-btn { padding: 10px 12px; font-size: 0.88rem; }
@@ -886,7 +887,7 @@
         <p>Guided Windows setup or a small Linux install script. No .NET runtime to install.</p>
       </div>
 
-      <p class="platform-requirements">Windows needs Windows Terminal and a working WSL distribution; Linux uses an installed supported terminal. Install and authenticate the AI CLIs you want to run; their services or local models have their own requirements. <a href="https://github.com/solwation/booster-ai/blob/main/docs/DETAILS.md#how-it-works-per-platform" style="color:var(--cyan);text-decoration:underline;">Platform details</a>.</p>
+      <p class="platform-requirements">Windows needs Windows Terminal and a working WSL distribution; Linux uses an installed supported terminal. Install the AI CLIs you want to run and complete any required sign-in or local-model setup. <a href="https://github.com/solwation/booster-ai/blob/main/docs/DETAILS.md#how-it-works-per-platform" style="color:var(--cyan);text-decoration:underline;">Platform details</a>.</p>
 
       <div class="install-box">
         <div class="install-tabs">
@@ -987,8 +988,8 @@
       const img = document.getElementById('previewImg');
       img.style.opacity = '0.3';
       const descriptions = {
-        dark: 'BoosterAI start window in the dark theme',
-        light: 'BoosterAI start window in the light theme',
+        dark: 'BoosterAI with six AI CLIs selected across example projects, dark theme',
+        light: 'BoosterAI with six AI CLIs selected across example projects, light theme',
         settings: 'General settings in BoosterAI',
         appearance: 'Appearance settings in BoosterAI',
         memory: 'WSL RAM usage with current memory, 30-minute history and the configured cap',
@@ -997,13 +998,13 @@
       };
       img.alt = descriptions[mode] || 'BoosterAI app screenshot';
       setTimeout(() => {
-        if (mode === 'dark') img.src = 'screenshot-dark.png?v=20261105';
-        else if (mode === 'light') img.src = 'screenshot.png?v=20261105';
-        else if (mode === 'settings') img.src = 'settings-general.png?v=20261105';
+        if (mode === 'dark') img.src = 'screenshot-dark.png?v=20261109-137';
+        else if (mode === 'light') img.src = 'screenshot.png?v=20261109-137';
+        else if (mode === 'settings') img.src = 'settings-general.png?v=20261109-137';
         else if (mode === 'appearance') img.src = 'settings-appearance.png?v=20261105';
         else if (mode === 'memory') img.src = 'settings-ram.png?v=20261109-135';
         else if (mode === 'wsl') img.src = 'settings-wsl.png?v=20261109-135';
-        else if (mode === 'compact') img.src = 'settings-compact.png?v=20261105-102';
+        else if (mode === 'compact') img.src = 'settings-compact.png?v=20261109-137';
         img.onload = () => { img.style.opacity = '1'; };
         // Fallback in case image is already cached
         setTimeout(() => { img.style.opacity = '1'; }, 100);

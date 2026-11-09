@@ -1,0 +1,42 @@
+[
+  {
+    "url": "https://github.com/solwation/booster-ai",
+    "status": 200,
+    "resolved": "https://github.com/solwation/booster-ai"
+  },
+  {
+    "url": "https://github.com/solwation/booster-ai/blob/main/docs/DETAILS.md",
+    "status": 200,
+    "resolved": "https://github.com/solwation/booster-ai/blob/main/docs/DETAILS.md"
+  },
+  {
+    "url": "https://github.com/solwation/booster-ai/blob/main/docs/DEVELOPMENT.md",
+    "status": 200,
+    "resolved": "https://github.com/solwation/booster-ai/blob/main/docs/DEVELOPMENT.md"
+  },
+  {
+    "url": "https://github.com/solwation/booster-ai/issues",
+    "status": 200,
+    "resolved": "https://github.com/solwation/booster-ai/issues"
+  },
+  {
+    "url": "https://github.com/solwation/booster-ai/releases",
+    "status": 200,
+    "resolved": "https://github.com/solwation/booster-ai/releases"
+  },
+  {
+    "url": "https://github.com/solwation/booster-ai/releases/latest",
+    "status": 200,
+    "resolved": "https://github.com/solwation/booster-ai/releases/tag/v0.34.1"
+  },
+  {
+    "url": "https://learn.microsoft.com/en-us/azure/artifact-signing/faq",
+    "status": 200,
+    "resolved": "https://learn.microsoft.com/en-us/azure/artifact-signing/faq"
+  },
+  {
+    "url": "https://solwation.github.io/dirigenten-och-orkestern/",
+    "status": 200,
+    "resolved": "https://solwation.github.io/dirigenten-och-orkestern/"
+  }
+]

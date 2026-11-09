@@ -1,0 +1,52 @@
+{
+  "Language": "en",
+  "AppTheme": "auto",
+  "AutoCompactMode": "auto",
+  "ProjectSearchRoot": "/home/me/Projects",
+  "Tabs": [
+    {
+      "Name": "Atlas",
+      "Directory": "/srv/atlas",
+      "Llm": "claude",
+      "Model": "standard",
+      "ColorIndex": 0,
+      "Expanded": true,
+      "SubTabs": [
+        {
+          "Name": "Review",
+          "Llm": "codex",
+          "Model": "standard",
+          "ColorIndex": 1
+        }
+      ]
+    },
+    {
+      "Name": "Harbor",
+      "Directory": "/srv/harbor",
+      "Llm": "agy",
+      "Model": "standard",
+      "ColorIndex": 2
+    },
+    {
+      "Name": "Meadow",
+      "Directory": "/srv/meadow",
+      "Llm": "aider",
+      "Model": "standard",
+      "ColorIndex": 3
+    },
+    {
+      "Name": "Workshop",
+      "Directory": "/srv/workshop",
+      "Llm": "interpreter",
+      "Model": "standard",
+      "ColorIndex": 4
+    },
+    {
+      "Name": "Lighthouse",
+      "Directory": "/srv/lighthouse",
+      "Llm": "openhands",
+      "Model": "standard",
+      "ColorIndex": 5
+    }
+  ]
+}
