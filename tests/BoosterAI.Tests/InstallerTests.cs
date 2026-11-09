@@ -53,6 +53,58 @@ public class InstallerTests : IDisposable
         Assert.Equal(SetupMode.Uninstall, Installer.Detect(["--install", "--uninstall"], null));
     }
 
+    // ---- Quiet mode ----
+
+    [Theory]
+    [InlineData(new[] { "--install", "--quiet" }, @"C:\x\BoosterAI.exe", true)]
+    [InlineData(new[] { "--quiet", "--uninstall" }, @"C:\x\BoosterAI.exe", true)]
+    [InlineData(new[] { "--quiet" }, @"C:\Users\me\Downloads\BoosterAI-Setup-1.0.0-win-x64.exe", true)]
+    [InlineData(new[] { "--install" }, @"C:\x\BoosterAI.exe", false)]
+    [InlineData(new[] { "--quiet" }, @"C:\x\BoosterAI.exe", false)]
+    [InlineData(new[] { "--quiet", "--background" }, null, false)]
+    public void QuietOnlyAppliesToASetupMode(string[] args, string? path, bool quiet)
+    {
+        Assert.Equal(quiet, Installer.IsQuiet(args, path));
+        // --quiet never changes which mode runs, and never turns an ordinary start into one.
+        Assert.Equal(Installer.Detect(args.Where(a => a != "--quiet").ToArray(), path), Installer.Detect(args, path));
+    }
+
+    private string LogPath => Path.Combine(_root, "BoosterAI", Installer.LogName);
+
+    [Fact]
+    public void QuietInstallRunsTheInstallAndLogsSuccess()
+    {
+        var installed = 0;
+        Assert.Equal(0, Installer.RunQuiet(SetupMode.Install, () => { installed++; return null; }, () => throw new InvalidOperationException(), LogPath));
+        Assert.Equal(1, installed);
+        Assert.Contains("install ok", File.ReadAllText(LogPath));
+    }
+
+    [Fact]
+    public void QuietInstallFailureExitsNonzeroWithALogLine()
+    {
+        Assert.Equal(1, Installer.RunQuiet(SetupMode.Install, () => throw new IOException("file in use"), () => [], LogPath));
+        Assert.Equal(0, Installer.RunQuiet(SetupMode.Install, () => "other copy", () => [], LogPath));
+        var lines = File.ReadAllLines(LogPath);
+        Assert.Equal(2, lines.Length);
+        Assert.Contains("install failed: file in use", lines[0]);
+        Assert.Contains("acknowledged", lines[1]);
+    }
+
+    [Fact]
+    public void QuietUninstallReportsWhatWasLeft()
+    {
+        Assert.Equal(0, Installer.RunQuiet(SetupMode.Uninstall, () => throw new InvalidOperationException(), () => [], LogPath));
+        Assert.Equal(1, Installer.RunQuiet(SetupMode.Uninstall, () => null, () => [@"C:\x\BoosterAI.lnk: denied"], LogPath));
+        var lines = File.ReadAllLines(LogPath);
+        Assert.Contains("uninstall ok", lines[0]);
+        Assert.Contains(@"uninstall failed: C:\x\BoosterAI.lnk: denied", lines[1]);
+    }
+
+    [Fact]
+    public void QuietWithoutAModeDoesNothing() =>
+        Assert.NotEqual(0, Installer.RunQuiet(SetupMode.None, () => throw new InvalidOperationException(), () => throw new InvalidOperationException(), LogPath));
+
     // ---- Install plan ----
 
     [Fact]
@@ -122,6 +174,7 @@ public class InstallerTests : IDisposable
         Assert.Contains("--background", text);
         Assert.Contains(@"delete: C:\Users\me\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\BoosterAI.lnk", text);
         Assert.Contains(@"keep: C:\Users\me\AppData\Roaming\BoosterAI\config.json", text);
+        Assert.Contains("quiet (--quiet", text);
     }
 
     [Fact]

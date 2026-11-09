@@ -100,6 +100,17 @@ internal static class Program
                 Environment.ExitCode = 1;
                 return;
             }
+            if (Installer.IsQuiet(args, Environment.ProcessPath))
+            {
+                // No Avalonia and no window; texts (shortcut description, errors) follow the config's language.
+                Loc.Init(ConfigStore.Load().Language);
+                var plan = Installer.CurrentPlan();
+                Environment.ExitCode = Installer.RunQuiet(Setup,
+                    () => Installer.Install(plan, null, [], null, new Progress<string>()),
+                    () => Installer.Uninstall(plan),
+                    Path.Combine(Path.GetDirectoryName(ConfigStore.PathOnDisk)!, Installer.LogName));
+                return;
+            }
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
             return;
         }

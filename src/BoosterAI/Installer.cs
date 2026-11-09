@@ -48,6 +48,10 @@ public static class Installer
     public const string InstallFlag = "--install";
     public const string UninstallFlag = "--uninstall";
     public const string DryRunFlag = "--dry-run-install";
+    /// <summary>With a setup mode: no window at all (scripted checks, Intune). Install keeps the config as it is; uninstall needs no confirmation.</summary>
+    public const string QuietFlag = "--quiet";
+    /// <summary>The quiet mode's log, next to config.json.</summary>
+    public const string LogName = "setup.log";
     public const string AppName = "BoosterAI";
     public const string Publisher = "Solwation";
     public const string AboutUrl = "https://github.com/" + UpdateLogic.Repository;
@@ -68,6 +72,46 @@ public static class Installer
         if (args.Contains(UninstallFlag)) return SetupMode.Uninstall;
         if (args.Contains(InstallFlag) || IsSetupName(processPath)) return SetupMode.Install;
         return SetupMode.None;
+    }
+
+    /// <summary>True when a setup mode runs silently: <c>--quiet</c> alongside --install, --uninstall or a BoosterAI-Setup name.</summary>
+    public static bool IsQuiet(string[] args, string? processPath) =>
+        args.Contains(QuietFlag) && Detect(args, processPath) != SetupMode.None;
+
+    /// <summary>
+    /// The silent install or uninstall: no window, the config unchanged, every outcome one line in
+    /// <paramref name="logPath"/>. 0 on success, 1 on failure (also when the uninstall left something behind).
+    /// </summary>
+    public static int RunQuiet(SetupMode mode, Func<string?> install, Func<IReadOnlyList<string>> uninstall, string logPath)
+    {
+        string line;
+        int code;
+        try
+        {
+            if (mode == SetupMode.Install)
+            {
+                var note = install();
+                (code, line) = (0, "install ok" + (note is null ? "" : " (a running BoosterAI acknowledged the start)"));
+            }
+            else if (mode == SetupMode.Uninstall)
+            {
+                var problems = uninstall();
+                (code, line) = problems.Count == 0 ? (0, "uninstall ok") : (1, "uninstall failed: " + string.Join("; ", problems));
+            }
+            else (code, line) = (2, "no setup mode");
+        }
+        catch (Exception e)
+        {
+            (code, line) = (1, (mode == SetupMode.Install ? "install" : "uninstall") + " failed: " + e.Message);
+        }
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(logPath)!);
+            File.AppendAllText(logPath, $"{DateTime.Now:o} {UpdateLogic.Current} {line}{Environment.NewLine}");
+        }
+        catch (Exception) { /* the exit code still tells */ }
+        if (code != 0) Console.Error.WriteLine(line);
+        return code;
     }
 
     public static bool IsSetupName(string? processPath)
@@ -193,6 +237,7 @@ public static class Installer
         foreach (var v in p.RegistryValues) L($"    {v.Name} = {v.Value} ({(v.Dword ? "REG_DWORD" : "REG_SZ")})");
         L($"  config: {p.ConfigPath}: merge the wizard's language, appearance, found projects and Find projects base folder; other settings and projects are kept (skipped steps change nothing)");
         L($"  start: \"{p.Exe}\" --background (hidden, working directory {p.InstallDir}); exit 0 within {StartWait.TotalMilliseconds:0} ms = a running BoosterAI acknowledged it (single-instance guard), other exit codes fail");
+        L($"quiet ({QuietFlag} with the above): no window; install keeps the config unchanged, uninstall needs no confirmation; exit 0 on success, else 1; one line per run in {LogName} next to the config");
         L($"uninstall ({UninstallFlag}, from \"Apps & features\" or the command line, after confirmation):");
         L($"  stop: BoosterAI processes whose path equals {p.Exe} (never this process)");
         foreach (var s in p.Shortcuts) L($"  delete: {s.Path}");
