@@ -1,3 +1,3 @@
-version: 0.34.1
-sv: Installationshjälpen i README och på webbplatsen visar guiden, uppgradering och avinstallation tydligare.
-en: Updated README and website guides cover setup, upgrades and uninstalling with your settings kept.
+version: 0.35.0
+sv: Nya hårdvaruråd för lokala AI-modeller och uppdaterade guider, RAM-bilder och information om alla sex CLI:er.
+en: Get hardware advice for local AI models, plus refreshed setup docs, RAM previews and all six AI CLIs.
