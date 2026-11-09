@@ -4,12 +4,15 @@ namespace BoosterAI;
 internal sealed class LocalModelViewModel : Observable
 {
     private readonly ModelSelection _selection;
+    private readonly Func<Uri, CancellationToken, Task<OllamaSnapshot>> _readModels;
+    private long _assessmentVersion;
     private string _model, _endpoint = "http://127.0.0.1:11434";
     private bool _confirmed, _cpuOnly, _busy;
     private string _result, _hardware = Loc.Get("localAdvice.notMeasured"), _metadata = "";
-    public LocalModelViewModel(string cli, string model)
+    public LocalModelViewModel(string cli, string model, Func<Uri, CancellationToken, Task<OllamaSnapshot>>? readModels = null)
     {
         _selection = ModelSelection.From(cli, model);
+        _readModels = readModels ?? LocalOllamaProbe.ReadAsync;
         _model = _selection.Model;
         Selection = Loc.Format("localAdvice.selection", Loc.Display("llm", cli), model);
         _result = Loc.Get("localAdvice.selection." + _selection.Backend);
@@ -27,6 +30,7 @@ internal sealed class LocalModelViewModel : Observable
     public string Metadata { get => _metadata; private set => Set(ref _metadata, value); }
     private void Invalidate()
     {
+        _assessmentVersion++;
         Assessment = null;
         Raise(nameof(Assessment));
         Result = Loc.Get("localAdvice.selection." + _selection.Backend);
@@ -39,24 +43,25 @@ internal sealed class LocalModelViewModel : Observable
         if (Busy) return;
         Busy = true;
         ClearAssessment();
+        var version = _assessmentVersion;
         // Capture the evidence inputs. Edits during the asynchronous read invalidate the old result.
         var (model, endpoint, confirmed, cpuOnly) = (Model, Endpoint, Confirmed, CpuOnly);
         try
         {
             var hardware = knownHardware ?? await LocalHardwareProbe.ReadAsync(cancellation);
-            if (cancellation.IsCancellationRequested) return;
+            if (cancellation.IsCancellationRequested || version != _assessmentVersion) return;
             Hardware = HardwareText(hardware);
             if (!confirmed) { Result = Loc.Get("localAdvice.confirmRequired"); return; }
             if (LocalOllamaProbe.Endpoint(endpoint) is not { } uri) { Result = Loc.Get("localAdvice.invalidEndpoint"); return; }
             if (model.Length == 0 || !Catalog.IsSafeModel(model)) { Result = Loc.Get("localAdvice.exactModelRequired"); return; }
             Result = Loc.Get("localAdvice.checking");
-            var snapshot = await LocalOllamaProbe.ReadAsync(uri, cancellation);
-            if ((model, endpoint, confirmed, cpuOnly) != (Model, Endpoint, Confirmed, CpuOnly) || cancellation.IsCancellationRequested) return;
+            var snapshot = await _readModels(uri, cancellation);
+            if ((model, endpoint, confirmed, cpuOnly) != (Model, Endpoint, Confirmed, CpuOnly) || cancellation.IsCancellationRequested || version != _assessmentVersion) return;
             Show(hardware, snapshot, model, cpuOnly);
         }
-        catch (OperationCanceledException) { if (!cancellation.IsCancellationRequested) Result = Loc.Get("localAdvice.failed"); }
+        catch (OperationCanceledException) { if (!cancellation.IsCancellationRequested && version == _assessmentVersion) Result = Loc.Get("localAdvice.failed"); }
         catch (Exception ex) when (ex is HttpRequestException or IOException or System.Text.Json.JsonException or KeyNotFoundException or InvalidOperationException)
-        { Result = Loc.Get("localAdvice.failed"); }
+        { if (version == _assessmentVersion) Result = Loc.Get("localAdvice.failed"); }
         finally { Busy = false; }
     }
 

@@ -69,13 +69,17 @@ public sealed class SettingsModelAdviceViewModel : Observable
     }
     internal LocalModelViewModel Exact { get; }
     internal HardwareSnapshot? MeasuredHardware => _hardware.HasReading ? _hardware.Snapshot : null;
-    internal SettingsModelAdviceViewModel(string cli, SettingsHardwareAdviceState hardware)
+    internal SettingsModelAdviceViewModel(string cli, SettingsHardwareAdviceState hardware, Func<Uri, CancellationToken, Task<OllamaSnapshot>>? readModels = null)
     {
         _hardware = hardware;
         IsSupported = ModelSelection.Supports(cli);
         Profiles = cli == "openhands" ? [None, GpuExample] : [None, CpuExample];
-        Exact = new(cli, Catalog.StandardModel);
-        hardware.PropertyChanged += (_, _) => Refresh();
+        Exact = new(cli, Catalog.StandardModel, readModels);
+        hardware.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(hardware.HasReading)) Exact.ClearAssessment();
+            Refresh();
+        };
         Exact.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(Exact.Assessment) && Exact.Assessment is not null)

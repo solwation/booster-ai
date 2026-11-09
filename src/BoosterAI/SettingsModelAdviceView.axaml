@@ -10,7 +10,7 @@
       <TextBlock Text="{Binding Reason}" TextWrapping="Wrap" FontSize="12" />
       <TextBlock Text="{Binding HardwareSummary}" Classes="muted" TextWrapping="Wrap" FontSize="12" />
       <TextBlock Text="{Binding NextStep}" TextWrapping="Wrap" FontSize="12" />
-      <ComboBox ItemsSource="{Binding Profiles}" SelectedItem="{Binding Profile}" HorizontalAlignment="Stretch"
+      <ComboBox ItemsSource="{Binding Profiles}" SelectedItem="{Binding Profile}" IsEnabled="{Binding Exact.CanCheck}" HorizontalAlignment="Stretch"
                 AutomationProperties.Name="{local:T settingsAdvice.profileLabel}">
         <ComboBox.ItemTemplate><DataTemplate x:DataType="local:PlanningModelProfile"><TextBlock Text="{Binding Label}" TextWrapping="Wrap" /></DataTemplate></ComboBox.ItemTemplate>
       </ComboBox>

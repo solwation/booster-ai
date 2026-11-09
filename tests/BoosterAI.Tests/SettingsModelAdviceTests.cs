@@ -118,6 +118,38 @@ public class SettingsModelAdviceTests
     }
 
     [Fact]
+    public void NewHardwareInvalidatesOldExactAdviceButKeepsModelInputs()
+    {
+        var hardware = new SettingsHardwareAdviceState();
+        hardware.SetSnapshot(Hardware(2 * GiB));
+        var advice = new AgentInfo(new("aider", "none", null), hardware).Advice;
+        advice.Exact.ShowSample("limited");
+        hardware.SetSnapshot(Hardware(8 * GiB));
+        Assert.Null(advice.Exact.Assessment);
+        Assert.NotEmpty(advice.Exact.Model);
+        Assert.Equal(Loc.Get("settingsAdvice.status.modelDependent"), advice.CardStatus);
+    }
+
+    [Fact]
+    public async Task OldExactReplyCannotRestoreVerdictAfterNewHardware()
+    {
+        var reply = new TaskCompletionSource<OllamaSnapshot>();
+        var hardware = new SettingsHardwareAdviceState();
+        hardware.SetSnapshot(Hardware(2 * GiB));
+        var advice = new SettingsModelAdviceViewModel("aider", hardware, (_, _) => reply.Task);
+        advice.Exact.Model = "coder:7b";
+        advice.Exact.Confirmed = true;
+        advice.Exact.CpuOnly = true;
+        var oldQuery = advice.Exact.CheckAsync(CancellationToken.None, advice.MeasuredHardware);
+        Assert.True(advice.Exact.Busy);
+        hardware.SetSnapshot(Hardware(8 * GiB));
+        reply.SetResult(new([new("coder:7b", "digest", 5 * GiB, false)], [], true));
+        await oldQuery;
+        Assert.Null(advice.Exact.Assessment);
+        Assert.Equal(Loc.Get("settingsAdvice.status.modelDependent"), advice.CardStatus);
+    }
+
+    [Fact]
     public void CpuPlanningUsesDocumentedFileEstimateAndReactsToUpdatedResources()
     {
         var hardware = new SettingsHardwareAdviceState();
