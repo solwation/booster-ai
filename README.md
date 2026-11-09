@@ -33,7 +33,7 @@ Alternatively, extract `BoosterAI-*-win-x64.zip` and run the installer script in
 ```powershell
 powershell -ExecutionPolicy Bypass -File install-windows.ps1
 ```
-> **Note:** Windows SmartScreen may show an unrecognized app warning while our open-source code signing verification is underway. Click **More info** &rarr; **Run anyway**.
+> **Code signing:** Windows releases are signed by **Svep Design Center AB**. SmartScreen can still warn about a new release while it builds reputation; check the publisher before choosing **More info** &rarr; **Run anyway**.
 
 ### Linux (Bash)
 Extract `BoosterAI-*-linux-x64.tar.gz` and run the installer:
