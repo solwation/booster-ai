@@ -479,6 +479,30 @@ public class InstallerTests : IDisposable
     }
 
     [Fact]
+    public async Task WizardCanExplicitlyPickItsProjectRootAndOmitsItOnTheNextSearch()
+    {
+        var project = Path.Combine(_root, "atlas");
+        Directory.CreateDirectory(Path.Combine(project, ".git"));
+        var wizard = Wizard();
+        wizard.SearchRoot = project;
+        var import = new ImportViewModel(wizard.KnownPaths);
+
+        await import.ScanAsync(wizard.ScanRoot);
+
+        var item = Assert.Single(import.Items);
+        Assert.False(item.Selected);
+        Assert.Empty(wizard.Projects);
+        item.Selected = true;
+        wizard.AddProjects(import.Selected);
+        Assert.Equal(project, Assert.Single(wizard.Projects).Path);
+
+        var again = new ImportViewModel(wizard.KnownPaths);
+        await again.ScanAsync(wizard.ScanRoot);
+        Assert.Empty(again.Items);
+        Assert.False(again.CanImport);
+    }
+
+    [Fact]
     public void SearchRootIsPrefilledResolvedAndSavedOnlyWhenChanged()
     {
         var vm = Wizard(new AppConfig { ProjectSearchRoot = "/srv/code" });

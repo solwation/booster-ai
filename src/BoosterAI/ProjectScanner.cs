@@ -7,7 +7,7 @@ namespace BoosterAI;
 public sealed record FoundProject(string Path, string Name, bool Git, bool Ai, bool Orchestra = false, string? OrchestraVersion = null);
 
 /// <summary>
-/// "Hitta projekt": walks a few levels below Documents looking for project folders. A folder
+/// "Hitta projekt": checks the selected root, then walks a few levels below it when it is not a project. A folder
 /// counts when it has .git (directory, or file for worktrees/submodules) or one of the AI
 /// instruction files in <see cref="AiMarkers"/>. The walk does not descend into a project it
 /// found, nor into hidden folders, links or dependency/build folders.
@@ -48,8 +48,15 @@ public static class ProjectScanner
 
     public static List<FoundProject> Scan(string root, int maxDepth = DefaultDepth, CancellationToken cancel = default)
     {
+        cancel.ThrowIfCancellationRequested();
+        var directory = new DirectoryInfo(System.IO.Path.TrimEndingDirectorySeparator(root));
+        FoundProject? project;
+        try { project = Inspect(directory.FullName); }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.Security.SecurityException) { return []; }
+        cancel.ThrowIfCancellationRequested();
+        if (project is not null) return [project];
         var found = new List<FoundProject>();
-        Walk(new DirectoryInfo(root), 1, maxDepth, found, cancel);
+        Walk(directory, 1, maxDepth, found, cancel);
         return [.. found.OrderBy(f => f.Name, StringComparer.CurrentCultureIgnoreCase).ThenBy(f => f.Path, StringComparer.Ordinal)];
     }
 

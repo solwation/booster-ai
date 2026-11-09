@@ -38,6 +38,66 @@ public sealed class ProjectScannerTests : IDisposable
         Assert.False(found[2].Ai);
     }
 
+    [Theory]
+    [InlineData("git-directory")]
+    [InlineData("git-file")]
+    [InlineData("ai")]
+    public void SelectedProjectRootIsReturnedWithoutSearchingItsChildren(string marker)
+    {
+        if (marker == "git-directory") Dir(".git");
+        else Touch(marker == "git-file" ? ".git" : "AGENTS.md");
+        Dir("nested", ".git");
+        Dir("node_modules", "dependency", ".git");
+
+        var project = Assert.Single(ProjectScanner.Scan(_root + Path.DirectorySeparatorChar));
+
+        Assert.Equal(_root, project.Path);
+        Assert.Equal(Path.GetFileName(_root), project.Name);
+        Assert.Equal(marker != "ai", project.Git);
+        Assert.Equal(marker == "ai", project.Ai);
+    }
+
+    [Fact]
+    public async Task SelectedRootRequiresExplicitSelectionAndIsExcludedAfterAdding()
+    {
+        Dir(".git");
+        var import = new ImportViewModel([]);
+        await import.ScanAsync(_root);
+        var item = Assert.Single(import.Items);
+        Assert.False(item.Selected);
+        Assert.False(import.CanImport);
+        Assert.Empty(import.Selected);
+        item.Selected = true;
+        Assert.Equal(_root, Assert.Single(import.Selected).Path);
+
+        var again = new ImportViewModel(import.Selected.Select(p => p.Path + Path.DirectorySeparatorChar));
+        await again.ScanAsync(_root);
+        Assert.Empty(again.Items);
+        Assert.False(again.CanImport);
+        Assert.Equal(Loc.Format("import.allAdded", _root), again.Message);
+    }
+
+    [Fact]
+    public void CancelledSearchDoesNotReturnAProjectRootOrWalkACollection()
+    {
+        using var cancel = new CancellationTokenSource();
+        cancel.Cancel();
+        Assert.Throws<OperationCanceledException>(() => ProjectScanner.Scan(_root, cancel: cancel.Token));
+        Dir(".git");
+        Assert.Throws<OperationCanceledException>(() => ProjectScanner.Scan(_root, cancel: cancel.Token));
+    }
+
+    [Fact]
+    public void CollectionSearchStillSkipsLinksToProjectsAndLoops()
+    {
+        if (!OperatingSystem.IsLinux()) return;
+        Dir("app", ".git");
+        Directory.CreateSymbolicLink(Path.Combine(_root, "alias"), Path.Combine(_root, "app"));
+        Directory.CreateSymbolicLink(Path.Combine(_root, "loop"), _root);
+
+        Assert.Equal(["app"], ProjectScanner.Scan(_root).Select(p => p.Name));
+    }
+
     [Fact]
     public void GitFileCountsForWorktrees()
     {
