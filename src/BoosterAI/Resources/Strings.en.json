@@ -652,7 +652,7 @@
   "settingsAdvice.reason.ramUnknown": "This example assumes CPU inference with a model file of about 4.7 GB, but RAM could not be read. Full memory requirements and response time are unknown. No recommendation is given without that information.",
   "settingsAdvice.reason.cpuRamSmall": "RAM available now is below the published model file size of about 4.7 GB, before context and working memory. This local model will probably not perform well on your computer for planned CPU inference. Close other programs, choose a smaller model or use a remote model.",
   "settingsAdvice.reason.cpuRoom": "Available RAM appears to fit the published model file of about 4.7 GB. Context and working memory are additional. CPU inference may be slow; this is not a speed measurement or a recommendation of the model’s coding quality.",
-  "settingsAdvice.next.choose": "Next: compare a named example below before installing, or install the agent for cloud/API use. Your choice does not change CLI settings.",
+  "settingsAdvice.next.choose": "Next: compare a named example below, or use the agent with cloud/API models. Your choice does not change CLI settings.",
   "settingsAdvice.next.model": "This advice applies only to the model and assumptions here, not the agent or cloud/API use. You can still install. Check model server support and actual context before local inference.",
   "settingsAdvice.profileLabel": "Plan a local model",
   "settingsAdvice.profile.none": "Choose a planning example (optional)",

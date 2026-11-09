@@ -652,7 +652,7 @@
   "settingsAdvice.reason.ramUnknown": "Exemplet gäller CPU-körning av en modellfil på cirka 4,7 GB, men RAM kunde inte läsas. Fullt minnesbehov och svarstid är okända. Ingen rekommendation ges utan dessa uppgifter.",
   "settingsAdvice.reason.cpuRamSmall": "Tillgängligt RAM nu är mindre än den publicerade modellfilen på cirka 4,7 GB, före kontext och arbetsminne. Den här lokala modellen kommer troligen inte prestera bra på din dator vid planerad CPU-körning. Stäng andra program, välj en mindre modell eller använd en fjärrmodell.",
   "settingsAdvice.reason.cpuRoom": "Tillgängligt RAM verkar rymma den publicerade modellfilen på cirka 4,7 GB. Kontext och arbetsminne tillkommer. CPU-körning kan vara långsam; detta är ingen hastighetsmätning eller rekommendation av modellens kodkvalitet.",
-  "settingsAdvice.next.choose": "Nästa steg: jämför ett namngivet exempel nedan innan du installerar, eller installera agenten för moln/API. Valet ändrar inga CLI-inställningar.",
+  "settingsAdvice.next.choose": "Nästa steg: jämför ett namngivet exempel nedan, eller använd agenten med moln/API. Valet ändrar inga CLI-inställningar.",
   "settingsAdvice.next.model": "Rådet gäller bara modellen och antagandena här, inte agenten eller moln/API. Du kan installera ändå. Kontrollera modellserverns stöd och verklig kontext innan lokal körning.",
   "settingsAdvice.profileLabel": "Planera en lokal modell",
   "settingsAdvice.profile.none": "Välj ett planeringsexempel (frivilligt)",

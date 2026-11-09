@@ -49,7 +49,7 @@ public sealed class SettingsModelAdviceViewModel : Observable
 {
     private static readonly PlanningModelProfile None = new("none", "", "");
     private static readonly PlanningModelProfile CpuExample = new("cpu7b", "qwen2.5-coder:7b-instruct-q4_K_M", "https://ollama.com/library/qwen2.5-coder:7b-instruct-q4_K_M");
-    private static readonly PlanningModelProfile GpuExample = new("gpu35b", "Qwen3.6-35B-A3B (quantized)", "https://docs.openhands.dev/openhands/usage/llms/local-llms");
+    private static readonly PlanningModelProfile GpuExample = new("gpu35b", "Qwen3.6-35B-A3B", "https://docs.openhands.dev/openhands/usage/llms/local-llms");
     // Primary sources publish rounded decimal GB, not exact runtime bytes. Never infer these from a parameter count.
     internal const long CpuExampleFileBytes = 4_700_000_000;
     internal const long GpuExampleVramBytes = 24_000_000_000;

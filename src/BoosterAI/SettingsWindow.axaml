@@ -538,14 +538,14 @@
                           <Button Grid.Column="2" Classes="accent" Content="{Binding InstallButtonText}" Click="OnInstallAgent"
                                   ToolTip.Tip="{Binding InstallTip}" IsVisible="{Binding !IsInstalled}" VerticalAlignment="Center" Margin="12,0,0,0" />
                         </Grid>
-                        <Panel IsVisible="{Binding ShowModelAdvice}"><local:SettingsModelAdviceView DataContext="{Binding Advice}" /></Panel>
-
-                        <StackPanel Spacing="16" IsVisible="{Binding IsInstalled}">
-                          <WrapPanel>
-                            <Button Classes="agent-nav" Classes.chosen="{Binding IsOverview}" Content="{local:T agents.section.overview}" Tag="0" Click="OnAgentSection" Margin="0,0,6,0" />
+                        <WrapPanel IsVisible="{Binding IsInstalled}">
+                          <Button Classes="agent-nav" Classes.chosen="{Binding IsOverview}" Content="{local:T agents.section.overview}" Tag="0" Click="OnAgentSection" Margin="0,0,6,0" />
                             <Button Classes="agent-nav" Classes.chosen="{Binding IsPermissions}" Content="{local:T agents.section.permissions}" Tag="1" Click="OnAgentSection" Margin="0,0,6,0" />
                             <Button Classes="agent-nav" Classes.chosen="{Binding IsContext}" Content="{local:T agents.section.context}" Tag="2" Click="OnAgentSection" />
                           </WrapPanel>
+                        <Panel IsVisible="{Binding ShowModelAdvice}"><local:SettingsModelAdviceView DataContext="{Binding Advice}" /></Panel>
+
+                        <StackPanel Spacing="16" IsVisible="{Binding IsInstalled}">
                           <StackPanel Spacing="14" IsVisible="{Binding IsOverview}">
                             <TextBlock Text="{Binding Description}" Classes="muted" TextWrapping="Wrap" />
                             <Button Classes="agent-card" Click="OnAgentSection" Tag="1" HorizontalAlignment="Stretch">
