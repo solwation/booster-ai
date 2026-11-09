@@ -103,6 +103,19 @@
               </StackPanel>
             </StackPanel>
 
+            <!-- Hitta projekt -->
+            <StackPanel Spacing="8">
+              <TextBlock Classes="sectionhead" Text="{local:T settings.section.findProjects}" />
+              <TextBlock Classes="muted" Text="{local:T settings.findRoot.hint}" TextWrapping="Wrap" />
+              <Grid ColumnDefinitions="*,Auto,Auto" MaxWidth="560" HorizontalAlignment="Left">
+                <TextBox Grid.Column="0" Text="{Binding ProjectSearchRoot}" Watermark="{Binding ProjectSearchRootDefault}"
+                         FontFamily="{StaticResource MonoFont}" MinWidth="320" AutomationProperties.Name="{local:T settings.findRoot.name}" />
+                <Button Grid.Column="1" Content="{local:T settings.findRoot.browse}" Click="OnBrowseSearchRoot" Margin="8,0,0,0" />
+                <Button Grid.Column="2" Content="{local:T settings.findRoot.reset}" Click="OnResetSearchRoot" Margin="8,0,0,0"
+                        IsEnabled="{Binding CanResetProjectSearchRoot}" />
+              </Grid>
+            </StackPanel>
+
             <!-- Automatisk rensning -->
             <StackPanel Spacing="8">
               <TextBlock Classes="sectionhead" Text="{local:T settings.section.autoClear}" />

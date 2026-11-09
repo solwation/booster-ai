@@ -531,6 +531,16 @@ public sealed partial class MainViewModel : Observable
         set { if (_cfg.WslDistro == value.Trim()) return; _cfg.WslDistro = value.Trim(); InvalidateCompactMetadata(); Raise(); _ = InitAsync(); }
     }
 
+    /// <summary>Folder "Find projects" searches; empty = the default (Documents, else home).</summary>
+    public string ProjectSearchRoot
+    {
+        get => _cfg.ProjectSearchRoot;
+        set { value = (value ?? "").Trim(); if (_cfg.ProjectSearchRoot == value) return; _cfg.ProjectSearchRoot = value; Raise(); Raise(nameof(CanResetProjectSearchRoot)); }
+    }
+    public bool CanResetProjectSearchRoot => _cfg.ProjectSearchRoot != "";
+    public string ProjectSearchRootDefault => ProjectScanner.DefaultRoot();
+    public void ResetProjectSearchRoot() => ProjectSearchRoot = "";
+
     public string LinuxTerminal { get => _cfg.LinuxTerminal; set { _cfg.LinuxTerminal = value; Raise(); } }
 
     public IReadOnlyList<ColorTheme> Themes => Catalog.Themes;
@@ -880,7 +890,7 @@ public sealed partial class MainViewModel : Observable
         if (_saved.WslDistro != _cfg.WslDistro) InvalidateCompactMetadata();
         foreach (var editor in _compactEditors.Values) editor.UpdateSettings(_cfg.AutoCompactSettings);
         RefreshCompactMode();
-        foreach (var name in new[] { nameof(WslDistro), nameof(LinuxTerminal), nameof(Theme), nameof(SelectedTheme), nameof(SelectedLanguage),
+        foreach (var name in new[] { nameof(WslDistro), nameof(LinuxTerminal), nameof(ProjectSearchRoot), nameof(CanResetProjectSearchRoot), nameof(Theme), nameof(SelectedTheme), nameof(SelectedLanguage),
             nameof(SelectedAppearance), nameof(SelectedAfterLaunch), nameof(MinimizeToTray), nameof(Notifications), nameof(SelectedZoom), nameof(AutoUpdateClis), nameof(AutoClearIdle), nameof(AutoClearMinutes), nameof(CheckForUpdates) })
             Raise(name);
         foreach (var t in Tabs) t.RaiseColor();
@@ -1757,7 +1767,7 @@ public sealed class ImportViewModel : Observable
     private readonly HashSet<string> _existing;
     private CancellationTokenSource? _scan;
     private string _root = "", _message = "";
-    private bool _scanning;
+    private bool _scanning, _messageIsError;
 
     /// <param name="existing">Local paths of the projects already added; they are left out of the list.</param>
     public ImportViewModel(IEnumerable<string> existing) =>
@@ -1767,6 +1777,7 @@ public sealed class ImportViewModel : Observable
     public string Root { get => _root; private set { if (Set(ref _root, value)) Raise(nameof(Hint)); } }
     public string Hint => Loc.Format("import.hint", Root);
     public string Message { get => _message; private set => Set(ref _message, value); }
+    public bool MessageIsError { get => _messageIsError; private set => Set(ref _messageIsError, value); }
     public bool IsScanning { get => _scanning; private set => Set(ref _scanning, value); }
     public bool HasItems => Items.Count > 0;
     public int SelectedCount => Items.Count(i => i.Selected);
@@ -1795,6 +1806,14 @@ public sealed class ImportViewModel : Observable
         var cancel = (_scan = new CancellationTokenSource()).Token;
         Root = root;
         Show([]);
+        MessageIsError = false;
+        if (!Directory.Exists(root))
+        {
+            Message = Loc.Format("import.rootMissing", root);
+            MessageIsError = true;
+            IsScanning = false;
+            return;
+        }
         IsScanning = true;
         Message = Loc.Format("import.scanning", root);
         try
@@ -1806,7 +1825,7 @@ public sealed class ImportViewModel : Observable
             Message = Loc.Format(found.Count == 0 ? "import.nothing" : "import.allAdded", root);
         }
         catch (OperationCanceledException) { /* a newer scan replaced this one */ }
-        catch (Exception e) { Message = Loc.Format("import.failed", e.Message); }
+        catch (Exception e) { Message = Loc.Format("import.failed", e.Message); MessageIsError = true; }
         finally { if (!cancel.IsCancellationRequested) IsScanning = false; }
     }
 

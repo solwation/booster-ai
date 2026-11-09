@@ -67,6 +67,64 @@ public sealed class ProjectScannerTests : IDisposable
     }
 
     [Fact]
+    public void ResolveRootUsesConfiguredFolderOrTheDefault()
+    {
+        Assert.Equal(_root, ProjectScanner.ResolveRoot("  " + _root + " ", out var isDefault));
+        Assert.False(isDefault);
+
+        foreach (var empty in new string?[] { "", "   ", null })
+        {
+            Assert.Equal(ProjectScanner.DefaultRoot(), ProjectScanner.ResolveRoot(empty, out isDefault));
+            Assert.True(isDefault);
+        }
+
+        // A missing folder is kept as configured, never swapped for the default.
+        var missing = Path.Combine(_root, "nope");
+        Assert.Equal(missing, ProjectScanner.ResolveRoot(missing, out isDefault));
+        Assert.False(isDefault);
+        Assert.Equal("", new AppConfig().ProjectSearchRoot);
+    }
+
+    [Fact]
+    public async Task ScanFromConfiguredRootFindsItsProjects()
+    {
+        Dir("shop", ".git");
+        var vm = new ImportViewModel([]);
+
+        await vm.ScanAsync(ProjectScanner.ResolveRoot(_root, out _));
+
+        Assert.Equal(["shop"], vm.Items.Select(i => i.Name));
+        Assert.False(vm.MessageIsError);
+    }
+
+    [Fact]
+    public async Task NonexistentRootShowsAnErrorInsteadOfAnEmptyList()
+    {
+        var missing = Path.Combine(_root, "nope");
+        var vm = new ImportViewModel([]);
+
+        await vm.ScanAsync(missing);
+
+        Assert.Empty(vm.Items);
+        Assert.True(vm.MessageIsError);
+        Assert.False(vm.IsScanning);
+        Assert.Equal(Loc.Format("import.rootMissing", missing), vm.Message);
+        Assert.Contains(missing, vm.Message);
+    }
+
+    [Fact]
+    public void SearchRootSurvivesConfigRoundTripAndMerge()
+    {
+        var cfg = new AppConfig { ProjectSearchRoot = _root };
+        var back = ConfigStore.Copy(cfg);
+        Assert.Equal(_root, back.ProjectSearchRoot);
+
+        var mine = new AppConfig();
+        Assert.True(ConfigMerge.TakeOthers(mine, new AppConfig(), cfg));
+        Assert.Equal(_root, mine.ProjectSearchRoot);
+    }
+
+    [Fact]
     public async Task ImportListLeavesOutExistingProjects()
     {
         Dir("old", ".git");

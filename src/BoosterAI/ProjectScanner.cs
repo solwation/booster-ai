@@ -34,6 +34,18 @@ public static class ProjectScanner
         return docs != "" && Directory.Exists(docs) ? docs : Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
     }
 
+    /// <summary>
+    /// The folder "Find projects" starts in: the configured <paramref name="configured"/> root (trimmed), or
+    /// <see cref="DefaultRoot"/> when it is empty. <paramref name="isDefault"/> tells which; a configured folder
+    /// that does not exist is returned as is, so the caller can report it instead of silently scanning elsewhere.
+    /// </summary>
+    public static string ResolveRoot(string? configured, out bool isDefault)
+    {
+        var root = (configured ?? "").Trim();
+        isDefault = root == "";
+        return isDefault ? DefaultRoot() : root;
+    }
+
     public static List<FoundProject> Scan(string root, int maxDepth = DefaultDepth, CancellationToken cancel = default)
     {
         var found = new List<FoundProject>();

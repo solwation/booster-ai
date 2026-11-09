@@ -109,6 +109,26 @@ public partial class SettingsWindow : Window
         _vm.Optimization.RestartWsl(confirmed);
     }
 
+    private void OnResetSearchRoot(object? sender, RoutedEventArgs e) => _vm.ResetProjectSearchRoot();
+
+    private async void OnBrowseSearchRoot(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var current = ProjectScanner.ResolveRoot(_vm.ProjectSearchRoot, out _);
+            var picked = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+            {
+                Title = Loc.Get("settings.findRoot.pick"),
+                SuggestedStartLocation = await StorageProvider.TryGetFolderFromPathAsync(current),
+            });
+            if (picked.Count > 0 && picked[0].TryGetLocalPath() is { } path) _vm.ProjectSearchRoot = path;
+        }
+        catch (Exception ex)
+        {
+            _vm.ShowStatus(Loc.Format("status.pickerFailed", ex.Message), error: true);
+        }
+    }
+
     private async void OnBrowse(object? sender, RoutedEventArgs e)
     {
         if ((sender as Control)?.DataContext is not TabViewModel tab) return;

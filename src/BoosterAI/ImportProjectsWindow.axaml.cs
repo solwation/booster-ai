@@ -20,12 +20,12 @@ public partial class ImportProjectsWindow : Window
         Closed += (_, _) => _vm.Cancel();
     }
 
-    /// <summary>Shows the dialog over <paramref name="owner"/>, scanning Documents, and imports what is picked.</summary>
+    /// <summary>Shows the dialog over <paramref name="owner"/>, scanning the configured search folder (default Documents), and imports what is picked.</summary>
     public static async Task FindProjects(Window owner, MainViewModel main)
     {
         var vm = new ImportViewModel(main.ProjectPaths);
         var dialog = new ImportProjectsWindow(vm);
-        _ = vm.ScanAsync(ProjectScanner.DefaultRoot());
+        _ = vm.ScanAsync(ProjectScanner.ResolveRoot(main.ProjectSearchRoot, out _));
         if (await dialog.ShowDialog<IReadOnlyList<FoundProject>?>(owner) is { } picked) main.Import(picked);
     }
 
