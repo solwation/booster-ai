@@ -1,3 +1,3 @@
-version: 0.35.0
-sv: Nya hårdvaruråd för lokala AI-modeller och uppdaterade guider, RAM-bilder och information om alla sex CLI:er.
-en: Get hardware advice for local AI models, plus refreshed setup docs, RAM previews and all six AI CLIs.
+version: 0.35.1
+sv: Råd om lokala modeller före installation, automatisk agentkontroll och en visuell guide till Auto-compact.
+en: See local model advice before installing agents, automatic version checks and a visual Auto-compact guide.
