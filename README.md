@@ -12,13 +12,13 @@ Start your whole working day with one click: BoosterAI opens every project you w
 ## Highlights
 
 - **One click, all your workspaces:** Opens each repository in its own color-coded tab in the right directory. Add subtabs sharing a folder for multi-agent workflows.
-- **Granular model control:** Run Opus or Pro on architecture tasks and Flash or Haiku on routine fixes. Switch models in-place without losing the ongoing conversation.
+- **Model control:** Pick a model per tab. Interactive Claude, Codex and Aider tabs can resume after a model change when no other tab shares their CLI and folder; see the [conversation limits](docs/DETAILS.md#multiple-tabs-for-one-project).
 - **Agent overview:** Recognize each CLI by its icon; manage installation, permissions and context in separate settings sections.
 - **Context budgets:** Choose Off, Auto or Manual under Optimization; tune or reset individual agents in Manual. Auto uses known model capacity and an explained task reserve. [How budgets work](docs/DETAILS.md#auto-compaction-budgets).
 - **Live Peek:** Hover any tab's status badge, or focus it and press Enter/Space, to stream its last 20 terminal output lines live &mdash; never break focus to check if an agent is done.
 - **Orchestra on demand:** Native integration with [Dirigenten och orkestern](https://github.com/solwation/dirigenten-och-orkestern) for unattended autonomous queue execution. Reload an idle Claude orchestra in its existing conversation without restarting its tab.
 - **WSL memory guard:** Live RAM telemetry, 30-minute min/avg/max tracking, and memory cap tuning directly in Settings.
-- **Graceful end-of-day close:** *Close all* asks running agents to commit, push, and cleanly terminate background processes.
+- **Graceful end-of-day close:** *Close all* requests saving, committing and pushing from Claude, Codex, AGY and Aider. Other CLIs and ambiguous shared-folder sessions need [manual handling](docs/DETAILS.md#watching-the-tabs).
 
 *For an interactive walkthrough and detailed feature guides, visit the [BoosterAI website](https://solwation.github.io/booster-ai/).*
 
