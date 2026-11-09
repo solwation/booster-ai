@@ -96,7 +96,7 @@ public sealed class InstallWizardWindow : Window
     {
         var import = new ImportViewModel(_vm.KnownPaths);
         var dialog = new ImportProjectsWindow(import);
-        _ = import.ScanAsync(_vm.ScanRoot, includeRoot: _vm.SearchRoot != "");
+        _ = import.ScanAsync(_vm.ScanRoot, includeRoot: !string.IsNullOrWhiteSpace(_vm.SearchRoot));
         if (await dialog.ShowDialog<IReadOnlyList<FoundProject>?>(this) is { } picked) _vm.AddProjects(picked);
     }
 }
