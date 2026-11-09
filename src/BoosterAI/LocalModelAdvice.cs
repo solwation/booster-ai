@@ -3,7 +3,7 @@ using System.Text.Json;
 namespace BoosterAI;
 
 internal enum ModelBackend { Unknown, Api, Ollama }
-internal enum ModelSuitability { Unknown, Remote, Limited, Fits }
+internal enum ModelSuitability { Unknown, Remote, Caution, Limited, Fits }
 internal sealed record ModelSelection(ModelBackend Backend, string Model)
 {
     public static bool Supports(string cli) => cli is "aider" or "interpreter" or "openhands";
@@ -41,11 +41,11 @@ internal static class LocalModelAdvice
         if (model.Remote) return new(ModelSuitability.Remote, "remote");
         if (model.Bytes <= 0) return new(ModelSuitability.Unknown, "missingModel");
         // A digest prevents a similarly named or re-tagged model from supplying unrelated runtime evidence.
-        var loaded = runtime is { Bytes: > 0 } && model.Digest.Length > 0 && runtime.Digest == model.Digest
+        var loaded = runtime is { Bytes: > 0 } && model.Digest.Length > 0 && runtime.Name == model.Name && runtime.Digest == model.Digest
             && runtime.VramBytes >= 0 && runtime.VramBytes <= runtime.Bytes;
         if (loaded && runtime!.VramBytes == runtime.Bytes) return new(ModelSuitability.Fits, "gpuLoaded");
-        if (loaded && runtime!.VramBytes > 0) return new(ModelSuitability.Limited, "splitLoaded");
-        if (loaded) return new(ModelSuitability.Limited, "cpuLoaded");
+        if (loaded && runtime!.VramBytes > 0) return new(ModelSuitability.Caution, "splitLoaded");
+        if (loaded) return new(ModelSuitability.Caution, "cpuLoaded");
         if (cpuOnly && hardware.TotalRam is > 0 && model.Bytes >= hardware.TotalRam.Value)
             return new(ModelSuitability.Limited, "ramTotal");
         if (cpuOnly && hardware.AvailableRam is >= 0 && model.Bytes >= hardware.AvailableRam.Value)

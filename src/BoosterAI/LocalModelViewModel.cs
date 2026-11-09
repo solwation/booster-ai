@@ -60,7 +60,7 @@ internal sealed class LocalModelViewModel : Observable
         if (installed is { Remote: false } && assessment.Suitability == ModelSuitability.Unknown)
             foreach (var gpu in hardware.Gpus.Where(g => g.TotalBytes < installed.Bytes))
                 Result += "\n" + Loc.Format("localAdvice.gpuSmall", gpu.Name, Memory(gpu.TotalBytes), Memory(installed.Bytes));
-        Metadata = installed is null ? "" : Loc.Format("localAdvice.metadata", installed.Name, Memory(installed.Bytes))
+        Metadata = installed is null ? "" : installed.Remote ? Loc.Format("localAdvice.remoteMetadata", installed.Name) : Loc.Format("localAdvice.metadata", installed.Name, Memory(installed.Bytes))
             + (snapshot.RuntimeKnown ? "" : "\n" + Loc.Get("localAdvice.runtimeUnknown"));
     }
 

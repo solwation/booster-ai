@@ -580,7 +580,7 @@
   "uninstall.button": "Avinstallera",
   "localAdvice.open": "Hårdvaruråd…",
   "localAdvice.title": "Lokal modell på den här datorn",
-  "localAdvice.selection": "Val i fliken: {0} / {1}",
+  "localAdvice.selection": "Val när rådfönstret öppnades: {0} / {1}",
   "localAdvice.intro": "Rådgivning för Aider, Open Interpreter och OpenHands. Kontrollera att modellen och servern nedan motsvarar agentens verkliga inställningar. Dina val här ändrar inga CLI-inställningar och hindrar aldrig start.",
   "localAdvice.selection.Ollama": "Ollama är valt, men serverns körplats är okänd. CLI-miljö, sparade inställningar eller egna alias kan använda en annan server. Bekräfta nedan för att bedöma den här datorn.",
   "localAdvice.selection.Api": "Modellnamnet tyder på API/fjärrkörning. Datorns RAM och GPU avgör då inte modellens prestanda. CLI-inställningar kan ändra servern; bekräfta bara nedan om du faktiskt använder en lokal Ollama-modell.",
@@ -615,10 +615,12 @@
   "localAdvice.reason.cpuLoaded": "Samma modellversion är laddad utan GPU enligt Ollama. CPU-körning kan ge långsamma svar även när RAM räcker. Överväg en mindre modell eller fjärrmodell; hastigheten har inte mätts.",
   "localAdvice.reason.ramTotal": "Vid bekräftad CPU-körning tar modellfilen ensam minst lika mycket utrymme som allt uppmätt RAM. Körning behöver även kontext och arbetsminne och kan ge växling eller minnesfel. Välj en mindre modell eller fjärrmodell.",
   "localAdvice.reason.ramAvailable": "Vid bekräftad CPU-körning är tillgängligt RAM nu högst modellfilens storlek, före kontext och arbetsminne. Stäng andra program eller välj en mindre modell/fjärrmodell. Tillgängligt RAM kan ändras; detta är en försiktig filstorleksjämförelse.",
-  "localAdvice.reason.cpuUnloaded": "CPU-körning är bekräftad men modellen är inte laddad. RAM verkar rymma filen, men kvantisering, kontext, runtime och CPU-hastighet avgör faktiskt minnesbehov och svarstid. CPU-körning kan bli långsam; överväg mindre modell eller fjärrmodell.",
+  "localAdvice.reason.cpuUnloaded": "CPU-körning är bekräftad men modellen är inte laddad. Kvantisering, kontext, runtime och CPU-hastighet avgör faktiskt minnesbehov och svarstid. CPU-körning kan bli långsam; överväg mindre modell eller fjärrmodell.",
   "localAdvice.reason.unloaded": "Modellen är inte laddad. Filstorleken räcker inte för att förutsäga minnesbehov eller hastighet. GPU-stöd, faktisk CPU/GPU-fördelning, kvantisering, kontext och samtidighet är ännu okända.",
   "localAdvice.gpuSmall": "Uppmätt GPU {0}: {1} VRAM totalt, mindre än modellfilens {2}. Om servern använder just denna GPU kan CPU-avlastning behövas och svaren bli långsamma. Andra GPU:er och faktisk backend kan ändra detta.",
   "localAdvice.details": "Underlag och begränsningar",
   "localAdvice.limits": "Kontrollen läser RAM/CPU, ett valfritt NVIDIA-anrop (högst 3 s) och Ollamas /api/tags samt /api/ps (begränsade svar och tidsgräns). Ingen generering, nedladdning eller benchmark körs. Filstorlek är en grov undre jämförelse, inte ett fullständigt krav: kvantisering, kontext/KV-cache, runtime och samtidighet påverkar. Ledigt VRAM summeras inte över GPU:er och bevisar inte kompatibilitet. Uppgifter och bekräftelser sparas inte.",
-  "localAdvice.sources": "Läs källor och metod"
+  "localAdvice.sources": "Läs källor och metod",
+  "localAdvice.verdict.Caution": "CPU-körning kan begränsa prestandan; svarstiden är inte mätt.",
+  "localAdvice.remoteMetadata": "Serverns modellpost: {0} · fjärrkörning"
 }

@@ -73,10 +73,20 @@ public class LocalModelTests
     }
 
     [Fact]
+    public void CpuAndSmallOffloadDoNotAssertPoorPerformanceWithoutMemoryEvidence()
+    {
+        var tiny = Model with { Bytes = Gb / 10 };
+        var runtime = new OllamaRuntime(tiny.Name, tiny.Digest, Gb / 5, 0);
+        Assert.Equal(ModelSuitability.Caution, LocalModelAdvice.Assess(tiny, runtime, Small, true).Suitability);
+        Assert.Equal(ModelSuitability.Caution, LocalModelAdvice.Assess(tiny, runtime with { VramBytes = runtime.Bytes - 1 }, Small, false).Suitability);
+    }
+
+    [Fact]
     public void DifferentDigestAndInvalidRuntimeCannotSupplyPerformanceEvidence()
     {
         var runtime = new OllamaRuntime(Model.Name, "different-quantization", 5 * Gb, 5 * Gb);
         Assert.Equal(ModelSuitability.Unknown, LocalModelAdvice.Assess(Model, runtime, Small, false).Suitability);
+        Assert.Equal(ModelSuitability.Unknown, LocalModelAdvice.Assess(Model, runtime with { Digest = Model.Digest, Name = "other:tag" }, Small, false).Suitability);
         Assert.Equal(ModelSuitability.Unknown, LocalModelAdvice.Assess(Model, runtime with { Digest = Model.Digest, VramBytes = 6 * Gb }, Small, false).Suitability);
         Assert.Equal(ModelSuitability.Unknown, LocalModelAdvice.Assess(Model, runtime with { Digest = Model.Digest, VramBytes = -1 }, Small, false).Suitability);
     }
