@@ -116,18 +116,26 @@
       </StackPanel>
 
       <!-- 3. Projects: the existing "Hitta projekt" dialog does the search -->
-      <Grid RowDefinitions="Auto,Auto,Auto,Auto,*" IsVisible="{Binding IsProjects}">
+      <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,*" IsVisible="{Binding IsProjects}">
         <TextBlock Grid.Row="0" Classes="sectionhead" FontSize="17" Text="{local:T setup.projects.heading}" />
         <TextBlock Grid.Row="1" Classes="muted" TextWrapping="Wrap" LineHeight="20" Margin="0,14,0,0" Text="{local:T setup.projects.body}" />
-        <Button Grid.Row="2" Click="OnFindProjects" Padding="12,8" Margin="0,14,0,0" HorizontalAlignment="Left">
+        <StackPanel Grid.Row="2" Spacing="6" Margin="0,14,0,0">
+          <TextBlock Classes="colhead" Text="{local:T settings.findRoot.name}" />
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBox Grid.Column="0" Text="{Binding SearchRoot}" Watermark="{Binding SearchRootDefault}"
+                     FontFamily="{StaticResource MonoFont}" AutomationProperties.Name="{local:T settings.findRoot.name}" />
+            <Button Grid.Column="1" Content="{local:T settings.findRoot.browse}" Click="OnBrowseSearchRoot" Margin="8,0,0,0" />
+          </Grid>
+        </StackPanel>
+        <Button Grid.Row="3" Click="OnFindProjects" Padding="12,8" Margin="0,12,0,0" HorizontalAlignment="Left">
           <StackPanel Orientation="Horizontal" Spacing="8">
             <Path Data="{StaticResource FolderIcon}" Width="15" Height="13" Stretch="Uniform" StrokeThickness="1.4"
                   StrokeJoin="Round" Stroke="{DynamicResource TextBrush}" VerticalAlignment="Center" />
             <TextBlock Text="{local:T setup.projects.find}" />
           </StackPanel>
         </Button>
-        <TextBlock Grid.Row="3" Classes="muted" Text="{Binding ProjectsText}" TextWrapping="Wrap" Margin="0,16,0,6" />
-        <ScrollViewer Grid.Row="4" HorizontalScrollBarVisibility="Disabled" IsVisible="{Binding HasProjects}">
+        <TextBlock Grid.Row="4" Classes="muted" Text="{Binding ProjectsText}" TextWrapping="Wrap" Margin="0,16,0,6" />
+        <ScrollViewer Grid.Row="5" HorizontalScrollBarVisibility="Disabled" IsVisible="{Binding HasProjects}">
           <ItemsControl ItemsSource="{Binding Projects}">
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="local:FoundProject">

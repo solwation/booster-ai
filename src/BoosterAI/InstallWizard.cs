@@ -24,7 +24,8 @@ public sealed class InstallWizardViewModel : Observable
     private readonly Action<string> _applyTheme;
     private Step _step;
     private bool _settingsSkipped, _working;
-    private string _status = "", _error = "", _doneNote = "";
+    private string _status = "", _error = "", _doneNote = "", _searchRoot, _searchRootDefault;
+    private bool _projectsSkipped;
     private LanguageChoice _language;
     private ThemeChoice _appearance;
     private LlmChoice _llm;
@@ -42,6 +43,8 @@ public sealed class InstallWizardViewModel : Observable
         _language = LanguageChoices.FirstOrDefault(c => c.Id == existing?.Language) ?? LanguageChoices[0];
         _appearance = AppearanceChoices.FirstOrDefault(c => c.Id == existing?.AppTheme) ?? AppearanceChoices[0];
         _llm = LlmChoices.FirstOrDefault(c => c.Id == Installer.PreferredLlm(existing)) ?? LlmChoices[0];
+        _searchRoot = existing?.ProjectSearchRoot ?? "";
+        _searchRootDefault = ProjectScanner.DefaultRoot();
         Projects.CollectionChanged += (_, _) => RaiseProjects();
     }
 
@@ -142,6 +145,18 @@ public sealed class InstallWizardViewModel : Observable
         Raise(nameof(InstallLines));
     }
 
+    /// <summary>The "Hitta projekt" base folder (AppConfig.ProjectSearchRoot); empty searches <see cref="SearchRootDefault"/>.</summary>
+    public string SearchRoot { get => _searchRoot; set => Set(ref _searchRoot, (value ?? "").Trim()); }
+
+    /// <summary>Shown as the field's placeholder: where an empty base folder searches (a neutral path in screenshots).</summary>
+    public string SearchRootDefault { get => _searchRootDefault; set => Set(ref _searchRootDefault, value); }
+
+    /// <summary>The folder the search starts in, as Settings' "Hitta projekt" resolves it.</summary>
+    public string ScanRoot => ProjectScanner.ResolveRoot(_searchRoot, out _);
+
+    /// <summary>The base folder to save: null (unchanged) when the project step was skipped or the value is the config's.</summary>
+    public string? SearchRootToSave => _projectsSkipped || _searchRoot == (_existing?.ProjectSearchRoot ?? "").Trim() ? null : _searchRoot;
+
     /// <summary>Local paths already known (config tabs and picked folders), left out of the next search.</summary>
     public IEnumerable<string> KnownPaths =>
         (_existing?.Tabs.Select(t => PathMapping.ToLocalPath(t.Directory, _existing.WslDistro, null)).OfType<string>() ?? [])
@@ -184,6 +199,7 @@ public sealed class InstallWizardViewModel : Observable
     public void Next()
     {
         if (_step == Step.Settings) _settingsSkipped = false;
+        if (_step == Step.Projects) _projectsSkipped = false;
         if (_step < Step.Install) Current = _step + 1;
     }
 
@@ -199,6 +215,7 @@ public sealed class InstallWizardViewModel : Observable
         {
             case Step.Welcome:
                 _settingsSkipped = true;
+                _projectsSkipped = true;
                 Projects.Clear();
                 Current = Step.Install;
                 break;
@@ -207,6 +224,7 @@ public sealed class InstallWizardViewModel : Observable
                 Current = Step.Projects;
                 break;
             case Step.Projects:
+                _projectsSkipped = true;
                 Projects.Clear();
                 Current = Step.Install;
                 break;
@@ -214,7 +232,7 @@ public sealed class InstallWizardViewModel : Observable
     }
 
     /// <summary>Runs the install off the UI thread; on success shows the done page, on failure the error (Install can be retried).</summary>
-    public async Task InstallAsync(Func<InstallPlan, SetupSettings?, IReadOnlyList<FoundProject>, IProgress<string>, string?> install)
+    public async Task InstallAsync(Func<InstallPlan, SetupSettings?, IReadOnlyList<FoundProject>, string?, IProgress<string>, string?> install)
     {
         if (_working) return;
         IsWorking = true;
@@ -222,9 +240,10 @@ public sealed class InstallWizardViewModel : Observable
         var progress = new Progress<string>(s => Status = s);
         var settings = Settings;
         var projects = Projects.ToList();
+        var searchRoot = SearchRootToSave;
         try
         {
-            DoneNote = await Task.Run(() => install(Plan, settings, projects, progress)) ?? "";
+            DoneNote = await Task.Run(() => install(Plan, settings, projects, searchRoot, progress)) ?? "";
             Current = Step.Done;
         }
         catch (Exception e)

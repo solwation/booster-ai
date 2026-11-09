@@ -71,6 +71,7 @@ internal static class Screenshot
     {
         var window = app.CreateWizard(Installer.SamplePlan(), installed: section == "upgrade");
         var vm = (InstallWizardViewModel)((Control)window.Content!).DataContext!;
+        vm.SearchRootDefault = @"C:\Users\me\Documents";
         var step = section switch
         {
             null or "welcome" or "upgrade" => InstallWizardViewModel.Step.Welcome,

@@ -138,11 +138,13 @@ public static class Installer
     /// <summary>
     /// Merges the wizard's choices into the config on disk (null: none yet). Every existing setting and project
     /// stays; the settings step changes only language and appearance, and the picked projects are appended
-    /// (a folder already present is not added twice) with the chosen AI CLI. Returns a new object.
+    /// (a folder already present is not added twice) with the chosen AI CLI. A non-null <paramref name="searchRoot"/>
+    /// becomes the "Hitta projekt" base folder (empty: the default). Returns a new object.
     /// </summary>
-    public static AppConfig MergeConfig(AppConfig? existing, SetupSettings? settings, IReadOnlyList<FoundProject> projects)
+    public static AppConfig MergeConfig(AppConfig? existing, SetupSettings? settings, IReadOnlyList<FoundProject> projects, string? searchRoot = null)
     {
         var cfg = existing is null ? new AppConfig() : ConfigStore.Copy(existing);
+        if (searchRoot is not null) cfg.ProjectSearchRoot = searchRoot.Trim();
         if (settings is not null)
         {
             if (settings.Language is "auto" or "sv" or "en") cfg.Language = settings.Language;
@@ -189,7 +191,7 @@ public static class Installer
         foreach (var s in p.Shortcuts) L($"  shortcut: {s.Path} -> {s.Target} (working directory {s.WorkingDirectory}, \"{s.Description}\")");
         L($"  registry: HKCU\\{p.UninstallKey}");
         foreach (var v in p.RegistryValues) L($"    {v.Name} = {v.Value} ({(v.Dword ? "REG_DWORD" : "REG_SZ")})");
-        L($"  config: {p.ConfigPath}: merge the wizard's language, appearance and found projects; other settings and projects are kept (skipped steps change nothing)");
+        L($"  config: {p.ConfigPath}: merge the wizard's language, appearance, found projects and Find projects base folder; other settings and projects are kept (skipped steps change nothing)");
         L($"  start: \"{p.Exe}\" --background (hidden, working directory {p.InstallDir}); exit 0 within {StartWait.TotalMilliseconds:0} ms = a running BoosterAI acknowledged it (single-instance guard), other exit codes fail");
         L($"uninstall ({UninstallFlag}, from \"Apps & features\" or the command line, after confirmation):");
         L($"  stop: BoosterAI processes whose path equals {p.Exe} (never this process)");
@@ -218,7 +220,7 @@ public static class Installer
     /// <summary>Installs per user as the script does, then starts the installed copy in the background.</summary>
     /// <returns>A message for the finish page when the start was handed to an already running BoosterAI, else null.</returns>
     [SupportedOSPlatform("windows")]
-    public static string? Install(InstallPlan p, SetupSettings? settings, IReadOnlyList<FoundProject> projects, IProgress<string> progress)
+    public static string? Install(InstallPlan p, SetupSettings? settings, IReadOnlyList<FoundProject> projects, string? searchRoot, IProgress<string> progress)
     {
         progress.Report(Loc.Get("setup.progress.legacy"));
         RemoveLegacy(p);
@@ -236,7 +238,7 @@ public static class Installer
         WriteUninstallEntry(p);
 
         progress.Report(Loc.Get("setup.progress.config"));
-        WriteConfig(p.ConfigPath, settings, projects);
+        WriteConfig(p.ConfigPath, settings, projects, searchRoot);
 
         progress.Report(Loc.Get("setup.progress.start"));
         return StartInstalled(p);
@@ -291,7 +293,7 @@ public static class Installer
     /// Merges the wizard's choices into the config on disk. A file that exists but cannot be read is kept as
     /// config.json.bak first; nothing is written when nothing changes.
     /// </summary>
-    public static void WriteConfig(string path, SetupSettings? settings, IReadOnlyList<FoundProject> projects)
+    public static void WriteConfig(string path, SetupSettings? settings, IReadOnlyList<FoundProject> projects, string? searchRoot = null)
     {
         AppConfig? existing = null;
         if (File.Exists(path))
@@ -300,9 +302,9 @@ public static class Installer
             catch (Exception e) when (e is System.Text.Json.JsonException or IOException) { }
             if (existing is null) File.Copy(path, path + ".bak", overwrite: true);
         }
-        var merged = MergeConfig(existing, settings, projects);
+        var merged = MergeConfig(existing, settings, projects, searchRoot);
         if (existing is not null && Json(existing) == Json(merged)) return;
-        if (existing is null && settings is null && projects.Count == 0) return;
+        if (existing is null && settings is null && projects.Count == 0 && string.IsNullOrWhiteSpace(searchRoot)) return;
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         var tmp = path + ".tmp";
         File.WriteAllText(tmp, Json(merged));

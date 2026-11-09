@@ -404,12 +404,14 @@ public class InstallerTests : IDisposable
         vm.Next();
         SetupSettings? gotSettings = null;
         IReadOnlyList<FoundProject>? gotProjects = null;
-        await vm.InstallAsync((_, _, _, _) => throw new IOException("locked"));
+        await vm.InstallAsync((_, _, _, _, _) => throw new IOException("locked"));
         Assert.True(vm.IsInstall);
         Assert.Contains("locked", vm.Error);
         Assert.False(vm.IsWorking);
-        await vm.InstallAsync((plan, s, projects, progress) =>
+        string? gotRoot = "unset";
+        await vm.InstallAsync((plan, s, projects, root, progress) =>
         {
+            gotRoot = root;
             gotSettings = s;
             gotProjects = projects;
             progress.Report("copying");
@@ -420,6 +422,41 @@ public class InstallerTests : IDisposable
         Assert.Equal("note", vm.DoneNote);
         Assert.Equal("claude", gotSettings?.Llm);
         Assert.Equal("alpha", Assert.Single(gotProjects!).Name);
+        Assert.Null(gotRoot);
+    }
+
+    [Fact]
+    public void SearchRootIsPrefilledResolvedAndSavedOnlyWhenChanged()
+    {
+        var vm = Wizard(new AppConfig { ProjectSearchRoot = "/srv/code" });
+        Assert.Equal("/srv/code", vm.SearchRoot);
+        Assert.Equal(ProjectScanner.ResolveRoot("/srv/code", out _), vm.ScanRoot);
+        Assert.Null(vm.SearchRootToSave);
+        vm.SearchRoot = "  /srv/other  ";
+        Assert.Equal("/srv/other", vm.SearchRootToSave);
+        vm.SearchRoot = "";
+        Assert.Equal(ProjectScanner.DefaultRoot(), vm.ScanRoot);
+        Assert.Equal("", vm.SearchRootToSave);
+        // A skipped project step leaves the setting alone.
+        vm.Next();
+        vm.Next();
+        vm.Skip();
+        Assert.Null(vm.SearchRootToSave);
+    }
+
+    [Fact]
+    public void MergeSetsTheSearchRootOnlyWhenGiven()
+    {
+        Assert.Equal("/srv/code", Installer.MergeConfig(new AppConfig { ProjectSearchRoot = "/srv/code" }, null, []).ProjectSearchRoot);
+        Assert.Equal("/srv/new", Installer.MergeConfig(new AppConfig { ProjectSearchRoot = "/srv/code" }, null, [], " /srv/new ").ProjectSearchRoot);
+        Assert.Equal("", Installer.MergeConfig(new AppConfig { ProjectSearchRoot = "/srv/code" }, null, [], "").ProjectSearchRoot);
+    }
+
+    [Fact]
+    public void WriteConfigSavesAChosenSearchRootOnAFreshInstall()
+    {
+        Installer.WriteConfig(ConfigPath, null, [], "/srv/code");
+        Assert.Equal("/srv/code", ConfigStore.Parse(File.ReadAllText(ConfigPath))!.ProjectSearchRoot);
     }
 
     [Fact]
