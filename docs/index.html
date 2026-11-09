@@ -4,11 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BoosterAI — Kickstart Your Daily AI Agent Workspace</title>
-  <meta name="description" content="Open every project as a terminal tab with Claude, Codex, or AGY already running. Pick models per tab to balance token budgets, monitor status live, and automate daily AI workflows.">
+  <meta name="description" content="Launch project tabs with Claude Code, Codex, AGY, Aider, Open Interpreter or OpenHands. Choose models, inspect output and manage workspaces on Windows and Linux.">
   
   <!-- Open Graph -->
   <meta property="og:title" content="BoosterAI — Kickstart Your Daily AI Agent Workspace">
-  <meta property="og:description" content="Start your whole working day with one click: dedicated AI CLI terminal tabs for Claude, Codex, and AGY on Windows and Linux.">
+  <meta property="og:description" content="Start selected project tabs with six AI CLIs, saved model choices and live status on Windows and Linux.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://solwation.github.io/booster-ai/">
   <meta property="og:image" content="https://solwation.github.io/booster-ai/assets/boosterai.png">
@@ -223,6 +223,7 @@
 
     .hero-meta {
       display: flex;
+      flex-wrap: wrap;
       align-items: center;
       justify-content: center;
       gap: 24px;
@@ -288,6 +289,7 @@
 
     .window-tabs {
       display: flex;
+      min-width: 0;
       gap: 6px;
       background: rgba(255, 255, 255, 0.04);
       padding: 4px;
@@ -493,6 +495,13 @@
     .install-section {
       padding: 90px 0;
       background: linear-gradient(180deg, transparent, rgba(56, 189, 248, 0.03) 50%, transparent);
+    }
+
+    .platform-requirements {
+      max-width: 820px;
+      margin: 0 auto 26px;
+      color: var(--text-muted);
+      font-size: 0.95rem;
     }
 
     .install-box {
@@ -717,7 +726,7 @@
         <span class="gradient">with one single click.</span>
       </h1>
       <p>
-        BoosterAI opens every project you touch into a dedicated terminal tab with your chosen AI coding CLI &mdash; Claude, Codex, or AGY &mdash; already initialized and ready to roll. Match models to your token budget and automate your daily multi-agent flow.
+        Keep your projects in one place and start their selected terminal tabs together. Choose Claude Code, Codex, AGY, Aider, Open Interpreter or OpenHands for each tab, with its own model and live status &mdash; or open a plain shell.
       </p>
       
       <div class="hero-actions">
@@ -759,7 +768,7 @@
             <div style="width: 20px;"></div>
           </div>
           <div class="showcase-media-container">
-            <img id="previewImg" class="showcase-media" src="screenshot-dark.png?v=20261105" alt="BoosterAI App Screenshot">
+            <img id="previewImg" class="showcase-media" src="screenshot-dark.png?v=20261109-137" alt="BoosterAI with six AI CLIs selected across example project tabs">
           </div>
         </div>
       </div>
@@ -771,19 +780,19 @@
     <div class="stats-banner">
       <div class="stat-card">
         <div class="stat-number">1 Click</div>
-        <div class="stat-label">Launches all your daily workspaces</div>
+        <div class="stat-label">Starts your selected project tabs</div>
       </div>
       <div class="stat-card">
-        <div class="stat-number">3 Engines</div>
-        <div class="stat-label">Claude &middot; Codex &middot; AGY supported</div>
+        <div class="stat-number">6 AI CLIs</div>
+        <div class="stat-label">Claude, Codex, AGY, Aider, Interpreter, OpenHands</div>
       </div>
       <div class="stat-card">
-        <div class="stat-number">0 Config</div>
-        <div class="stat-label">Restores tabs, positions, and models</div>
+        <div class="stat-number">Saved Setup</div>
+        <div class="stat-label">Project folders, tab groups and model choices</div>
       </div>
       <div class="stat-card">
-        <div class="stat-number">100% Native</div>
-        <div class="stat-label">Windows Terminal + Linux Ptyxis/Gnome</div>
+        <div class="stat-number">2 Platforms</div>
+        <div class="stat-label">Windows Terminal + a choice of Linux terminals</div>
       </div>
     </div>
   </section>
@@ -793,31 +802,34 @@
     <div class="container">
       <div class="section-head">
         <h2>Built for Engineers Who Live in AI CLIs</h2>
-        <p>Managing multiple concurrent AI sessions shouldn't mean wasting 15 minutes setting up terminal tabs every morning.</p>
+        <p>Save your project setup once, then choose what to start each day.</p>
       </div>
 
       <div class="bento-grid">
         <!-- Feature 1 (Span 2) -->
         <div class="bento-card col-span-2">
           <div class="card-icon">🚀</div>
-          <h3>One Click, Complete Multi-Agent Setup</h3>
+          <h3>Projects, Subtabs and Six AI CLIs</h3>
           <p>
-            BoosterAI opens each repository in its own tab, at the exact directory, assigned its own custom color theme and title. Tabs refresh state every two seconds. Need multiple workers in the same repo? Add subtabs with distinct AI CLIs, custom model overrides, or dedicated Run-once agents in seconds.
+            Start selected projects in their saved directories with individual tab titles and colours. Add subtabs sharing a project folder, each with its own CLI and model. Status refreshes every two seconds while BoosterAI watches the tabs.
           </p>
           <div class="cli-matrix">
             <span class="cli-pill">⚡ Claude Code</span>
             <span class="cli-pill">⚡ Codex CLI</span>
             <span class="cli-pill">⚡ Antigravity (AGY)</span>
-            <span class="cli-pill">💻 Standard Bash</span>
+            <span class="cli-pill">⚡ Aider</span>
+            <span class="cli-pill">⚡ Open Interpreter</span>
+            <span class="cli-pill">⚡ OpenHands</span>
+            <span class="cli-pill">💻 Plain Bash shell</span>
           </div>
         </div>
 
         <!-- Feature 2 -->
         <div class="bento-card card-purple">
           <div class="card-icon">🧠</div>
-          <h3>Per-Tab Model & Token Control</h3>
+          <h3>Models &amp; Context Budgets</h3>
           <p>
-            Allocate costly high-intelligence models (Opus / Pro) to difficult architecture issues while routing simple repetitive tasks to Flash or Haiku. Switch models in place mid-stream without losing the current conversation.
+            Choose a model per tab or keep the CLI default. Apply a model change with an explicit restart; Claude, Codex and Aider can keep the conversation when its directory is unambiguous. Under Optimization, choose Off, Auto or Manual context budgets; Auto uses known model capacity and an explained reserve.
           </p>
         </div>
 
@@ -826,10 +838,10 @@
           <div class="card-icon">👁️</div>
           <h3>Live Peek & Terminal Pulse</h3>
           <p>
-            Never wonder what an agent is doing. Hover over any running tab's status badge to see the last 20 lines of terminal output streamed live &mdash; without leaving your current workspace window.
+            Hover over a running tab's status badge, or focus it and press Enter or Space, to inspect its last 20 output lines. Activity detail depends on the CLI; unknown activity is shown explicitly.
           </p>
           <div class="card-highlight">
-            Running &middot; Idle &middot; Watching &middot; Exited
+            Running &middot; Idle &middot; Watching &middot; Exit codes
           </div>
         </div>
 
@@ -838,28 +850,28 @@
           <div class="card-icon">🎼</div>
           <h3>Orchestra on Demand</h3>
           <p>
-            Full native integration with <a href="https://solwation.github.io/dirigenten-och-orkestern/" style="color:var(--cyan);text-decoration:underline;" target="_blank">Dirigenten och orkestern</a>. Toggle <code>/orkester</code> as the automatic first prompt, or run unattended one-shot batch tasks leaving an open shell when done.
+            Full native integration with <a href="https://solwation.github.io/dirigenten-och-orkestern/" style="color:var(--cyan);text-decoration:underline;" target="_blank">Dirigenten och orkestern</a>. For projects with the orchestra installed, send its startup instruction to your selected CLI (the repository skill in Codex when available). Choose Run once for a non-interactive session, or reload an idle interactive Claude orchestra without restarting its tab.
           </p>
         </div>
 
         <!-- Feature 5 (Span 2) -->
         <div class="bento-card col-span-2">
           <div class="card-icon">⚡</div>
-          <h3>WSL Memory Guard & Auto-Optimization</h3>
+          <h3>RAM Usage &amp; WSL Memory Limits</h3>
           <p>
-            WSL memory consumption getting out of hand? BoosterAI features an integrated RAM telemetry dashboard with 30-minute min/avg/max tracking, recommended limit calculators, and instant configuration of memory caps directly inside Settings.
+            On Windows, see current WSL resident RAM and sampled minimum, mean and maximum over a rolling 30-minute window. Review the suggested memory-cap range and save it to .wslconfig; restart WSL to apply a change. Native Linux shows system memory; WSL caps apply only on Windows.
           </p>
           <div class="card-highlight">
-            WSL RAM Cap &middot; Auto-Clear Idle Context &middot; Seamless Restarts
+            Sampled RAM History &middot; Optional WSL Cap &middot; Explicit Restart
           </div>
         </div>
 
         <!-- Feature 6 -->
         <div class="bento-card">
           <div class="card-icon">🛡️</div>
-          <h3>Graceful Day-End Teardown</h3>
+          <h3>Save Work Before Closing</h3>
           <p>
-            Hit <strong>Close All</strong> when you are done. BoosterAI prompts each running AI agent to save uncommitted work, commit, and push changes before cleanly closing all tabs and terminating child process trees.
+            <strong>Close all</strong> asks safely resumable Claude, Codex, AGY and Aider sessions to save, commit and push completed work before closing. Other agents and ambiguous shared conversations stay open for manual saving. Permissions or a failed save can prevent closure; force close is an explicit separate action.
           </p>
         </div>
       </div>
@@ -873,6 +885,8 @@
         <h2>Install BoosterAI</h2>
         <p>Guided Windows setup or a small Linux install script. No .NET runtime to install.</p>
       </div>
+
+      <p class="platform-requirements">Windows needs Windows Terminal and a working WSL distribution; Linux uses an installed supported terminal. Install and authenticate the AI CLIs you want to run; their services or local models have their own requirements. <a href="https://github.com/solwation/booster-ai/blob/main/docs/DETAILS.md#how-it-works-per-platform" style="color:var(--cyan);text-decoration:underline;">Platform details</a>.</p>
 
       <div class="install-box">
         <div class="install-tabs">
