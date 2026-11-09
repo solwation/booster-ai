@@ -245,7 +245,7 @@
                      HorizontalAlignment="Center" />
           <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
             <Button Content="{local:T import.button}" Click="OnFindProjects" Classes="accent" ToolTip.Tip="{local:T import.button.tip}" />
-            <Button Content="{local:T empty.add}" Click="OnSettings" />
+            <Button Content="{local:T empty.add}" Click="OnAddProject" />
           </StackPanel>
         </StackPanel>
       </Panel>

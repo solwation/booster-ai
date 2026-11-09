@@ -32,6 +32,8 @@ This works without changing global Windows Terminal settings. A brief bootstrap 
 
 The settings window is divided into five tabs: **Projects** (name and directory, with a folder picker), **General** (window and tray behaviour, notifications, auto-clear, update checks and Linux terminal), **Optimization** (WSL resource tuning with a memory slider, hardware recommendations, `.wslconfig` management and WSL installation information), **Appearance** (app theme, language, font size and tab colour palettes), and **AI agents** (installation, versions, permission aliases and context settings). On Windows you point at your normal Windows folders; WSL shares (`\\wsl.localhost\...`) and Linux paths such as `~/webshop` work too. Whether an agent then works in a mirror elsewhere is up to your own agent instructions.
 
+With an empty project list, **Settings → Projects** shows an empty state and offers **Add project** and **Find projects**. The main window’s **Add project** opens Settings with one new editable entry. Opening **Settings** itself creates no entry.
+
 ### WSL optimization
 
 WSL's default memory cap is 50% of the host's RAM. A custom cap is optional; raising it is not always an improvement when Windows applications or other virtual machines share the computer. Without an explicit setting in `%USERPROFILE%\.wslconfig`, the main window offers **Review memory …**, which opens the **Optimization** tab.

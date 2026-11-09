@@ -121,7 +121,12 @@ public partial class MainWindow : Window
 
     private async void OnSettings(object? sender, RoutedEventArgs e)
     {
-        if (!_vm.HasTabs) _vm.AddTab();
+        await new SettingsWindow(_vm).ShowDialog(this);
+    }
+
+    private async void OnAddProject(object? sender, RoutedEventArgs e)
+    {
+        _vm.AddTab();
         await new SettingsWindow(_vm).ShowDialog(this);
     }
 
