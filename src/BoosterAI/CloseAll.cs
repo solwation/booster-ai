@@ -46,6 +46,7 @@ public sealed class CloseAllOperation : Observable
     private readonly string _distro;
     private readonly Action _changed;
     private readonly string? _wslHome;
+    private readonly Func<Func<int, long?>?> _liveness;
     private bool _active, _started, _timedOut, _force, _busy, _sample;
     private DateTime _began;
     private readonly object _controlGate = new();
@@ -57,17 +58,20 @@ public sealed class CloseAllOperation : Observable
     public bool CanForce => Active;
     public string Message => _timedOut ? Loc.Get("close.timeout") : Loc.Get(Active ? "close.waiting" : Started ? "close.finished" : "close.confirm");
 
-    internal CloseAllOperation(IEnumerable<TabViewModel> tabs, string distro, Action changed, string? wslHome = null)
+    internal CloseAllOperation(IEnumerable<TabViewModel> tabs, string distro, Action changed, string? wslHome = null, Func<Func<int, long?>?>? liveness = null)
     {
         Tabs = new(tabs.Select(t => new ClosingTab(t)));
         _distro = distro;
         _wslHome = wslHome;
+        _liveness = liveness ?? (() => TabSession.Liveness(distro));
         _changed = changed;
-        _timer = new DispatcherTimer(TimeSpan.FromSeconds(2), DispatcherPriority.Background, (_, _) => Tick());
+        _timer = new DispatcherTimer(TimeSpan.FromSeconds(2), DispatcherPriority.Background, (_, _) => _ = TickAsync());
         _timer.Stop();
     }
 
-    public void Start()
+    public void Start() => _ = StartAsync();
+
+    internal async Task StartAsync()
     {
         if (Started) return;
         Started = Active = true;
@@ -76,7 +80,7 @@ public sealed class CloseAllOperation : Observable
         _changed();
         Raise(nameof(Message));
         _timer.Start();
-        Tick();
+        await TickAsync();
     }
 
     // Cancel stops future automatic closes; a save turn already running may finish in its original tab.
@@ -101,10 +105,10 @@ public sealed class CloseAllOperation : Observable
     {
         if (!Active) return;
         _force = true;
-        Tick();
+        _ = TickAsync();
     }
 
-    private async void Tick()
+    internal async Task TickAsync()
     {
         if (_sample || !Active || _busy) return;
         _busy = true;
@@ -132,10 +136,35 @@ public sealed class CloseAllOperation : Observable
     private async Task ProcessItem(ClosingTab item)
     {
         if (!Active) return;
-        if (item.Phase == ClosePhase.Failed && !_force) return;
         var session = item.Tab.Session;
         var id = item.Tab.TrackId;
-        if (session is null || id is null) { item.Fail(Loc.Get("close.noTrack")); return; }
+        if (session is null || id is null)
+        {
+            if (item.Phase != ClosePhase.Failed) item.Fail(Loc.Get("close.noTrack"));
+            return;
+        }
+        // Failed rows only observe recovery. Do not retry saving or signal a shell on an ordinary poll.
+        if (item.Phase == ClosePhase.Failed && !_force)
+        {
+            var closed = await Task.Run(() =>
+            {
+                try
+                {
+                    var failedLog = session.ReadLog(id);
+                    if (failedLog?.Pid is not { } failedPid || failedLog.StartTime is not { } failedStart) return false;
+                    if (failedLog.Exited) return true;
+                    // A null result also means unreadable process data: only a different known identity proves exit.
+                    return _liveness()?.Invoke(failedPid) is { } current && current != failedStart;
+                }
+                catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return false; }
+            });
+            if (Active && closed)
+            {
+                item.Phase = ClosePhase.Closed;
+                item.Tab.SetState(TabState.Closed, null);
+            }
+            return;
+        }
         var snapshot = await Task.Run(() =>
         {
             var log = session.ReadLog(id);

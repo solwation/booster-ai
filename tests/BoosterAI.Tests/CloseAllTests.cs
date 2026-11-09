@@ -97,6 +97,89 @@ public class CloseAllTests
         Assert.Equal(ClosePhase.Saving, operation.Tabs[0].Phase);
     }
 
+    [Theory]
+    [InlineData("alive")]
+    [InlineData("missing")]
+    [InlineData("unavailable")]
+    [InlineData("incomplete")]
+    [InlineData("unreadable")]
+    [InlineData("probe-error")]
+    [InlineData("untracked")]
+    public async Task FailedCloseObservesManualExitWithoutRetryingControl(string observation)
+    {
+        var root = Directory.CreateTempSubdirectory("booster-close-recovery-").FullName;
+        CloseAllOperation? operation = null;
+        try
+        {
+            var vm = new MainViewModel(new AppConfig { Tabs = [new TabConfig { Llm = "codex" }] });
+            var row = vm.Tabs[0];
+            row.Session = new TabSession(root, DateTime.UtcNow);
+            row.Track = row.Session.NewTrack()!;
+            row.LaunchedAs = new TabConfig { Llm = "codex", Directory = root };
+            var logPath = Path.Combine(row.Session.Directory, row.Track.Id + ".log");
+            var pendingPath = Path.Combine(row.Session.Directory, row.Track.Id + ".next");
+            File.WriteAllText(pendingPath, "preserve pending work");
+            const string running = "1 start pid=424242 starttime=500\n2 cli-start\n";
+            File.WriteAllText(logPath, observation == "incomplete" ? "1 start pid=424242\n" : running);
+            if (observation == "unreadable") { File.Delete(logPath); Directory.CreateDirectory(logPath); }
+            var track = row.Track;
+            if (observation == "untracked") row.Track = null;
+            operation = new CloseAllOperation([row], "Ubuntu", () => { }, liveness: () =>
+            {
+                if (observation == "probe-error") throw new IOException("process status unavailable");
+                return observation == "unavailable" ? null : _ => observation == "alive" ? 500 : null;
+            });
+            var item = operation.Tabs[0];
+            item.Fail("save manually");
+
+            await operation.StartAsync();
+            await operation.TickAsync();
+
+            Assert.True(operation.Active);
+            Assert.Equal(ClosePhase.Failed, item.Phase);
+            Assert.Equal("save manually", item.Text);
+            Assert.False(item.Requested);
+            Assert.Equal("preserve pending work", File.ReadAllText(pendingPath));
+
+            if (observation == "unreadable") Directory.Delete(logPath);
+            row.Track = track;
+            File.WriteAllText(logPath, running + "3 exit\n");
+            await operation.TickAsync();
+
+            Assert.Equal(ClosePhase.Closed, item.Phase);
+            Assert.False(row.HasOpenTerminal);
+            Assert.False(operation.Active);
+            Assert.False(item.Requested);
+            Assert.Equal("preserve pending work", File.ReadAllText(pendingPath));
+        }
+        finally { operation?.Cancel(); Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public async Task FailedCloseRecognizesAReusedPidWithoutControllingItsNewOwner()
+    {
+        var root = Directory.CreateTempSubdirectory("booster-close-reused-").FullName;
+        CloseAllOperation? operation = null;
+        try
+        {
+            var vm = new MainViewModel(new AppConfig { Tabs = [new TabConfig()] });
+            var row = vm.Tabs[0];
+            row.Session = new TabSession(root, DateTime.UtcNow);
+            row.Track = row.Session.NewTrack()!;
+            File.WriteAllText(Path.Combine(row.Session.Directory, row.Track.Id + ".log"),
+                "1 start pid=424242 starttime=500\n2 cli-start\n");
+            operation = new CloseAllOperation([row], "Ubuntu", () => { }, liveness: () => _ => 501);
+            operation.Tabs[0].Fail("save failed");
+
+            await operation.StartAsync();
+
+            Assert.Equal(ClosePhase.Closed, operation.Tabs[0].Phase);
+            Assert.False(operation.Active);
+            Assert.False(operation.Tabs[0].Requested);
+        }
+        finally { operation?.Cancel(); Directory.Delete(root, true); }
+    }
+
     [Fact]
     public void RealSaveScriptRunsTheContinuationAndLogsItsOwnExit()
     {
