@@ -580,6 +580,66 @@
       line-height: 1.5;
     }
 
+    .setup-intro {
+      margin: 14px 0 24px;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    .setup-overview {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+      gap: 28px;
+      align-items: start;
+    }
+
+    .setup-steps {
+      padding-left: 22px;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    .setup-steps li { padding-left: 4px; margin-bottom: 16px; }
+    .setup-steps strong { display: block; color: var(--text); }
+
+    .setup-preview img {
+      display: block;
+      width: 100%;
+      height: auto;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+
+    .setup-preview figcaption {
+      color: var(--text-muted);
+      font-size: 0.82rem;
+      margin-top: 10px;
+    }
+
+    .install-lifecycle {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 24px;
+      margin: 26px 0;
+      padding-top: 22px;
+      border-top: 1px solid var(--border);
+    }
+
+    .install-lifecycle h3 { font-size: 1rem; margin-bottom: 6px; }
+    .install-lifecycle p, .install-alternative p { color: var(--text-muted); font-size: 0.9rem; }
+    .install-pane code { overflow-wrap: anywhere; }
+    .install-pane .btn { max-width: 100%; justify-content: center; text-align: center; }
+    .install-alternative { border-top: 1px solid var(--border); padding-top: 18px; }
+    .install-alternative summary { cursor: pointer; color: var(--cyan); font-weight: 600; }
+    .install-alternative p { margin: 14px 0 12px; }
+
+    @media (max-width: 640px) {
+      .install-content { padding: 22px 18px; }
+      .install-tabs { padding: 6px; }
+      .install-tab-btn { padding: 10px 12px; font-size: 0.88rem; }
+      .setup-overview, .install-lifecycle { grid-template-columns: 1fr; gap: 18px; }
+    }
+
     /* Footer */
     footer {
       border-top: 1px solid var(--border);
@@ -637,8 +697,8 @@
           <a href="https://github.com/solwation/booster-ai" target="_blank" rel="noopener">GitHub</a>
         </nav>
         <div class="nav-cta">
-          <a href="https://github.com/solwation/booster-ai/releases/latest" class="btn btn-primary">
-            Download Latest
+          <a href="#install" class="btn btn-primary">
+            Get BoosterAI
           </a>
         </div>
       </div>
@@ -650,7 +710,7 @@
     <div class="container">
       <div class="badge">
         <span class="badge-dot"></span>
-        <span>Version 0.25.1 Live & Ready</span>
+        <span>Guided Windows setup &amp; native Linux</span>
       </div>
       <h1>
         Start your whole work day<br>
@@ -661,7 +721,7 @@
       </p>
       
       <div class="hero-actions">
-        <a href="https://github.com/solwation/booster-ai/releases/latest" class="btn btn-primary" style="padding: 14px 28px; font-size: 1.05rem;">
+        <a href="#install" class="btn btn-primary" style="padding: 14px 28px; font-size: 1.05rem;">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
           Download BoosterAI
         </a>
@@ -810,34 +870,58 @@
     <div class="container">
       <div class="section-head">
         <h2>Install BoosterAI</h2>
-        <p>Single self-contained executables. Zero dependencies or runtimes needed.</p>
+        <p>Guided Windows setup or a small Linux install script. No .NET runtime to install.</p>
       </div>
 
       <div class="install-box">
         <div class="install-tabs">
-          <button class="install-tab-btn active" onclick="switchInstall('win', this)">Windows 11 (PowerShell)</button>
+          <button class="install-tab-btn active" onclick="switchInstall('win', this)">Windows 11 (Setup)</button>
           <button class="install-tab-btn" onclick="switchInstall('linux', this)">Linux (Bash)</button>
         </div>
         <div class="install-content">
           <!-- Windows Pane -->
           <div id="pane-win" class="install-pane active">
-            <div style="margin-bottom: 20px;">
-              <a href="https://github.com/solwation/booster-ai/releases/latest" class="btn btn-primary" target="_blank" rel="noopener">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                Download BoosterAI for Windows (setup)
-              </a>
+            <a href="https://github.com/solwation/booster-ai/releases/latest" class="btn btn-primary" target="_blank" rel="noopener">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              Get Windows setup from the latest release
+            </a>
+            <p class="setup-intro">Choose <code>BoosterAI-Setup-*-win-x64.exe</code> under the release's assets. It installs for your Windows user, with no administrator rights needed.</p>
+            <div class="setup-overview">
+              <ol class="setup-steps">
+                <li><strong>Run the setup file.</strong>Open the downloaded executable to begin the guide.</li>
+                <li><strong>Choose your settings.</strong>Pick the language, appearance and AI CLI for projects you add.</li>
+                <li><strong>Find your projects.</strong>Choose a base folder to search and select which projects to add.</li>
+                <li><strong>Install and open BoosterAI.</strong>The app starts in the background, ready on your Start menu and desktop.</li>
+              </ol>
+              <figure class="setup-preview">
+                <a href="setup/setup-projects-en-dark.png" target="_blank" rel="noopener" aria-label="View the Find projects setup step at full size">
+                  <img src="setup/setup-projects-en-dark.png" width="700" height="580" loading="lazy" alt="English setup guide showing the Find projects base folder and three selected example projects">
+                </a>
+                <figcaption>Find projects during setup. Click the preview to view it at full size.</figcaption>
+              </figure>
             </div>
-            <p style="margin-bottom:12px;color:var(--text-muted);font-size:0.95rem;">Run <code>BoosterAI-Setup-*-win-x64.exe</code> (no administrator rights needed). The setup guide lets you pick language, appearance and AI CLI and find your projects; every step except the installation can be skipped, and a newer setup upgrades in place keeping your projects and settings. Add <code>--quiet</code> for a silent install (e.g. Intune).</p>
-            <p style="margin-bottom:12px;color:var(--text-muted);font-size:0.95rem;">Alternatively, unpack <code>BoosterAI-*-win-x64.zip</code> and run the installer script in PowerShell:</p>
-            <div class="code-block">
-              <code>powershell -ExecutionPolicy Bypass -File install-windows.ps1</code>
-              <button class="copy-btn" onclick="copyCode('powershell -ExecutionPolicy Bypass -File install-windows.ps1')">Copy</button>
+            <p class="install-note">Every step before installation can be skipped. The app goes in <code>%LOCALAPPDATA%\Programs\BoosterAI</code>, with Start menu and desktop shortcuts.</p>
+            <div class="install-lifecycle">
+              <div>
+                <h3>Already using BoosterAI?</h3>
+                <p>Run a newer setup over your existing installation; no uninstall is needed. Your projects and settings are kept, and skipped choices change nothing. The app's built-in updates remain available.</p>
+              </div>
+              <div>
+                <h3>Need to uninstall?</h3>
+                <p>Choose BoosterAI in Windows Settings &rarr; Apps &rarr; Installed apps. Uninstalling removes the program and shortcuts while keeping your configuration and session data.</p>
+              </div>
             </div>
-            <p class="install-note">
-              Places BoosterAI in <code>%LOCALAPPDATA%\Programs\BoosterAI</code>, registers Start menu & desktop shortcuts (the setup also adds an <em>Apps &amp; features</em> entry for uninstalling), and restarts in the background.
-            </p>
+            <details class="install-alternative">
+              <summary>Zip alternative and silent deployment</summary>
+              <p>Alternatively, extract <code>BoosterAI-*-win-x64.zip</code> from the <a href="https://github.com/solwation/booster-ai/releases/latest" style="color:var(--cyan);text-decoration:underline;">latest release</a> and run the installer script in PowerShell:</p>
+              <div class="code-block">
+                <code>powershell -ExecutionPolicy Bypass -File install-windows.ps1</code>
+                <button class="copy-btn" onclick="copyCode('powershell -ExecutionPolicy Bypass -File install-windows.ps1')">Copy</button>
+              </div>
+              <p>For scripted or IT deployment, add <code>--quiet</code> to the setup executable. It installs without a window and keeps the existing configuration. <a href="https://github.com/solwation/booster-ai/blob/main/docs/DEVELOPMENT.md#setup-mode-windows" style="color:var(--cyan);text-decoration:underline;">Setup command reference</a>.</p>
+            </details>
             <div style="margin-top: 16px; padding: 12px 16px; background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 10px; font-size: 0.88rem; color: var(--text-muted);">
-              <strong style="color: var(--cyan);">💡 Windows code signing:</strong> Releases are signed by <strong>Svep Design Center AB</strong>. SmartScreen can still warn about a new release while it builds reputation; check the publisher before choosing <em>More info</em> and then <em>Run anyway</em>.
+              <strong style="color: var(--cyan);">💡 Windows code signing:</strong> Releases are signed by <strong>Svep Design Center AB</strong>. SmartScreen can still warn about a new release while it builds reputation; check the publisher before choosing <em>More info</em> and then <em>Run anyway</em>. <a href="https://learn.microsoft.com/en-us/azure/artifact-signing/faq#what-can-i-expect-when-i-see-smartscreen-prompts-for-signed-files" style="color:var(--cyan);text-decoration:underline;" target="_blank" rel="noopener">About SmartScreen prompts</a>.
             </div>
           </div>
 
