@@ -27,7 +27,21 @@ Start your whole working day with one click: BoosterAI opens every project you w
 Download from [Releases](https://github.com/solwation/booster-ai/releases/latest); everything is self-contained (no .NET runtime required).
 
 ### Windows 11
-Download and run `BoosterAI-Setup-*-win-x64.exe` (no admin rights needed). The setup guide lets you choose the language, appearance and AI CLI, find your projects, then installs BoosterAI for your user in `%LOCALAPPDATA%\Programs\BoosterAI` with Start menu and desktop shortcuts and an entry in *Apps & features* for uninstalling. Every step except the installation itself can be skipped; running a newer setup later upgrades in place and keeps your projects and settings. For scripted or IT deployment (e.g. Intune), `--quiet` installs or, with `--uninstall`, removes it without any window.
+
+1. Download `BoosterAI-Setup-<version>-win-x64.exe` from the [latest release](https://github.com/solwation/booster-ai/releases/latest) and run it. No administrator rights are needed.
+2. Choose your language, appearance and the AI CLI for newly found projects. In *Find projects*, choose a base folder to search and select the projects to add. You can skip either step to keep your current settings or projects.
+3. Click *Install*. BoosterAI installs for your user in `%LOCALAPPDATA%\Programs\BoosterAI`, creates Start menu and desktop shortcuts, then starts in the background. Use *Open BoosterAI* on the finish page to open its window.
+
+<details>
+<summary>Preview the setup guide's project search</summary>
+
+![The setup guide with a base folder and selected projects](docs/setup/setup-projects-en-dark.png)
+
+</details>
+
+**Upgrading:** run a newer setup directly; there is no need to uninstall first. Existing projects and settings are kept unless you choose to change or add them in the guide. **Uninstalling:** remove BoosterAI through Windows Settings → Apps → Installed apps. Your configuration and projects are kept for a later reinstall.
+
+For scripted or IT deployment, see [Setup mode](docs/DEVELOPMENT.md#setup-mode-windows) for silent `--quiet` installation and uninstallation.
 
 Alternatively, extract `BoosterAI-*-win-x64.zip` and run the installer script in PowerShell:
 ```powershell
