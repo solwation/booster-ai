@@ -485,7 +485,7 @@
 
       <!-- Agent pages stay mounted: switching sections never recreates editable controls. -->
       <TabItem x:Name="AgentsTab" Header="{local:T settings.tab.agents}">
-        <Grid RowDefinitions="*,Auto" Margin="0,16,0,0">
+        <Grid RowDefinitions="*,Auto,Auto" Margin="0,16,0,0">
           <Grid ColumnDefinitions="136,*">
             <ScrollViewer HorizontalScrollBarVisibility="Disabled">
             <StackPanel Spacing="10">
@@ -506,10 +506,6 @@
                 <StackPanel Spacing="16" Margin="0,0,12,12">
                   <TextBlock Classes="title" Text="{local:T agents.overview.title}" />
                   <TextBlock Classes="muted" Text="{local:T agents.overview.hint}" TextWrapping="Wrap" />
-                  <WrapPanel>
-                    <Button Content="{local:T agents.check.short}" Click="OnCheckSetup" IsEnabled="{Binding !Setup.IsChecking}" Margin="0,0,12,8" />
-                    <Button Classes="link" Content="{Binding SelectedCompactMode.Label}" Click="OnAgentCompactSettings" ToolTip.Tip="{local:T compact.global.title}" Margin="0,0,0,8" />
-                  </WrapPanel>
                   <ItemsControl ItemsSource="{Binding Setup.Agents}">
                     <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
@@ -524,7 +520,6 @@
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>
-                  <TextBlock Text="{Binding Setup.CheckNotice}" Classes="muted" TextWrapping="Wrap" FontSize="12" />
                 </StackPanel>
               </ScrollViewer>
               <ItemsControl ItemsSource="{Binding Setup.Agents}">
@@ -556,11 +551,10 @@
                             <Button Classes="agent-card" Click="OnAgentSection" Tag="2" HorizontalAlignment="Stretch">
                               <Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="5"><TextBlock Text="{local:T agents.section.context}" FontWeight="SemiBold" /><TextBlock Text="{Binding $parent[Window].((local:MainViewModel)DataContext).SelectedCompactMode.Label}" Classes="muted" /></StackPanel><TextBlock Grid.Column="1" Text="›" FontSize="25" VerticalAlignment="Center" /></Grid>
                             </Button>
-                            <WrapPanel><Button Content="{Binding InstallButtonText}" Click="OnInstallAgent" ToolTip.Tip="{Binding InstallTip}" Margin="0,0,8,8" /><Button Content="{local:T agents.check.short}" Click="OnCheckSetup" Margin="0,0,0,8" IsEnabled="{Binding !$parent[Window].((local:MainViewModel)DataContext).Setup.IsChecking}" /></WrapPanel>
+                            <Button Content="{Binding InstallButtonText}" Click="OnInstallAgent" ToolTip.Tip="{Binding InstallTip}" HorizontalAlignment="Left" />
                             <Expander Header="{local:T agents.details.installation}" HorizontalAlignment="Stretch">
                               <StackPanel Spacing="8"><TextBlock Text="{local:T agents.intro}" TextWrapping="Wrap" FontSize="12" /><TextBlock Text="{Binding UpdateInfo}" TextWrapping="Wrap" FontSize="12" /></StackPanel>
                             </Expander>
-                            <TextBlock Text="{Binding $parent[Window].((local:MainViewModel)DataContext).Setup.CheckNotice}" Classes="muted" TextWrapping="Wrap" FontSize="12" />
                           </StackPanel>
                           <StackPanel Spacing="12" IsVisible="{Binding IsPermissions}">
                             <TextBlock Text="{local:T agents.alias.what}" Classes="muted" TextWrapping="Wrap" FontSize="12" />
@@ -602,7 +596,8 @@
               </ItemsControl>
             </Panel>
           </Grid>
-          <TextBlock Grid.Row="1" Text="{Binding Status}" TextWrapping="Wrap" FontSize="12" Margin="0,6,0,0" />
+          <TextBlock Grid.Row="1" Text="{Binding Setup.CheckNotice}" Classes="muted" TextWrapping="Wrap" FontSize="12" Margin="0,6,0,0" AutomationProperties.LiveSetting="Polite" />
+          <TextBlock Grid.Row="2" Text="{Binding Status}" TextWrapping="Wrap" FontSize="12" Margin="0,6,0,0" />
         </Grid>
       </TabItem>
 

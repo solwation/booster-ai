@@ -622,5 +622,10 @@
   "localAdvice.limits": "The check reads RAM/CPU, an optional NVIDIA query (at most 3 s) and Ollama’s /api/tags and /api/ps (bounded responses and deadline). No generation, download or benchmark runs. File size is a rough lower comparison, not a full requirement: quantization, context/KV cache, runtime and concurrency matter. Free VRAM is not summed across GPUs and does not prove compatibility. Readings and confirmations are not saved.",
   "localAdvice.sources": "Read sources and method",
   "localAdvice.verdict.Caution": "CPU inference may limit performance; response time has not been measured.",
-  "localAdvice.remoteMetadata": "Server model entry: {0} · remote inference"
+  "localAdvice.remoteMetadata": "Server model entry: {0} · remote inference",
+  "agents.status.unknown.short": "Unknown",
+  "agents.status.unknown": "Status has not been checked yet",
+  "agents.status.checking": "Checking agent status in the background …",
+  "agents.status.failed": "Agent status could not be checked. Opening this page later will retry automatically.",
+  "agents.status.failed.previous": "The check failed. Showing the last known agent status. Opening this page later will retry automatically."
 }

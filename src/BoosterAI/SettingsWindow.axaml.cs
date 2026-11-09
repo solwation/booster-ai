@@ -17,6 +17,12 @@ public partial class SettingsWindow : Window
         _vm = vm;
         DataContext = vm;
         InitializeComponent();
+        TabsControl.SelectionChanged += (_, e) =>
+        {
+            if (ReferenceEquals(e.Source, TabsControl) && ReferenceEquals(TabsControl.SelectedItem, AgentsTab))
+                _vm.SetupAgentsOpened();
+        };
+        Opened += (_, _) => { if (ReferenceEquals(TabsControl.SelectedItem, AgentsTab)) _vm.SetupAgentsOpened(); };
         Closing += (_, _) => _vm.Save();
     }
 
@@ -96,8 +102,6 @@ public partial class SettingsWindow : Window
     }
 
     private void OnDone(object? sender, RoutedEventArgs e) => Close();
-
-    private void OnCheckSetup(object? sender, RoutedEventArgs e) => _vm.CheckSetupNow();
 
     private void OnUseRecommendedMemory(object? sender, RoutedEventArgs e) => _vm.Optimization.ApplyRecommendation();
 

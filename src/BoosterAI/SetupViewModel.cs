@@ -11,8 +11,9 @@ public sealed class AgentInfo : Observable
 {
     private bool _isSelected;
     public bool IsSelected { get => _isSelected; internal set => Set(ref _isSelected, value); }
-    public AutoCompactViewModel? Compact { get; init; }
-    public CliStatus Detected { get; }
+    public AutoCompactViewModel? Compact { get; internal set; }
+    public CliStatus Detected { get; private set; }
+    private bool _statusKnown = true;
     public string Cli => Detected.Cli;
     public string Name => Loc.Display("llm", Cli);
     public string DisplayName => Cli switch { "claude" => "Claude Code", "codex" => "Codex", "agy" => "Antigravity", "aider" => "Aider", "interpreter" => "Open Interpreter", "openhands" => "OpenHands", _ => Name };
@@ -24,13 +25,13 @@ public sealed class AgentInfo : Observable
     public bool IsYolo => SelectedMode.Mode == AgentMode.Yolo;
     public string Description => Loc.Get("agents.description." + Cli);
     public bool IsInstalled => Detected.Installed;
-    public string StatusText => Loc.Get(IsInstalled ? "setup.status.installed" : "setup.status.missing");
+    public string StatusText => Loc.Get(!_statusKnown ? "agents.status.unknown.short" : IsInstalled ? "setup.status.installed" : "setup.status.missing");
     public string VersionText => IsInstalled ? Detected.Version ?? Loc.Get("agents.version.unknown") : "—";
     public string InstallButtonText => Loc.Format(IsInstalled ? "agents.update" : "setup.cli.install", Cli);
     public string InstallTip => Loc.Format("setup.cli.install.tip", Prerequisites.InstallScript(Cli));
     public string UpdateInfo => Loc.Get("agents.update." + Cli);
-    public IReadOnlyList<AgentModeChoice> ModeChoices { get; }
-    public AgentMode CurrentMode { get; }
+    public IReadOnlyList<AgentModeChoice> ModeChoices { get; private set; }
+    public AgentMode CurrentMode { get; private set; }
     public bool HasExternalDefinition => CurrentMode == AgentMode.Custom;
     public string CurrentModeText => Loc.Get(!IsInstalled ? "agents.alias.unverified" : CurrentMode != AgentMode.Custom
         ? "agents.mode." + CurrentMode : Detected.Kind == "function" ? "agents.alias.function" : Detected.Kind == "alias" ? "agents.alias.external" : "agents.alias.block");
@@ -71,6 +72,27 @@ public sealed class AgentInfo : Observable
         }
     }
 
+    /// <summary>Refresh facts in place so mounted pages, selection and unsaved editors survive a background check.</summary>
+    internal void RefreshDetection(CliStatus status, bool known)
+    {
+        if (Detected == status && _statusKnown == known) return;
+        var draft = SelectedMode.Mode != CurrentMode ? SelectedMode.Mode : (AgentMode?)null;
+        Detected = status;
+        _statusKnown = known;
+        CurrentMode = AgentModes.Current(status);
+        ModeChoices = CurrentMode == AgentMode.Custom
+            ? [new AgentModeChoice(AgentMode.Custom, "", "agents.mode.custom.detail"), .. AgentModes.Choices(status)]
+            : AgentModes.Choices(status);
+        _selectedMode = ModeChoices.FirstOrDefault(c => c.Mode == (draft ?? CurrentMode))
+            ?? ModeChoices.FirstOrDefault(c => c.Mode == CurrentMode) ?? ModeChoices[0];
+        foreach (var name in new[] { nameof(Detected), nameof(IsInstalled), nameof(StatusText), nameof(VersionText), nameof(InstallButtonText),
+                     nameof(CurrentMode), nameof(ModeChoices), nameof(SelectedMode), nameof(IsYolo), nameof(HasExternalDefinition), nameof(CurrentModeText),
+                     nameof(CurrentAliasCommand), nameof(MissingDefinition), nameof(HasCurrentAliasCommand), nameof(CurrentAliasExplanation),
+                     nameof(DefinitionTruncated), nameof(AliasInspectCommand), nameof(AliasRecommendation), nameof(CanSelectMode), nameof(CanApply),
+                     nameof(HasPresetPreview), nameof(ModeExplanation), nameof(ModeCommand), nameof(HasModeCommand), nameof(ModePreview), nameof(ModePreviewEffect) })
+            Raise(name);
+    }
+
     public AgentInfo(CliStatus status)
     {
         Detected = status;
@@ -89,12 +111,14 @@ public sealed class AgentInfo : Observable
 public sealed class SetupViewModel : Observable
 {
     private SetupStatus _status = SetupStatus.Empty;
-    private bool _checking, _checked, _missingDismissed;
+    private bool _checking, _checked, _missingDismissed, _checkFailed;
     private IReadOnlyList<string> _rowLlms = [];
 
     public SetupStatus Status => _status;
     public bool IsChecking { get => _checking; set { if (Set(ref _checking, value)) { Raise(nameof(Summary)); Raise(nameof(CheckNotice)); Raise(nameof(WslInstallationStatus)); } } }
-    public string CheckNotice => IsChecking || !_status.Checked || WslVisible ? Summary : "";
+    public string CheckNotice => IsChecking ? Loc.Get("agents.status.checking")
+        : _checkFailed ? Loc.Get(_status.Checked ? "agents.status.failed.previous" : "agents.status.failed")
+        : WslVisible ? WslText : !_status.Checked ? Loc.Get("agents.status.unknown") : "";
     public Action? OnStatusChanged { get; set; }
 
     public IReadOnlyList<AgentInfo> Agents { get; private set; } = [];
@@ -174,9 +198,21 @@ public sealed class SetupViewModel : Observable
 
     public void Apply(SetupStatus status, string distro)
     {
-        _status = status;
-        _distro = distro.Trim();
-        _checked = true;
+        distro = distro.Trim();
+        if (!status.Checked && status.Wsl is WslState.Ok or WslState.Unknown)
+        {
+            if (_distro != distro) _status = status;
+            _distro = distro;
+            _checked = true;
+            _checkFailed = true;
+        }
+        else
+        {
+            _status = status;
+            _distro = distro;
+            _checked = true;
+            _checkFailed = false;
+        }
         Refresh();
         OnStatusChanged?.Invoke();
     }
@@ -194,17 +230,19 @@ public sealed class SetupViewModel : Observable
 
     private void Refresh()
     {
-        var selectedCli = SelectedAgent?.Cli;
-        var sections = Agents.ToDictionary(a => a.Cli, a => a.Section);
         Missing = Prerequisites.MissingToOffer(_status, _rowLlms)
             .Select(c => new CliOffer(c, Loc.Format("setup.cli.install", c), Loc.Format("setup.cli.install.tip", Prerequisites.InstallScript(c)))).ToList();
-        Agents = Prerequisites.Clis.Select(c =>
+        if (Agents.Count == 0)
         {
-            var status = _status.Cli(c) ?? new CliStatus(c, "none", null);
-            return new AgentInfo(status) { Compact = _compactFactory?.Invoke(status), Section = sections.GetValueOrDefault(c) };
-        }).ToList();
-        Raise(nameof(Agents));
-        SelectedAgent = Agents.FirstOrDefault(a => a.Cli == selectedCli);
+            Agents = Prerequisites.Clis.Select(c => new AgentInfo(new(c, "none", null))).ToList();
+            Raise(nameof(Agents));
+        }
+        foreach (var agent in Agents)
+        {
+            var status = _status.Cli(agent.Cli) ?? new CliStatus(agent.Cli, "none", null);
+            agent.RefreshDetection(status, _status.Checked);
+            if (_compactFactory is not null) agent.Compact = _compactFactory(status);
+        }
         foreach (var name in new[] { nameof(Status), nameof(WslVisible), nameof(CanInstallWsl), nameof(WslText), nameof(Missing), nameof(MissingVisible),
                      nameof(MissingText), nameof(Summary), nameof(CheckNotice), nameof(WslInstallationStatus), nameof(CheckedWslDistro), nameof(InstalledWslDistros) })
             Raise(name);
@@ -218,6 +256,10 @@ public sealed partial class MainViewModel
 
     private bool _setupEnabled, _setupRunning;
     private DateTime _lastSetupCheck = DateTime.MinValue;
+    private string? _lastSetupDistro;
+    internal Func<DateTime> SetupUtcNow { get; set; } = () => DateTime.UtcNow;
+    internal Func<string, Task<SetupStatus>> DetectSetupAsync { get; set; } = distro => Task.Run(() => Prerequisites.Detect(distro));
+    internal Task SetupCheckTask { get; private set; } = Task.CompletedTask;
     private readonly HashSet<string> _installing = [];
     private DateTime _installUntil;
     private DispatcherTimer? _installTimer;
@@ -232,42 +274,52 @@ public sealed partial class MainViewModel
 
     internal void SetupRowsChanged() => Setup.RowsChanged(Tabs.Select(t => t.Llm));
 
-    /// <summary>The main window was activated: check again, at most every 30 seconds (an install may have finished).</summary>
-    public void SetupWindowActive()
-    {
-        if (_setupEnabled && DateTime.UtcNow - _lastSetupCheck > TimeSpan.FromSeconds(30)) CheckSetup();
-    }
+    /// <summary>Activation and opening AI agents share the same quiet, throttled check.</summary>
+    public void SetupWindowActive() => RequestSetupCheck(onlyIfStale: true);
+    public void SetupAgentsOpened() => RequestSetupCheck(onlyIfStale: true);
 
-    /// <summary>"Kontrollera" in Settings: also works when the automatic checks are off (they are only off in tests and screenshots).</summary>
-    public void CheckSetupNow()
-    {
-        _setupEnabled = true;
-        CheckSetup();
-    }
+    /// <summary>Explicit lifecycle checks (startup, changed environment and installation) bypass the age limit.</summary>
+    public void CheckSetup() => RequestSetupCheck(onlyIfStale: false);
 
-    /// <summary>Runs Prerequisites.Detect off the UI thread (no window, no focus change) and updates the bars.</summary>
-    public void CheckSetup()
+    private void RequestSetupCheck(bool onlyIfStale)
     {
         if (!_setupEnabled || _setupRunning) return;
+        if (onlyIfStale && _lastSetupDistro == _cfg.WslDistro && SetupUtcNow() - _lastSetupCheck < TimeSpan.FromSeconds(30)) return;
         _setupRunning = true;
-        _lastSetupCheck = DateTime.UtcNow;
+        _lastSetupCheck = SetupUtcNow();
+        _lastSetupDistro = _cfg.WslDistro;
+        SetupCheckTask = RunSetupCheckAsync(_cfg.WslDistro);
+    }
+
+    /// <summary>The detector uses hidden processes off the UI thread; only its result is applied on the UI context.</summary>
+    private async Task RunSetupCheckAsync(string distro)
+    {
         Setup.IsChecking = true;
-        var distro = _cfg.WslDistro;
-        Task.Run(() => Prerequisites.Detect(distro)).ContinueWith(t =>
+        try
         {
-            _setupRunning = false;
-            Setup.IsChecking = false;
-            if (!t.IsCompletedSuccessfully) return;
-            Setup.Apply(t.Result, distro);
-            if (t.Result.Cli("codex")?.Installed == true) _ = LoadCompactMetadataAsync(distro);
+            var result = await DetectSetupAsync(distro);
+            if (_cfg.WslDistro != distro) return;
+            Setup.Apply(result, distro);
+            if (result.Cli("codex")?.Installed == true) _ = LoadCompactMetadataAsync(distro);
             SetupRowsChanged();
-            var done = _installing.Where(c => t.Result.Cli(c) is { Installed: true }).ToList();
+            var done = _installing.Where(c => result.Cli(c) is { Installed: true }).ToList();
             if (done.Count > 0)
             {
                 _installing.ExceptWith(done);
                 ShowStatus(Loc.Format("status.cliInstalled", string.Join(", ", done)), error: false);
             }
-        }, TaskScheduler.FromCurrentSynchronizationContext());
+        }
+        catch (Exception)
+        {
+            if (_cfg.WslDistro == distro) Setup.Apply(SetupStatus.Empty, distro);
+        }
+        finally
+        {
+            _setupRunning = false;
+            Setup.IsChecking = false;
+            // A distribution changed while a check was running: discard that result and check the current environment.
+            if (_cfg.WslDistro != distro) CheckSetup();
+        }
     }
 
     /// <summary>Opens a visible tab that runs the CLI's official installer; the check repeats until it is found.</summary>

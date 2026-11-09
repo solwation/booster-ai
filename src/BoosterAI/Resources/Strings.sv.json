@@ -622,5 +622,10 @@
   "localAdvice.limits": "Kontrollen läser RAM/CPU, ett valfritt NVIDIA-anrop (högst 3 s) och Ollamas /api/tags samt /api/ps (begränsade svar och tidsgräns). Ingen generering, nedladdning eller benchmark körs. Filstorlek är en grov undre jämförelse, inte ett fullständigt krav: kvantisering, kontext/KV-cache, runtime och samtidighet påverkar. Ledigt VRAM summeras inte över GPU:er och bevisar inte kompatibilitet. Uppgifter och bekräftelser sparas inte.",
   "localAdvice.sources": "Läs källor och metod",
   "localAdvice.verdict.Caution": "CPU-körning kan begränsa prestandan; svarstiden är inte mätt.",
-  "localAdvice.remoteMetadata": "Serverns modellpost: {0} · fjärrkörning"
+  "localAdvice.remoteMetadata": "Serverns modellpost: {0} · fjärrkörning",
+  "agents.status.unknown.short": "Okänd",
+  "agents.status.unknown": "Status inte kontrollerad ännu",
+  "agents.status.checking": "Kontrollerar agentstatus i bakgrunden …",
+  "agents.status.failed": "Agentstatus kunde inte kontrolleras. Ett nytt försök görs automatiskt när du öppnar sidan senare.",
+  "agents.status.failed.previous": "Kontrollen misslyckades. Senast kända agentstatus visas. Ett nytt försök görs automatiskt när du öppnar sidan senare."
 }
