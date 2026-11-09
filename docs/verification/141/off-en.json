@@ -1,0 +1,12 @@
+{
+  "Language": "en",
+  "AutoCompactMode": "off",
+  "Tabs": [
+    {
+      "Name": "Atlas",
+      "Directory": "/srv/atlas",
+      "Llm": "claude",
+      "Model": "standard"
+    }
+  ]
+}

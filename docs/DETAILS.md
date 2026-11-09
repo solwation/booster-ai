@@ -352,7 +352,9 @@ or menu activation keeps it visible; minimizing it again still returns it to the
 
 ## Auto-compaction budgets
 
-Start with **Settings → Optimization → Auto-compact**:
+Start with **Settings → Optimization → Auto-compact**. The page illustrates a growing conversation → agent summary → room for more work, with a visible reminder that summaries can lose details. A second static diagram explains known model capacity minus a work reserve → suggested compaction threshold, with code/orchestra examples and a labeled legend. These are scalable theme-aware illustrations, not live conversation meters or promises of exact summary size, cost, speed or quality.
+
+The explanation remains visible in Off, Auto and Manual so you can understand Auto before selecting it. The current choice and its effect remain separate from the illustrations; opening the page changes no setting. Calculation details, model support and metadata status are expandable, while the agent-specific tuning shortcut remains available.
 
 | Global mode | Behavior |
 | --- | --- |
