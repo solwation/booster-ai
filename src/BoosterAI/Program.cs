@@ -1,4 +1,5 @@
 using Avalonia;
+using System.Runtime.Versioning;
 
 namespace BoosterAI;
 
@@ -102,13 +103,7 @@ internal static class Program
             }
             if (Installer.IsQuiet(args, Environment.ProcessPath))
             {
-                // No Avalonia and no window; texts (shortcut description, errors) follow the config's language.
-                Loc.Init(ConfigStore.Load().Language);
-                var plan = Installer.CurrentPlan();
-                Environment.ExitCode = Installer.RunQuiet(Setup,
-                    () => Installer.Install(plan, null, [], null, new Progress<string>()),
-                    () => Installer.Uninstall(plan),
-                    Path.Combine(Path.GetDirectoryName(ConfigStore.PathOnDisk)!, Installer.LogName));
+                Environment.ExitCode = RunQuietSetup();
                 return;
             }
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
@@ -129,6 +124,18 @@ internal static class Program
             try { BuildAvaloniaApp().StartWithClassicDesktopLifetime(args); }
             finally { Instance = null; }
         }
+    }
+
+    [SupportedOSPlatform("windows")]
+    private static int RunQuietSetup()
+    {
+        // No Avalonia and no window; texts (shortcut description, errors) follow the config's language.
+        Loc.Init(ConfigStore.Load().Language);
+        var plan = Installer.CurrentPlan();
+        return Installer.RunQuiet(Setup,
+            () => Installer.Install(plan, null, [], null, new Progress<string>()),
+            () => Installer.Uninstall(plan),
+            Path.Combine(Path.GetDirectoryName(ConfigStore.PathOnDisk)!, Installer.LogName));
     }
 
     /// <summary>The setup check and the install and alias commands it can offer (#74); nothing is run.</summary>
