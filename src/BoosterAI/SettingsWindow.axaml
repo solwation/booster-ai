@@ -515,6 +515,7 @@
                             <StackPanel Orientation="Horizontal" Spacing="10"><local:AgentIcon Cli="{Binding Cli}" Width="28" Height="28" /><TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap" MaxWidth="140" /></StackPanel>
                             <StackPanel Orientation="Horizontal" Spacing="8"><Ellipse Width="7" Height="7" Fill="#28A56A" IsVisible="{Binding IsInstalled}" /><TextBlock Text="{Binding StatusText}" FontSize="12" /><TextBlock Text="{Binding VersionText}" Classes="muted" FontSize="12" /></StackPanel>
                             <TextBlock Text="{Binding CurrentModeText}" Classes="muted" FontSize="12" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding Advice.CardStatus}" IsVisible="{Binding Advice.IsSupported}" TextWrapping="Wrap" FontSize="12" FontWeight="SemiBold" />
                           </StackPanel>
                         </Button>
                       </DataTemplate>
@@ -535,6 +536,7 @@
                             <WrapPanel IsVisible="{Binding IsInstalled}"><TextBlock Text="{Binding StatusText}" FontSize="12" Margin="0,0,10,0" /><TextBlock Text="{local:T agents.version}" Classes="muted" FontSize="12" Margin="0,0,5,0" /><TextBlock Text="{Binding VersionText}" FontSize="12" /></WrapPanel>
                           </StackPanel>
                         </Grid>
+                        <Panel IsVisible="{Binding ShowModelAdvice}"><local:SettingsModelAdviceView DataContext="{Binding Advice}" /></Panel>
                         <Button Classes="accent" Content="{Binding InstallButtonText}" Click="OnInstallAgent"
                                 ToolTip.Tip="{Binding InstallTip}" IsVisible="{Binding !IsInstalled}" HorizontalAlignment="Left" />
                         <StackPanel Spacing="16" IsVisible="{Binding IsInstalled}">

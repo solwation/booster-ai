@@ -12,14 +12,16 @@ public sealed class AgentInfo : Observable
     private bool _isSelected;
     public bool IsSelected { get => _isSelected; internal set => Set(ref _isSelected, value); }
     public AutoCompactViewModel? Compact { get; internal set; }
+    public SettingsModelAdviceViewModel Advice { get; }
     public CliStatus Detected { get; private set; }
     private bool _statusKnown = true;
     public string Cli => Detected.Cli;
     public string Name => Loc.Display("llm", Cli);
     public string DisplayName => Cli switch { "claude" => "Claude Code", "codex" => "Codex", "agy" => "Antigravity", "aider" => "Aider", "interpreter" => "Open Interpreter", "openhands" => "OpenHands", _ => Name };
     private int _section;
-    public int Section { get => _section; set { if (Set(ref _section, value)) { Raise(nameof(IsOverview)); Raise(nameof(IsPermissions)); Raise(nameof(IsContext)); } } }
+    public int Section { get => _section; set { if (Set(ref _section, value)) { Raise(nameof(IsOverview)); Raise(nameof(IsPermissions)); Raise(nameof(IsContext)); Raise(nameof(ShowModelAdvice)); } } }
     public bool IsOverview => Section == 0;
+    public bool ShowModelAdvice => Advice.IsSupported && (!IsInstalled || IsOverview);
     public bool IsPermissions => Section == 1;
     public bool IsContext => Section == 2;
     public bool IsYolo => SelectedMode.Mode == AgentMode.Yolo;
@@ -85,7 +87,7 @@ public sealed class AgentInfo : Observable
             : AgentModes.Choices(status);
         _selectedMode = ModeChoices.FirstOrDefault(c => c.Mode == (draft ?? CurrentMode))
             ?? ModeChoices.FirstOrDefault(c => c.Mode == CurrentMode) ?? ModeChoices[0];
-        foreach (var name in new[] { nameof(Detected), nameof(IsInstalled), nameof(StatusText), nameof(VersionText), nameof(InstallButtonText),
+        foreach (var name in new[] { nameof(Detected), nameof(IsInstalled), nameof(ShowModelAdvice), nameof(StatusText), nameof(VersionText), nameof(InstallButtonText),
                      nameof(CurrentMode), nameof(ModeChoices), nameof(SelectedMode), nameof(IsYolo), nameof(HasExternalDefinition), nameof(CurrentModeText),
                      nameof(CurrentAliasCommand), nameof(MissingDefinition), nameof(HasCurrentAliasCommand), nameof(CurrentAliasExplanation),
                      nameof(DefinitionTruncated), nameof(AliasInspectCommand), nameof(AliasRecommendation), nameof(CanSelectMode), nameof(CanApply),
@@ -93,8 +95,9 @@ public sealed class AgentInfo : Observable
             Raise(name);
     }
 
-    public AgentInfo(CliStatus status)
+    public AgentInfo(CliStatus status, SettingsHardwareAdviceState? hardwareAdvice = null)
     {
+        Advice = new(status.Cli, hardwareAdvice ?? new SettingsHardwareAdviceState());
         Detected = status;
         CurrentMode = AgentModes.Current(status);
         ModeChoices = CurrentMode == AgentMode.Custom
@@ -122,6 +125,7 @@ public sealed class SetupViewModel : Observable
         : WslVisible ? WslText : !_status.Checked ? Loc.Get("agents.status.unknown") : "";
     public Action? OnStatusChanged { get; set; }
 
+    public SettingsHardwareAdviceState HardwareAdvice { get; } = new();
     public IReadOnlyList<AgentInfo> Agents { get; private set; } = [];
     private AgentInfo? _selectedAgent;
     public AgentInfo? SelectedAgent
@@ -238,7 +242,7 @@ public sealed class SetupViewModel : Observable
             .Select(c => new CliOffer(c, Loc.Format("setup.cli.install", c), Loc.Format("setup.cli.install.tip", Prerequisites.InstallScript(c)))).ToList();
         if (Agents.Count == 0)
         {
-            Agents = Prerequisites.Clis.Select(c => new AgentInfo(new(c, "none", null))).ToList();
+            Agents = Prerequisites.Clis.Select(c => new AgentInfo(new(c, "none", null), HardwareAdvice)).ToList();
             Raise(nameof(Agents));
         }
         foreach (var agent in Agents)
@@ -393,7 +397,7 @@ public sealed partial class MainViewModel
     }
 
     /// <summary>Neutral, deterministic versions and permission states; never reads an installed CLI or a user file.</summary>
-    public void ShowSampleAgents()
+    public void ShowSampleAgents(bool localClisMissing = false)
     {
         const string modern = "--approve-for-me --ask-for-approval --sandbox --dangerously-bypass-approvals-and-sandbox --oss --config";
         Setup.Apply(new SetupStatus(WslState.Ok, ["Ubuntu"],
@@ -401,8 +405,8 @@ public sealed partial class MainViewModel
             new("claude", "alias", "/sample/bin/claude") { Version = "2.1.304", Help = "--autocompact acceptEdits --permission-mode --dangerously-skip-permissions", AliasDefinition = "alias claude='claude --permission-mode acceptEdits'", ManagedAlias = "alias claude='claude --permission-mode acceptEdits'" },
             new("codex", "file", "/sample/bin/codex") { Version = "0.170.0", Help = modern },
             new("agy", "function", "/sample/bin/agy") { Version = "1.4.0", Help = "--mode auto --dangerously-skip-permissions", FunctionDefinition = "agy () {\n    command agy --mode=auto \"$@\";\n}" },
-            new("aider", "file", "/sample/bin/aider") { Help = "--yes-always" },
-            new("interpreter", "file", "/sample/bin/interpreter") { Version = "0.0.59", Help = modern },
+            new("aider", localClisMissing ? "none" : "file", localClisMissing ? null : "/sample/bin/aider") { Help = "--yes-always" },
+            new("interpreter", localClisMissing ? "none" : "file", localClisMissing ? null : "/sample/bin/interpreter") { Version = "0.0.59", Help = modern },
             new("openhands", "none", null),
         ], true, true), _cfg.WslDistro);
     }

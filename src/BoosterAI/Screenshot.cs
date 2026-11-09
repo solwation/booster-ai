@@ -163,12 +163,19 @@ internal static class Screenshot
             }
             else if (o.Tab is "agents" or "agenter")
             {
-                vm.ShowSampleAgents();
+                vm.ShowSampleAgents(localClisMissing: o.Section == "missing" || o.Section?.Contains("-missing", StringComparison.Ordinal) == true);
+                const long gib = LocalModelAdvice.GiB;
+                vm.Setup.HardwareAdvice.SetSnapshot(new(16 * gib, 3 * gib, "Example CPU", 8, [new("Example GPU", 8 * gib, 6 * gib)]));
                 sw.SelectedTabIndex = 4;
                 if (o.Section is { } agentSection)
                 {
                     sw.SelectedAgentCli = agentSection.Split('-')[0];
-                    if (vm.Setup.SelectedAgent is { } agent) agent.Section = agentSection.EndsWith("-compact") ? 2 : agentSection.EndsWith("-permissions") ? 1 : 0;
+                    if (vm.Setup.SelectedAgent is { } agent)
+                    {
+                        agent.Section = agentSection.EndsWith("-compact") ? 2 : agentSection.EndsWith("-permissions") ? 1 : 0;
+                        var profile = agentSection.EndsWith("-cpu") ? "cpu7b" : agentSection.EndsWith("-gpu") ? "gpu35b" : "none";
+                        agent.Advice.Profile = agent.Advice.Profiles.FirstOrDefault(p => p.Id == profile) ?? agent.Advice.Profiles[0];
+                    }
                 }
             }
             else if (o.Tab is "appearance" or "utseende") sw.SelectedTabIndex = 3;

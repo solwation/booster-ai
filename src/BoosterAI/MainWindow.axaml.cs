@@ -8,12 +8,6 @@ namespace BoosterAI;
 
 public partial class MainWindow : Window
 {
-    private void OnLocalModelAdvice(object? sender, RoutedEventArgs e)
-    {
-        if ((sender as Control)?.DataContext is TabViewModel tab)
-            new LocalModelWindow(new LocalModelViewModel(tab.Llm, tab.Model)).Show(this);
-    }
-
     private void OnProjectGridLoaded(object? sender, RoutedEventArgs e)
     {
         if (sender is Grid grid) ApplyProjectColumns(grid);

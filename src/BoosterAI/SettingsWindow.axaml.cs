@@ -24,6 +24,7 @@ public partial class SettingsWindow : Window
         };
         Opened += (_, _) => { if (ReferenceEquals(TabsControl.SelectedItem, AgentsTab)) _vm.SetupAgentsOpened(); };
         Activated += (_, _) => { if (ReferenceEquals(TabsControl.SelectedItem, AgentsTab)) _vm.SetupAgentsOpened(); };
+        ConfigureHardwareAdvice();
         Closing += (_, _) => _vm.Save();
     }
 

@@ -14,6 +14,7 @@ internal sealed class LocalModelViewModel : Observable
         Selection = Loc.Format("localAdvice.selection", Loc.Display("llm", cli), model);
         _result = Loc.Get("localAdvice.selection." + _selection.Backend);
     }
+    internal ModelAssessment? Assessment { get; private set; }
     public string Selection { get; }
     public string Model { get => _model; set { if (Set(ref _model, value?.Trim() ?? "")) Invalidate(); } }
     public string Endpoint { get => _endpoint; set { if (Set(ref _endpoint, value?.Trim() ?? "")) Invalidate(); } }
@@ -24,17 +25,25 @@ internal sealed class LocalModelViewModel : Observable
     public string Result { get => _result; private set => Set(ref _result, value); }
     public string Hardware { get => _hardware; private set => Set(ref _hardware, value); }
     public string Metadata { get => _metadata; private set => Set(ref _metadata, value); }
-    private void Invalidate() { Result = Loc.Get("localAdvice.selection." + _selection.Backend); Metadata = ""; }
+    private void Invalidate()
+    {
+        Assessment = null;
+        Raise(nameof(Assessment));
+        Result = Loc.Get("localAdvice.selection." + _selection.Backend);
+        Metadata = "";
+    }
+    internal void ClearAssessment() => Invalidate();
 
-    public async Task CheckAsync(CancellationToken cancellation)
+    public async Task CheckAsync(CancellationToken cancellation, HardwareSnapshot? knownHardware = null)
     {
         if (Busy) return;
         Busy = true;
+        ClearAssessment();
         // Capture the evidence inputs. Edits during the asynchronous read invalidate the old result.
         var (model, endpoint, confirmed, cpuOnly) = (Model, Endpoint, Confirmed, CpuOnly);
         try
         {
-            var hardware = await LocalHardwareProbe.ReadAsync(cancellation);
+            var hardware = knownHardware ?? await LocalHardwareProbe.ReadAsync(cancellation);
             if (cancellation.IsCancellationRequested) return;
             Hardware = HardwareText(hardware);
             if (!confirmed) { Result = Loc.Get("localAdvice.confirmRequired"); return; }
@@ -56,6 +65,8 @@ internal sealed class LocalModelViewModel : Observable
         var installed = LocalModelAdvice.Find(model, snapshot.Models);
         var running = installed is null ? null : snapshot.Running.FirstOrDefault(r => r.Name == installed.Name && r.Digest == installed.Digest);
         var assessment = LocalModelAdvice.Assess(installed, running, hardware, cpuOnly);
+        Assessment = assessment;
+        Raise(nameof(Assessment));
         Result = Loc.Get("localAdvice.verdict." + assessment.Suitability) + "\n" + Loc.Get("localAdvice.reason." + assessment.Reason);
         if (installed is { Remote: false } && assessment.Suitability == ModelSuitability.Unknown)
             foreach (var gpu in hardware.Gpus.Where(g => g.TotalBytes < installed.Bytes))
@@ -65,7 +76,7 @@ internal sealed class LocalModelViewModel : Observable
     }
 
     internal static string Memory(long? bytes) => bytes.HasValue ? $"{bytes.Value / (double)LocalModelAdvice.GiB:0.0} GiB" : Loc.Get("localAdvice.unknown");
-    private static string HardwareText(HardwareSnapshot hardware) =>
+    internal static string HardwareText(HardwareSnapshot hardware) =>
         Loc.Format("localAdvice.ram", Memory(hardware.TotalRam), Memory(hardware.AvailableRam)) + "\n"
         + Loc.Format("localAdvice.cpu", hardware.Cpu.Length > 0 ? hardware.Cpu : Loc.Get("localAdvice.unknown"), hardware.Processors) + "\n"
         + (hardware.Gpus.Count == 0 ? Loc.Get("localAdvice.gpuUnknown") : string.Join("\n", hardware.Gpus.Select(g => Loc.Format("localAdvice.gpu", g.Name, Memory(g.TotalBytes), Memory(g.FreeBytes)))));
