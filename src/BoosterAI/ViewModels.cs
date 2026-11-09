@@ -173,6 +173,7 @@ public sealed class TabViewModel : Observable
     public void RaiseLlms() => Raise(nameof(Llms));
     public IReadOnlyList<string> Models => Catalog.ModelsFor(_llm);
     public bool IsAi => _llm != Catalog.ShellOnly;
+    public bool HasLocalModelAdvice => ModelSelection.Supports(_llm);
 
     public string Llm
     {
@@ -185,6 +186,7 @@ public sealed class TabViewModel : Observable
             Dispatcher.UIThread.Post(RaiseLlms);
             Raise(nameof(Models));
             Raise(nameof(IsAi));
+            Raise(nameof(HasLocalModelAdvice));
             Raise(nameof(CanOrkester));
             Raise(nameof(CanNonInteractive));
             Raise(nameof(CanInstallOrkester));

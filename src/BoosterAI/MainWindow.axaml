@@ -206,9 +206,13 @@
                       </DataTemplate>
                     </ComboBox.ItemTemplate>
                   </ComboBox>
-                  <ComboBox Grid.Column="6" Classes="field" IsEditable="True" ItemsSource="{Binding Models}"
+                  <StackPanel Grid.Column="6" Spacing="3" VerticalAlignment="Center">
+                  <ComboBox Classes="field" IsEditable="True" ItemsSource="{Binding Models}"
                             Text="{Binding Model}" IsEnabled="{Binding IsAi}" Opacity="{Binding RowOpacity}"
                             ToolTip.Tip="{local:T model.tip}" />
+                  <Button Classes="link" Content="{local:T localAdvice.open}" Click="OnLocalModelAdvice" IsVisible="{Binding HasLocalModelAdvice}"
+                          Padding="0,2" HorizontalAlignment="Left" />
+                  </StackPanel>
 
                   <Panel Grid.Column="7" Margin="16,0,0,0" VerticalAlignment="Center" Opacity="{Binding RowOpacity}">
                     <ToggleSwitch IsChecked="{Binding Orkester}" IsVisible="{Binding CanOrkester}"

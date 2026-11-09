@@ -87,6 +87,13 @@ internal static class Screenshot
         return window;
     }
 
+    private static LocalModelWindow SampleLocalModel(string? state)
+    {
+        var vm = new LocalModelViewModel("aider", "ollama/example-coder:7b-q4");
+        if (state is not null) vm.ShowSample(state);
+        return new LocalModelWindow(vm);
+    }
+
     public static int Run(ScreenshotOptions o)
     {
         AppBuilder.Configure<App>()
@@ -117,6 +124,7 @@ internal static class Screenshot
         Window window = o.Window switch
         {
             "main" => new MainWindow(vm),
+            "local-model" => SampleLocalModel(o.Section),
             "close" => new CloseAllWindow(vm.PrepareCloseAll(sample: true)),
             "settings" => new SettingsWindow(vm),
             "install" => new ConfirmInstallWindow(vm.Tabs.First()),

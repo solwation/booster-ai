@@ -1,0 +1,42 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="using:BoosterAI"
+        x:Class="BoosterAI.LocalModelWindow" x:DataType="local:LocalModelViewModel"
+        Title="{local:T localAdvice.title}" Icon="avares://BoosterAI/Assets/boosterai.ico"
+        Width="710" Height="760" MinWidth="540" MinHeight="450" WindowStartupLocation="CenterOwner">
+  <Grid RowDefinitions="*,Auto" Margin="28,22">
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+      <StackPanel Spacing="12" Margin="0,0,12,8">
+        <TextBlock Classes="title" Text="{local:T localAdvice.title}" TextWrapping="Wrap" />
+        <TextBlock Text="{Binding Selection}" FontWeight="SemiBold" TextWrapping="Wrap" />
+        <TextBlock Classes="muted" Text="{local:T localAdvice.intro}" TextWrapping="Wrap" />
+        <Border Classes="row" Padding="12">
+          <TextBlock Text="{Binding Result}" TextWrapping="Wrap" LineHeight="21" AutomationProperties.LiveSetting="Polite" />
+        </Border>
+        <TextBlock Text="{Binding Hardware}" TextWrapping="Wrap" FontSize="12" />
+        <TextBlock Classes="muted" Text="{local:T localAdvice.platform}" TextWrapping="Wrap" FontSize="12" />
+        <StackPanel Spacing="6" IsEnabled="{Binding CanCheck}">
+          <TextBlock Text="{local:T localAdvice.model}" />
+          <TextBox Text="{Binding Model}" Watermark="qwen2.5-coder:7b" AutomationProperties.Name="{local:T localAdvice.model}" />
+          <TextBlock Text="{local:T localAdvice.endpoint}" />
+          <TextBox Text="{Binding Endpoint}" AutomationProperties.Name="{local:T localAdvice.endpoint}" />
+          <CheckBox IsChecked="{Binding Confirmed}">
+            <TextBlock Text="{local:T localAdvice.confirm}" TextWrapping="Wrap" />
+          </CheckBox>
+          <CheckBox IsChecked="{Binding CpuOnly}">
+            <TextBlock Text="{local:T localAdvice.cpuOnly}" TextWrapping="Wrap" />
+          </CheckBox>
+        </StackPanel>
+        <Button Content="{local:T localAdvice.check}" Click="OnCheck" IsEnabled="{Binding CanCheck}" HorizontalAlignment="Left" Padding="14,8" />
+        <TextBlock Text="{Binding Metadata}" TextWrapping="Wrap" FontSize="12" />
+        <Expander Header="{local:T localAdvice.details}">
+          <StackPanel Spacing="8" Margin="0,8,0,0">
+            <TextBlock Classes="muted" Text="{local:T localAdvice.limits}" TextWrapping="Wrap" FontSize="12" />
+            <Button Classes="link" Content="{local:T localAdvice.sources}" Click="OnSources" HorizontalAlignment="Left" />
+          </StackPanel>
+        </Expander>
+      </StackPanel>
+    </ScrollViewer>
+    <Button Grid.Row="1" Content="{local:T done}" Click="OnDone" IsCancel="True" HorizontalAlignment="Right" Padding="18,8" Margin="0,12,0,0" />
+  </Grid>
+</Window>
