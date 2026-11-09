@@ -374,24 +374,30 @@
           </TabItem>
           <TabItem Header="{local:T compact.title}">
             <ScrollViewer HorizontalScrollBarVisibility="Disabled" Margin="20,0,0,0">
-              <StackPanel Spacing="14" Margin="0,0,12,12">
+              <StackPanel Spacing="10" Margin="0,0,12,12">
                 <TextBlock Classes="title" Text="{local:T compact.global.title}" TextWrapping="Wrap" />
-                <TextBlock Text="{local:T compact.global.intro}" TextWrapping="Wrap" />
+                <TextBlock Text="{local:T compact.guide.benefit}" TextWrapping="Wrap" />
+                <local:CompactBenefitView />
                 <ComboBox x:Name="CompactGlobalMode" ItemsSource="{Binding CompactGlobalModes}" SelectedItem="{Binding SelectedCompactMode}"
-                          HorizontalAlignment="Stretch" MaxWidth="400" AutomationProperties.Name="{local:T compact.global.title}">
-                  <ComboBox.ItemTemplate><DataTemplate x:DataType="local:CompactChoice"><TextBlock Text="{Binding Label}" /></DataTemplate></ComboBox.ItemTemplate>
+                          HorizontalAlignment="Left" MaxWidth="400" AutomationProperties.Name="{local:T compact.global.title}">
+                  <ComboBox.ItemTemplate><DataTemplate x:DataType="local:CompactChoice"><TextBlock Text="{Binding Label}" TextWrapping="Wrap" /></DataTemplate></ComboBox.ItemTemplate>
                 </ComboBox>
-                <TextBlock Text="{Binding CompactModeExplanation}" TextWrapping="Wrap" FontWeight="SemiBold" />
-                <TextBlock Text="{local:T compact.global.modes}" TextWrapping="Wrap" />
-                <Border Classes="agent-group" IsVisible="{Binding CompactIsAuto}">
-                  <StackPanel Spacing="8">
-                    <TextBlock Text="{local:T compact.global.auto.profile}" TextWrapping="Wrap" />
-                    <TextBlock Text="{Binding CompactMetadataStatus}" TextWrapping="Wrap" FontSize="12" />
-                    <TextBlock Text="{local:T compact.global.auto.fallback}" TextWrapping="Wrap" FontSize="12" />
-                  </StackPanel>
-                </Border>
+                <StackPanel Spacing="4">
+                  <TextBlock Text="{Binding CompactModeExplanation}" TextWrapping="Wrap" FontSize="12" />
+                  <TextBlock Classes="muted" Text="{local:T compact.guide.applies}" TextWrapping="Wrap" FontSize="12" />
+                </StackPanel>
+                <local:CompactAutoGuideView />
                 <Button Classes="link" Content="{local:T compact.global.advanced}" Click="OnShowCompactAgents" HorizontalAlignment="Left" />
-                <TextBlock Classes="muted" Text="{local:T compact.global.applies}" TextWrapping="Wrap" FontSize="12" />
+                <Expander HorizontalAlignment="Stretch">
+                  <Expander.Header><TextBlock Text="{local:T compact.guide.details}" TextWrapping="Wrap" /></Expander.Header>
+                  <StackPanel Spacing="8" Margin="0,8,0,0">
+                    <TextBlock Text="{local:T compact.global.modes}" TextWrapping="Wrap" FontSize="12" />
+                    <TextBlock Text="{local:T compact.global.auto.profile}" TextWrapping="Wrap" FontSize="12" />
+                    <TextBlock Text="{Binding CompactMetadataStatus}" IsVisible="{Binding CompactIsAuto}" TextWrapping="Wrap" FontSize="12" />
+                    <TextBlock Text="{local:T compact.global.auto.fallback}" TextWrapping="Wrap" FontSize="12" />
+                    <TextBlock Text="{local:T compact.global.applies}" TextWrapping="Wrap" FontSize="12" />
+                  </StackPanel>
+                </Expander>
               </StackPanel>
             </ScrollViewer>
           </TabItem>

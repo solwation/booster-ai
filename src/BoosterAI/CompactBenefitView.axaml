@@ -1,0 +1,51 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="using:BoosterAI"
+             x:Class="BoosterAI.CompactBenefitView">
+  <StackPanel Spacing="7">
+    <Grid ColumnDefinitions="*,18,*,18,*">
+      <Border Classes="agent-group" Padding="10">
+        <StackPanel Spacing="7">
+          <Viewbox Height="44" HorizontalAlignment="Center">
+            <Canvas Width="80" Height="44">
+              <Rectangle Width="69" Height="8" RadiusX="3" RadiusY="3" Fill="{DynamicResource MutedBrush}" />
+              <Rectangle Canvas.Top="12" Canvas.Left="17" Width="63" Height="8" RadiusX="3" RadiusY="3" Fill="{DynamicResource LinkBrush}" />
+              <Rectangle Canvas.Top="24" Width="73" Height="8" RadiusX="3" RadiusY="3" Fill="{DynamicResource MutedBrush}" />
+              <Rectangle Canvas.Top="36" Canvas.Left="17" Width="63" Height="8" RadiusX="3" RadiusY="3" Fill="{DynamicResource LinkBrush}" />
+            </Canvas>
+          </Viewbox>
+          <TextBlock Text="{local:T compact.guide.before}" FontWeight="SemiBold" FontSize="12" TextWrapping="Wrap" />
+          <TextBlock Text="{local:T compact.guide.before.caption}" Classes="muted" FontSize="12" TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
+      <Path Grid.Column="1" Data="M0,5 H12 M7,0 L12,5 L7,10" Stroke="{DynamicResource MutedBrush}" StrokeThickness="1.5" Width="12" Height="10" HorizontalAlignment="Center" VerticalAlignment="Center" />
+      <Border Grid.Column="2" Classes="agent-group" Padding="10">
+        <StackPanel Spacing="7">
+          <Viewbox Height="44" HorizontalAlignment="Center">
+            <Canvas Width="80" Height="44">
+              <Rectangle Canvas.Left="16" Width="48" Height="44" RadiusX="4" RadiusY="4" Stroke="{DynamicResource LinkBrush}" StrokeThickness="2" />
+              <Path Data="M25,12 H55 M25,21 H55 M25,30 H44" Stroke="{DynamicResource LinkBrush}" StrokeThickness="3" />
+            </Canvas>
+          </Viewbox>
+          <TextBlock Text="{local:T compact.guide.summarize}" FontWeight="SemiBold" FontSize="12" TextWrapping="Wrap" />
+          <TextBlock Text="{local:T compact.guide.summarize.caption}" Classes="muted" FontSize="12" TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
+      <Path Grid.Column="3" Data="M0,5 H12 M7,0 L12,5 L7,10" Stroke="{DynamicResource MutedBrush}" StrokeThickness="1.5" Width="12" Height="10" HorizontalAlignment="Center" VerticalAlignment="Center" />
+      <Border Grid.Column="4" Classes="agent-group" Padding="10">
+        <StackPanel Spacing="7">
+          <Viewbox Height="44" HorizontalAlignment="Center">
+            <Canvas Width="80" Height="44">
+              <Rectangle Width="80" Height="10" RadiusX="3" RadiusY="3" Fill="{DynamicResource LinkBrush}" />
+              <Rectangle Canvas.Top="16" Width="80" Height="28" RadiusX="4" RadiusY="4" Stroke="{DynamicResource MutedBrush}" StrokeThickness="1.5" StrokeDashArray="3,3" />
+              <Path Data="M34,30 H46 M40,24 V36" Stroke="{DynamicResource LinkBrush}" StrokeThickness="2" />
+            </Canvas>
+          </Viewbox>
+          <TextBlock Text="{local:T compact.guide.after}" FontWeight="SemiBold" FontSize="12" TextWrapping="Wrap" />
+          <TextBlock Text="{local:T compact.guide.after.caption}" Classes="muted" FontSize="12" TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
+    </Grid>
+    <TextBlock Text="{local:T compact.guide.tradeoff}" Classes="muted" FontSize="12" TextWrapping="Wrap" />
+  </StackPanel>
+</UserControl>
