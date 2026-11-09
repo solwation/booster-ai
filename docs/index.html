@@ -752,7 +752,8 @@
               <button class="tab-btn" onclick="switchPreview('light', this)">Start (Light)</button>
               <button class="tab-btn" onclick="switchPreview('settings', this)">Settings (General)</button>
               <button class="tab-btn" onclick="switchPreview('appearance', this)">Settings (Appearance)</button>
-              <button class="tab-btn" onclick="switchPreview('wsl', this)">WSL & RAM Optimization</button>
+              <button class="tab-btn" onclick="switchPreview('memory', this)">RAM usage</button>
+              <button class="tab-btn" onclick="switchPreview('wsl', this)">WSL &amp; environment</button>
               <button class="tab-btn" onclick="switchPreview('compact', this)">Auto-compact</button>
             </div>
             <div style="width: 20px;"></div>
@@ -971,12 +972,23 @@
       btn.classList.add('active');
       const img = document.getElementById('previewImg');
       img.style.opacity = '0.3';
+      const descriptions = {
+        dark: 'BoosterAI start window in the dark theme',
+        light: 'BoosterAI start window in the light theme',
+        settings: 'General settings in BoosterAI',
+        appearance: 'Appearance settings in BoosterAI',
+        memory: 'WSL RAM usage with current memory, 30-minute history and the configured cap',
+        wsl: 'WSL environment settings and detected distributions',
+        compact: 'Auto-compact context settings in BoosterAI'
+      };
+      img.alt = descriptions[mode] || 'BoosterAI app screenshot';
       setTimeout(() => {
         if (mode === 'dark') img.src = 'screenshot-dark.png?v=20261105';
         else if (mode === 'light') img.src = 'screenshot.png?v=20261105';
         else if (mode === 'settings') img.src = 'settings-general.png?v=20261105';
         else if (mode === 'appearance') img.src = 'settings-appearance.png?v=20261105';
-        else if (mode === 'wsl') img.src = 'settings-wsl.png?v=20261105-102';
+        else if (mode === 'memory') img.src = 'settings-ram.png?v=20261109-135';
+        else if (mode === 'wsl') img.src = 'settings-wsl.png?v=20261109-135';
         else if (mode === 'compact') img.src = 'settings-compact.png?v=20261105-102';
         img.onload = () => { img.style.opacity = '1'; };
         // Fallback in case image is already cached
