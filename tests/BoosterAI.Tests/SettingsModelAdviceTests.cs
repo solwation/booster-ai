@@ -84,6 +84,40 @@ public class SettingsModelAdviceTests
     }
 
     [Fact]
+    public void BackgroundDetectionPreservesAdviceProfileAndMissingPageVisibility()
+    {
+        var setup = new SetupViewModel();
+        var agent = setup.Agents.Single(a => a.Cli == "aider");
+        var advice = agent.Advice;
+        advice.Profile = advice.Profiles.Single(p => p.Id == "cpu7b");
+        setup.HardwareAdvice.SetSnapshot(Hardware(2 * GiB));
+        setup.SelectedAgent = agent;
+        setup.Apply(new(WslState.Ok, [], [new("aider", "file", "/sample/aider")], false, false), "Example");
+        Assert.Same(agent, setup.SelectedAgent);
+        Assert.Same(advice, agent.Advice);
+        Assert.Equal("cpu7b", advice.Profile.Id);
+        Assert.Equal(Loc.Get("settingsAdvice.status.cpuRamSmall"), advice.CardStatus);
+        agent.Section = 2;
+        setup.Apply(new(WslState.Ok, [], [new("aider", "none", null)], false, false), "Example");
+        Assert.True(agent.ShowModelAdvice);
+        Assert.Equal("cpu7b", advice.Profile.Id);
+    }
+
+    [Fact]
+    public void ExactAssessmentReplacesPlanningAndEditingCannotRetainItsVerdict()
+    {
+        var hardware = new SettingsHardwareAdviceState();
+        hardware.SetSnapshot(Hardware(2 * GiB));
+        var advice = new AgentInfo(new("aider", "none", null), hardware).Advice;
+        advice.Profile = advice.Profiles.Single(p => p.Id == "cpu7b");
+        advice.Exact.ShowSample("limited");
+        Assert.False(advice.HasProfile);
+        Assert.Equal(Loc.Get("settingsAdvice.status.exact.Limited"), advice.CardStatus);
+        advice.Exact.Model = "another:tag";
+        Assert.Equal(Loc.Get("settingsAdvice.status.modelDependent"), advice.CardStatus);
+    }
+
+    [Fact]
     public void CpuPlanningUsesDocumentedFileEstimateAndReactsToUpdatedResources()
     {
         var hardware = new SettingsHardwareAdviceState();

@@ -12,6 +12,7 @@ public partial class SettingsWindow
             if (e.Property == TabItem.IsSelectedProperty && AgentsTab.IsSelected) ReadHardwareAdvice();
         };
         Opened += (_, _) => { if (AgentsTab.IsSelected) ReadHardwareAdvice(); };
+        Activated += (_, _) => { if (AgentsTab.IsSelected) ReadHardwareAdvice(); };
         Closed += (_, _) => _hardwareAdviceLifetime?.Cancel();
     }
     private async void ReadHardwareAdvice()
