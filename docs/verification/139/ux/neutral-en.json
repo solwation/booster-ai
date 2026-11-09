@@ -1,0 +1,21 @@
+{
+  "Language": "en",
+  "AppTheme": "auto",
+  "AutoCompactMode": "auto",
+  "Tabs": [
+    {
+      "Name": "Atlas",
+      "Directory": "/srv/atlas",
+      "Llm": "claude",
+      "Model": "standard",
+      "ColorIndex": 0
+    },
+    {
+      "Name": "Harbor",
+      "Directory": "/srv/harbor",
+      "Llm": "codex",
+      "Model": "standard",
+      "ColorIndex": 1
+    }
+  ]
+}
