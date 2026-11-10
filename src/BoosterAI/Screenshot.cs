@@ -94,6 +94,13 @@ internal static class Screenshot
         return new LocalModelWindow(vm);
     }
 
+    private static LocalModelsWindow SampleLocalModels(string? state)
+    {
+        var vm = new LocalModelsViewModel();
+        vm.ShowSample(state);
+        return new LocalModelsWindow(vm);
+    }
+
     public static int Run(ScreenshotOptions o)
     {
         AppBuilder.Configure<App>()
@@ -125,6 +132,7 @@ internal static class Screenshot
         {
             "main" => new MainWindow(vm),
             "local-model" => SampleLocalModel(o.Section),
+            "local-models" => SampleLocalModels(o.Section),
             "close" => new CloseAllWindow(vm.PrepareCloseAll(sample: true)),
             "settings" => new SettingsWindow(vm),
             "install" => new ConfirmInstallWindow(vm.Tabs.First()),

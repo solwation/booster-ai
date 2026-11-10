@@ -509,6 +509,7 @@
             <ScrollViewer HorizontalScrollBarVisibility="Disabled">
             <StackPanel Spacing="10">
               <Button Content="{local:T agents.overview.all}" Click="OnAgentOverview" Classes="agent-nav" Classes.chosen="{Binding Setup.IsAgentOverview}" HorizontalAlignment="Stretch" />
+              <Button x:Name="LocalModelsButton" Content="{local:T models.title}" Click="OnLocalModels" Classes="agent-nav" HorizontalAlignment="Stretch" ToolTip.Tip="{local:T models.openHint}" />
               <ListBox x:Name="AgentSections" Classes="agent-sections" ItemsSource="{Binding Setup.Agents}"
                        SelectedItem="{Binding Setup.SelectedAgent}" Background="Transparent" BorderThickness="0"
                        AutomationProperties.Name="{local:T settings.tab.agents}">

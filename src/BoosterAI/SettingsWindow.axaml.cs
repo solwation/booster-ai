@@ -50,6 +50,17 @@ public partial class SettingsWindow : Window
         }
     }
 
+    private LocalModelsWindow? _localModels;
+    private async void OnLocalModels(object? sender, RoutedEventArgs e)
+    {
+        if (_localModels is not null) return;
+        var model = new LocalModelsViewModel(_vm.Setup.HardwareAdvice);
+        if (Screenshot.Active) model.ShowSample(null);
+        _localModels = new LocalModelsWindow(model, liveReads: _vm.CanReadHardwareAdvice);
+        try { await _localModels.ShowDialog(this); }
+        finally { _localModels = null; }
+    }
+
     private void OnAgentOverview(object? sender, RoutedEventArgs e) => _vm.Setup.SelectedAgent = null;
     private void OnOpenAgent(object? sender, RoutedEventArgs e)
     {
