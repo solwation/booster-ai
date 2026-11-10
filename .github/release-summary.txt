@@ -1,3 +1,3 @@
-version: 0.35.2
-sv: Smidigare projektstart och projektsökning, tydligare Auto-clear och bättre återkoppling när flikar stängs.
-en: Find chosen project folders, open settings without extra projects, and get clearer cleanup and close feedback.
+version: 0.36.0
+sv: Välj lokala modeller i ett eget fönster med råd för din dator och hämta dem via Ollama.
+en: Compare local models in a separate window, get hardware-based suggestions and download through Ollama.
