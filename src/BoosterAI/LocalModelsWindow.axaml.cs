@@ -18,7 +18,7 @@ public partial class LocalModelsWindow : Window
         InitializeComponent();
         Opened += (_, _) => { DoneButton.Focus(); ModelScroll.Offset = default; };
         Opened += async (_, _) => { if (liveReads && !Screenshot.Active) await vm.RefreshAsync(_lifetime.Token); };
-        Closed += (_, _) => { _lifetime.Cancel(); vm.Cancel(); };
+        Closed += (_, _) => { _lifetime.Cancel(); vm.Dispose(); _lifetime.Dispose(); };
     }
     private async void OnRefresh(object? sender, RoutedEventArgs e)
     { if (!Screenshot.Active) await ViewModel.RefreshAsync(_lifetime.Token); }

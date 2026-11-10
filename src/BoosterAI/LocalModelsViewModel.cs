@@ -21,7 +21,7 @@ public sealed class DownloadableModelRow : Observable
 }
 
 /// <summary>Transient local-model management. Never writes the agent's model or endpoint configuration.</summary>
-public sealed class LocalModelsViewModel : Observable
+public sealed class LocalModelsViewModel : Observable, IDisposable
 {
     private readonly SettingsHardwareAdviceState _hardware;
     private readonly Func<Uri, CancellationToken, Task<OllamaSnapshot>> _readModels;
@@ -30,7 +30,7 @@ public sealed class LocalModelsViewModel : Observable
     private IReadOnlyList<OllamaModel> _installed = [];
     private string _endpoint = "http://127.0.0.1:11434";
     private string _status = Loc.Get("models.serverUnchecked"), _downloadStatus = "";
-    private bool _busy, _connected, _confirmed;
+    private bool _busy, _connected, _confirmed, _disposed;
     private double _percent;
     private CancellationTokenSource? _operation;
     public IReadOnlyList<DownloadableModelRow> Models { get; } = DownloadableModels.All.Select(m => new DownloadableModelRow(m)).ToArray();
@@ -42,7 +42,7 @@ public sealed class LocalModelsViewModel : Observable
         _hardware = hardware; _readModels = readModels ?? LocalOllamaProbe.ReadAsync;
         _pull = pull ?? OllamaModelDownload.PullAsync;
         _selected = Models[1];
-        hardware.PropertyChanged += (_, _) => Refresh();
+        hardware.PropertyChanged += OnHardwareChanged;
         Refresh();
     }
     public DownloadableModelRow Selected
@@ -62,9 +62,9 @@ public sealed class LocalModelsViewModel : Observable
     }
     public bool Confirmed { get => _confirmed; set { if (!Busy && Set(ref _confirmed, value)) Refresh(); } }
     public bool Busy { get => _busy; private set { if (Set(ref _busy, value)) Refresh(); } }
-    public bool CanEdit => !Busy;
-    public bool CanDownload => !Busy && _connected && Confirmed && !Selected.Installed;
-    public bool CanCancel => Busy;
+    public bool CanEdit => !Busy && !_disposed;
+    public bool CanDownload => !_disposed && !Busy && _connected && Confirmed && !Selected.Installed;
+    public bool CanCancel => Busy && !_disposed;
     public string Status { get => _status; private set => Set(ref _status, value); }
     public string DownloadStatus { get => _downloadStatus; private set => Set(ref _downloadStatus, value); }
     public double Percent { get => _percent; private set => Set(ref _percent, value); }
@@ -90,7 +90,7 @@ public sealed class LocalModelsViewModel : Observable
 
     public async Task RefreshAsync(CancellationToken cancellation)
     {
-        if (Busy) return;
+        if (Busy || _disposed) return;
         Busy = true;
         using var operation = CancellationTokenSource.CreateLinkedTokenSource(cancellation);
         _operation = operation;
@@ -144,8 +144,17 @@ public sealed class LocalModelsViewModel : Observable
     }
     private static bool IsReadFailure(Exception ex) => ex is HttpRequestException or IOException or System.Text.Json.JsonException or KeyNotFoundException or InvalidOperationException;
     public void Cancel() => _operation?.Cancel();
+    private void OnHardwareChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e) => Refresh();
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        _hardware.PropertyChanged -= OnHardwareChanged;
+        Cancel();
+    }
     private void Refresh()
     {
+        if (_disposed) return;
         foreach (var row in Models) row.Refresh(_hardware.Snapshot, _installed);
         foreach (var name in new[] { nameof(CanEdit), nameof(CanDownload), nameof(CanCancel), nameof(Hardware), nameof(Recommendation), nameof(SelectedPlan), nameof(DownloadTarget), nameof(DownloadHint), nameof(Compatibility), nameof(InstalledModels) }) Raise(name);
     }

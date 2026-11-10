@@ -191,6 +191,23 @@ public class DownloadableModelTests
         Assert.Equal(5_000, updates[0].Status.Length);
     }
 
+    [Fact]
+    public void ClosingOneManagerUnsubscribesWithoutStoppingTheReopenedManagersHardwareUpdates()
+    {
+        var hardware = Hardware();
+        var closed = new LocalModelsViewModel(hardware);
+        using var reopened = new LocalModelsViewModel(hardware);
+        var oldUpdates = 0; var newUpdates = 0;
+        closed.PropertyChanged += (_, _) => oldUpdates++;
+        reopened.PropertyChanged += (_, _) => newUpdates++;
+        closed.Dispose(); closed.Dispose();
+        hardware.SetSnapshot(HardwareSnapshot.Empty);
+        Assert.Equal(0, oldUpdates);
+        Assert.True(newUpdates > 0);
+        Assert.False(closed.CanEdit);
+        Assert.False(closed.CanDownload);
+    }
+
     private static HttpResponseMessage Response(string content) => new(HttpStatusCode.OK) { Content = new StringContent(content, Encoding.UTF8, "application/x-ndjson") };
     private static HttpClient Client(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> handle) => new(new Handler(handle)) { BaseAddress = new("http://localhost:11434/") };
     private sealed class Handler(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> handle) : HttpMessageHandler

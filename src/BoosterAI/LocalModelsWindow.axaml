@@ -22,7 +22,7 @@
         </Border>
         <TextBlock Text="{local:T models.choose}" FontWeight="SemiBold" />
         <ListBox x:Name="ModelList" ItemsSource="{Binding Models}" SelectedItem="{Binding Selected}" IsEnabled="{Binding CanEdit}"
-                 MaxHeight="210" ScrollViewer.HorizontalScrollBarVisibility="Disabled" AutomationProperties.Name="{local:T models.choose}">
+                 MaxHeight="210" AutoScrollToSelectedItem="False" ScrollViewer.HorizontalScrollBarVisibility="Disabled" AutomationProperties.Name="{local:T models.choose}">
           <ListBox.ItemTemplate>
             <DataTemplate x:DataType="local:DownloadableModelRow">
               <StackPanel Spacing="3" Margin="4">
