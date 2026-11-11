@@ -1,0 +1,36 @@
+{
+  "Language": "sv",
+  "Theme": "light",
+  "ProjectSearchRoot": "/home/me/Projects",
+  "Tabs": [
+    {
+      "Name": "Atlas",
+      "Directory": "/srv/atlas",
+      "Llm": "claude",
+      "Model": "standard",
+      "Expanded": true,
+      "SubTabs": [
+        {
+          "Name": "Atlas-api",
+          "Directory": "/srv/atlas/api",
+          "Llm": "codex"
+        }
+      ]
+    },
+    {
+      "Name": "Boreal",
+      "Directory": "/srv/boreal",
+      "Llm": "codex"
+    },
+    {
+      "Name": "Cirrus",
+      "Directory": "/srv/cirrus",
+      "Llm": "agy"
+    },
+    {
+      "Name": "Delta",
+      "Directory": "/srv/delta",
+      "Llm": "claude"
+    }
+  ]
+}
