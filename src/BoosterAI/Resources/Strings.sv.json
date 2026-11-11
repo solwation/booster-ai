@@ -354,7 +354,7 @@
   "subtab.summary.other": "{0} underflikar · samma mapp",
   "subtab.remove": "Ta bort underflik",
   "subtab.remove.tip": "Ta bort underfliken. Stäng dess terminalflik först om den är öppen.",
-  "subtab.restart.fresh.tip": "Starta om fliken med {0} / {1} och en ny konversation. Flera flikar i projektet delar denna AI:s konversationshistorik.",
+  "subtab.restart.fresh.tip": "Starta om fliken med {0} / {1} och en ny konversation. Flera flikar i projektet delar agentens konversationshistorik.",
   "compact.title": "Auto-compact",
   "compact.model": "Exakt modell (alla matchande flikar)",
   "compact.profile": "Uppgiftsprofil",

@@ -354,7 +354,7 @@
   "subtab.summary.other": "{0} subtabs · same folder",
   "subtab.remove": "Remove subtab",
   "subtab.remove.tip": "Remove this subtab. Close its terminal tab first if it is open.",
-  "subtab.restart.fresh.tip": "Restart this tab with {0} / {1} and a new conversation. Multiple tabs in the project share this AI's conversation history.",
+  "subtab.restart.fresh.tip": "Restart this tab with {0} / {1} and a new conversation. Multiple tabs in the project share this agent's conversation history.",
   "compact.title": "Auto-compact",
   "compact.model": "Exact model (all matching tabs)",
   "compact.profile": "Task profile",
