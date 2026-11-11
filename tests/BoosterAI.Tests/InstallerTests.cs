@@ -199,7 +199,7 @@ public class InstallerTests : IDisposable
         Assert.Equal("dark", cfg.AppTheme);
         Assert.Equal(["alpha", "beta"], cfg.Tabs.Select(t => t.Name));
         Assert.All(cfg.Tabs, t => Assert.Equal("codex", t.Llm));
-        Assert.Equal([0, 1], cfg.Tabs.Select(t => t.ColorIndex));
+        Assert.Equal([1, 2], cfg.Tabs.Select(t => t.ColorIndex));
         Assert.Equal(PathMapping.ToTabPath(Found("alpha").Path), cfg.Tabs[0].Directory);
         Assert.All(cfg.Tabs, t => Assert.Equal(32, t.Id.Length));
     }
@@ -228,7 +228,7 @@ public class InstallerTests : IDisposable
         Assert.Equal(["keep-me", "beta"], cfg.Tabs.Select(t => t.Name));
         Assert.Equal("agy", cfg.Tabs[0].Llm);
         Assert.Equal("second", Assert.Single(cfg.Tabs[0].SubTabs).Name);
-        Assert.Equal(1, cfg.Tabs[1].ColorIndex);
+        Assert.Equal(5, cfg.Tabs[1].ColorIndex);
         // The input is not modified.
         Assert.Equal("en", before.Language);
         Assert.Single(before.Tabs);

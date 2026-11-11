@@ -7,22 +7,26 @@ namespace BoosterAI.Tests;
 [Collection(ConfigFileCollection.Name)]
 public class ConverterTests
 {
+    /// <summary>A missing CLI keeps its plain name; a warning marker after it says "codex saknas" (#152).</summary>
     [Fact]
-    public void LlmNameShowsMissingTagWhenCliIsMissing()
+    public void MissingCliGetsAMarkerInsteadOfATextSuffix()
     {
         var previousLanguage = Loc.Language;
         Loc.Use("sv");
-        Converters.IsCliMissing = id => id == "codex";
+        Converters.IsCliMissing = id => id is "codex" or Catalog.ShellOnly;
         try
         {
-            var result = Converters.LlmName.Convert("codex", typeof(string), null, CultureInfo.InvariantCulture);
-            Assert.Equal("codex (saknas)", result);
+            object? Convert(Avalonia.Data.Converters.IValueConverter c, string id) => c.Convert(id, typeof(object), null, CultureInfo.InvariantCulture);
+            Assert.Equal("codex", Convert(Converters.LlmName, "codex"));
+            Assert.Equal(true, Convert(Converters.LlmMissing, "codex"));
+            Assert.Equal("codex saknas", Convert(Converters.LlmMissingName, "codex"));
 
-            var claude = Converters.LlmName.Convert("claude", typeof(string), null, CultureInfo.InvariantCulture);
-            Assert.Equal("claude", claude);
+            Assert.Equal("claude", Convert(Converters.LlmName, "claude"));
+            Assert.Equal(false, Convert(Converters.LlmMissing, "claude"));
 
-            var shell = Converters.LlmName.Convert(Catalog.ShellOnly, typeof(string), null, CultureInfo.InvariantCulture);
-            Assert.Equal("skal", shell);
+            // The plain shell is never "missing".
+            Assert.Equal("skal", Convert(Converters.LlmName, Catalog.ShellOnly));
+            Assert.Equal(false, Convert(Converters.LlmMissing, Catalog.ShellOnly));
         }
         finally
         {

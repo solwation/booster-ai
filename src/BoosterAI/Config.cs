@@ -14,8 +14,9 @@ public sealed class TabConfig
     public string Name { get; set; } = Loc.Get("tab.newName");
     /// <summary>Position in the colour theme; -1 in files from before themes (derived from Color).</summary>
     public int ColorIndex { get; set; } = -1;
-    /// <summary>The resolved colour, written for readability and used by the launcher.</summary>
-    public string Color { get; set; } = "#1E66F5";
+    /// <summary>The resolved colour, written for readability and used by the launcher. Empty in a hand-written
+    /// config without one: the tab then takes the next palette colour (#152), as a newly added project does.</summary>
+    public string Color { get; set; } = "";
     /// <summary>Linux path: inside WSL on Windows, local on Linux.</summary>
     public string Directory { get; set; } = "~";
     public bool Enabled { get; set; } = true;

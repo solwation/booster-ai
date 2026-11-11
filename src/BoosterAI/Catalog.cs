@@ -45,6 +45,12 @@ public static class Catalog
         new("Solnedgång", ["#F94144", "#F3722C", "#F8961E", "#F9C74F", "#90BE6D", "#43AA8B", "#577590", "#277DA1"]),
     ];
 
+    /// <summary>
+    /// The colour index a new project gets: the one after the previous project's (#152), so neighbouring tabs differ.
+    /// The first project starts at index 1, not the accent-like blue at 0, which sits beside the accent checkbox.
+    /// </summary>
+    public static int NextColorIndex(int? previous) => ((previous is >= 0 ? previous.Value : 0) + 1) % Themes[0].Colors.Count;
+
     public static ColorTheme Theme(string name) => Themes.FirstOrDefault(t => t.Name == name) ?? Themes[0];
 
     /// <summary>Model ids and directories end up in a shell command, so only plain characters pass.</summary>

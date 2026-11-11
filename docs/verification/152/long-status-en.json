@@ -1,0 +1,52 @@
+{
+ "Language": "en",
+ "Theme": "light",
+ "ProjectSearchRoot": "/home/me/Projects",
+ "Tabs": [
+  {
+   "Name": "Atlas",
+   "Directory": "/srv/atlas",
+   "Llm": "claude"
+  },
+  {
+   "Name": "Boreal",
+   "Directory": "/srv/boreal",
+   "Llm": "codex"
+  },
+  {
+   "Name": "Cirrus",
+   "Directory": "/srv/cirrus",
+   "Llm": "claude"
+  },
+  {
+   "Name": "Delta",
+   "Directory": "/srv/delta",
+   "Llm": "agy"
+  },
+  {
+   "Name": "Eko",
+   "Directory": "/srv/eko",
+   "Llm": "codex"
+  },
+  {
+   "Name": "Fjord",
+   "Directory": "/srv/fjord",
+   "Llm": "claude"
+  },
+  {
+   "Name": "Glimt",
+   "Directory": "/srv/glimt",
+   "Llm": "codex"
+  },
+  {
+   "Name": "Hamn",
+   "Directory": "/srv/hamn",
+   "Llm": "agy"
+  },
+  {
+   "Name": "Iris",
+   "Directory": "/srv/iris",
+   "Llm": "claude"
+  }
+ ]
+}

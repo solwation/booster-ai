@@ -203,10 +203,11 @@ public static class Installer
         {
             var dir = PathMapping.ToTabPath(p.Path);
             if (!present.Add(ProjectScanner.Key(dir))) continue;
+            var color = Catalog.NextColorIndex(cfg.Tabs.Count > 0 ? cfg.Tabs[^1].ColorIndex : null);
             cfg.Tabs.Add(new TabConfig
             {
-                Id = Guid.NewGuid().ToString("N"), Name = p.Name, Directory = dir, ColorIndex = cfg.Tabs.Count,
-                Color = Catalog.Theme(cfg.ColorTheme).ColorAt(cfg.Tabs.Count), Llm = llm,
+                Id = Guid.NewGuid().ToString("N"), Name = p.Name, Directory = dir, ColorIndex = color,
+                Color = Catalog.Theme(cfg.ColorTheme).ColorAt(color), Llm = llm,
             });
         }
         return cfg;

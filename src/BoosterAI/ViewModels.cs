@@ -58,6 +58,7 @@ public sealed class TabViewModel : Observable
     private bool _enabled, _orkester, _nonInteractive;
     private bool? _hasOrkester;
 
+    /// <param name="index">The colour index when the config has none (ColorIndex -1 and no palette colour).</param>
     public TabViewModel(TabConfig c, MainViewModel owner, int index)
     {
         _owner = owner;
@@ -96,10 +97,28 @@ public sealed class TabViewModel : Observable
     public bool Orkester
     {
         get => _orkester;
-        set { if (Set(ref _orkester, value)) { Raise(nameof(CanNonInteractive)); Raise(nameof(OnceChecked)); RaiseRestart(); } }
+        set { if (Set(ref _orkester, value)) { Raise(nameof(CanNonInteractive)); Raise(nameof(OnceChecked)); Raise(nameof(OrchestraMode)); RaiseRestart(); } }
     }
 
-    public bool NonInteractive { get => _nonInteractive; set { if (Set(ref _nonInteractive, value)) Raise(nameof(OnceChecked)); } }
+    public bool NonInteractive { get => _nonInteractive; set { if (Set(ref _nonInteractive, value)) { Raise(nameof(OnceChecked)); Raise(nameof(OrchestraMode)); } } }
+
+    /// <summary>The row's orchestra choices (#152), in <see cref="OrchestraMode"/> order: Off · Orchestra · Orchestra, once.</summary>
+    public static IReadOnlyList<string> OrchestraModes => [Loc.Get("orkester.mode.off"), Loc.Get("orkester.mode.on"), Loc.Get("orkester.mode.once")];
+
+    /// <summary>
+    /// One control for the two saved settings (#152): 0 = Orkester off, 1 = on, 2 = on with NonInteractive.
+    /// Off keeps a stored NonInteractive (ignored while off, as before); choosing 1 or 2 sets it explicitly.
+    /// </summary>
+    public int OrchestraMode
+    {
+        get => !_orkester ? 0 : _nonInteractive ? 2 : 1;
+        set
+        {
+            if (value is < 0 or > 2 || value == OrchestraMode) return;
+            if (value > 0) NonInteractive = value == 2;
+            Orkester = value > 0;
+        }
+    }
 
     /// <summary>What the toggle shows: a stored choice looks off while it cannot apply (orchestra off).</summary>
     public bool OnceChecked { get => _nonInteractive && _orkester; set => NonInteractive = value; }
@@ -149,6 +168,7 @@ public sealed class TabViewModel : Observable
             Raise(nameof(CanInstallOrkester));
             Raise(nameof(CanNonInteractive));
             RaiseRestart();
+            _owner.OrchestraColumnChanged();
         }
     }
 
@@ -162,6 +182,7 @@ public sealed class TabViewModel : Observable
     public bool CanInstallOrkester => _hasOrkester == false && IsAi;
 
     public string Color => _owner.Theme.ColorAt(_colorIndex);
+    internal int ColorIndex => _colorIndex;
     public IBrush ColorBrush => new SolidColorBrush(Avalonia.Media.Color.Parse(Color));
 
     /// <summary>Called when the theme changes.</summary>
@@ -210,6 +231,7 @@ public sealed class TabViewModel : Observable
             Raise(nameof(CanOrkester));
             Raise(nameof(CanNonInteractive));
             Raise(nameof(CanInstallOrkester));
+            _owner.OrchestraColumnChanged();
             _owner.SetupRowsChanged();
             // Another CLI's model id rarely fits; fall back to its default.
             if (!Catalog.ModelsFor(value).Contains(Model)) Model = Catalog.StandardModel;
@@ -500,10 +522,12 @@ public sealed partial class MainViewModel : Observable
                 tab.Id = Guid.NewGuid().ToString("N");
                 ids.Add(tab.Id);
             }
-            Tabs.Add(new TabViewModel(tab, this, Tabs.Count) { Parent = parent });
+            // A tab without a stored colour gets the next one (a subtab its project's), as a newly added project does.
+            Tabs.Add(new TabViewModel(tab, this, parent?.ColorIndex ?? NextProjectColor()) { Parent = parent });
         }
         _projects = Tabs.Where(t => t.IsProject).ToArray();
         _visibleTabs = Tabs.Where(IsVisibleTab).ToArray();
+        OrchestraColumnChanged();
         Tabs.CollectionChanged += (_, _) => TabsChanged();
         Update = new UpdateViewModel(cfg, Save);
         Denial = new DenialViewModel();
@@ -745,6 +769,21 @@ public sealed partial class MainViewModel : Observable
         }
     }
 
+    /// <summary>
+    /// The orchestra column (and its header) shows only while a visible row can use or install the orchestra (#152);
+    /// otherwise its width is 0 and the status column gets the room.
+    /// </summary>
+    public bool ShowOrchestraColumn => _showOrchestraColumn;
+    private bool _showOrchestraColumn;
+
+    internal void OrchestraColumnChanged()
+    {
+        var show = _visibleTabs.Any(t => t.CanOrkester || t.CanInstallOrkester);
+        if (show == _showOrchestraColumn) return;
+        _showOrchestraColumn = show;
+        Raise(nameof(ShowOrchestraColumn));
+    }
+
     public void TabsChanged()
     {
         // Status polling must not replace ItemsSource and destroy an open row editor or popup.
@@ -761,6 +800,7 @@ public sealed partial class MainViewModel : Observable
             Raise(nameof(VisibleTabs));
         }
         foreach (var project in Projects) project.GroupChanged();
+        OrchestraColumnChanged();
         RefreshConversationChoices();
         Raise(nameof(HasTabs));
         Raise(nameof(EnabledCount));
@@ -874,9 +914,12 @@ public sealed partial class MainViewModel : Observable
         return true;
     }
 
+    /// <summary>A new project's colour: the palette's next after the last project's (#152).</summary>
+    private int NextProjectColor() => Catalog.NextColorIndex(Tabs.LastOrDefault(t => t.IsProject)?.ColorIndex);
+
     public void AddTab()
     {
-        var tab = new TabViewModel(new TabConfig { Id = Guid.NewGuid().ToString("N"), ColorIndex = Tabs.Count }, this, Tabs.Count);
+        var tab = new TabViewModel(new TabConfig { Id = Guid.NewGuid().ToString("N"), ColorIndex = NextProjectColor() }, this, Tabs.Count);
         Tabs.Add(tab);
         CheckOrkester(tab);
     }
@@ -892,7 +935,7 @@ public sealed partial class MainViewModel : Observable
         if (Tabs is [{ } only] && only.Directory.Trim() is "" or "~" && Loc.IsDefaultTabName(only.Name)) Tabs.Clear();
         foreach (var p in projects)
         {
-            var tab = new TabViewModel(new TabConfig { Id = Guid.NewGuid().ToString("N"), Name = p.Name, Directory = PathMapping.ToTabPath(p.Path), ColorIndex = Tabs.Count }, this, Tabs.Count);
+            var tab = new TabViewModel(new TabConfig { Id = Guid.NewGuid().ToString("N"), Name = p.Name, Directory = PathMapping.ToTabPath(p.Path), ColorIndex = NextProjectColor() }, this, Tabs.Count);
             Tabs.Add(tab);
             CheckOrkester(tab);
         }
@@ -1036,6 +1079,44 @@ public sealed partial class MainViewModel : Observable
         tab.RefreshInputState(new TabLog(null, null, true, null, false, Activity: Activity.Idle)
         { InputReady = true, InputProtocol = 2, InputReadyAt = idle - 2000, BusyAt = idle - 1000, IdleAt = idle },
             DateTimeOffset.FromUnixTimeMilliseconds(idle).UtcDateTime);
+    }
+
+    /// <summary>
+    /// For --screenshot --fake-long-status (#152): the longest fixed status texts, one per AI row, with the orchestra
+    /// column shown, so the status column is as narrow as it gets at a given width. Rows beyond the samples stay as they are.
+    /// </summary>
+    public void ShowSampleLongStatus()
+    {
+        var now = DateTimeOffset.UtcNow;
+        long Ago(int minutes) => now.AddMinutes(-minutes).ToUnixTimeMilliseconds();
+        Action<TabViewModel>[] samples =
+        [
+            t => t.SetState(TabState.CliExited, 127),
+            t => t.SetState(TabState.Running, null, activity: Activity.Idle, clearedAt: Ago(3)),
+            t => { t.PendingRestart = true; t.SetState(TabState.Running, null, activity: Activity.Busy); },
+            t =>
+            {
+                t.LaunchedAs = t.ToConfig(forLaunch: true);
+                t.LaunchedAs.Orkester = t.LaunchedAs.NonInteractive = true;
+                t.SetState(TabState.Running, null, activity: Activity.Watching, watchingSince: Ago(59));
+            },
+            t =>
+            {
+                t.LaunchedAs = t.ToConfig(forLaunch: true);
+                t.LaunchedAs.Model = Catalog.ModelsFor(t.Llm).FirstOrDefault(m => m != t.Model) ?? "other-model";
+                t.SetState(TabState.Running, null, activity: Activity.Busy);
+            },
+            t => t.SetState(TabState.Running, null),
+            t => t.SetState(TabState.NotStarted, null),
+            t => t.SetState(TabState.CliMissing, null),
+            t => t.SetState(TabState.Closed, null),
+        ];
+        foreach (var (tab, sample) in Tabs.Where(t => t.Enabled && t.IsAi).Zip(samples))
+        {
+            tab.HasOrkester = true;
+            tab.LaunchedAs = tab.ToConfig(forLaunch: true);
+            sample(tab);
+        }
     }
 
     /// <summary>For --screenshot --fake-changed: the first tab runs a turn with another model than the one now chosen.</summary>

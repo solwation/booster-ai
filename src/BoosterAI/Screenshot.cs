@@ -8,13 +8,14 @@ using Avalonia.Threading;
 namespace BoosterAI;
 
 /// <summary>
-/// <c>--screenshot file.png [--window main|settings|install|import|restart|setup|uninstall] [--theme light|dark] [--config file.json] [--fake-update [manual:]0.3.0] [--fake-status [error:]text] [--fake-denied] [--fake-changed] [--fake-restartable N] [--fake-output [N]] [--fake-setup [cli|wsl|alias]]</c>:
+/// <c>--screenshot file.png [--window main|settings|install|import|restart|setup|uninstall] [--theme light|dark] [--config file.json] [--fake-update [manual:]0.3.0] [--fake-status [error:]text] [--fake-denied] [--fake-changed] [--fake-restartable N] [--fake-output [N]] [--fake-setup [cli|wsl|alias]] [--fake-long-status] [--check-clipping]</c>:
 /// renders a window with Avalonia's headless Skia platform. Nothing is shown on the desktop and no
 /// focus changes. The window frame (title bar) is not drawn; only the client area.
 /// </summary>
 internal sealed record ScreenshotOptions(string File, string Window, string? FakeUpdate, string? FakeStatus, bool FakeDenied, bool FakeChanged,
     int? FakeOutput = null, int FakeRestartable = 0, string? FakeSetup = null, string? Tab = null, bool FakeOptimization = false, int? FakeMemoryCap = null,
-    string? Section = null, string? FakeMemoryState = null, int? Width = null, int? Height = null, bool FakeOrchestraIdle = false, int? FakeMemorySaved = null);
+    string? Section = null, string? FakeMemoryState = null, int? Width = null, int? Height = null, bool FakeOrchestraIdle = false, int? FakeMemorySaved = null,
+    bool FakeLongStatus = false, bool CheckClipping = false);
 
 internal static class Screenshot
 {
@@ -35,7 +36,8 @@ internal static class Screenshot
             Value(args, "--section"), Value(args, "--fake-memory-state"),
             int.TryParse(Value(args, "--width"), out var width) ? width : null,
             int.TryParse(Value(args, "--height"), out var height) ? height : null, args.Contains("--fake-orchestra-idle"),
-            int.TryParse(Value(args, "--fake-memory-saved"), out var saved) ? saved : null);
+            int.TryParse(Value(args, "--fake-memory-saved"), out var saved) ? saved : null,
+            args.Contains("--fake-long-status"), args.Contains("--check-clipping"));
     }
 
     /// <summary>--fake-output [N]: the popup of the Nth running sample tab (0: the first, interactive; 1: Watching).</summary>
@@ -206,6 +208,8 @@ internal static class Screenshot
             Thread.Sleep(50);
         }
         if (o.FakeOrchestraIdle) vm.ShowSampleOrchestraIdle();
+        // --fake-long-status: the longest fixed status texts, with the orchestra column shown (#152).
+        if (o.FakeLongStatus) vm.ShowSampleLongStatus();
         Dispatcher.UIThread.RunJobs();
         for (var i = 0; i < 3; i++)
         {
@@ -219,6 +223,16 @@ internal static class Screenshot
         // --fake-output [N]: a running tab's status popup open over the window, with sample output.
         if (o.FakeOutput is { } n && vm.ShowSampleOutput(n) is { } tab) WithStatusPopup(window, frame, tab).Save(o.File);
         else frame.Save(o.File);
+        // --check-clipping: every text that ends in "…" because it did not fit is printed, and the exit code is 3 (#152).
+        if (o.CheckClipping)
+        {
+            var clipped = window.GetVisualDescendants().OfType<TextBlock>()
+                .Where(t => t.IsEffectivelyVisible && t.TextTrimming != Avalonia.Media.TextTrimming.None
+                    && t.TextLayout.TextLines.Any(l => l.HasCollapsed))
+                .Select(t => t.Text).ToList();
+            foreach (var text in clipped) Console.WriteLine("clipped: " + text);
+            if (clipped.Count > 0) return 3;
+        }
         return 0;
     }
 

@@ -15,11 +15,28 @@ public partial class MainWindow : Window
 
     private void ApplyProjectColumns(Grid grid)
     {
-        var compact = Bounds.Width is > 0 and < 1050;
-        if (grid.Tag is bool previous && previous == compact) return;
-        grid.Tag = compact;
-        grid.ColumnDefinitions = new ColumnDefinitions(compact
-            ? "4,20,46,*,115,166,120,75,105" : "4,20,46,*,200,166,195,110,130");
+        var columns = ProjectColumns(Bounds.Width, _vm.ShowOrchestraColumn);
+        if (grid.Tag as string == columns) return;
+        grid.Tag = columns;
+        grid.ColumnDefinitions = new ColumnDefinitions(columns);
+    }
+
+    /// <summary>
+    /// Stripe, handle, Start, project, status, agent, model, orchestra. Project and status share the free room, the
+    /// status a little more (its longest texts must fit at the default width); agent, model and orchestra are fixed,
+    /// and the orchestra column is 0 while no visible row can use it (#152).
+    /// </summary>
+    internal static string ProjectColumns(double width, bool orchestra)
+    {
+        var compact = width is > 0 and < 1050;
+        var fixedColumns = compact ? "150,140" : "166,195";
+        return $"4,20,46,4*,5*,{fixedColumns},{(orchestra ? 168 : 0)}";
+    }
+
+    private void ApplyAllProjectColumns()
+    {
+        foreach (var grid in this.GetVisualDescendants().OfType<Grid>().Where(g => g.Classes.Contains("project-columns")))
+            ApplyProjectColumns(grid);
     }
 
     private static readonly DataFormat<string> TabDragFormat = DataFormat.CreateStringApplicationFormat("boosterai-tab-index");
@@ -77,10 +94,10 @@ public partial class MainWindow : Window
         Closed += (_, _) => StopStatusPeek();
         ActualThemeVariantChanged += (_, _) => _vm.RaiseThemeBrushes();
         PropertyChanged += OnStatusWindowVisibilityChanged;
-        Resized += (_, _) =>
+        Resized += (_, _) => ApplyAllProjectColumns();
+        vm.PropertyChanged += (_, e) =>
         {
-            foreach (var grid in this.GetVisualDescendants().OfType<Grid>().Where(g => g.Classes.Contains("project-columns")))
-                ApplyProjectColumns(grid);
+            if (e.PropertyName == nameof(MainViewModel.ShowOrchestraColumn)) ApplyAllProjectColumns();
         };
         if (background)
         {

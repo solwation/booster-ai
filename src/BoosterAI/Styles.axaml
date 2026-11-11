@@ -202,6 +202,7 @@
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="Padding" Value="0,10" />
     <Setter Property="Margin" Value="0,0,0,2" />
+    <Setter Property="MinHeight" Value="52" />
   </Style>
   <Style Selector="Border.row:pointerover">
     <Setter Property="Background" Value="{DynamicResource RowHoverBrush}" />
@@ -251,6 +252,22 @@
     <Setter Property="FontSize" Value="13" />
   </Style>
 
+  <!-- A field whose choices are words, not values (the orchestra mode, #152): mono only on values. -->
+  <Style Selector="ComboBox.field.words">
+    <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
+  </Style>
+
+  <!-- The agent's CLI is missing where the tabs run (#152): a warning triangle after its name. -->
+  <Style Selector="Path.missing">
+    <Setter Property="Width" Value="13" />
+    <Setter Property="Height" Value="13" />
+    <Setter Property="Stretch" Value="Uniform" />
+    <Setter Property="StrokeThickness" Value="1.5" />
+    <Setter Property="StrokeLineCap" Value="Round" />
+    <Setter Property="StrokeJoin" Value="Round" />
+    <Setter Property="Stroke" Value="{DynamicResource WarningBrush}" />
+  </Style>
+
   <!-- Small borderless icon buttons. -->
   <Style Selector="Button.icon">
     <Setter Property="Background" Value="Transparent" />
@@ -267,6 +284,11 @@
     <Setter Property="StrokeLineCap" Value="Round" />
     <Setter Property="StrokeJoin" Value="Round" />
     <Setter Property="Stretch" Value="Uniform" />
+  </Style>
+  <!-- A disabled icon button (the subtab's × while its tab is open) gets no grey box, only its dimmed glyph (#152). -->
+  <Style Selector="Button.icon:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
   </Style>
   <Style Selector="Button.remove">
     <Setter Property="Opacity" Value="0.35" />

@@ -142,14 +142,14 @@
     </Border>
     </StackPanel>
 
-    <Grid Grid.Row="2" Classes="project-columns" Loaded="OnProjectGridLoaded" ColumnDefinitions="4,20,46,*,200,166,195,110,130" Margin="0,0,0,6" IsVisible="{Binding HasTabs}">
+    <!-- Column widths are set in MainWindow.axaml.cs (ProjectColumns): compact or wide, orchestra shown or 0 (#152). -->
+    <Grid Grid.Row="2" Classes="project-columns" Loaded="OnProjectGridLoaded" ColumnDefinitions="4,20,46,4*,5*,166,195,168" Margin="0,0,0,6" IsVisible="{Binding HasTabs}">
       <TextBlock Grid.Column="2" Classes="colhead" Text="{local:T col.with}" />
       <TextBlock Grid.Column="3" Classes="colhead" Text="{local:T col.project}" />
       <TextBlock Grid.Column="4" Classes="colhead" Text="{local:T col.status}" />
       <TextBlock Grid.Column="5" Classes="colhead" Text="{local:T col.llm}" />
       <TextBlock Grid.Column="6" Classes="colhead" Text="{local:T col.model}" />
-      <TextBlock Grid.Column="7" Classes="colhead" Text="{local:T col.orkester}" Margin="16,0,0,0" />
-      <TextBlock Grid.Column="8" Classes="colhead" Text="{local:T col.once}" Margin="16,0,0,0" />
+      <TextBlock Grid.Column="7" Classes="colhead" Text="{local:T col.orkester}" IsVisible="{Binding ShowOrchestraColumn}" />
     </Grid>
 
     <ScrollViewer Grid.Row="3" HorizontalScrollBarVisibility="Disabled">
@@ -160,7 +160,7 @@
               <Border Classes="row" DragDrop.AllowDrop="True" DragDrop.DragOver="OnTabDragOver"
                       DragDrop.DragLeave="OnTabDragLeave" DragDrop.Drop="OnTabDrop">
                 <StackPanel>
-                <Grid Classes="project-columns" Loaded="OnProjectGridLoaded" ColumnDefinitions="4,20,46,*,200,166,195,110,130">
+                <Grid Classes="project-columns" Loaded="OnProjectGridLoaded" ColumnDefinitions="4,20,46,4*,5*,166,195,168">
                   <Border Grid.Column="0" Background="{Binding ColorBrush}" CornerRadius="{StaticResource RadiusSmall}" />
                   <TextBlock Grid.Column="1" Text="⋮" Foreground="{DynamicResource FaintBrush}" FontSize="16"
                              HorizontalAlignment="Center" VerticalAlignment="Center" PointerPressed="OnTabDragStart"
@@ -222,32 +222,35 @@
                             Margin="0,0,12,0" Opacity="{Binding RowOpacity}">
                     <ComboBox.ItemTemplate>
                       <DataTemplate x:DataType="x:String">
-                        <StackPanel Orientation="Horizontal" Spacing="6"><local:AgentIcon Cli="{Binding}" Width="16" Height="16" /><TextBlock Text="{Binding, Converter={x:Static local:Converters.LlmName}}" VerticalAlignment="Center" /></StackPanel>
+                        <!-- A CLI missing where the tabs run gets a warning marker after its name, not a text suffix (#152). -->
+                        <StackPanel Orientation="Horizontal" Spacing="6"><local:AgentIcon Cli="{Binding}" Width="16" Height="16" /><TextBlock Text="{Binding, Converter={x:Static local:Converters.LlmName}}" VerticalAlignment="Center" />
+                          <Border Background="Transparent" VerticalAlignment="Center" IsVisible="{Binding, Converter={x:Static local:Converters.LlmMissing}}"
+                                  ToolTip.Tip="{Binding, Converter={x:Static local:Converters.LlmMissingName}}"
+                                  AutomationProperties.Name="{Binding, Converter={x:Static local:Converters.LlmMissingName}}">
+                            <Path Classes="missing" Data="{StaticResource WarningIcon}" />
+                          </Border></StackPanel>
                       </DataTemplate>
                     </ComboBox.ItemTemplate>
                   </ComboBox>
                   <ComboBox Grid.Column="6" Classes="field" IsEditable="True" ItemsSource="{Binding Models}"
                             Text="{Binding Model}" IsEnabled="{Binding IsAi}" Opacity="{Binding RowOpacity}"
-                            ToolTip.Tip="{local:T model.tip}" />
+                            Margin="0,0,12,0" ToolTip.Tip="{local:T model.tip}" />
 
-                  <Panel Grid.Column="7" Margin="16,0,0,0" VerticalAlignment="Center" Opacity="{Binding RowOpacity}">
-                    <ToggleSwitch IsChecked="{Binding Orkester}" IsVisible="{Binding CanOrkester}"
-                                  OnContent="{x:Null}" OffContent="{x:Null}" MinWidth="0"
-                                  ToolTip.Tip="{local:T orkester.tip}" />
+                  <!-- One choice for the orchestra and Run once (#152); empty where the folder has no orchestra to use or install. -->
+                  <Panel Grid.Column="7" VerticalAlignment="Center" Opacity="{Binding RowOpacity}">
+                    <ComboBox Classes="field words" ItemsSource="{x:Static local:TabViewModel.OrchestraModes}"
+                              SelectedIndex="{Binding OrchestraMode}" IsVisible="{Binding CanOrkester}"
+                              ToolTip.Tip="{local:T orkester.mode.tip}" AutomationProperties.Name="{local:T col.orkester}" />
                     <Button Classes="link" IsVisible="{Binding CanInstallOrkester}" Click="OnInstallOrkester"
                             AutomationProperties.Name="{local:T install.name}"
                             ToolTip.Tip="{local:T install.tip}">
                       <TextBlock Text="{local:T install.link}" />
                     </Button>
                   </Panel>
-
-                  <ToggleSwitch Grid.Column="8" Margin="16,0,0,0" VerticalAlignment="Center" Opacity="{Binding RowOpacity}"
-                                IsChecked="{Binding OnceChecked}" IsEnabled="{Binding CanNonInteractive}" IsVisible="{Binding CanOrkester}"
-                                OnContent="{x:Null}" OffContent="{x:Null}" MinWidth="0"
-                                ToolTip.Tip="{local:T once.tip}" AutomationProperties.Name="{local:T col.once}" />
                 </Grid>
-                <StackPanel Orientation="Horizontal" Margin="62,6,0,2" Spacing="12" IsVisible="{Binding IsProject}">
-                  <StackPanel Orientation="Horizontal" Spacing="12" IsVisible="{Binding Expanded}">
+                <!-- Only an expanded project carries a line under it, so collapsed rows keep one rhythm (#152). -->
+                <StackPanel Orientation="Horizontal" IsVisible="{Binding IsProject}">
+                  <StackPanel Orientation="Horizontal" Spacing="12" Margin="62,6,0,2" IsVisible="{Binding Expanded}">
                     <Button Classes="link" Content="{local:T subtab.add}" Click="OnAddSubTab" Padding="0,2"
                             AutomationProperties.Name="{local:T subtab.add}" />
                     <TextBlock Classes="muted" Text="{Binding SubTabSummary}" VerticalAlignment="Center" FontSize="12" />

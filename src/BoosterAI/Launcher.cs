@@ -434,7 +434,7 @@ fi
             var t = tabs[i];
             if (a.Count > 2) a.Add(";");
             // A raw '"' anywhere in the wt.exe command line breaks every later argument (#124); the title shows a typographic one.
-            a.AddRange(["new-tab", .. profile, "--title", t.Name.Replace('"', '\u201D'), "--tabColor", t.Color, "--suppressApplicationTitle",
+            a.AddRange(["new-tab", .. profile, "--title", t.Name.Replace('"', '\u201D'), "--tabColor", string.IsNullOrWhiteSpace(t.Color) ? Catalog.Themes[0].Colors[0] : t.Color, "--suppressApplicationTitle",
                 "wsl.exe", "-d", distro, "--exec", "bash", "-lic", TabScript(InWsl(t), prompt, tracks?[i], resume)]);
         }
         a.AddRange([";", "focus-tab", "-t", "0"]);
