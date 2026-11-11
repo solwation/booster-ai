@@ -1,0 +1,38 @@
+{
+  "software": true,
+  "nativePopup": true,
+  "separateHwnd": true,
+  "rootType": "Avalonia.Controls.Primitives.PopupRoot",
+  "opacity": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
+  "surfaceColor": "#ff1c1e26",
+  "extendedStyle": 136,
+  "captured": true,
+  "assemblyVersion": "0.36.0.0",
+  "framework": ".NET 10.0.15",
+  "platform": {
+    "PlatformImplementation": "Avalonia.Win32.PopupImpl",
+    "NativeHandle": 4721040,
+    "RenderScaling": 1,
+    "ActualTransparency": "Transparent",
+    "UseRedirectionBitmap": true,
+    "GraphicsSurface": null,
+    "CompositionEffectsSurface": null,
+    "SoftwareFramePresent": true,
+    "Renderer": "Avalonia.Rendering.Composition.CompositingRenderer"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "application_source_revision": "d14abfa9a78c308559d5a4a7e452fa65fd39e89f",
+  "source_and_assets_equal_release": "v0.37.0",
+  "application_assembly_sha256": "80b0159cc9e94bb2799ed226871a564bcb50dfc4803f2b31cae7f11e2e45f348",
+  "avalonia": "11.3.22",
+  "platform": "Windows x64, native Win32, private desktop",
+  "framework": ".NET 10.0.15",
+  "capture": "PrintWindow; additional native premultiplied software framebuffer proof",
+  "personal_configuration_used": false
+}

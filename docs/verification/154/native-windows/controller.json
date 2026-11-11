@@ -1,0 +1,17 @@
+{
+  "privateDesktop": true,
+  "switchedDesktop": false,
+  "foregroundUnchanged": true,
+  "results": [
+    {
+      "mode": "default",
+      "exit": 0,
+      "foregroundUnchanged": true
+    },
+    {
+      "mode": "software",
+      "exit": 0,
+      "foregroundUnchanged": true
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "software": false,
+  "capture": "PrintWindow of native WinUI composition HWND",
+  "expected": "#ff1c1e26",
+  "before": {
+    "sampleCount": 300,
+    "minAlpha": 255,
+    "maxAlpha": 255,
+    "matchingExpected": 300,
+    "firstPixel": "#ff1c1e26"
+  },
+  "negativeControl": {
+    "sampleCount": 300,
+    "minAlpha": 255,
+    "maxAlpha": 255,
+    "matchingExpected": 0,
+    "firstPixel": "#ff0e0f13"
+  },
+  "restored": {
+    "sampleCount": 300,
+    "minAlpha": 255,
+    "maxAlpha": 255,
+    "matchingExpected": 300,
+    "firstPixel": "#ff1c1e26"
+  },
+  "passed": true
+}

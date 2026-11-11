@@ -1,0 +1,27 @@
+{
+  "software": true,
+  "capture": "native Win32 framebuffer BGRA premultiplied",
+  "expected": "#ff1c1e26",
+  "before": {
+    "sampleCount": 300,
+    "minAlpha": 255,
+    "maxAlpha": 255,
+    "matchingExpected": 300,
+    "firstPixel": "#ff1c1e26"
+  },
+  "negativeControl": {
+    "sampleCount": 300,
+    "minAlpha": 127,
+    "maxAlpha": 127,
+    "matchingExpected": 0,
+    "firstPixel": "#7f1c1e26"
+  },
+  "restored": {
+    "sampleCount": 300,
+    "minAlpha": 255,
+    "maxAlpha": 255,
+    "matchingExpected": 300,
+    "firstPixel": "#ff1c1e26"
+  },
+  "passed": true
+}
