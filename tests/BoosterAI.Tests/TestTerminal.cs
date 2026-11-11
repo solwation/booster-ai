@@ -10,6 +10,9 @@ using BoosterAI;
 internal static class TestTerminal
 {
     public static readonly ConcurrentQueue<Launcher.TerminalRequest> Requests = new();
+
+    /// <summary>A start with a tab named like this fails as if the terminal did not open.</summary>
+    public const string FailPrefix = "fail-terminal-";
     public static readonly ConcurrentQueue<(int Percent, bool Restore)> ZoomRequests = new();
 
     public static readonly string SessionRoot =
@@ -18,7 +21,12 @@ internal static class TestTerminal
     [ModuleInitializer]
     internal static void Install()
     {
-        Launcher.OpenTerminal = Requests.Enqueue;
+        Launcher.OpenTerminal = r =>
+        {
+            if (r.Tabs.Any(t => t.Name.StartsWith(FailPrefix, StringComparison.Ordinal)))
+                throw new InvalidOperationException("synthetic terminal failure");
+            Requests.Enqueue(r);
+        };
         TabTitles.Restore = (_, _) => { };
         Launcher.RequestZoom = (percent, restore) => ZoomRequests.Enqueue((percent, restore));
         TabSession.DefaultRoot = SessionRoot;

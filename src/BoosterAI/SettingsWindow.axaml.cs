@@ -142,7 +142,7 @@ public partial class SettingsWindow : Window
         }
         catch (Exception ex)
         {
-            _vm.ShowStatus(Loc.Format("status.pickerFailed", ex.Message), error: true);
+            _vm.ShowError(ErrorKind.SearchRootPicker, Loc.Format("status.pickerFailed", ex.Message));
         }
     }
 
@@ -166,7 +166,7 @@ public partial class SettingsWindow : Window
         }
         catch (Exception ex)
         {
-            _vm.ShowStatus(Loc.Format("status.pickerFailed", ex.Message), error: true);
+            _vm.ShowError(ErrorKind.ProjectPicker, Loc.Format("status.pickerFailed", ex.Message));
         }
     }
 }

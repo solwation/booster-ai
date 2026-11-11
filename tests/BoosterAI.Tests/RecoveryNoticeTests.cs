@@ -51,13 +51,13 @@ public class RecoveryNoticeTests
         var vm = RunningTabs(2);
         var initialRevision = vm.StatusRevision;
         vm.ShowRecoveredStatus(vm.Tabs, initialRevision);
-        vm.ShowStatus("new message", error);
+        Show(vm, "new message", error);
         foreach (var row in vm.Tabs) row.SetState(TabState.Closed, null);
-        Assert.Equal("new message", vm.Status);
+        Assert.Equal("new message", Shown(vm));
         Assert.Equal(error, vm.StatusIsError);
         // The same recovery result arriving late must not resurrect its old count.
         vm.ShowRecoveredStatus(vm.Tabs, initialRevision);
-        Assert.Equal("new message", vm.Status);
+        Assert.Equal("new message", Shown(vm));
         Assert.Equal(error, vm.StatusIsError);
     }
 
@@ -66,12 +66,13 @@ public class RecoveryNoticeTests
     {
         var vm = RunningTabs(1);
         var revisionBeforeLookup = vm.StatusRevision;
-        vm.ShowStatus("", error: false); // A launch completed with no message while discovery was pending.
+        vm.ShowStatus(""); // A launch completed with no message while discovery was pending.
         vm.ShowRecoveredStatus(vm.Tabs, revisionBeforeLookup);
         Assert.Equal("", vm.Status);
-        vm.ShowStatus("launch failed", error: true);
+        Show(vm, "launch failed", error: true);
         vm.ShowRecoveredStatus(vm.Tabs, revisionBeforeLookup);
-        Assert.Equal("launch failed", vm.Status);
+        Assert.Equal("launch failed", vm.Error.Text);
+        Assert.Equal("", vm.Status);
         Assert.True(vm.StatusIsError);
     }
 
@@ -87,11 +88,13 @@ public class RecoveryNoticeTests
         // Validation fails before any process is launched, but this is the real restart entry point.
         vm.RestartChanged(row);
         Assert.True(vm.StatusIsError);
-        Assert.NotEmpty(vm.Status);
-        var error = vm.Status;
+        Assert.Equal(ErrorKind.InvalidTab, vm.Error.Kind);
+        Assert.NotEmpty(vm.Error.Text);
+        var error = vm.Error.Text;
         vm.ShowRecoveredStatus(vm.Tabs, recoveryRevision);
         row.SetState(TabState.Closed, null);
-        Assert.Equal(error, vm.Status);
+        Assert.Equal(error, vm.Error.Text);
+        Assert.Equal("", vm.Status);
         Assert.True(vm.StatusIsError);
     }
 
@@ -106,4 +109,13 @@ public class RecoveryNoticeTests
         vm.ShowRecoveredStatus(vm.Tabs, vm.StatusRevision);
         Assert.Equal("", vm.Status);
     }
+
+    private static void Show(MainViewModel vm, string text, bool error)
+    {
+        if (error) vm.ShowError(ErrorKind.InvalidTab, text);
+        else vm.ShowStatus(text);
+    }
+
+    /// <summary>The newest outcome's text: the error banner's while it shows, otherwise the status line's.</summary>
+    private static string Shown(MainViewModel vm) => vm.Error.IsVisible ? vm.Error.Text : vm.Status;
 }

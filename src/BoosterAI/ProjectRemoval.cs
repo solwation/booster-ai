@@ -24,7 +24,7 @@ public sealed partial class MainViewModel
         if (!await confirm(request)) return false;
         if (!group.SequenceEqual(ProjectGroup(project)))
         {
-            ShowStatus(Loc.Get("project.remove.changed"), error: true);
+            ShowError(ErrorKind.ProjectRemoval, Loc.Get("project.remove.changed"));
             return false;
         }
         return RemoveProject(project, confirmed: true);
@@ -36,7 +36,7 @@ public sealed partial class MainViewModel
         if (!confirmed) return false;
         if (!CanRemoveProject(project))
         {
-            ShowStatus(Loc.Get("project.remove.blocked"), error: true);
+            ShowError(ErrorKind.ProjectRemoval, Loc.Get("project.remove.blocked"));
             return false;
         }
         foreach (var tab in ProjectGroup(project).ToArray()) Tabs.Remove(tab);

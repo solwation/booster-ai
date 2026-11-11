@@ -241,6 +241,12 @@
     <Setter Property="Padding" Value="14,8" />
   </Style>
 
+  <!-- The error banner (#153): danger border and icon, a soft danger surface, body text in TextBrush. -->
+  <Style Selector="Border.update.danger">
+    <Setter Property="BorderBrush" Value="{DynamicResource DangerBrush}" />
+    <Setter Property="Background" Value="{DynamicResource DangerSurfaceBrush}" />
+  </Style>
+
   <Style Selector="Border.update TextBlock.failed">
     <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
   </Style>

@@ -127,7 +127,11 @@ internal static class Screenshot
         if (o.FakeOptimization) vm.Optimization.ShowFakeUnoptimized(selectedGb: o.FakeMemoryCap, savedGb: o.FakeMemorySaved);
         // --fake-status "text" shows a status line message as normal, error:text as an error (screenshots only).
         if (o.FakeStatus is { } st)
-            vm.ShowStatus(st.StartsWith("error:") ? st[6..] : st, st.StartsWith("error:"));
+        {
+            // An error is shown as a failed start: the banner with Retry and the terminal settings.
+            if (st.StartsWith("error:")) vm.ShowError(ErrorKind.Launch, st[6..], retry: () => { });
+            else vm.ShowStatus(st);
+        }
         Window window = o.Window switch
         {
             "main" => new MainWindow(vm),
@@ -227,6 +231,8 @@ internal static class Screenshot
         var target = window.GetVisualDescendants().OfType<Control>()
             .First(c => c.DataContext == tab && ToolTip.GetTip(c) is ToolTip);
         var tip = (ToolTip)ToolTip.GetTip(target)!;
+        // An exit with an error is shown as the click opens it, with ↻ as the primary action (#153).
+        if (tab.IsExitError && tip.Content is StatusPeekView view) view.ShowsActions = true;
         ToolTip.SetIsOpen(target, true);
         for (var i = 0; i < 3; i++)
         {

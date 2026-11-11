@@ -2,6 +2,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.VisualTree;
 
 namespace BoosterAI;
 
@@ -39,16 +40,45 @@ public partial class MainWindow
     {
         if (sender is not StatusPeekButton { DataContext: TabViewModel tab } target) return;
         if (_statusPeekTarget == target && _statusPeek?.IsOpen == true) { CloseStatusPeek(restoreFocus: true); return; }
+        ShowStatusPeek(target, tab);
+    }
+
+    /// <summary>The error banner's "Visa detaljer": the tab's status popup, as a click on its status opens it.</summary>
+    private void OpenStatusPeek(TabViewModel tab)
+    {
+        if (tab.Parent is { Expanded: false } parent) parent.Expanded = true;
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            var target = this.GetVisualDescendants().OfType<StatusPeekButton>().FirstOrDefault(b => b.DataContext == tab);
+            if (target is null) return;
+            target.BringIntoView();
+            ShowStatusPeek(target, tab);
+        }, Avalonia.Threading.DispatcherPriority.Loaded);
+    }
+
+    private void ShowStatusPeek(StatusPeekButton target, TabViewModel tab)
+    {
         CloseStatusPeek(restoreFocus: false);
         ToolTip.SetIsOpen(target, false);
-        var content = new StatusPeekView { DataContext = tab, MaxHeight = Math.Max(100, ClientSize.Height - 48) };
+        var content = new StatusPeekView { DataContext = tab, MaxHeight = Math.Max(100, ClientSize.Height - 48), ShowsActions = true };
+        content.RestartRequested += () =>
+        {
+            CloseStatusPeek(restoreFocus: true);
+            OnRestart(target, new RoutedEventArgs());
+        };
         var flyout = new Flyout { Content = content, Placement = PlacementMode.Bottom };
         flyout.FlyoutPresenterClasses.Add("status-output");
         _statusPeek = flyout;
         _statusPeekTarget = target;
         content.AddHandler(KeyDownEvent, (_, key) =>
         {
-            if (key.Key is Key.Enter or Key.Space) { key.Handled = true; return; }
+            if (key.Key is Key.Enter or Key.Space)
+            {
+                // Swallowed so it never reaches the status button again; the popup's own ↻ still answers it.
+                key.Handled = true;
+                if (key.Source is Button { Name: "RestartButton" }) content.RequestRestart();
+                return;
+            }
             if (key.Key != Key.Escape) return;
             key.Handled = true;
             CloseStatusPeek(restoreFocus: true);

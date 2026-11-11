@@ -33,8 +33,28 @@
       </Button>
     </Grid>
 
-    <!-- Update prompt: a quiet bar, only while a newer release is offered (see UpdateViewModel). -->
+    <!-- Banners. At most one action among them is primary (MainViewModel.PrimaryBanner); the rest are secondary. -->
     <StackPanel Grid.Row="1">
+    <!-- Error (#153): the cause in one sentence, one or two recovery actions and a close button (ErrorBannerViewModel). -->
+    <Border Classes="update danger" IsVisible="{Binding Error.IsVisible}" Margin="0,0,0,14">
+      <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+        <Path Grid.Column="0" Data="{StaticResource WarningIcon}" Width="15" Height="15" Stretch="Uniform" StrokeThickness="1.5"
+              StrokeLineCap="Round" StrokeJoin="Round" Stroke="{DynamicResource DangerBrush}" VerticalAlignment="Center" Margin="0,0,10,0" />
+        <SelectableTextBlock Grid.Column="1" Text="{Binding Error.Text}" TextWrapping="Wrap" VerticalAlignment="Center" FontSize="13.5"
+                             Foreground="{DynamicResource TextBrush}" />
+        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" Margin="16,0,0,0" VerticalAlignment="Center">
+          <Button Classes.primary="{Binding Error.FirstIsPrimary}" Content="{Binding Error.FirstLabel}" Click="OnErrorFirst"
+                  IsVisible="{Binding Error.HasFirst}" Padding="14,6" />
+          <Button Content="{Binding Error.SecondLabel}" Click="OnErrorSecond" IsVisible="{Binding Error.HasSecond}" Padding="14,6" />
+        </StackPanel>
+        <Button Grid.Column="3" Classes="icon" Click="OnErrorClose" Margin="10,0,-4,0" VerticalAlignment="Center"
+                ToolTip.Tip="{local:T error.close}" AutomationProperties.Name="{local:T error.close}">
+          <Path Data="{StaticResource CloseIcon}" Width="10" Height="10" />
+        </Button>
+      </Grid>
+    </Border>
+
+    <!-- Update prompt: a quiet bar, only while a newer release is offered (see UpdateViewModel). -->
     <Border Classes="update" IsVisible="{Binding Update.IsVisible}" Margin="0,0,0,14">
       <Grid ColumnDefinitions="Auto,*,Auto">
         <Path Grid.Column="0" Data="{StaticResource DownloadIcon}" Width="14" Height="14" Stretch="Uniform" StrokeThickness="1.5"
@@ -51,9 +71,9 @@
           </Grid>
         </StackPanel>
         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" Margin="16,0,0,0" VerticalAlignment="Center">
-          <Button Classes="primary" Content="{local:T update.install}" Click="OnUpdateInstall" IsVisible="{Binding Update.ShowInstall}"
+          <Button Classes.primary="{Binding UpdatePrimary}" Content="{local:T update.install}" Click="OnUpdateInstall" IsVisible="{Binding Update.ShowInstall}"
                   ToolTip.Tip="{Binding Update.InstallTip}" Padding="14,6" />
-          <Button Classes="primary" Content="{local:T update.page}" Click="OnUpdatePage" IsVisible="{Binding Update.ShowPage}"
+          <Button Classes.primary="{Binding UpdatePrimary}" Content="{local:T update.page}" Click="OnUpdatePage" IsVisible="{Binding Update.ShowPage}"
                   ToolTip.Tip="{Binding Update.PageUrl}" Padding="14,6" />
           <Button Content="{local:T update.later}" Click="OnUpdateLater" IsVisible="{Binding Update.ShowDismiss}" Padding="14,6" />
           <Button Content="{local:T update.skip}" Click="OnUpdateSkip" IsVisible="{Binding Update.ShowDismiss}" Padding="14,6" />
@@ -68,7 +88,7 @@
               StrokeLineCap="Round" StrokeJoin="Round" Stroke="{DynamicResource LinkBrush}" VerticalAlignment="Center" Margin="0,0,10,0" />
         <TextBlock Grid.Column="1" Text="{Binding Denial.Text}" TextWrapping="Wrap" VerticalAlignment="Center" FontSize="13.5" />
         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" Margin="16,0,0,0" VerticalAlignment="Center">
-          <Button Classes="primary" Content="{local:T denied.allow}" Click="OnAllowDenied" ToolTip.Tip="{Binding Denial.AllowTip}" Padding="14,6" />
+          <Button Classes.primary="{Binding DenialPrimary}" Content="{local:T denied.allow}" Click="OnAllowDenied" ToolTip.Tip="{Binding Denial.AllowTip}" Padding="14,6" />
           <Button Content="{local:T denied.dismiss}" Click="OnDismissDenied" Padding="14,6" />
         </StackPanel>
       </Grid>
@@ -80,7 +100,7 @@
         <Path Grid.Column="0" Data="{StaticResource DownloadIcon}" Width="14" Height="14" Stretch="Uniform" StrokeThickness="1.5"
               StrokeLineCap="Round" StrokeJoin="Round" Stroke="{DynamicResource LinkBrush}" VerticalAlignment="Center" Margin="0,0,10,0" />
         <TextBlock Grid.Column="1" Text="{Binding Setup.WslText}" TextWrapping="Wrap" VerticalAlignment="Center" FontSize="13.5" />
-        <Button Grid.Column="2" Classes="primary" Content="{local:T setup.wsl.install}" Click="OnInstallWsl" IsVisible="{Binding Setup.CanInstallWsl}"
+        <Button Grid.Column="2" Classes.primary="{Binding WslPrimary}" Content="{local:T setup.wsl.install}" Click="OnInstallWsl" IsVisible="{Binding Setup.CanInstallWsl}"
                 ToolTip.Tip="{local:T setup.wsl.install.tip}" Padding="14,6" Margin="16,0,0,0" VerticalAlignment="Center" />
       </Grid>
     </Border>
@@ -99,7 +119,7 @@
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="local:CliOffer">
-                <Button Classes="primary" Content="{Binding Label}" Click="OnInstallCli" ToolTip.Tip="{Binding Tip}" Padding="14,6" />
+                <Button Classes.primary="{Binding $parent[ItemsControl].((local:MainViewModel)DataContext).MissingPrimary}" Content="{Binding Label}" Click="OnInstallCli" ToolTip.Tip="{Binding Tip}" Padding="14,6" />
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>
@@ -115,7 +135,7 @@
               Fill="{DynamicResource LinkBrush}" VerticalAlignment="Center" Margin="0,0,10,0" />
         <TextBlock Grid.Column="1" Text="{local:T optimization.banner.text}" TextWrapping="Wrap" VerticalAlignment="Center" FontSize="13.5" />
         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" Margin="16,0,0,0" VerticalAlignment="Center">
-          <Button Classes="primary" Content="{local:T optimization.banner.button}" Click="OnOptimizeWsl" Padding="14,6" />
+          <Button Classes.primary="{Binding OptimizationPrimary}" Content="{local:T optimization.banner.button}" Click="OnOptimizeWsl" Padding="14,6" />
           <Button Content="{local:T optimization.banner.dismiss}" Click="OnDismissOptimization" Padding="14,6" />
         </StackPanel>
       </Grid>
@@ -252,10 +272,10 @@
     </ScrollViewer>
 
     <Grid Grid.Row="4" ColumnDefinitions="*,Auto,Auto,Auto" Margin="0,16,0,0">
-      <!-- The running version sits under the status, bottom left, so a report always says which build it was. -->
+      <!-- The running version sits under the status, bottom left, so a report always says which build it was.
+           The status line is for neutral acknowledgements only; errors use the banner at the top (#153). -->
       <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,20,0" Spacing="4">
-        <TextBlock Text="{Binding Status}" TextWrapping="Wrap" IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                   Classes.muted="{Binding !StatusIsError}" Classes.error="{Binding StatusIsError}" />
+        <TextBlock Classes="muted" Text="{Binding Status}" TextWrapping="Wrap" IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
         <TextBlock Classes="muted" Text="{Binding VersionText}" FontSize="11.5" ToolTip.Tip="{local:T version.tip}" />
       </StackPanel>
       <Button Grid.Column="1" Classes="main-action secondary" Height="{Binding #LaunchButton.Bounds.Height}" Content="{Binding RestartAllLabel}" Click="OnRestartAll"

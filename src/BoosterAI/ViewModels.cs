@@ -382,8 +382,14 @@ public sealed class TabViewModel : Observable
     private string _outputText = "";
     private bool _hasOutput;
 
-    /// <summary>The status popup shows the tab's last lines only while its CLI lives (Running, whatever the activity).</summary>
-    public bool ShowsOutput => _state is TabState.Running;
+    /// <summary>
+    /// The status popup shows the tab's last lines while its CLI lives (Running, whatever the activity) and after it
+    /// exited with an error, where they tell why (#153).
+    /// </summary>
+    public bool ShowsOutput => _state is TabState.Running || IsExitError;
+
+    /// <summary>The CLI ended with a non-zero exit code: the popup offers ↻ as its primary action.</summary>
+    public bool IsExitError => _state is TabState.CliExited && _rc is not 0;
 
     /// <summary>The tab's last lines (see TabSession.ReadOutput), read only while the popup is open.</summary>
     public string OutputText { get => _outputText; private set => Set(ref _outputText, value); }
@@ -392,6 +398,7 @@ public sealed class TabViewModel : Observable
     public string? OutputNote => _state switch
     {
         TabState.Running => _hasOutput ? null : Loc.Get("output.none"),
+        TabState.CliExited when IsExitError => _hasOutput ? null : Loc.Get("output.none"),
         null or TabState.Starting => null,
         _ => Loc.Get("output.notRunning"),
     };
@@ -447,7 +454,7 @@ public sealed class TabViewModel : Observable
         _clearedAt = clearedAt;
         if (state != TabState.Running) PendingRestart = false;
         foreach (var n in new[] { nameof(HasStatus), nameof(IsRunning), nameof(IsAlive), nameof(OpenTip), nameof(WillStart), nameof(Activity), nameof(StatusText), nameof(StatusTip), nameof(StatusBrush),
-            nameof(ShowsOutput), nameof(HasOutput), nameof(OutputNote), nameof(HasOutputNote), nameof(CanRemoveSubTab) }) Raise(n);
+            nameof(ShowsOutput), nameof(IsExitError), nameof(HasOutput), nameof(OutputNote), nameof(HasOutputNote), nameof(CanRemoveSubTab) }) Raise(n);
         RaiseRestart();
         (Parent ?? this).GroupChanged();
         if (stateChanged) _owner.RecoveredTabChanged(this);
@@ -472,7 +479,6 @@ public sealed partial class MainViewModel : Observable
     /// <summary>The config as this instance last loaded or saved it; see ConfigMerge.</summary>
     private AppConfig _saved;
     private string _status = "";
-    private bool _statusIsError;
     private string? _wslHome;
 
     public MainViewModel(AppConfig cfg)
@@ -508,6 +514,7 @@ public sealed partial class MainViewModel : Observable
             foreach (var t in Tabs) t.RaiseLlms();
         };
         Setup.ConfigureCompact(CompactEditor);
+        WatchBanners();
         _ = InitAsync();
     }
 
@@ -529,20 +536,49 @@ public sealed partial class MainViewModel : Observable
     /// <summary>The window title and the bottom-left label name the running build, so any report says which version it was.</summary>
     public string AppTitle => "BoosterAI " + UpdateLogic.Current;
     public string VersionText => "v" + UpdateLogic.Current;
+    /// <summary>The status line at the bottom: neutral acknowledgements only; errors go to the banner (#153).</summary>
     public string Status { get => _status; private set => Set(ref _status, value); }
-    public bool StatusIsError { get => _statusIsError; private set => Set(ref _statusIsError, value); }
+    /// <summary>The newest outcome is an error, shown in the error banner.</summary>
+    public bool StatusIsError => Error.IsVisible;
+    /// <summary>The danger banner at the top of the main window.</summary>
+    public ErrorBannerViewModel Error { get; } = new();
 
     // Every status publication invalidates pending recovery notices, even when its text is unchanged.
     internal long StatusRevision { get; private set; }
     private HashSet<TabViewModel>? _recoveredStatusRows;
 
-    public void ShowStatus(string text, bool error)
+    /// <summary>A neutral acknowledgement in the status line; it also retires an older error banner.</summary>
+    public void ShowStatus(string text)
     {
         StatusRevision++;
         _recoveredStatusRows = null;
         Status = text;
-        StatusIsError = error;
+        Error.Hide();
     }
+
+    /// <summary>
+    /// An error in the banner, with the actions its kind offers (ErrorBannerViewModel.ActionsFor): pass
+    /// <paramref name="retry"/> for kinds with Retry and <paramref name="tab"/> for kinds with Details.
+    /// </summary>
+    public void ShowError(ErrorKind kind, string text, Action? retry = null, TabViewModel? tab = null)
+    {
+        StatusRevision++;
+        _recoveredStatusRows = null;
+        Status = "";
+        Error.Show(kind, text, retry, tab);
+    }
+
+    /// <summary>A launch's outcome: "" clears the status, otherwise an invalid tab or a terminal that did not open.</summary>
+    private void ShowLaunchOutcome(string error, IEnumerable<TabConfig> tabs, Action retry, string success = "")
+    {
+        if (error == "") { ShowStatus(success); return; }
+        var enabled = TabGroups.Flatten(tabs.ToList()).Where(t => t.Enabled).ToList();
+        if (enabled.Count == 0 || Launcher.Validate(enabled) != "") ShowError(ErrorKind.InvalidTab, error);
+        else ShowError(ErrorKind.Launch, error, retry);
+    }
+
+    /// <summary>The window's own Start (with its after-launch policy); "Försök igen" after a failed start uses it.</summary>
+    internal Action? LaunchFromWindow { get; set; }
 
     /// <summary>A startup notice only: a newer status or the first recovered tab's state change retires it.</summary>
     internal void ShowRecoveredStatus(IEnumerable<TabViewModel> rows, long expectedRevision)
@@ -550,7 +586,7 @@ public sealed partial class MainViewModel : Observable
         if (StatusRevision != expectedRevision) return;
         var running = rows.Where(row => row.IsAlive).ToHashSet();
         if (running.Count == 0) return;
-        ShowStatus(Loc.Format(running.Count == 1 ? "status.foundRunning.one" : "status.foundRunning.many", running.Count), error: false);
+        ShowStatus(Loc.Format(running.Count == 1 ? "status.foundRunning.one" : "status.foundRunning.many", running.Count));
         _recoveredStatusRows = running;
     }
 
@@ -561,7 +597,7 @@ public sealed partial class MainViewModel : Observable
 
     private void DismissRecoveredStatus()
     {
-        if (_recoveredStatusRows is not null) ShowStatus("", error: false);
+        if (_recoveredStatusRows is not null) ShowStatus("");
     }
 
     public string WslDistro
@@ -860,7 +896,7 @@ public sealed partial class MainViewModel : Observable
             Tabs.Add(tab);
             CheckOrkester(tab);
         }
-        if (projects.Count > 0) ShowStatus(Loc.Format(projects.Count == 1 ? "status.imported.one" : "status.imported.many", projects.Count), error: false);
+        if (projects.Count > 0) ShowStatus(Loc.Format(projects.Count == 1 ? "status.imported.one" : "status.imported.many", projects.Count));
     }
 
     /// <summary>Resolves the WSL home (for ~ paths on Windows), then checks every tab.</summary>
@@ -926,7 +962,7 @@ public sealed partial class MainViewModel : Observable
             ConfigStore.Save(cfg);
             _saved = ConfigStore.Copy(cfg);
         }
-        catch (Exception e) { ShowStatus(Loc.Format("status.saveFailed", e.Message), error: true); }
+        catch (Exception e) { ShowError(ErrorKind.Save, Loc.Format("status.saveFailed", e.Message), Save); }
     }
 
     /// <summary>Shows the settings another instance saved (ConfigMerge) in this one's windows.</summary>
@@ -955,7 +991,7 @@ public sealed partial class MainViewModel : Observable
         // Running tabs joined from an earlier BoosterAI run keep their window: new tabs open next to them.
         var error = Start(cfg, rows, window: _session?.WindowName);
         Save();
-        ShowStatus(error, error: error != "");
+        ShowLaunchOutcome(error, cfg.Tabs, () => { if (LaunchFromWindow is { } launch) launch(); else Launch(); });
         return error == "";
     }
 
@@ -1019,6 +1055,17 @@ public sealed partial class MainViewModel : Observable
     public TabViewModel? ShowSampleOutput(int index = 0)
     {
         if (Tabs.Where(t => t.ShowsOutput).ElementAtOrDefault(index) is not { } tab) return null;
+        if (tab.IsExitError)
+        {
+            // A CLI that ended with an error: its last lines say why (#153).
+            tab.SetOutput(TerminalText.Render(string.Join("\r\n",
+                "me@workstation:~/Projects/delta$ claude --model sonnet",
+                "",
+                "Error: Invalid API key · Please run /login",
+                "",
+                "me@workstation:~/Projects/delta$ ") + "\r\n", 40, 100, TabSession.OutputLines));
+            return tab;
+        }
         if (tab.LaunchedAs is { NonInteractive: true })
         {
             // A Run once tab shows bs_stream's formatter lines.
@@ -1069,8 +1116,12 @@ public sealed partial class MainViewModel : Observable
         if (IsClosingAll || !tab.IsChanged || tab.LaunchedAs is not { } launched) return;
         var next = tab.ToConfig(forLaunch: true);
         var error = Launcher.Validate([next]);
-        if (error == "" && (tab.Session is null || tab.Track is null || tab.ShellPid is null)) error = Loc.Get("err.restartInPlace");
-        if (error != "") { ShowStatus(error, error: true); return; }
+        if (error != "") { ShowError(ErrorKind.InvalidTab, error); return; }
+        if (tab.Session is null || tab.Track is null || tab.ShellPid is null)
+        {
+            ShowError(ErrorKind.RestartUnavailable, Loc.Get("err.restartInPlace"), tab: tab);
+            return;
+        }
         try
         {
             var resume = tab.RestartResumes;
@@ -1082,12 +1133,12 @@ public sealed partial class MainViewModel : Observable
             tab.Session.SaveTab(tab.Track.Id, next);
             tab.RaiseRestartTip();
             ShowStatus(Loc.Format(resume ? "status.restartedResume" : "status.restarted", tab.Name.Trim(), next.Llm,
-                next.Model == Catalog.StandardModel ? Loc.Get("restart.standardModel") : next.Model), error: false);
+                next.Model == Catalog.StandardModel ? Loc.Get("restart.standardModel") : next.Model));
             Save();
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.ComponentModel.Win32Exception)
         {
-            ShowStatus(Loc.Format("err.launch", e.Message), error: true);
+            ShowError(ErrorKind.Restart, Loc.Format("err.launch", e.Message), () => RestartChanged(tab), tab);
         }
     }
 
@@ -1158,13 +1209,14 @@ public sealed partial class MainViewModel : Observable
         try { log = session.ReadLog(track.Id); }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
-            ShowStatus(Loc.Format("err.launch", e.Message), error: true);
+            ShowError(ErrorKind.Restart, Loc.Format("err.launch", e.Message), () => Restart(tab, resume), tab);
             return true;
         }
         if (!CanRestartExited(log, TabSession.Liveness(_cfg.WslDistro))) return false;
         DismissRecoveredStatus();
         launched = WithCurrentCompact(launched);
         var error = Launcher.Validate([launched]);
+        var invalid = error != "";
         try
         {
             if (error == "")
@@ -1183,11 +1235,11 @@ public sealed partial class MainViewModel : Observable
                     try
                     {
                         if (!Launcher.WakeIdleShell(track, distro))
-                            Dispatcher.UIThread.Post(() => ShowStatus(Loc.Format("err.restartUndelivered", name), error: true));
+                            Dispatcher.UIThread.Post(() => ShowError(ErrorKind.Restart, Loc.Format("err.restartUndelivered", name), () => Restart(tab), tab));
                     }
                     catch (Exception e) when (e is IOException or System.ComponentModel.Win32Exception)
                     {
-                        Dispatcher.UIThread.Post(() => ShowStatus(Loc.Format("err.launch", e.Message), error: true));
+                        Dispatcher.UIThread.Post(() => ShowError(ErrorKind.Restart, Loc.Format("err.launch", e.Message), () => Restart(tab), tab));
                     }
                 });
                 tab.PendingRestart = false;
@@ -1197,10 +1249,12 @@ public sealed partial class MainViewModel : Observable
         {
             error = Loc.Format("err.launch", e.Message);
         }
-        ShowStatus(error != "" ? error : resume
+        if (invalid) ShowError(ErrorKind.InvalidTab, error);
+        else if (error != "") ShowError(ErrorKind.Restart, error, () => Restart(tab, resume), tab);
+        else ShowStatus(resume
             ? Loc.Format("status.restartedResume", tab.Name.Trim(), launched.Llm,
                 launched.Model == Catalog.StandardModel ? Loc.Get("restart.standardModel") : launched.Model)
-            : "", error: error != "");
+            : "");
         return true;
     }
 
@@ -1219,10 +1273,10 @@ public sealed partial class MainViewModel : Observable
         var cfg = new AppConfig { WslDistro = _cfg.WslDistro, LinuxTerminal = _cfg.LinuxTerminal, ZoomPercent = _cfg.ZoomPercent, Tabs = rows.Select(r => r.Tab).ToList() };
         var error = Start(cfg, rows, _session?.WindowName, resume);
         var first = rows[0];
-        ShowStatus(error != "" ? error : resume
+        ShowLaunchOutcome(error, cfg.Tabs, () => RestartClosed(rows, resume), resume
             ? Loc.Format("status.restartedResume", first.Row.Name.Trim(), first.Tab.Llm,
                 first.Tab.Model == Catalog.StandardModel ? Loc.Get("restart.standardModel") : first.Tab.Model)
-            : "", error: error != "");
+            : "");
     }
 
     private TabSession? _session;
@@ -1482,7 +1536,7 @@ public sealed partial class MainViewModel : Observable
     /// <summary>Adds allow-rules for the offered programs to agy's settings and runs the denied tabs again.</summary>
     public void AllowDenied()
     {
-        if (AgySettingsFile is not { } path) { ShowStatus(Loc.Get("status.wslHomeMissing"), error: true); return; }
+        if (AgySettingsFile is not { } path) { ShowError(ErrorKind.WslHome, Loc.Get("status.wslHomeMissing"), AllowDenied); return; }
         try
         {
             var current = File.Exists(path) ? File.ReadAllText(path) : null;
@@ -1492,7 +1546,7 @@ public sealed partial class MainViewModel : Observable
             // Written in place, so the file keeps its permissions (agy creates it 0600).
             File.WriteAllText(path, AgyPermissions.AddRules(current, programs));
             Denial.Hide();
-            ShowStatus(Loc.Format("status.rulesAdded", string.Join(", ", programs)), error: false);
+            ShowStatus(Loc.Format("status.rulesAdded", string.Join(", ", programs)));
             var closed = new List<(TabViewModel Row, TabConfig Tab)>();
             foreach (var (row, _) in rows)
                 if (row.LaunchedAs is { } launched && !RestartExited(row, launched, resume: false)) closed.Add((row, launched));
@@ -1500,7 +1554,7 @@ public sealed partial class MainViewModel : Observable
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.Text.Json.JsonException)
         {
-            ShowStatus(Loc.Format("status.rulesFailed", path, e.Message), error: true);
+            ShowError(ErrorKind.Rules, Loc.Format("status.rulesFailed", path, e.Message), AllowDenied);
         }
     }
 
@@ -1515,8 +1569,8 @@ public sealed partial class MainViewModel : Observable
     public void OpenFolder(TabViewModel tab)
     {
         var local = PathMapping.ToLocalPath(tab.Directory, _cfg.WslDistro, _wslHome);
-        if (local is null) { ShowStatus(Loc.Get("status.wslHomeMissing"), error: true); return; }
-        if (!System.IO.Directory.Exists(local)) { ShowStatus(Loc.Format("status.dirMissing", tab.Directory), error: true); return; }
+        if (local is null) { ShowError(ErrorKind.WslHome, Loc.Get("status.wslHomeMissing"), () => OpenFolder(tab)); return; }
+        if (!System.IO.Directory.Exists(local)) { ShowError(ErrorKind.Folder, Loc.Format("status.dirMissing", tab.Directory)); return; }
         try
         {
             var opener = OperatingSystem.IsWindows() ? "explorer.exe" : OperatingSystem.IsMacOS() ? "open" : "xdg-open";
@@ -1526,7 +1580,7 @@ public sealed partial class MainViewModel : Observable
         }
         catch (Exception e)
         {
-            ShowStatus(Loc.Format("status.openFailed", e.Message), error: true);
+            ShowError(ErrorKind.Folder, Loc.Format("status.openFailed", e.Message));
         }
     }
 
@@ -1542,7 +1596,7 @@ public sealed partial class MainViewModel : Observable
         cfg.Tabs[0].Name = tab.Name.Trim() + " (" + Loc.Get("tab.installSuffix") + ")";
         var error = Launcher.Launch(cfg, Launcher.InstallOrkesterPrompt);
         // The files appear once the agent has worked; reopening BoosterAI or editing the path rechecks.
-        ShowStatus(error != "" ? error : Loc.Format("status.installRunning", tab.Name.Trim()), error: error != "");
+        ShowLaunchOutcome(error, cfg.Tabs, () => InstallOrkester(tab), Loc.Format("status.installRunning", tab.Name.Trim()));
         if (error != "" && _cfg.Notifications) Notifier.Show("BoosterAI", error);
     }
 }

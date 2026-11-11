@@ -314,7 +314,7 @@ public sealed partial class MainViewModel
             if (done.Count > 0)
             {
                 _installing.ExceptWith(done);
-                ShowStatus(Loc.Format("status.cliInstalled", string.Join(", ", done)), error: false);
+                ShowStatus(Loc.Format("status.cliInstalled", string.Join(", ", done)));
             }
         }
         catch (Exception)
@@ -339,7 +339,7 @@ public sealed partial class MainViewModel
             Tabs = [new TabConfig { Name = Loc.Format("setup.cli.install", cli), Directory = "~", Llm = Catalog.ShellOnly, Script = Prerequisites.InstallScript(cli) }],
         };
         var error = Launcher.Launch(cfg);
-        ShowStatus(error != "" ? error : Loc.Format("status.cliInstallRunning", cli, Prerequisites.LoginCommand(cli)), error: error != "");
+        ShowLaunchOutcome(error, cfg.Tabs, () => InstallCli(cli), Loc.Format("status.cliInstallRunning", cli, Prerequisites.LoginCommand(cli)));
         if (error != "") return;
         // New tabs run a new login shell, so they find the CLI once it is installed; the bars follow within 15 s.
         _installing.Add(cli);
@@ -361,12 +361,12 @@ public sealed partial class MainViewModel
             var psi = new ProcessStartInfo(exe) { UseShellExecute = true, Verb = "runas" };
             foreach (var a in args) psi.ArgumentList.Add(a);
             Process.Start(psi)?.Dispose();
-            ShowStatus(Loc.Get("status.wslInstallStarted"), error: false);
+            ShowStatus(Loc.Get("status.wslInstallStarted"));
         }
         catch (Exception e)
         {
             // Includes the user's "No" in the UAC prompt.
-            ShowStatus(Loc.Format("status.wslInstallFailed", e.Message), error: true);
+            ShowError(ErrorKind.WslInstall, Loc.Format("status.wslInstallFailed", e.Message), InstallWsl);
         }
     }
 
@@ -379,19 +379,19 @@ public sealed partial class MainViewModel
     {
         if (!agent.CanApply || (agent.SelectedMode.Mode == AgentMode.Yolo && !yoloConfirmed)
             || (agent.HasExternalDefinition && !replaceCustomConfirmed)) return false;
-        if (BashrcFile is not { } path) { ShowStatus(Loc.Get("status.wslHomeMissing"), error: true); return false; }
+        if (BashrcFile is not { } path) { ShowError(ErrorKind.AgentConfig, Loc.Get("status.wslHomeMissing")); return false; }
         try
         {
             var current = File.Exists(path) ? File.ReadAllText(path) : null;
             var updated = AgentModes.Change(current, agent.Detected, agent.SelectedMode, replaceCustomConfirmed);
             if (updated != (current ?? "")) File.WriteAllText(path, updated);
-            ShowStatus(Loc.Format("agents.mode.applied", agent.Name, agent.SelectedMode.Label), error: false);
+            ShowStatus(Loc.Format("agents.mode.applied", agent.Name, agent.SelectedMode.Label));
             CheckSetup();
             return true;
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidOperationException)
         {
-            ShowStatus(Loc.Format("agents.mode.failed", e.Message), error: true);
+            ShowError(ErrorKind.AgentConfig, Loc.Format("agents.mode.failed", e.Message));
             return false;
         }
     }

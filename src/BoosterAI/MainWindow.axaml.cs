@@ -89,6 +89,7 @@ public partial class MainWindow : Window
             Opened += OnBackgroundOpened;
         }
         Closing += OnClosing;
+        vm.LaunchFromWindow = () => OnLaunch(null, new RoutedEventArgs());
         PropertyChanged += (_, e) =>
         {
             if (e.Property == WindowStateProperty && WindowState == WindowState.Minimized
@@ -236,13 +237,13 @@ public partial class MainWindow : Window
     private async void OnUpdatePage(object? sender, RoutedEventArgs e)
     {
         try { if (TopLevel.GetTopLevel(this)?.Launcher is { } l) await l.LaunchUriAsync(new Uri(_vm.Update.PageUrl)); }
-        catch (Exception ex) { _vm.ShowStatus(Loc.Format("status.openFailed", ex.Message), error: true); }
+        catch (Exception ex) { _vm.ShowError(ErrorKind.Link, Loc.Format("status.openFailed", ex.Message), () => OnUpdatePage(sender, e)); }
     }
 
     private async void OnUpdateMore(object? sender, RoutedEventArgs e)
     {
         try { if (TopLevel.GetTopLevel(this)?.Launcher is { } l) await l.LaunchUriAsync(new Uri(_vm.Update.MoreUrl)); }
-        catch (Exception ex) { _vm.ShowStatus(Loc.Format("status.openFailed", ex.Message), error: true); }
+        catch (Exception ex) { _vm.ShowError(ErrorKind.Link, Loc.Format("status.openFailed", ex.Message), () => OnUpdateMore(sender, e)); }
     }
 
     private void OnUpdateLater(object? sender, RoutedEventArgs e) => _vm.Update.Later();
@@ -307,4 +308,41 @@ public partial class MainWindow : Window
     }
 
     private void OnDismissOptimization(object? sender, RoutedEventArgs e) => _vm.Optimization.DismissBanner();
+
+    private void OnErrorFirst(object? sender, RoutedEventArgs e) => RunErrorAction(0);
+
+    private void OnErrorSecond(object? sender, RoutedEventArgs e) => RunErrorAction(1);
+
+    private void OnErrorClose(object? sender, RoutedEventArgs e) => _vm.Error.Hide();
+
+    private async void RunErrorAction(int index)
+    {
+        var error = _vm.Error;
+        if (!error.IsVisible || index >= error.Actions.Count) return;
+        var action = error.Actions[index];
+        switch (action)
+        {
+            case ErrorAction.Retry:
+                error.Retry();
+                break;
+            case ErrorAction.Details:
+                if (error.Tab is { } tab) OpenStatusPeek(tab);
+                break;
+            default:
+                // The banner stays until closed: the fix in Settings does not by itself show that the cause is gone.
+                var settings = new SettingsWindow(_vm);
+                switch (action)
+                {
+                    case ErrorAction.TerminalSettings when OperatingSystem.IsWindows():
+                        settings.SelectedTabIndex = 2;
+                        settings.SelectedOptimizationSectionIndex = 2;
+                        break;
+                    case ErrorAction.TerminalSettings or ErrorAction.GeneralSettings: settings.SelectedTabIndex = 1; break;
+                    case ErrorAction.AgentSettings: settings.SelectedTabIndex = 4; break;
+                    default: settings.SelectedTabIndex = 0; break;
+                }
+                await settings.ShowDialog(this);
+                break;
+        }
+    }
 }
