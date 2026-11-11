@@ -102,7 +102,7 @@
         </Grid>
 
         <TextBlock Classes="colhead" Text="{local:T setup.llm.name}" Margin="0,6,0,0" />
-        <ListBox Classes="agents" ItemsSource="{Binding LlmChoices}" SelectedItem="{Binding SelectedLlm}" Padding="0"
+        <ListBox Classes="agents picklist" ItemsSource="{Binding LlmChoices}" SelectedItem="{Binding SelectedLlm}"
                  AutomationProperties.Name="{local:T setup.llm.name}">
           <ListBox.ItemTemplate>
             <DataTemplate x:DataType="local:LlmChoice">

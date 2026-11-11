@@ -5,34 +5,6 @@
         Title="{local:T models.title}" Icon="avares://BoosterAI/Assets/boosterai.ico"
         Width="860" Height="790" MinWidth="640" MinHeight="400" WindowStartupLocation="CenterOwner">
   <Window.Styles>
-    <!-- The catalog list: token background, a quiet hover and a 1 px accent outline for the selected row (no fill). -->
-    <Style Selector="ListBox.models">
-      <Setter Property="Background" Value="{DynamicResource BackgroundBrush}" />
-      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
-      <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="CornerRadius" Value="{StaticResource RadiusLarge}" />
-      <Setter Property="Padding" Value="4" />
-    </Style>
-    <Style Selector="ListBox.models ListBoxItem">
-      <Setter Property="Padding" Value="10,7" />
-      <Setter Property="Margin" Value="0,1" />
-      <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
-    </Style>
-    <Style Selector="ListBox.models ListBoxItem /template/ ContentPresenter#PART_ContentPresenter">
-      <Setter Property="CornerRadius" Value="{StaticResource RadiusMedium}" />
-      <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="BorderBrush" Value="Transparent" />
-      <Setter Property="Background" Value="Transparent" />
-    </Style>
-    <Style Selector="ListBox.models ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter, ListBox.models ListBoxItem:pressed /template/ ContentPresenter#PART_ContentPresenter">
-      <Setter Property="Background" Value="{DynamicResource RowHoverBrush}" />
-      <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
-    </Style>
-    <Style Selector="ListBox.models ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter, ListBox.models ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter, ListBox.models ListBoxItem:selected:pressed /template/ ContentPresenter#PART_ContentPresenter, ListBox.models ListBoxItem:selected:focus /template/ ContentPresenter#PART_ContentPresenter, ListBox.models ListBoxItem:selected:disabled /template/ ContentPresenter#PART_ContentPresenter">
-      <Setter Property="Background" Value="{DynamicResource RowHoverBrush}" />
-      <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColor}" />
-      <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
-    </Style>
     <Style Selector="Path.status-mark">
       <Setter Property="Width" Value="14" />
       <Setter Property="Height" Value="14" />
@@ -91,7 +63,7 @@
           <Border Classes="step" Classes.current="{Binding ServerOk}"><TextBlock Text="2" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border>
           <TextBlock Classes="stepname" Classes.current="{Binding ServerOk}" Text="{local:T models.step.choose}" VerticalAlignment="Center" />
         </StackPanel>
-        <ListBox x:Name="ModelList" Grid.Row="4" Classes="models" MinHeight="180" Margin="30,0,0,0"
+        <ListBox x:Name="ModelList" Grid.Row="4" Classes="models picklist" MinHeight="180" Margin="30,0,0,0"
                  ItemsSource="{Binding Models}" SelectedItem="{Binding Selected}" IsEnabled="{Binding CanEdit}"
                  AutoScrollToSelectedItem="False" ScrollViewer.HorizontalScrollBarVisibility="Disabled" AutomationProperties.Name="{local:T models.choose}">
           <ListBox.ItemTemplate>

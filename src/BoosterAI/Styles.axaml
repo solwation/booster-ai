@@ -476,4 +476,37 @@
   <Style Selector="CheckBox.alive:checked:pointerover /template/ Path#CheckGlyph, CheckBox.alive:checked:pressed /template/ Path#CheckGlyph">
     <Setter Property="Fill" Value="{DynamicResource TextBrush}" />
   </Style>
+  <!-- Pick lists (Local models catalog, setup agent list): token background, a quiet hover and a 1 px accent outline for the selected row (no fill). -->
+  <Style Selector="ListBox.picklist">
+    <Setter Property="Background" Value="{DynamicResource BackgroundBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusLarge}" />
+    <Setter Property="Padding" Value="4" />
+  </Style>
+  <Style Selector="ListBox.picklist ListBoxItem">
+    <Setter Property="Padding" Value="10,7" />
+    <Setter Property="Margin" Value="0,1" />
+    <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+  </Style>
+  <Style Selector="ListBox.picklist ListBoxItem /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusMedium}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="ListBox.picklist ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter, ListBox.picklist ListBoxItem:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource RowHoverBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+  </Style>
+  <Style Selector="ListBox.picklist ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter, ListBox.picklist ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter, ListBox.picklist ListBoxItem:selected:pressed /template/ ContentPresenter#PART_ContentPresenter, ListBox.picklist ListBoxItem:selected:focus /template/ ContentPresenter#PART_ContentPresenter, ListBox.picklist ListBoxItem:selected:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource RowHoverBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColor}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+  </Style>
+  <!-- The setup agent list fits six agents and its hint above the wizard's footer. -->
+  <Style Selector="ListBox.picklist.agents ListBoxItem">
+    <Setter Property="Padding" Value="10,4" />
+    <Setter Property="Margin" Value="0" />
+  </Style>
 </Styles>
