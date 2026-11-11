@@ -235,6 +235,10 @@ internal static class Screenshot
             AvaloniaHeadlessPlatform.ForceRenderTimerTick();
         }
         if (!tip.IsVisible || tip.Bounds.Width <= 0) throw new InvalidOperationException("The status popup did not open");
+        // The tooltip fades in; a capture taken mid-fade would show the window through an opaque popup.
+        tip.Transitions = null;
+        tip.Opacity = 1;
+        tip.UpdateLayout();
         // The headless popup surface is window-sized, so render the tip itself.
         var size = tip.Bounds.Size;
         var popupFrame = new RenderTargetBitmap(new PixelSize((int)Math.Ceiling(size.Width), (int)Math.Ceiling(size.Height)), frame.Dpi);

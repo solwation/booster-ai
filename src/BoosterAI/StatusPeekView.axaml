@@ -2,12 +2,19 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="using:BoosterAI"
              x:Class="BoosterAI.StatusPeekView" x:DataType="local:TabViewModel">
+  <Border Classes="peek-surface">
   <ScrollViewer x:Name="OutputScroll" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" Focusable="True">
     <StackPanel Spacing="8" Width="{x:Static local:TabOutputView.PopupWidth}">
-      <TextBlock Text="{Binding StatusTip}" TextWrapping="Wrap" />
+      <StackPanel Orientation="Horizontal" Spacing="7">
+        <Ellipse Width="8" Height="8" Fill="{Binding StatusBrush}" VerticalAlignment="Center" />
+        <TextBlock Classes="peek-header" Text="{Binding PeekHeader}" TextTrimming="CharacterEllipsis" />
+      </StackPanel>
+      <TextBlock Classes="muted" Text="{Binding PeekDetail}" IsVisible="{Binding HasPeekDetail}"
+                 FontSize="12" TextWrapping="Wrap" />
       <local:TabOutputView IsVisible="{Binding HasOutput}" />
       <TextBlock Classes="muted" Text="{Binding OutputNote}" IsVisible="{Binding HasOutputNote}"
                  FontSize="12" TextWrapping="Wrap" />
     </StackPanel>
   </ScrollViewer>
+  </Border>
 </UserControl>

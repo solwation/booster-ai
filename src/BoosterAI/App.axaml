@@ -6,7 +6,10 @@
     <ResourceDictionary>
     <!-- One family for the interface, its mono sibling for paths, models and commands. -->
     <FontFamily x:Key="UiFont">avares://BoosterAI/Assets/Fonts#IBM Plex Sans</FontFamily>
-    <FontFamily x:Key="MonoFont">avares://BoosterAI/Assets/Fonts#IBM Plex Mono</FontFamily>
+    <!-- Plex Mono has Latin only. BoosterAI Symbols (bundled) carries the box drawing, arrows and dingbats the agent CLIs
+         print, plus U+23BF, U+23FA and U+23F5, which no common monospace font has; the system fonts come last. -->
+    <FontFamily x:Key="MonoFont">avares://BoosterAI/Assets/Fonts#IBM Plex Mono, avares://BoosterAI/Assets/Fonts#BoosterAI Symbols, Cascadia Mono, Consolas, DejaVu Sans Mono</FontFamily>
+    <BoxShadows x:Key="PopupShadow">0 8 24 0 #2E000000</BoxShadows>
 
     <!-- Accent from the icon's bolt gradient (#1E66F5 → #8839EF), midpoint. -->
     <Color x:Key="SystemAccentColor">#5B5FF2</Color>
@@ -26,7 +29,6 @@
         <SolidColorBrush x:Key="MutedBrush" Color="#A9ADBC" />
         <SolidColorBrush x:Key="FaintBrush" Color="#8A8EA0" />
         <SolidColorBrush x:Key="RowHoverBrush" Color="#14FFFFFF" />
-        <SolidColorBrush x:Key="OutputBackgroundBrush" Color="#33000000" />
         <SolidColorBrush x:Key="LinkBrush" Color="#9A9DFF" />
         <SolidColorBrush x:Key="LinkHoverBrush" Color="#BDBFFF" />
         <SolidColorBrush x:Key="RecommendedBrush" Color="#5BC26E" />
@@ -93,7 +95,6 @@
         <SolidColorBrush x:Key="MutedBrush" Color="#5A5E6E" />
         <SolidColorBrush x:Key="FaintBrush" Color="#6B6F80" />
         <SolidColorBrush x:Key="RowHoverBrush" Color="#0C000000" />
-        <SolidColorBrush x:Key="OutputBackgroundBrush" Color="#0A000000" />
         <SolidColorBrush x:Key="LinkBrush" Color="#3B3FCF" />
         <SolidColorBrush x:Key="LinkHoverBrush" Color="#2A2DA8" />
         <SolidColorBrush x:Key="RecommendedBrush" Color="#27773A" />

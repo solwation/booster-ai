@@ -23,9 +23,9 @@ public sealed class TabOutputView : Border
         Width = PopupWidth;
         Height = TabSession.OutputLines * LineHeightValue + 16;
         Padding = new Thickness(10, 8);
-        CornerRadius = new CornerRadius(6);
+        this.Bind(CornerRadiusProperty, this.GetResourceObservable("RadiusMedium"));
         ClipToBounds = true;
-        Bind(BackgroundProperty, this.GetResourceObservable("OutputBackgroundBrush"));
+        Bind(BackgroundProperty, this.GetResourceObservable("BackgroundBrush"));
         var text = new TextBlock
         {
             FontSize = FontSizeValue,

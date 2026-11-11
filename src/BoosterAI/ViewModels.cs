@@ -69,6 +69,11 @@ public sealed class TabViewModel : Observable
         _model = string.IsNullOrWhiteSpace(c.Model) ? Catalog.StandardModel : c.Model;
         _orkester = c.Orkester;
         _nonInteractive = c.NonInteractive;
+        PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(Name) or nameof(Llm) or nameof(StatusText)) Raise(nameof(PeekHeader));
+            if (e.PropertyName is nameof(StatusText) or nameof(StatusTip)) { Raise(nameof(PeekDetail)); Raise(nameof(HasPeekDetail)); }
+        };
     }
 
     public string Name { get => _name; set { if (Set(ref _name, value)) Raise(nameof(StatusActionName)); } }
@@ -324,6 +329,11 @@ public sealed class TabViewModel : Observable
         Raise(nameof(StatusText));
         Raise(nameof(StatusTip));
     }
+    /// <summary>The status popup's header: "Atlas · claude · Running" (tab, agent, status).</summary>
+    public string PeekHeader => $"{Name} · {Loc.Display("llm", Llm)} · {StatusText}";
+    /// <summary>The longer explanation under the header, when the tooltip says more than the status itself.</summary>
+    public string PeekDetail => StatusTip;
+    public bool HasPeekDetail => StatusTip != StatusText;
     public string StatusActionName => Loc.Format("output.action", Name, StatusTip);
     public string StatusText => _closeProgress ?? (_state switch
     {
