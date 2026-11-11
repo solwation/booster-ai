@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Media;
+using Avalonia.Input;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using BoosterAI;
@@ -108,6 +109,26 @@ public class SettingsLayoutTests : IDisposable
         Assert.Equal(FontWeight.SemiBold, agents.Chosen);
         Assert.Equal(FontWeight.Medium, memory.Other);
         Assert.Equal(FontWeight.Medium, agents.Other);
+    }
+
+    [Fact]
+    public void BothSideNavigationsShowKeyboardFocusWithoutChangingLayout()
+    {
+        WithWindow(Build(), w =>
+        {
+            foreach (var tab in new[] { 2, 4 })
+            {
+                w.SelectedTabIndex = tab;
+                Settle(w);
+                var nav = Shown<ContentControl>(w).First(c => c is ListBoxItem || c is Button && c.Classes.Contains("sidenav"));
+                var before = nav.Bounds;
+                Assert.True(nav.Focus(NavigationMethod.Tab));
+                Settle(w);
+                Assert.True(nav.GetVisualDescendants().OfType<Border>().Single(b => b.Name == "PART_Focus").IsVisible);
+                Assert.Equal(before, nav.Bounds);
+            }
+            return 0;
+        });
     }
 
     [Fact]

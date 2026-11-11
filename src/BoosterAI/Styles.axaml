@@ -96,6 +96,8 @@
             <ContentPresenter Name="PART_NavContent" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
                               Padding="{TemplateBinding Padding}" HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
                               VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+            <Border Name="PART_Focus" BorderThickness="2" BorderBrush="{DynamicResource LinkBrush}"
+                    CornerRadius="{StaticResource RadiusSmall}" IsVisible="False" IsHitTestVisible="False" />
           </Panel>
         </Border>
       </ControlTemplate>
@@ -111,6 +113,8 @@
             <ContentPresenter Name="PART_NavContent" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
                               Padding="{TemplateBinding Padding}" HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
                               VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+            <Border Name="PART_Focus" BorderThickness="2" BorderBrush="{DynamicResource LinkBrush}"
+                    CornerRadius="{StaticResource RadiusSmall}" IsVisible="False" IsHitTestVisible="False" />
           </Panel>
         </Border>
       </ControlTemplate>
@@ -124,6 +128,9 @@
     <Setter Property="FontWeight" Value="SemiBold" />
   </Style>
   <Style Selector="ListBox.sidenav ListBoxItem:selected /template/ Border#PART_Bar, Button.sidenav.chosen /template/ Border#PART_Bar">
+    <Setter Property="IsVisible" Value="True" />
+  </Style>
+  <Style Selector="ListBox.sidenav ListBoxItem:focus-visible /template/ Border#PART_Focus, Button.sidenav:focus-visible /template/ Border#PART_Focus">
     <Setter Property="IsVisible" Value="True" />
   </Style>
   <Style Selector="Button.agent-nav">
