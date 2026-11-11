@@ -1,0 +1,45 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="using:BoosterAI"
+             x:Class="BoosterAI.ProjectPickList"
+             x:DataType="local:IProjectList">
+
+  <UserControl.Styles>
+    <!-- A project with the orchestra reads in normal text; one without stays muted. -->
+    <Style Selector="TextBlock.muted.orchestra">
+      <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+    </Style>
+  </UserControl.Styles>
+
+  <!-- The project list of "Hitta projekt" and of the setup wizard (#159). Columns: check 36 · name/path/orchestra status * · kind 90. -->
+  <Grid RowDefinitions="Auto,*">
+    <Grid Grid.Row="0" ColumnDefinitions="36,*,90" Margin="14,0,14,6" IsVisible="{Binding HasItems}">
+      <CheckBox Grid.Column="0" IsChecked="{Binding AllSelected}" MinWidth="0" VerticalAlignment="Center"
+                ToolTip.Tip="{local:T import.all}" AutomationProperties.Name="{local:T import.all}" />
+      <TextBlock Grid.Column="1" Classes="colhead" Text="{local:T col.project}" />
+      <TextBlock Grid.Column="2" Classes="colhead" Text="{local:T import.kind}" />
+    </Grid>
+
+    <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" IsVisible="{Binding HasItems}">
+      <ItemsControl ItemsSource="{Binding Items}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="local:ImportItem">
+            <Border Classes="row" Padding="14,8">
+              <Grid ColumnDefinitions="36,*,90">
+                <CheckBox Grid.Column="0" IsChecked="{Binding Selected}" MinWidth="0" VerticalAlignment="Center"
+                          AutomationProperties.Name="{Binding Name}" />
+                <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center" Margin="0,0,12,0">
+                  <TextBlock Classes="name" Text="{Binding Name}" />
+                  <TextBlock Classes="path" Text="{Binding Path}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Path}" />
+                  <TextBlock Classes="muted" Classes.orchestra="{Binding HasOrchestra}" Text="{Binding Orchestra}"
+                             FontSize="12.5" TextWrapping="Wrap" />
+                </StackPanel>
+                <TextBlock Grid.Column="2" Classes="muted" Text="{Binding Kind}" VerticalAlignment="Center" FontSize="12.5" />
+              </Grid>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+  </Grid>
+</UserControl>

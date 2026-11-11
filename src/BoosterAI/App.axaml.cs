@@ -81,6 +81,12 @@ public partial class App : Application
         plan ??= Installer.CurrentPlan();
         var vm = new InstallWizardViewModel(plan, ConfigStore.TryRead(), installed ?? File.Exists(plan.Exe),
             Screenshot.Active ? _ => { } : id => RequestedThemeVariant = ThemeFor(id));
+        // The agents' installed state comes from the same shell check as the main window's; screenshots set a synthetic one.
+        if (!Screenshot.Active)
+        {
+            var distro = ConfigStore.TryRead()?.WslDistro ?? new AppConfig().WslDistro;
+            _ = vm.DetectAsync(() => Prerequisites.Detect(distro));
+        }
         return new InstallWizardWindow(vm);
     }
 

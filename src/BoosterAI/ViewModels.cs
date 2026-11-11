@@ -1942,7 +1942,7 @@ public sealed class ImportItem(FoundProject project, Action changed) : Observabl
 }
 
 /// <summary>The "Hitta projekt" dialog: scans a folder in the background and lists the projects not added yet.</summary>
-public sealed class ImportViewModel : Observable
+public sealed class ImportViewModel : Observable, IProjectList
 {
     private readonly HashSet<string> _existing;
     private CancellationTokenSource? _scan;

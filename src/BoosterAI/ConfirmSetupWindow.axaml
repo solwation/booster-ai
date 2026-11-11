@@ -13,12 +13,25 @@
     <StackPanel Spacing="6">
       <TextBlock Classes="muted" TextWrapping="Wrap" Text="{Binding CodeLabel}" />
       <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="{StaticResource RadiusMedium}" Padding="10,7">
-        <ScrollViewer MaxHeight="160" HorizontalScrollBarVisibility="Disabled">
-          <SelectableTextBlock Classes="path" Text="{Binding Code}" TextWrapping="Wrap" Foreground="{DynamicResource TextBrush}" />
-        </ScrollViewer>
+        <Panel>
+          <!-- A command or preview wraps; a list of paths (uninstall) stays one line each, trimmed, never broken mid-word (#159). -->
+          <ScrollViewer MaxHeight="160" HorizontalScrollBarVisibility="Disabled" IsVisible="{Binding !CodeIsPaths}">
+            <SelectableTextBlock Classes="path" FontSize="13" Text="{Binding Code}" TextWrapping="Wrap" Foreground="{DynamicResource TextBrush}" />
+          </ScrollViewer>
+          <ItemsControl ItemsSource="{Binding CodeLines}" IsVisible="{Binding CodeIsPaths}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="x:String">
+                <TextBlock Classes="path" FontSize="13" Text="{Binding}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"
+                           Foreground="{DynamicResource TextBrush}" ToolTip.Tip="{Binding}" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </Panel>
       </Border>
     </StackPanel>
     <TextBlock Classes="muted" TextWrapping="Wrap" LineHeight="20" Text="{Binding Detail}" />
+    <TextBlock Classes="path" FontSize="13" Text="{Binding DetailPath}" IsVisible="{Binding HasDetailPath}" TextWrapping="NoWrap"
+               TextTrimming="CharacterEllipsis" Foreground="{DynamicResource TextBrush}" ToolTip.Tip="{Binding DetailPath}" />
     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,6,0,0">
       <Button Content="{Binding CancelText}" Click="OnCancel" IsCancel="True" IsDefault="True" Padding="18,8" />
       <Button Classes="primary" Click="OnConfirm" Padding="18,8" Content="{Binding Button}" />

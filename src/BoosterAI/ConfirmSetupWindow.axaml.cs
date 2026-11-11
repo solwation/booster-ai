@@ -12,9 +12,11 @@ public partial class ConfirmSetupWindow : Window
     // Required by the XAML previewer.
     public ConfirmSetupWindow() : this("", "", "", "", "", "", "") { }
 
-    private ConfirmSetupWindow(string heading, string body, string codeLabel, string code, string detail, string button, string cancel)
+    private ConfirmSetupWindow(string heading, string body, string codeLabel, string code, string detail, string button, string cancel,
+        bool codeIsPaths = false, string detailPath = "")
     {
         (Heading, Body, CodeLabel, Code, Detail, Button, CancelText) = (heading, body, codeLabel, code, detail, button, cancel);
+        (CodeIsPaths, DetailPath) = (codeIsPaths, detailPath);
         DataContext = this;
         InitializeComponent();
     }
@@ -42,7 +44,9 @@ public partial class ConfirmSetupWindow : Window
     /// <summary>The uninstall confirmation (#131): what goes, and that the config stays.</summary>
     public static ConfirmSetupWindow Uninstall(InstallPlan plan) => new(Loc.Get("uninstall.heading"), Loc.Get("uninstall.body"),
         Loc.Get("uninstall.code"), string.Join("\n", [plan.InstallDir, .. plan.Shortcuts.Select(s => s.Path), "HKCU\\" + plan.UninstallKey]),
-        Loc.Format("uninstall.detail", plan.ConfigPath), Loc.Get("uninstall.button"), Loc.Get("cancel"));
+        Loc.Get("uninstall.detail"), Loc.Get("uninstall.button"), Loc.Get("cancel"),
+        // Paths stay on one line each (trimmed, full text in a tooltip), in a window wide enough for the usual ones.
+        codeIsPaths: true, detailPath: plan.ConfigPath) { Width = 720 };
 
     /// <summary>True once the confirm button closed the window (for a window shown without an owner).</summary>
     public bool Confirmed { get; private set; }
@@ -52,6 +56,12 @@ public partial class ConfirmSetupWindow : Window
     public string CodeLabel { get; }
     public string Code { get; }
     public string Detail { get; }
+    /// <summary>The code block is a list of paths: one unwrapped line each instead of wrapped text.</summary>
+    public bool CodeIsPaths { get; }
+    public IReadOnlyList<string> CodeLines => Code.Split('\n');
+    /// <summary>A path shown on its own line under <see cref="Detail"/>.</summary>
+    public string DetailPath { get; }
+    public bool HasDetailPath => DetailPath != "";
     public string Button { get; }
     public string CancelText { get; }
 

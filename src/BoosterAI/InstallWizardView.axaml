@@ -4,11 +4,38 @@
              x:Class="BoosterAI.InstallWizardView"
              x:DataType="local:InstallWizardViewModel">
 
+  <UserControl.Styles>
+    <!-- Agent status dot (#159): green installed, amber missing, grey unknown or still checking. -->
+    <Style Selector="Ellipse.agentdot">
+      <Setter Property="Width" Value="8" />
+      <Setter Property="Height" Value="8" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="Fill" Value="{DynamicResource NeutralStatusBrush}" />
+    </Style>
+    <Style Selector="Ellipse.agentdot.installed">
+      <Setter Property="Fill" Value="{DynamicResource SuccessDotBrush}" />
+    </Style>
+    <Style Selector="Ellipse.agentdot.missing">
+      <Setter Property="Fill" Value="{DynamicResource WarningDotBrush}" />
+    </Style>
+    <Style Selector="ListBox.agents ListBoxItem">
+      <Setter Property="MinHeight" Value="0" />
+      <Setter Property="Padding" Value="10,5" />
+    </Style>
+    <!-- A path in the summary: mono 13, one line, trimmed with an ellipsis rather than broken (full path in the tooltip). -->
+    <Style Selector="TextBlock.pathline">
+      <Setter Property="FontFamily" Value="{StaticResource MonoFont}" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="TextWrapping" Value="NoWrap" />
+      <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    </Style>
+  </UserControl.Styles>
+
   <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="28,22,28,20">
 
     <!-- Header: icon, title, step indicator -->
     <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="12">
-      <Image Source="avares://BoosterAI/Assets/boosterai.png" Width="30" Height="30" VerticalAlignment="Center" />
+      <Image Source="avares://BoosterAI/Assets/boosterai-small.png" Width="28" Height="28" VerticalAlignment="Center" />
       <TextBlock Classes="title" FontSize="20" Text="{local:T setup.title}" VerticalAlignment="Center" />
     </StackPanel>
 
@@ -47,7 +74,7 @@
       <StackPanel Spacing="14" IsVisible="{Binding IsSettings}">
         <TextBlock Classes="sectionhead" FontSize="17" Text="{local:T setup.settings.heading}" />
         <TextBlock Classes="muted" TextWrapping="Wrap" LineHeight="20" Text="{local:T setup.settings.body}" />
-        <Grid ColumnDefinitions="120,180,*" RowDefinitions="Auto,Auto,Auto" Margin="0,6,0,0">
+        <Grid ColumnDefinitions="120,180,*" RowDefinitions="Auto,Auto" Margin="0,6,0,0">
           <TextBlock Grid.Row="0" Grid.Column="0" Classes="colhead" Text="{local:T language.title}" Margin="0,0,14,0" />
           <ComboBox Grid.Row="0" Grid.Column="1" ItemsSource="{Binding LanguageChoices}" SelectedItem="{Binding SelectedLanguage}" Width="180"
                     AutomationProperties.Name="{local:T language.name}">
@@ -72,18 +99,21 @@
           <TextBlock Grid.Row="1" Grid.Column="2" Classes="muted" Text="{local:T theme.hint}" VerticalAlignment="Center"
                      TextWrapping="Wrap" Margin="14,12,0,0" />
 
-          <TextBlock Grid.Row="2" Grid.Column="0" Classes="colhead" Text="{local:T setup.llm.title}" Margin="0,12,14,0" />
-          <ComboBox Grid.Row="2" Grid.Column="1" ItemsSource="{Binding LlmChoices}" SelectedItem="{Binding SelectedLlm}" Width="180" Margin="0,12,0,0"
-                    AutomationProperties.Name="{local:T setup.llm.name}">
-            <ComboBox.ItemTemplate>
-              <DataTemplate x:DataType="local:LlmChoice">
-                <TextBlock Text="{Binding Label}" />
-              </DataTemplate>
-            </ComboBox.ItemTemplate>
-          </ComboBox>
-          <TextBlock Grid.Row="2" Grid.Column="2" Classes="muted" Text="{local:T setup.llm.hint}" VerticalAlignment="Center"
-                     TextWrapping="Wrap" Margin="14,12,0,0" />
         </Grid>
+
+        <TextBlock Classes="colhead" Text="{local:T setup.llm.name}" Margin="0,6,0,0" />
+        <ListBox Classes="agents" ItemsSource="{Binding LlmChoices}" SelectedItem="{Binding SelectedLlm}" Padding="0"
+                 AutomationProperties.Name="{local:T setup.llm.name}">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="local:LlmChoice">
+              <StackPanel Orientation="Horizontal" Spacing="10">
+                <Ellipse Classes="agentdot" Classes.installed="{Binding IsInstalled}" Classes.missing="{Binding IsMissing}" />
+                <TextBlock Text="{Binding StatusText}" VerticalAlignment="Center" />
+              </StackPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+        <TextBlock Classes="muted" TextWrapping="Wrap" LineHeight="20" Text="{local:T setup.llm.hint}" />
       </StackPanel>
 
       <!-- 3. Projects: the existing "Hitta projekt" dialog does the search -->
@@ -106,20 +136,7 @@
           </StackPanel>
         </Button>
         <TextBlock Grid.Row="4" Classes="muted" Text="{Binding ProjectsText}" TextWrapping="Wrap" Margin="0,16,0,6" />
-        <ScrollViewer Grid.Row="5" HorizontalScrollBarVisibility="Disabled" IsVisible="{Binding HasProjects}">
-          <ItemsControl ItemsSource="{Binding Projects}">
-            <ItemsControl.ItemTemplate>
-              <DataTemplate x:DataType="local:FoundProject">
-                <Border Classes="row" Padding="12,6">
-                  <StackPanel Spacing="2">
-                    <TextBlock Classes="name" Text="{Binding Name}" />
-                    <TextBlock Classes="path" Text="{Binding Path}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Path}" />
-                  </StackPanel>
-                </Border>
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
-        </ScrollViewer>
+        <local:ProjectPickList Grid.Row="5" IsVisible="{Binding HasItems}" />
       </Grid>
 
       <!-- 4. Install -->
@@ -128,10 +145,13 @@
         <TextBlock Classes="muted" Text="{local:T setup.install.body}" />
         <ItemsControl ItemsSource="{Binding InstallLines}">
           <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="x:String">
+            <DataTemplate x:DataType="local:InstallLine">
               <Grid ColumnDefinitions="18,*" Margin="0,0,0,7">
                 <TextBlock Grid.Column="0" Text="•" Foreground="{DynamicResource MutedBrush}" />
-                <TextBlock Grid.Column="1" Text="{Binding}" TextWrapping="Wrap" LineHeight="20" />
+                <StackPanel Grid.Column="1" Spacing="2">
+                  <TextBlock Text="{Binding Text}" TextWrapping="Wrap" LineHeight="20" />
+                  <TextBlock Classes="pathline" Text="{Binding Path}" IsVisible="{Binding HasPath}" ToolTip.Tip="{Binding Path}" />
+                </StackPanel>
               </Grid>
             </DataTemplate>
           </ItemsControl.ItemTemplate>

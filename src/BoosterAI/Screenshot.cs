@@ -74,6 +74,10 @@ internal static class Screenshot
         var window = app.CreateWizard(Installer.SamplePlan(), installed: section == "upgrade");
         var vm = (InstallWizardViewModel)((Control)window.Content!).DataContext!;
         vm.SearchRootDefault = @"C:\Users\me\Documents";
+        // Synthetic agent status: no shell check runs for a screenshot.
+        vm.ApplyDetection(new SetupStatus(WslState.Ok, ["Ubuntu"],
+            [new("claude", "file", "/sample/bin/claude"), new("codex", "none", null), new("agy", "file", "/sample/bin/agy"),
+             new("aider", "none", null), new("interpreter", "none", null), new("openhands", "none", null)], true, false));
         var step = section switch
         {
             null or "welcome" or "upgrade" => InstallWizardViewModel.Step.Welcome,

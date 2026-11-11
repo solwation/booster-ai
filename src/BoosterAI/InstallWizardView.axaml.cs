@@ -41,7 +41,7 @@ public sealed class InstallWizardWindow : Window
     {
         _vm = vm;
         Width = 700;
-        Height = 580;
+        Height = 640;
         CanResize = false;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
         using (var icon = Avalonia.Platform.AssetLoader.Open(new Uri("avares://BoosterAI/Assets/boosterai.ico")))

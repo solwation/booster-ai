@@ -402,7 +402,7 @@ public class InstallerTests : IDisposable
         Assert.True(vm.IsInstall);
         Assert.Null(vm.Settings);
         Assert.Empty(vm.Projects);
-        Assert.Contains(Loc.Get("setup.install.settingsKept"), vm.InstallLines);
+        Assert.Contains(Loc.Get("setup.install.settingsKept"), vm.InstallLines.Select(l => l.Text));
     }
 
     [Fact]
@@ -434,6 +434,98 @@ public class InstallerTests : IDisposable
         Assert.Equal(["alpha", "beta", "gamma"], vm.Projects.Select(p => p.Name));
         Assert.Equal(Loc.Format("setup.projects.many", 3), vm.ProjectsText);
         Assert.Contains(Found("gamma").Path, vm.KnownPaths);
+    }
+
+    private static SetupStatus Detected(params (string Cli, bool Installed)[] clis) =>
+        new(WslState.Ok, ["Ubuntu"], [.. clis.Select(c => new CliStatus(c.Cli, c.Installed ? "file" : "none", c.Installed ? "/bin/" + c.Cli : null))], true, false);
+
+    [Fact]
+    public void DefaultAgentIsAnInstalledOneWhenClaudeIsMissing()
+    {
+        var vm = Wizard();
+        Assert.Equal("claude", vm.SelectedLlm.Id);
+        vm.ApplyDetection(Detected(("claude", false), ("codex", true), ("agy", true)));
+        Assert.Equal("codex", vm.SelectedLlm.Id);
+        Assert.Equal(Loc.Format("setup.agent.installed", "codex"), vm.LlmChoices.Single(c => c.Id == "codex").StatusText);
+        Assert.True(vm.LlmChoices.Single(c => c.Id == "claude").IsMissing);
+    }
+
+    [Fact]
+    public void ADeliberateAgentChoiceIsNotReplacedByTheCheck()
+    {
+        var vm = Wizard();
+        vm.SelectedLlm = vm.LlmChoices.Single(c => c.Id == "aider");
+        vm.ApplyDetection(Detected(("claude", true), ("aider", false)));
+        Assert.Equal("aider", vm.SelectedLlm.Id);
+        var fromConfig = Wizard(new AppConfig { Tabs = [new() { Llm = "agy" }] });
+        fromConfig.ApplyDetection(Detected(("claude", true), ("agy", false)));
+        Assert.Equal("agy", fromConfig.SelectedLlm.Id);
+    }
+
+    [Fact]
+    public void AFailedCheckLeavesTheAgentsUnknownAndNamesNoneMissing()
+    {
+        var vm = Wizard();
+        vm.AddProjects([Found("alpha")]);
+        vm.ApplyDetection(SetupStatus.Empty);
+        Assert.All(vm.LlmChoices, c => Assert.Null(c.Installed));
+        Assert.DoesNotContain(vm.InstallLines, l => l.Text.StartsWith(Loc.Get("setup.install.missingAgents").Split('{')[0]));
+        Assert.Equal("claude", vm.SelectedLlm.Id);
+    }
+
+    [Fact]
+    public void SummaryNamesMissingAgents()
+    {
+        var vm = Wizard();
+        vm.AddProjects([Found("alpha")]);
+        vm.ApplyDetection(Detected(("claude", true), ("codex", false), ("agy", true), ("aider", false)));
+        var text = string.Join("\n", vm.InstallLines.Select(l => l.Text));
+        Assert.Contains(Loc.Format("setup.install.missingAgents", "codex, aider, interpreter, openhands"), text);
+        Assert.DoesNotContain(Loc.Format("setup.install.agentMissing", "claude"), text);
+        // Projects that start with a missing agent get their own sentence, and it is not repeated in the list.
+        vm.SelectedLlm = vm.LlmChoices.Single(c => c.Id == "codex");
+        var after = string.Join("\n", vm.InstallLines.Select(l => l.Text));
+        Assert.Contains(Loc.Format("setup.install.agentMissing", "codex"), after);
+        Assert.Contains(Loc.Format("setup.install.missingAgents", "aider, interpreter, openhands"), after);
+    }
+
+    [Fact]
+    public void SummaryPutsPathsOnTheirOwnLine()
+    {
+        var vm = Wizard();
+        Assert.Contains(vm.InstallLines, l => l.Path == vm.Plan.InstallDir);
+        Assert.DoesNotContain(vm.Plan.InstallDir, string.Join("", vm.InstallLines.Select(l => l.Text)));
+    }
+
+    [Fact]
+    public void ADeselectedProjectIsLeftOutOfTheInstall()
+    {
+        var vm = Wizard();
+        vm.AddProjects([Found("alpha"), Found("beta"), Found("gamma")]);
+        Assert.Equal(3, vm.Projects.Count);
+        Assert.True(vm.AllSelected);
+        vm.Items.Single(i => i.Name == "beta").Selected = false;
+        Assert.Equal(["alpha", "gamma"], vm.Projects.Select(p => p.Name));
+        Assert.Null(vm.AllSelected);
+        Assert.Equal(Loc.Format("setup.projects.many", 2), vm.ProjectsText);
+        Assert.Contains(Loc.Format("setup.install.projects", 2, vm.SelectedLlm.Label), vm.InstallLines.Select(l => l.Text));
+        // The unticked project stays known, so the next search does not offer it again.
+        Assert.Contains(Found("beta").Path, vm.KnownPaths);
+        vm.AllSelected = false;
+        Assert.Empty(vm.Projects);
+        Assert.Equal(Loc.Get("setup.projects.noneTicked"), vm.ProjectsText);
+        Assert.Contains(Loc.Get("setup.install.noProjects"), vm.InstallLines.Select(l => l.Text));
+    }
+
+    [Fact]
+    public async Task OnlyTickedProjectsReachTheInstaller()
+    {
+        var vm = Wizard();
+        vm.AddProjects([Found("alpha"), Found("beta")]);
+        vm.Items[0].Selected = false;
+        IReadOnlyList<FoundProject>? got = null;
+        await vm.InstallAsync((_, _, projects, _, _) => { got = projects; return null; });
+        Assert.Equal("beta", Assert.Single(got!).Name);
     }
 
     [Fact]

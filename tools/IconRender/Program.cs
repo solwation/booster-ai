@@ -52,6 +52,8 @@ byte[] Render(string svgFile, int size)
 
 var images = sizes.Select(s => (Size: s, Png: Render(s <= SmallUpTo ? "boosterai-small.svg" : "boosterai.svg", s))).ToList();
 File.WriteAllBytes(Path.Combine(assets, "boosterai.png"), images.Single(i => i.Size == 256).Png);
+// Bolt-only mark for in-app images of 32 px or less (the setup wizard header); 64 px stays sharp at 200 % scaling.
+File.WriteAllBytes(Path.Combine(assets, "boosterai-small.png"), Render("boosterai-small.svg", 64));
 
 // ICO: header, one directory entry per image, then the PNG payloads.
 using var ico = new BinaryWriter(File.Create(Path.Combine(assets, "boosterai.ico")));
@@ -64,4 +66,4 @@ foreach (var (size, png) in images)
     offset += png.Length;
 }
 foreach (var (_, png) in images) ico.Write(png);
-Console.WriteLine($"Wrote boosterai.png and boosterai.ico ({string.Join(", ", sizes)}) in {assets}");
+Console.WriteLine($"Wrote boosterai.png, boosterai-small.png and boosterai.ico ({string.Join(", ", sizes)}) in {assets}");
