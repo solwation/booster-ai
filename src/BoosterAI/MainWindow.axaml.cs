@@ -75,6 +75,7 @@ public partial class MainWindow : Window
         DataContext = vm;
         InitializeComponent();
         Closed += (_, _) => StopStatusPeek();
+        ActualThemeVariantChanged += (_, _) => _vm.RaiseThemeBrushes();
         PropertyChanged += OnStatusWindowVisibilityChanged;
         Resized += (_, _) =>
         {

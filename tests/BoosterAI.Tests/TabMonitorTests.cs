@@ -543,14 +543,14 @@ public class InPlaceRestartTests
 
         tab.SetState(TabState.Running, null, activity: Activity.Busy);
         Assert.Equal(Loc.Get("tabstate.busy"), tab.StatusText);
-        var running = ((Avalonia.Media.ISolidColorBrush)tab.StatusBrush).Color;
+        var running = tab.StatusBrushKey;
 
         var since = DateTimeOffset.UtcNow.AddMinutes(-12).ToUnixTimeMilliseconds();
         tab.SetState(TabState.Running, null, activity: Activity.Watching, watchingSince: since);
         Assert.Equal(Activity.Watching, tab.Activity);
         Assert.Equal(Loc.Format("tabstate.watching", 12), tab.StatusText);
         Assert.NotEqual(Loc.Get("tabstate.idle"), tab.StatusText);
-        Assert.NotEqual(running, ((Avalonia.Media.ISolidColorBrush)tab.StatusBrush).Color);
+        Assert.NotEqual(running, tab.StatusBrushKey);
         Assert.NotEqual(tab.StatusText, tab.StatusTip);
         Assert.False(tab.CanRestart);
         // A repeated poll changes nothing (no notification) but keeps the minutes current.

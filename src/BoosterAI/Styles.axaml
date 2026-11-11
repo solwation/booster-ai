@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
   <!-- Shared by the start and settings windows. -->
   <Style Selector="Window">
+    <Setter Property="Background" Value="{DynamicResource BackgroundBrush}" />
     <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
     <Setter Property="FontSize" Value="14" />
   </Style>
@@ -14,8 +15,27 @@
   </Style>
   <Style Selector="TextBlock.colhead">
     <Setter Property="FontSize" Value="12" />
-    <Setter Property="Foreground" Value="{DynamicResource FaintBrush}" />
+    <Setter Property="FontWeight" Value="Medium" />
+    <Setter Property="Foreground" Value="{DynamicResource MutedBrush}" />
     <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <!-- A form field's label outranks its help text: label in text colour, help muted. -->
+  <Style Selector="TextBlock.label">
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="FontWeight" Value="Medium" />
+    <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="TextBlock.hint">
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="Foreground" Value="{DynamicResource MutedBrush}" />
+  </Style>
+  <!-- Status text: error and success colours come from the theme tokens. -->
+  <Style Selector="TextBlock.error, SelectableTextBlock.error">
+    <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
+  </Style>
+  <Style Selector="TextBlock.success">
+    <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}" />
   </Style>
   <Style Selector="TextBlock.sectionhead">
     <Setter Property="FontSize" Value="14" />
@@ -47,22 +67,22 @@
     <Setter Property="Background" Value="{DynamicResource RowHoverBrush}" /><Setter Property="FontWeight" Value="SemiBold" />
   </Style>
   <Style Selector="Button.agent-card">
-    <Setter Property="Background" Value="{DynamicResource RowHoverBrush}" /><Setter Property="Padding" Value="14" /><Setter Property="CornerRadius" Value="8" /><Setter Property="BorderThickness" Value="1" /><Setter Property="BorderBrush" Value="{DynamicResource RowHoverBrush}" /><Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" /><Setter Property="Padding" Value="14" /><Setter Property="CornerRadius" Value="{StaticResource RadiusLarge}" /><Setter Property="BorderThickness" Value="1" /><Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" /><Setter Property="HorizontalContentAlignment" Value="Stretch" />
   </Style>
   <Style Selector="Border.agent-group">
-    <Setter Property="Background" Value="{DynamicResource RowHoverBrush}" />
-    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusLarge}" />
     <Setter Property="Padding" Value="14,12" />
   </Style>
   <Style Selector="Border.memory-track">
     <Setter Property="Height" Value="24" />
-    <Setter Property="CornerRadius" Value="4" />
-    <Setter Property="Background" Value="{DynamicResource RowHoverBrush}" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusSmall}" />
+    <Setter Property="Background" Value="{DynamicResource SurfaceStrongBrush}" />
   </Style>
   <Style Selector="Border.memory-stat">
     <Setter Property="Padding" Value="10,7" />
-    <Setter Property="CornerRadius" Value="5" />
-    <Setter Property="Background" Value="{DynamicResource RowHoverBrush}" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusMedium}" />
+    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
   </Style>
   <Style Selector="TextBlock.memory-axis">
     <Setter Property="FontSize" Value="11" />
@@ -99,7 +119,7 @@
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderBrush" Value="Transparent" />
     <Setter Property="BorderThickness" Value="2" />
-    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusSmall}" />
     <Setter Property="Padding" Value="3,4" />
     <Setter Property="MinHeight" Value="28" />
     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
@@ -116,7 +136,7 @@
 
   <!-- A list row: quiet until hovered. -->
   <Style Selector="Border.row">
-    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusLarge}" />
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="Padding" Value="0,10" />
     <Setter Property="Margin" Value="0,0,0,2" />
@@ -195,22 +215,22 @@
 
   <!-- The update prompt: a soft outlined bar, not a dialog. -->
   <Style Selector="Border.update">
-    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusLarge}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColor}" />
-    <Setter Property="Background" Value="{DynamicResource RowHoverBrush}" />
+    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
     <Setter Property="Padding" Value="14,8" />
   </Style>
 
   <Style Selector="Border.update TextBlock.failed">
-    <Setter Property="Foreground" Value="#E5484D" />
+    <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
   </Style>
 
   <!-- Tab colour stripe; a button in settings, where it cycles the colour. -->
   <Style Selector="Button.stripe">
     <Setter Property="Template">
       <ControlTemplate>
-        <Border Background="{TemplateBinding Background}" CornerRadius="2" />
+        <Border Background="{TemplateBinding Background}" CornerRadius="{StaticResource RadiusSmall}" />
       </ControlTemplate>
     </Setter>
     <Setter Property="Cursor" Value="Hand" />
@@ -242,9 +262,9 @@
   <Style Selector="ListBox.themes ListBoxItem">
     <Setter Property="Padding" Value="10,8" />
     <Setter Property="Margin" Value="0,0,8,0" />
-    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusLarge}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="BorderBrush" Value="{DynamicResource RowHoverBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
   </Style>
   <Style Selector="ListBox.themes ListBoxItem:selected">
     <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColor}" />
@@ -255,7 +275,7 @@
 
   <!-- Main-window actions share their shape; only boost gets the launch gradient. -->
   <Style Selector="Button.boost, Button.main-action">
-    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusLarge}" />
   </Style>
 
   <!-- The one loud element: the launch button in the icon's gradient. -->

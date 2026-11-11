@@ -86,7 +86,7 @@
               <TextBlock Classes="sectionhead" Text="{local:T settings.section.behavior}" />
 
               <Grid ColumnDefinitions="140,170,*" Margin="0,4,0,0">
-                <TextBlock Grid.Column="0" Classes="colhead" Text="{local:T afterLaunch.title}" VerticalAlignment="Center" Margin="0,0,14,0" />
+                <TextBlock Grid.Column="0" Classes="label" Text="{local:T afterLaunch.title}" VerticalAlignment="Center" Margin="0,0,14,0" />
                 <ComboBox Grid.Column="1" ItemsSource="{Binding AfterLaunchChoices}" SelectedItem="{Binding SelectedAfterLaunch}" Width="170"
                           AutomationProperties.Name="{local:T afterLaunch.title}">
                   <ComboBox.ItemTemplate>
@@ -95,7 +95,7 @@
                     </DataTemplate>
                   </ComboBox.ItemTemplate>
                 </ComboBox>
-                <TextBlock Grid.Column="2" Classes="muted" Text="{local:T afterLaunch.hint}" VerticalAlignment="Center"
+                <TextBlock Grid.Column="2" Classes="hint" Text="{local:T afterLaunch.hint}" VerticalAlignment="Center"
                            TextWrapping="Wrap" Margin="14,0,0,0" />
               </Grid>
 
@@ -157,7 +157,7 @@
               <TextBlock Classes="sectionhead" Text="{local:T settings.section.environment}" />
 
               <Grid ColumnDefinitions="140,170,*" Margin="0,4,0,0">
-                <TextBlock Grid.Column="0" Classes="colhead" Text="{local:T terminal}" VerticalAlignment="Center" Margin="0,0,14,0" />
+                <TextBlock Grid.Column="0" Classes="label" Text="{local:T terminal}" VerticalAlignment="Center" Margin="0,0,14,0" />
                 <ComboBox Grid.Column="1" ItemsSource="{Binding LinuxTerminals}" SelectedItem="{Binding LinuxTerminal}" Width="170"
                           FontFamily="{StaticResource MonoFont}" FontSize="13" />
               </Grid>
@@ -203,7 +203,7 @@
                     <Border Classes="memory-track">
                       <local:SliderRangePanel LowerFraction="0" UpperFraction="{Binding Optimization.MemoryCurrentFraction}"
                                               Inset="0" IsVisible="{Binding Optimization.HasCurrentMemory}" IsHitTestVisible="False">
-                        <Border Background="{DynamicResource LinkBrush}" CornerRadius="4" />
+                        <Border Background="{DynamicResource LinkBrush}" CornerRadius="{StaticResource RadiusSmall}" />
                       </local:SliderRangePanel>
                     </Border>
                   </StackPanel>
@@ -218,7 +218,7 @@
                         <local:SliderRangePanel LowerFraction="{Binding Optimization.MemoryLowerFraction}"
                                                 UpperFraction="{Binding Optimization.MemoryUpperFraction}" Inset="0">
                           <Border Background="{DynamicResource LinkBrush}" Opacity="0.25" />
-                          <Border BorderBrush="{DynamicResource LinkBrush}" BorderThickness="2" CornerRadius="3" />
+                          <Border BorderBrush="{DynamicResource LinkBrush}" BorderThickness="2" CornerRadius="{StaticResource RadiusSmall}" />
                         </local:SliderRangePanel>
                         <local:SliderMarkerPanel Fraction="{Binding Optimization.MemoryAverageFraction}" Inset="0">
                           <Border Width="3" Height="28" Background="{DynamicResource TextBrush}" />
@@ -257,7 +257,7 @@
                       <local:SliderRangePanel LowerFraction="{Binding Optimization.SuggestedLowerFraction}"
                                               UpperFraction="{Binding Optimization.SuggestedUpperFraction}" Inset="0" IsHitTestVisible="False">
                         <Border Background="{DynamicResource RecommendedBrush}" Opacity="0.22" />
-                        <Border BorderBrush="{DynamicResource RecommendedBrush}" BorderThickness="2" CornerRadius="3" />
+                        <Border BorderBrush="{DynamicResource RecommendedBrush}" BorderThickness="2" CornerRadius="{StaticResource RadiusSmall}" />
                       </local:SliderRangePanel>
                     </Border>
                   </StackPanel>
@@ -296,15 +296,15 @@
                 <TextBlock Classes="title" Text="{local:T settings.optimization.nav.limit}" />
                 <TextBlock Classes="muted" Text="{local:T settings.optimization.hint}" TextWrapping="Wrap" />
                 <Grid ColumnDefinitions="160,*" RowDefinitions="Auto,Auto" Margin="0,8,0,0">
-                  <TextBlock Classes="colhead" Text="{local:T settings.optimization.totalRam}" />
+                  <TextBlock Classes="label" Text="{local:T settings.optimization.totalRam}" />
                   <TextBlock Grid.Column="1" Text="{Binding Optimization.TotalMemoryText}" FontWeight="SemiBold" />
-                  <TextBlock Grid.Row="1" Classes="colhead" Text="{local:T settings.optimization.currentConfig}" Margin="0,8,0,0" />
+                  <TextBlock Grid.Row="1" Classes="label" Text="{local:T settings.optimization.currentConfig}" Margin="0,8,0,0" />
                   <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Optimization.CurrentConfigText}" TextWrapping="Wrap" Margin="0,8,0,0" />
                 </Grid>
               <!-- Editing stays separate from observed usage. -->
               <StackPanel Spacing="8" Margin="0,8,0,0" IsVisible="{Binding Optimization.IsWindows}">
                 <Grid ColumnDefinitions="*,Auto">
-                  <TextBlock Grid.Column="0" Classes="colhead" Text="{local:T settings.optimization.memorySlider}" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="0" Classes="label" Text="{local:T settings.optimization.memorySlider}" VerticalAlignment="Center" />
                   <TextBlock Grid.Column="1" Text="{Binding Optimization.SliderMemoryText}" FontWeight="Bold" FontSize="16" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" />
                 </Grid>
 
@@ -344,7 +344,7 @@
 
                 <!-- Feedback from explicit save/restart. -->
                 <TextBlock Text="{Binding Optimization.StatusMessage}" IsVisible="{Binding Optimization.HasStatusMessage}"
-                           Foreground="{Binding Optimization.StatusColorBrush}" TextWrapping="Wrap" Margin="0,6,0,0" FontSize="13" />
+                           Classes.error="{Binding Optimization.StatusIsError}" Classes.success="{Binding !Optimization.StatusIsError}" TextWrapping="Wrap" Margin="0,6,0,0" FontSize="13" />
               </StackPanel>
 
 
@@ -360,7 +360,7 @@
                 <TextBlock Classes="title" Text="{local:T settings.optimization.nav.environment}" />
                 <TextBlock Classes="muted" Text="{local:T settings.optimization.environmentIntro}" TextWrapping="Wrap" />
                 <StackPanel Spacing="8" IsVisible="{Binding Optimization.IsWindows}">
-                  <TextBlock Classes="colhead" Text="{local:T wsl.distro}" />
+                  <TextBlock Classes="label" Text="{local:T wsl.distro}" />
                   <TextBox Text="{Binding WslDistro}" HorizontalAlignment="Left" Width="300"
                            FontFamily="{StaticResource MonoFont}" AutomationProperties.Name="{local:T wsl.distro}" />
                 </StackPanel>
@@ -427,7 +427,7 @@
               <TextBlock Classes="sectionhead" Text="{local:T settings.section.appearanceLanguage}" />
 
               <Grid ColumnDefinitions="140,170,*" RowDefinitions="Auto,Auto,Auto" Margin="0,4,0,0">
-                <TextBlock Grid.Row="0" Grid.Column="0" Classes="colhead" Text="{local:T theme.title}" VerticalAlignment="Center" Margin="0,0,14,0" />
+                <TextBlock Grid.Row="0" Grid.Column="0" Classes="label" Text="{local:T theme.title}" VerticalAlignment="Center" Margin="0,0,14,0" />
                 <ComboBox Grid.Row="0" Grid.Column="1" ItemsSource="{Binding AppearanceChoices}" SelectedItem="{Binding SelectedAppearance}" Width="170"
                           AutomationProperties.Name="{local:T theme.name}">
                   <ComboBox.ItemTemplate>
@@ -436,10 +436,10 @@
                     </DataTemplate>
                   </ComboBox.ItemTemplate>
                 </ComboBox>
-                <TextBlock Grid.Row="0" Grid.Column="2" Classes="muted" Text="{local:T theme.hint}" VerticalAlignment="Center"
+                <TextBlock Grid.Row="0" Grid.Column="2" Classes="hint" Text="{local:T theme.hint}" VerticalAlignment="Center"
                            TextWrapping="Wrap" Margin="14,0,0,0" />
 
-                <TextBlock Grid.Row="1" Grid.Column="0" Classes="colhead" Text="{local:T language.title}" VerticalAlignment="Center" Margin="0,12,14,0" />
+                <TextBlock Grid.Row="1" Grid.Column="0" Classes="label" Text="{local:T language.title}" VerticalAlignment="Center" Margin="0,12,14,0" />
                 <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding LanguageChoices}" SelectedItem="{Binding SelectedLanguage}" Width="170" Margin="0,12,0,0"
                           AutomationProperties.Name="{local:T language.name}">
                   <ComboBox.ItemTemplate>
@@ -448,10 +448,10 @@
                     </DataTemplate>
                   </ComboBox.ItemTemplate>
                 </ComboBox>
-                <TextBlock Grid.Row="1" Grid.Column="2" Classes="muted" Text="{local:T language.restart}" VerticalAlignment="Center"
+                <TextBlock Grid.Row="1" Grid.Column="2" Classes="hint" Text="{local:T language.restart}" VerticalAlignment="Center"
                            TextWrapping="Wrap" Margin="14,12,0,0" />
 
-                <TextBlock Grid.Row="2" Grid.Column="0" Classes="colhead" Text="{local:T zoom.title}" VerticalAlignment="Center" Margin="0,12,14,0" />
+                <TextBlock Grid.Row="2" Grid.Column="0" Classes="label" Text="{local:T zoom.title}" VerticalAlignment="Center" Margin="0,12,14,0" />
                 <ComboBox Grid.Row="2" Grid.Column="1" ItemsSource="{Binding ZoomChoices}" SelectedItem="{Binding SelectedZoom}" Width="170" Margin="0,12,0,0"
                           AutomationProperties.Name="{local:T zoom.name}">
                   <ComboBox.ItemTemplate>
@@ -487,7 +487,7 @@
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                           <DataTemplate x:DataType="IBrush">
-                            <Border Width="10" Height="10" CornerRadius="5" Background="{Binding}" />
+                            <Ellipse Width="10" Height="10" Fill="{Binding}" />
                           </DataTemplate>
                         </ItemsControl.ItemTemplate>
                       </ItemsControl>
@@ -533,7 +533,7 @@
                         <Button Classes="agent-card" Click="OnOpenAgent" Width="198" Margin="0,0,10,10" AutomationProperties.Name="{Binding DisplayName}">
                           <StackPanel Spacing="10">
                             <StackPanel Orientation="Horizontal" Spacing="10"><local:AgentIcon Cli="{Binding Cli}" Width="28" Height="28" /><TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap" MaxWidth="140" /></StackPanel>
-                            <StackPanel Orientation="Horizontal" Spacing="8"><Ellipse Width="7" Height="7" Fill="#28A56A" IsVisible="{Binding IsInstalled}" /><TextBlock Text="{Binding StatusText}" FontSize="12" /><TextBlock Text="{Binding VersionText}" Classes="muted" FontSize="12" /></StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="8"><Ellipse Width="7" Height="7" Fill="{DynamicResource SuccessDotBrush}" IsVisible="{Binding IsInstalled}" /><TextBlock Text="{Binding StatusText}" FontSize="12" /><TextBlock Text="{Binding VersionText}" Classes="muted" FontSize="12" /></StackPanel>
                             <TextBlock Text="{Binding CurrentModeText}" Classes="muted" FontSize="12" TextWrapping="Wrap" />
                             <TextBlock Text="{Binding Advice.CardStatus}" IsVisible="{Binding Advice.IsSupported}" TextWrapping="Wrap" FontSize="12" FontWeight="SemiBold" />
                           </StackPanel>
@@ -597,7 +597,7 @@
                               </ComboBox>
                               <TextBlock Text="{Binding AliasRecommendation}" Classes="muted" TextWrapping="Wrap" FontSize="12" />
                             </StackPanel>
-                            <Border Background="#20DD7536" CornerRadius="6" Padding="10" IsVisible="{Binding IsYolo}"><TextBlock Text="{local:T agents.permissions.warning}" TextWrapping="Wrap" FontWeight="SemiBold" /></Border>
+                            <Border Background="{DynamicResource WarningSurfaceBrush}" CornerRadius="{StaticResource RadiusMedium}" Padding="10" IsVisible="{Binding IsYolo}"><TextBlock Text="{local:T agents.permissions.warning}" TextWrapping="Wrap" FontWeight="SemiBold" /></Border>
                             <TextBlock Text="{Binding ModeExplanation}" TextWrapping="Wrap" FontSize="12" />
                             <StackPanel Spacing="5" IsVisible="{Binding HasPresetPreview}">
                               <TextBlock Text="{local:T agents.alias.preview}" FontWeight="SemiBold" FontSize="12" />

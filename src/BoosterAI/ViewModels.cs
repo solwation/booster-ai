@@ -383,15 +383,21 @@ public sealed class TabViewModel : Observable
         if (had != _hasOutput) { Raise(nameof(OutputNote)); Raise(nameof(HasOutputNote)); Raise(nameof(HasOutput)); }
     }
 
-    public IBrush StatusBrush => new SolidColorBrush(Avalonia.Media.Color.Parse(_state switch
+    /// <summary>The theme token (App.axaml) of the status dot's colour.</summary>
+    public string StatusBrushKey => _state switch
     {
-        TabState.Running when Activity == Activity.Watching => "#3B7DD8",
-        TabState.Running => "#2E9E5B",
-        TabState.Starting => "#8A8FA0",
-        TabState.CliExited when _rc == 0 => "#8A8FA0",
-        TabState.Closed => "#D08A1E",
-        _ => "#D2453F",
-    }));
+        TabState.Running when Activity == Activity.Watching => "InfoDotBrush",
+        TabState.Running => "SuccessDotBrush",
+        TabState.Starting => "NeutralStatusBrush",
+        TabState.CliExited when _rc == 0 => "NeutralStatusBrush",
+        TabState.Closed => "WarningDotBrush",
+        _ => "DangerDotBrush",
+    };
+
+    public IBrush StatusBrush => ThemeBrushes.Get(StatusBrushKey);
+
+    /// <summary>The theme changed: the status dot looks its colour up again.</summary>
+    internal void RaiseThemeBrushes() => Raise(nameof(StatusBrush));
 
     /// <summary>Updates the state; true when it changed.</summary>
     /// <param name="clearedAt">When auto-clear typed /clear in the current idle period (AutoClear.ClearedAt); shown in the status.</param>
@@ -479,6 +485,12 @@ public sealed partial class MainViewModel : Observable
     }
 
     public ObservableCollection<TabViewModel> Tabs { get; }
+
+    /// <summary>The theme changed: brushes looked up from theme tokens are fetched again.</summary>
+    internal void RaiseThemeBrushes()
+    {
+        foreach (var tab in Tabs) tab.RaiseThemeBrushes();
+    }
     private IReadOnlyList<TabViewModel> _projects = [];
     public IReadOnlyList<TabViewModel> Projects => _projects;
     private IReadOnlyList<TabViewModel> _visibleTabs = [];

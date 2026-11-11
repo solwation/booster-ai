@@ -67,7 +67,7 @@
         <TextBlock Classes="sectionhead" FontSize="17" Text="{local:T setup.welcome.heading}" />
         <TextBlock TextWrapping="Wrap" LineHeight="21" Text="{local:T setup.welcome.body}" />
         <TextBlock Classes="muted" TextWrapping="Wrap" LineHeight="20" Text="{local:T setup.welcome.skip}" />
-        <Border Background="{DynamicResource RowHoverBrush}" CornerRadius="6" Padding="12,9" IsVisible="{Binding IsUpgrade}">
+        <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="{StaticResource RadiusMedium}" Padding="12,9" IsVisible="{Binding IsUpgrade}">
           <TextBlock TextWrapping="Wrap" LineHeight="20" Text="{local:T setup.welcome.upgrade}" />
         </Border>
       </StackPanel>
@@ -169,14 +169,14 @@
           <ProgressBar IsIndeterminate="True" />
           <TextBlock Classes="muted" Text="{Binding Status}" />
         </StackPanel>
-        <TextBlock TextWrapping="Wrap" LineHeight="20" Foreground="#D20F39" Text="{Binding Error}" IsVisible="{Binding HasError}" />
+        <TextBlock TextWrapping="Wrap" LineHeight="20" Foreground="{DynamicResource DangerBrush}" Text="{Binding Error}" IsVisible="{Binding HasError}" />
       </StackPanel>
 
       <!-- 5. Done -->
       <StackPanel Spacing="14" IsVisible="{Binding IsDone}">
         <TextBlock Classes="sectionhead" FontSize="17" Text="{local:T setup.done.heading}" />
         <TextBlock TextWrapping="Wrap" LineHeight="21" Text="{local:T setup.done.body}" />
-        <Border Background="{DynamicResource RowHoverBrush}" CornerRadius="6" Padding="12,9" IsVisible="{Binding HasDoneNote}">
+        <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="{StaticResource RadiusMedium}" Padding="12,9" IsVisible="{Binding HasDoneNote}">
           <TextBlock TextWrapping="Wrap" LineHeight="20" Text="{Binding DoneNote}" />
         </Border>
       </StackPanel>

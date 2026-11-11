@@ -55,8 +55,7 @@
 
       <StackPanel IsVisible="{Binding !HasItems}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
         <ProgressBar IsIndeterminate="True" Width="160" IsVisible="{Binding IsScanning}" />
-        <TextBlock Classes.muted="{Binding !MessageIsError}" Text="{Binding Message}" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="440"
-                   Foreground="{Binding MessageIsError, Converter={x:Static local:Converters.ErrorBrush}}" />
+        <TextBlock Classes.muted="{Binding !MessageIsError}" Classes.error="{Binding MessageIsError}" Text="{Binding Message}" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="440" />
       </StackPanel>
     </Panel>
 

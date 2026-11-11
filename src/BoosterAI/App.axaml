@@ -17,29 +17,125 @@
     <Color x:Key="SystemAccentColorLight2">#9093F7</Color>
     <Color x:Key="SystemAccentColorLight3">#ABAEFA</Color>
 
-    <!-- Text and surface tones for both themes (Avalonia's Fluent has no WinUI text-fill brushes). -->
+    <!-- Design tokens for both themes (Avalonia's Fluent has no WinUI text-fill brushes). Status and error
+         colours live only here: text tokens reach 4.5:1 on BackgroundBrush and SurfaceBrush, *Dot tokens are for
+         status dots. BorderBrush is for decorative edges only; field edges use FieldBorderBrush (>= 3:1). -->
     <ResourceDictionary.ThemeDictionaries>
       <ResourceDictionary x:Key="Dark">
         <SolidColorBrush x:Key="TextBrush" Color="#F2F3F7" />
         <SolidColorBrush x:Key="MutedBrush" Color="#A9ADBC" />
-        <SolidColorBrush x:Key="FaintBrush" Color="#7C8091" />
+        <SolidColorBrush x:Key="FaintBrush" Color="#8A8EA0" />
         <SolidColorBrush x:Key="RowHoverBrush" Color="#14FFFFFF" />
         <SolidColorBrush x:Key="OutputBackgroundBrush" Color="#33000000" />
         <SolidColorBrush x:Key="LinkBrush" Color="#9A9DFF" />
         <SolidColorBrush x:Key="LinkHoverBrush" Color="#BDBFFF" />
         <SolidColorBrush x:Key="RecommendedBrush" Color="#5BC26E" />
+
+        <SolidColorBrush x:Key="BackgroundBrush" Color="#14151B" />
+        <SolidColorBrush x:Key="SurfaceBrush" Color="#1C1E26" />
+        <SolidColorBrush x:Key="SurfaceStrongBrush" Color="#262935" />
+        <SolidColorBrush x:Key="BorderBrush" Color="#343846" />
+        <SolidColorBrush x:Key="FieldBorderBrush" Color="#70758A" />
+
+        <SolidColorBrush x:Key="SuccessBrush" Color="#5BC26E" />
+        <SolidColorBrush x:Key="SuccessDotBrush" Color="#46A758" />
+        <SolidColorBrush x:Key="DangerBrush" Color="#FF6B6F" />
+        <SolidColorBrush x:Key="DangerDotBrush" Color="#E5484D" />
+        <SolidColorBrush x:Key="WarningBrush" Color="#E8A93A" />
+        <SolidColorBrush x:Key="WarningDotBrush" Color="#D08A1E" />
+        <SolidColorBrush x:Key="InfoBrush" Color="#6FA4F0" />
+        <SolidColorBrush x:Key="InfoDotBrush" Color="#3B7DD8" />
+        <SolidColorBrush x:Key="NeutralStatusBrush" Color="#8A8FA0" />
+        <SolidColorBrush x:Key="DangerSurfaceBrush" Color="#2A1518" />
+        <SolidColorBrush x:Key="WarningSurfaceBrush" Color="#2A2112" />
+        <SolidColorBrush x:Key="DangerFillBrush" Color="#C62F35" />
+
+        <!-- Fluent keys mapped onto the tokens above (same values; keep them in step). -->
+        <SolidColorBrush x:Key="ButtonBackground" Color="#262935" />
+        <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#343846" />
+        <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#1C1E26" />
+        <SolidColorBrush x:Key="ButtonBackgroundDisabled" Color="#1C1E26" />
+        <SolidColorBrush x:Key="ToolTipBackground" Color="#1C1E26" />
+        <SolidColorBrush x:Key="ToolTipBorderBrush" Color="#343846" />
+        <SolidColorBrush x:Key="ComboBoxBackground" Color="#14151B" />
+        <SolidColorBrush x:Key="ComboBoxBackgroundPointerOver" Color="#1C1E26" />
+        <SolidColorBrush x:Key="ComboBoxBackgroundPressed" Color="#262935" />
+        <SolidColorBrush x:Key="ComboBoxBackgroundDisabled" Color="#1C1E26" />
+        <SolidColorBrush x:Key="ComboBoxBorderBrush" Color="#70758A" />
+        <SolidColorBrush x:Key="ComboBoxBorderBrushPointerOver" Color="#70758A" />
+        <SolidColorBrush x:Key="ComboBoxDropDownBackground" Color="#1C1E26" />
+        <SolidColorBrush x:Key="ComboBoxDropDownBorderBrush" Color="#343846" />
+        <SolidColorBrush x:Key="TextControlBackground" Color="#14151B" />
+        <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="#1C1E26" />
+        <SolidColorBrush x:Key="TextControlBorderBrush" Color="#70758A" />
+        <SolidColorBrush x:Key="TextControlBorderBrushPointerOver" Color="#70758A" />
+        <SolidColorBrush x:Key="ExpanderHeaderBackground" Color="#1C1E26" />
+        <SolidColorBrush x:Key="ExpanderHeaderBackgroundPointerOver" Color="#262935" />
+        <SolidColorBrush x:Key="ExpanderHeaderBackgroundPressed" Color="#262935" />
+        <SolidColorBrush x:Key="ExpanderHeaderBorderBrush" Color="#343846" />
+        <SolidColorBrush x:Key="ExpanderContentBackground" Color="#1C1E26" />
+        <SolidColorBrush x:Key="ExpanderContentBorderBrush" Color="#343846" />
       </ResourceDictionary>
       <ResourceDictionary x:Key="Light">
         <SolidColorBrush x:Key="TextBrush" Color="#1B1D26" />
         <SolidColorBrush x:Key="MutedBrush" Color="#5A5E6E" />
-        <SolidColorBrush x:Key="FaintBrush" Color="#7F8394" />
+        <SolidColorBrush x:Key="FaintBrush" Color="#6B6F80" />
         <SolidColorBrush x:Key="RowHoverBrush" Color="#0C000000" />
         <SolidColorBrush x:Key="OutputBackgroundBrush" Color="#0A000000" />
         <SolidColorBrush x:Key="LinkBrush" Color="#3B3FCF" />
         <SolidColorBrush x:Key="LinkHoverBrush" Color="#2A2DA8" />
-        <SolidColorBrush x:Key="RecommendedBrush" Color="#2F8A42" />
+        <SolidColorBrush x:Key="RecommendedBrush" Color="#27773A" />
+
+        <SolidColorBrush x:Key="BackgroundBrush" Color="#FFFFFF" />
+        <SolidColorBrush x:Key="SurfaceBrush" Color="#F5F6F9" />
+        <SolidColorBrush x:Key="SurfaceStrongBrush" Color="#ECEEF3" />
+        <SolidColorBrush x:Key="BorderBrush" Color="#D9DCE5" />
+        <SolidColorBrush x:Key="FieldBorderBrush" Color="#80859A" />
+
+        <SolidColorBrush x:Key="SuccessBrush" Color="#27773A" />
+        <SolidColorBrush x:Key="SuccessDotBrush" Color="#2E9E5B" />
+        <SolidColorBrush x:Key="DangerBrush" Color="#C62F35" />
+        <SolidColorBrush x:Key="DangerDotBrush" Color="#D2453F" />
+        <SolidColorBrush x:Key="WarningBrush" Color="#9A6200" />
+        <SolidColorBrush x:Key="WarningDotBrush" Color="#D08A1E" />
+        <SolidColorBrush x:Key="InfoBrush" Color="#2F6FD0" />
+        <SolidColorBrush x:Key="InfoDotBrush" Color="#3B7DD8" />
+        <SolidColorBrush x:Key="NeutralStatusBrush" Color="#8A8FA0" />
+        <SolidColorBrush x:Key="DangerSurfaceBrush" Color="#FDF0F0" />
+        <SolidColorBrush x:Key="WarningSurfaceBrush" Color="#FDF4E3" />
+        <SolidColorBrush x:Key="DangerFillBrush" Color="#C62F35" />
+
+        <!-- Fluent keys mapped onto the tokens above (same values; keep them in step). -->
+        <SolidColorBrush x:Key="ButtonBackground" Color="#ECEEF3" />
+        <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#D9DCE5" />
+        <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#F5F6F9" />
+        <SolidColorBrush x:Key="ButtonBackgroundDisabled" Color="#F5F6F9" />
+        <SolidColorBrush x:Key="ToolTipBackground" Color="#F5F6F9" />
+        <SolidColorBrush x:Key="ToolTipBorderBrush" Color="#D9DCE5" />
+        <SolidColorBrush x:Key="ComboBoxBackground" Color="#FFFFFF" />
+        <SolidColorBrush x:Key="ComboBoxBackgroundPointerOver" Color="#F5F6F9" />
+        <SolidColorBrush x:Key="ComboBoxBackgroundPressed" Color="#ECEEF3" />
+        <SolidColorBrush x:Key="ComboBoxBackgroundDisabled" Color="#F5F6F9" />
+        <SolidColorBrush x:Key="ComboBoxBorderBrush" Color="#80859A" />
+        <SolidColorBrush x:Key="ComboBoxBorderBrushPointerOver" Color="#80859A" />
+        <SolidColorBrush x:Key="ComboBoxDropDownBackground" Color="#F5F6F9" />
+        <SolidColorBrush x:Key="ComboBoxDropDownBorderBrush" Color="#D9DCE5" />
+        <SolidColorBrush x:Key="TextControlBackground" Color="#FFFFFF" />
+        <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="#F5F6F9" />
+        <SolidColorBrush x:Key="TextControlBorderBrush" Color="#80859A" />
+        <SolidColorBrush x:Key="TextControlBorderBrushPointerOver" Color="#80859A" />
+        <SolidColorBrush x:Key="ExpanderHeaderBackground" Color="#F5F6F9" />
+        <SolidColorBrush x:Key="ExpanderHeaderBackgroundPointerOver" Color="#ECEEF3" />
+        <SolidColorBrush x:Key="ExpanderHeaderBackgroundPressed" Color="#ECEEF3" />
+        <SolidColorBrush x:Key="ExpanderHeaderBorderBrush" Color="#D9DCE5" />
+        <SolidColorBrush x:Key="ExpanderContentBackground" Color="#F5F6F9" />
+        <SolidColorBrush x:Key="ExpanderContentBorderBrush" Color="#D9DCE5" />
       </ResourceDictionary>
     </ResourceDictionary.ThemeDictionaries>
+
+    <CornerRadius x:Key="RadiusSmall">4</CornerRadius>
+    <CornerRadius x:Key="RadiusMedium">6</CornerRadius>
+    <CornerRadius x:Key="RadiusLarge">8</CornerRadius>
 
     <LinearGradientBrush x:Key="BoostBrush" StartPoint="0%,0%" EndPoint="100%,100%">
       <GradientStop Offset="0" Color="#1E66F5" />

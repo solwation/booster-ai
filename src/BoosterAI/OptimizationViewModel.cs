@@ -1,4 +1,3 @@
-using Avalonia.Media;
 using Avalonia.Threading;
 
 namespace BoosterAI;
@@ -184,9 +183,6 @@ public sealed class OptimizationViewModel : Observable
     public bool HasStatusMessage => !string.IsNullOrEmpty(_statusMessage);
     public bool StatusIsError => _statusIsError;
 
-    public IBrush StatusColorBrush => _statusIsError
-        ? new SolidColorBrush(Color.Parse("#E5484D"))
-        : new SolidColorBrush(Color.Parse("#46A758"));
 
     public void Refresh()
     {
@@ -239,13 +235,11 @@ public sealed class OptimizationViewModel : Observable
             Raise(nameof(CurrentConfigText));
             Raise(nameof(CanSave));
             RaiseMemoryScale();
-            Raise(nameof(StatusColorBrush));
         }
         catch (Exception ex)
         {
             _statusIsError = true;
             StatusMessage = Loc.Format("settings.optimization.saveFailed", ex.Message);
-            Raise(nameof(StatusColorBrush));
         }
         Raise(nameof(StatusIsError));
     }
@@ -260,13 +254,11 @@ public sealed class OptimizationViewModel : Observable
             ShutdownWsl();
             _statusIsError = false;
             StatusMessage = Loc.Get("settings.optimization.restarted");
-            Raise(nameof(StatusColorBrush));
         }
         catch (Exception ex)
         {
             _statusIsError = true;
             StatusMessage = Loc.Format("settings.optimization.restartFailed", ex.Message);
-            Raise(nameof(StatusColorBrush));
         }
         Raise(nameof(StatusIsError));
     }

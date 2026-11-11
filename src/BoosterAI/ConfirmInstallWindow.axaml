@@ -16,7 +16,7 @@
 
     <StackPanel Spacing="6">
       <TextBlock Classes="muted" Text="{local:T confirm.addsTo}" />
-      <Border Background="{DynamicResource RowHoverBrush}" CornerRadius="6" Padding="10,7">
+      <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="{StaticResource RadiusMedium}" Padding="10,7">
         <TextBlock Classes="path" Text="{Binding Directory}" Foreground="{DynamicResource TextBrush}" />
       </Border>
       <TextBlock Classes="muted" TextWrapping="Wrap" LineHeight="20"

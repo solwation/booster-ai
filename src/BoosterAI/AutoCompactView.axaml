@@ -23,7 +23,7 @@
           <ComboBox.ItemTemplate><DataTemplate x:DataType="local:CompactChoice"><TextBlock Text="{Binding Label}" /></DataTemplate></ComboBox.ItemTemplate>
         </ComboBox>
         <TextBox x:Name="CompactCustom" Text="{Binding Custom}" IsVisible="{Binding IsCustom}" Watermark="{local:T compact.custom.tokens}" AutomationProperties.Name="{local:T compact.custom.tokens}" />
-        <Border Background="{DynamicResource RowHoverBrush}" CornerRadius="8" Padding="16" IsVisible="{Binding ShowBudget}">
+        <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="{StaticResource RadiusLarge}" Padding="16" IsVisible="{Binding ShowBudget}">
           <StackPanel Spacing="8">
             <TextBlock Text="{local:T compact.visual.budget}" FontSize="12" />
             <WrapPanel><TextBlock Text="{Binding BudgetValue}" FontSize="26" FontWeight="SemiBold" Margin="0,0,10,0" /><TextBlock Text="{Binding BudgetCapacity}" VerticalAlignment="Bottom" Margin="0,0,0,4" /></WrapPanel>

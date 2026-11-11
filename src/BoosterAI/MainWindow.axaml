@@ -141,7 +141,7 @@
                       DragDrop.DragLeave="OnTabDragLeave" DragDrop.Drop="OnTabDrop">
                 <StackPanel>
                 <Grid Classes="project-columns" Loaded="OnProjectGridLoaded" ColumnDefinitions="4,20,36,*,200,166,195,110,130">
-                  <Border Grid.Column="0" Background="{Binding ColorBrush}" CornerRadius="2" />
+                  <Border Grid.Column="0" Background="{Binding ColorBrush}" CornerRadius="{StaticResource RadiusSmall}" />
                   <TextBlock Grid.Column="1" Text="⋮" Foreground="{DynamicResource FaintBrush}" FontSize="16"
                              HorizontalAlignment="Center" VerticalAlignment="Center" PointerPressed="OnTabDragStart"
                              ToolTip.Tip="{local:T tab.reorder.tip}" />
@@ -255,8 +255,7 @@
       <!-- The running version sits under the status, bottom left, so a report always says which build it was. -->
       <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,20,0" Spacing="4">
         <TextBlock Text="{Binding Status}" TextWrapping="Wrap" IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                   Classes.muted="{Binding !StatusIsError}"
-                   Foreground="{Binding StatusIsError, Converter={x:Static local:Converters.ErrorBrush}}" />
+                   Classes.muted="{Binding !StatusIsError}" Classes.error="{Binding StatusIsError}" />
         <TextBlock Classes="muted" Text="{Binding VersionText}" FontSize="11.5" ToolTip.Tip="{local:T version.tip}" />
       </StackPanel>
       <Button Grid.Column="1" Classes="main-action" Height="{Binding #LaunchButton.Bounds.Height}" Content="{Binding RestartAllLabel}" Click="OnRestartAll"
