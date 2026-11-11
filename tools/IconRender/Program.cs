@@ -10,7 +10,6 @@ if (args.FirstOrDefault() == "--agents")
     {
         var ink = theme == "dark" ? "#F4F4F5" : "#202124";
         var source = File.ReadAllText(file).Replace("currentColor", ink).Replace("#171717", ink).Replace("#000000", ink);
-        if (Path.GetFileName(file) == "interpreter.svg") source = source.Replace("stroke-width=\"4\"", "stroke-width=\"10\"");
         using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(source));
         using var svg = new SKSvg();
         var picture = svg.Load(stream) ?? throw new InvalidOperationException(file);

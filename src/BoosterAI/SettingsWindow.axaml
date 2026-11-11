@@ -532,14 +532,29 @@
                     <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="local:AgentInfo">
-                        <Button Classes="agent-card" Click="OnOpenAgent" Width="198" Margin="0,0,10,10" AutomationProperties.Name="{Binding DisplayName}">
-                          <StackPanel Spacing="10">
-                            <StackPanel Orientation="Horizontal" Spacing="10"><local:AgentIcon Cli="{Binding Cli}" Width="28" Height="28" /><TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap" MaxWidth="140" /></StackPanel>
-                            <StackPanel Orientation="Horizontal" Spacing="8"><Ellipse Width="7" Height="7" Fill="{DynamicResource SuccessDotBrush}" IsVisible="{Binding IsInstalled}" /><TextBlock Classes="caption" Text="{Binding StatusText}" /><TextBlock Text="{Binding VersionText}" Classes="muted caption" /></StackPanel>
-                            <TextBlock Text="{Binding CurrentModeText}" Classes="muted caption" TextWrapping="Wrap" />
-                            <TextBlock Classes="caption" Text="{Binding Advice.CardStatus}" IsVisible="{Binding Advice.IsSupported}" TextWrapping="Wrap" FontWeight="SemiBold" />
-                          </StackPanel>
-                        </Button>
+                        <Panel Width="198" Margin="0,0,10,10">
+                          <Button Classes="agent-card" Click="OnOpenAgent" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" AutomationProperties.Name="{Binding DisplayName}">
+                            <StackPanel Spacing="10">
+                              <StackPanel Orientation="Horizontal" Spacing="10">
+                                <Border Classes="logo-plate"><local:AgentIcon Cli="{Binding Cli}" Width="16" Height="16" /></Border>
+                                <TextBlock Classes="sectionhead" Text="{Binding DisplayName}" VerticalAlignment="Center" TextWrapping="Wrap" MaxWidth="140" />
+                              </StackPanel>
+                              <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Ellipse Width="7" Height="7" Fill="{DynamicResource SuccessDotBrush}" IsVisible="{Binding CardDotReady}" />
+                                <Ellipse Width="7" Height="7" Fill="{DynamicResource DangerDotBrush}" IsVisible="{Binding CardDotMissing}" />
+                                <Ellipse Width="7" Height="7" Fill="{DynamicResource WarningDotBrush}" IsVisible="{Binding CardDotOutdated}" />
+                                <Ellipse Width="7" Height="7" Fill="{DynamicResource NeutralStatusBrush}" IsVisible="{Binding CardDotUnknown}" />
+                                <TextBlock Classes="body-small" Text="{Binding CardStatusText}" />
+                              </StackPanel>
+                              <TextBlock Classes="body-small muted" Text="{Binding CardPermissionText}" TextWrapping="Wrap" />
+                              <TextBlock Classes="body-small link-text" Text="{local:T agents.card.advice}" IsVisible="{Binding ShowCardAdvice}" />
+                              <Border Height="30" IsVisible="{Binding ShowCardInstall}" />
+                            </StackPanel>
+                          </Button>
+                          <Button Classes="secondary" Content="{local:T agents.card.install}" Click="OnInstallAgent" ToolTip.Tip="{Binding CardInstallTip}"
+                                  IsVisible="{Binding ShowCardInstall}" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="14,0,0,14"
+                                  AutomationProperties.Name="{Binding InstallButtonText}" />
+                        </Panel>
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>
@@ -555,6 +570,7 @@
                           <local:AgentIcon Cli="{Binding Cli}" Width="36" Height="36" Margin="0,0,12,0" />
                           <StackPanel Grid.Column="1" Spacing="3">
                             <TextBlock Classes="title" Text="{Binding DisplayName}" />
+                            <TextBlock Classes="body-small muted" IsVisible="{Binding !IsInstalled}" Text="{Binding AliasStateText}" />
                             <WrapPanel IsVisible="{Binding IsInstalled}"><TextBlock Classes="caption" Text="{Binding StatusText}" Margin="0,0,10,0" /><TextBlock Text="{local:T agents.version}" Classes="muted caption" Margin="0,0,5,0" /><TextBlock Classes="caption" Text="{Binding VersionText}" /></WrapPanel>
                           </StackPanel>
                           <Button Grid.Column="2" Classes="secondary" Content="{Binding InstallButtonText}" Click="OnInstallAgent"

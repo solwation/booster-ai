@@ -28,6 +28,28 @@ public sealed class AgentInfo : Observable
     public string Description => Loc.Get("agents.description." + Cli);
     public bool IsInstalled => Detected.Installed;
     public string StatusText => Loc.Get(!_statusKnown ? "agents.status.unknown.short" : IsInstalled ? "setup.status.installed" : "setup.status.missing");
+    /// <summary>The overview card's status word (#158): Ready, Missing or Needs update, in plain language.</summary>
+    public string CardStatusText => Loc.Get(CardStatusKey(_statusKnown, Detected.Installed, Detected.Outdated));
+    internal static string CardStatusKey(bool known, bool installed, bool outdated) =>
+        !known ? "agents.status.unknown.short" : !installed ? "agents.card.status.missing" : outdated ? "agents.card.status.outdated" : "agents.card.status.ready";
+    /// <summary>Alias state shown on the detail page of a missing agent (moved off the overview card, #158).</summary>
+    public string AliasStateText => Loc.Format("agents.card.aliasState", CurrentModeText);
+    public bool CardDotReady => _statusKnown && IsInstalled && !Detected.Outdated;
+    public bool CardDotMissing => _statusKnown && !IsInstalled;
+    public bool CardDotOutdated => _statusKnown && IsInstalled && Detected.Outdated;
+    public bool CardDotUnknown => !_statusKnown;
+    /// <summary>The overview card's permissions row: "Asks before tools" or "Approves automatically".</summary>
+    public string CardPermissionText => Loc.Format("agents.card.permissions", Loc.Get(CardPermissionKey(IsInstalled, CurrentMode)));
+    internal static string CardPermissionKey(bool installed, AgentMode mode) => !installed ? "agents.card.perm.unknown" : mode switch
+    {
+        AgentMode.Standard => "agents.card.perm.ask",
+        AgentMode.AutoApprove or AgentMode.Yolo => "agents.card.perm.auto",
+        _ => "agents.card.perm.custom",
+    };
+    /// <summary>The card offers Install only for a missing agent whose status is known.</summary>
+    public bool ShowCardInstall => _statusKnown && !IsInstalled;
+    public bool ShowCardAdvice => Advice.IsSupported && !ShowCardInstall;
+    public string CardInstallTip => InstallTip;
     public string VersionText => IsInstalled ? Detected.Version ?? Loc.Get("agents.version.unknown") : "—";
     public string InstallButtonText => Loc.Format(IsInstalled ? "agents.update" : "setup.cli.install", Cli);
     public string InstallTip => Loc.Format("setup.cli.install.tip", Prerequisites.InstallScript(Cli));
@@ -87,7 +109,7 @@ public sealed class AgentInfo : Observable
             : AgentModes.Choices(status);
         _selectedMode = ModeChoices.FirstOrDefault(c => c.Mode == (draft ?? CurrentMode))
             ?? ModeChoices.FirstOrDefault(c => c.Mode == CurrentMode) ?? ModeChoices[0];
-        foreach (var name in new[] { nameof(Detected), nameof(IsInstalled), nameof(ShowModelAdvice), nameof(StatusText), nameof(VersionText), nameof(InstallButtonText),
+        foreach (var name in new[] { nameof(Detected), nameof(IsInstalled), nameof(ShowModelAdvice), nameof(StatusText), nameof(CardStatusText), nameof(AliasStateText), nameof(CardDotReady), nameof(CardDotMissing), nameof(CardDotOutdated), nameof(CardDotUnknown), nameof(CardPermissionText), nameof(ShowCardInstall), nameof(ShowCardAdvice), nameof(VersionText), nameof(InstallButtonText),
                      nameof(CurrentMode), nameof(ModeChoices), nameof(SelectedMode), nameof(IsYolo), nameof(HasExternalDefinition), nameof(CurrentModeText),
                      nameof(CurrentAliasCommand), nameof(MissingDefinition), nameof(HasCurrentAliasCommand), nameof(CurrentAliasExplanation),
                      nameof(DefinitionTruncated), nameof(AliasInspectCommand), nameof(AliasRecommendation), nameof(CanSelectMode), nameof(CanApply),

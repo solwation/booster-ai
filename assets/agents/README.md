@@ -17,5 +17,5 @@ SVGs are the sources. Regenerate both transparent 128px PNG variants with:
 dotnet run --project tools/IconRender -- --agents assets/agents
 ```
 
-The renderer adapts monochrome ink for light/dark backgrounds. The Interpreter ring is thickened for small sizes. Colored marks retain
+The renderer adapts monochrome ink for light/dark backgrounds. The Interpreter mark is a filled disc with a cut-out prompt, so it cannot be mistaken for a radio button (#158; derived from the upstream ring). Colored marks retain
 their colors. Avalonia uses these PNGs through `AgentIcon`, without a runtime SVG dependency.
