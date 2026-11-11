@@ -387,7 +387,7 @@ public partial class MainWindow : Window
                         settings.SelectedTabIndex = 2;
                         settings.SelectedOptimizationSectionIndex = 2;
                         break;
-                    case ErrorAction.TerminalSettings or ErrorAction.GeneralSettings: settings.SelectedTabIndex = 1; break;
+                    case ErrorAction.TerminalSettings: settings.SelectedTabIndex = 1; break;
                     case ErrorAction.AgentSettings: settings.SelectedTabIndex = 4; break;
                     default: settings.SelectedTabIndex = 0; break;
                 }

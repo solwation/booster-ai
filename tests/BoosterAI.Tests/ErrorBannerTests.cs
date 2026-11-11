@@ -147,4 +147,25 @@ public sealed class ErrorBannerTests : IDisposable
         Assert.True(tab.HasOutput);
         Assert.False(tab.HasOutputNote);
     }
+
+    [Fact]
+    public void TheTerminalSettingsActionNamesTheRenamedTabAndTheBaseFolderPickerOpensProjects()
+    {
+        // #157: Optimering is now Minne och kontext; the WSL page keeps its name. The base folder moved to Projekt.
+        var labels = BoosterAI.Tests.UiSession.Run(() =>
+        {
+            var previous = Loc.Language;
+            try
+            {
+                Loc.Use("sv");
+                var sv = (ErrorBannerViewModel.Label(ErrorAction.TerminalSettings, windows: true), ErrorBannerViewModel.Label(ErrorAction.TerminalSettings, windows: false));
+                Loc.Use("en");
+                return (sv, ErrorBannerViewModel.Label(ErrorAction.TerminalSettings, windows: true));
+            }
+            finally { Loc.Use(previous); }
+        });
+        Assert.Equal(("Öppna Inställningar → Minne och kontext → WSL och miljö", "Öppna Inställningar → Allmänt"), labels.sv);
+        Assert.Equal("Open Settings → Memory and context → WSL & environment", labels.Item2);
+        Assert.Equal([ErrorAction.ProjectSettings], ErrorBannerViewModel.ActionsFor(ErrorKind.SearchRootPicker));
+    }
 }

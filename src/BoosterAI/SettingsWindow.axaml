@@ -12,76 +12,94 @@
 
     <TabControl x:Name="TabsControl" Grid.Row="0" Classes="settings-tabs">
 
-      <!-- Flik 1: Projekt -->
+      <!-- Projects: one scroll area holds the page head, the list (MinHeight: three 52 px rows), its buttons and the
+           Find projects base folder, so nothing is cut off at 640x400 (#157). -->
       <TabItem Header="{local:T settings.tab.projects}">
-        <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="0,16,0,0">
-          <StackPanel Grid.Row="0" Spacing="2" Margin="0,0,0,16">
-            <TextBlock Classes="title" Text="{local:T settings.projects.title}" />
-            <TextBlock Classes="muted" Text="{local:T settings.projects.hint}" />
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+          <StackPanel Spacing="16" Margin="0,0,12,12">
+            <StackPanel Spacing="4">
+              <TextBlock Classes="title" Text="{local:T settings.projects.title}" />
+              <TextBlock Classes="body-small muted" Text="{local:T settings.projects.hint}" TextWrapping="Wrap" />
+            </StackPanel>
+
+            <StackPanel>
+              <Grid ColumnDefinitions="4,14,220,*,36" Margin="0,0,0,6" IsVisible="{Binding HasTabs}">
+                <TextBlock Grid.Column="2" Classes="colhead" Text="{local:T col.tabname}" />
+                <TextBlock Grid.Column="3" Classes="colhead" Text="{local:T col.directory}" />
+              </Grid>
+              <Panel x:Name="ProjectList" MinHeight="156">
+                <ItemsControl ItemsSource="{Binding Projects}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="local:TabViewModel">
+                      <Border Classes="row" Padding="0,6">
+                        <Grid ColumnDefinitions="4,14,220,*,36" RowDefinitions="Auto,Auto">
+                          <Button Grid.Column="0" Classes="stripe" Background="{Binding ColorBrush}"
+                                  Click="OnNextColor" ToolTip.Tip="{local:T color.change}" AutomationProperties.Name="{local:T color.change}" />
+                          <TextBox Grid.Column="2" Classes="inline name" Text="{Binding Name}" Watermark="{local:T col.tabname}"
+                                   Margin="-6,0,16,0" VerticalAlignment="Center" />
+                          <Grid Grid.Column="3" ColumnDefinitions="*,Auto,Auto" VerticalAlignment="Center">
+                            <TextBox Grid.Column="0" Classes="inline path" Text="{Binding Directory}" Watermark="{Binding DirectoryHint}" />
+                            <!-- Change folder is a word; the folder icon opens the folder, as in the main window (#156). -->
+                            <Button Grid.Column="1" Classes="link" Click="OnBrowse" Margin="8,0,0,0" VerticalAlignment="Center"
+                                    ToolTip.Tip="{local:T folder.change.tip}" AutomationProperties.Name="{local:T folder.change.name}">
+                              <TextBlock Text="{local:T folder.change}" />
+                            </Button>
+                            <Button Grid.Column="2" Classes="icon" Click="OnOpenFolder" Margin="4,0,0,0"
+                                    ToolTip.Tip="{x:Static local:TabViewModel.OpenFolderName}" AutomationProperties.Name="{x:Static local:TabViewModel.OpenFolderName}">
+                              <Path Data="{StaticResource FolderIcon}" />
+                            </Button>
+                          </Grid>
+                          <Button Grid.Column="4" Classes="icon" Click="OnRemoveTab" ToolTip.Tip="{local:T project.remove}" AutomationProperties.Name="{local:T project.remove}"
+                                  IsEnabled="{Binding CanRemoveProject}" VerticalAlignment="Center" HorizontalAlignment="Right">
+                            <Path Data="{StaticResource CloseIcon}" />
+                          </Button>
+                          <TextBlock Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="3" Text="{Binding ProjectRemovalHint}"
+                                     IsVisible="{Binding !CanRemoveProject}" Classes="muted caption" TextWrapping="Wrap" Margin="0,6,0,2" />
+                        </Grid>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Text="{local:T empty.text}" IsVisible="{Binding !HasTabs}" Classes="muted"
+                           TextWrapping="Wrap" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="12,32" />
+              </Panel>
+              <WrapPanel Orientation="Horizontal" Margin="0,12,0,0">
+                <Button Click="OnAddTab" Padding="12,8" Margin="0,0,8,8" AutomationProperties.Name="{local:T project.add}" VerticalAlignment="Center">
+                  <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Path Data="{StaticResource PlusIcon}" Width="11" Height="11" StrokeThickness="1.6" StrokeLineCap="Round"
+                          Stroke="{DynamicResource TextBrush}" Stretch="Uniform" VerticalAlignment="Center" />
+                    <TextBlock Text="{local:T project.add}" />
+                  </StackPanel>
+                </Button>
+                <Button Click="OnFindProjects" Padding="12,8" Margin="0,0,8,8" VerticalAlignment="Center"
+                        Content="{local:T import.button}" ToolTip.Tip="{local:T import.button.tip}" />
+              </WrapPanel>
+            </StackPanel>
+
+            <!-- Hitta projekt: the base folder sits next to the button that searches it. -->
+            <StackPanel x:Name="FindProjectsSection" Spacing="8">
+              <TextBlock Classes="sectionhead" Text="{local:T settings.section.findProjects}" />
+              <TextBlock Classes="body-small muted" Text="{local:T settings.findRoot.hint}" TextWrapping="Wrap" />
+              <Grid ColumnDefinitions="*,Auto,Auto" MaxWidth="560" HorizontalAlignment="Left">
+                <TextBox Grid.Column="0" Text="{Binding ProjectSearchRoot}" Watermark="{Binding ProjectSearchRootDefault}"
+                         FontFamily="{StaticResource MonoFont}" MinWidth="240" AutomationProperties.Name="{local:T settings.findRoot.name}" />
+                <Button Grid.Column="1" Content="{local:T settings.findRoot.browse}" Click="OnBrowseSearchRoot" Margin="8,0,0,0" />
+                <Button Grid.Column="2" Content="{local:T settings.findRoot.reset}" Click="OnResetSearchRoot" Margin="8,0,0,0"
+                        IsEnabled="{Binding CanResetProjectSearchRoot}" />
+              </Grid>
+            </StackPanel>
           </StackPanel>
-
-          <Grid Grid.Row="1" ColumnDefinitions="4,14,220,*,36" Margin="0,0,0,6" IsVisible="{Binding HasTabs}">
-            <TextBlock Grid.Column="2" Classes="colhead" Text="{local:T col.tabname}" />
-            <TextBlock Grid.Column="3" Classes="colhead" Text="{local:T col.directory}" />
-          </Grid>
-
-          <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Disabled">
-            <Panel>
-            <ItemsControl ItemsSource="{Binding Projects}">
-              <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="local:TabViewModel">
-                  <Border Classes="row" Padding="0,6">
-                    <Grid ColumnDefinitions="4,14,220,*,36" RowDefinitions="Auto,Auto">
-                      <Button Grid.Column="0" Classes="stripe" Background="{Binding ColorBrush}"
-                              Click="OnNextColor" ToolTip.Tip="{local:T color.change}" AutomationProperties.Name="{local:T color.change}" />
-                      <TextBox Grid.Column="2" Classes="inline name" Text="{Binding Name}" Watermark="{local:T col.tabname}"
-                               Margin="-6,0,16,0" VerticalAlignment="Center" />
-                      <Grid Grid.Column="3" ColumnDefinitions="*,Auto,Auto" VerticalAlignment="Center">
-                        <TextBox Grid.Column="0" Classes="inline path" Text="{Binding Directory}" Watermark="{Binding DirectoryHint}" />
-                        <!-- Change folder is a word; the folder icon opens the folder, as in the main window (#156). -->
-                        <Button Grid.Column="1" Classes="link" Click="OnBrowse" Margin="8,0,0,0" VerticalAlignment="Center"
-                                ToolTip.Tip="{local:T folder.change.tip}" AutomationProperties.Name="{local:T folder.change.name}">
-                          <TextBlock Text="{local:T folder.change}" />
-                        </Button>
-                        <Button Grid.Column="2" Classes="icon" Click="OnOpenFolder" Margin="4,0,0,0"
-                                ToolTip.Tip="{x:Static local:TabViewModel.OpenFolderName}" AutomationProperties.Name="{x:Static local:TabViewModel.OpenFolderName}">
-                          <Path Data="{StaticResource FolderIcon}" />
-                        </Button>
-                      </Grid>
-                      <Button Grid.Column="4" Classes="icon" Click="OnRemoveTab" ToolTip.Tip="{local:T project.remove}" AutomationProperties.Name="{local:T project.remove}"
-                              IsEnabled="{Binding CanRemoveProject}" VerticalAlignment="Center" HorizontalAlignment="Right">
-                        <Path Data="{StaticResource CloseIcon}" />
-                      </Button>
-                      <TextBlock Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="3" Text="{Binding ProjectRemovalHint}"
-                                 IsVisible="{Binding !CanRemoveProject}" Classes="muted caption" TextWrapping="Wrap" Margin="0,6,0,2" />
-                    </Grid>
-                  </Border>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-              <TextBlock Text="{local:T empty.text}" IsVisible="{Binding !HasTabs}" Classes="muted"
-                         TextWrapping="Wrap" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="12,32" />
-            </Panel>
-          </ScrollViewer>
-
-          <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="8" Margin="0,16,0,0">
-            <Button Click="OnAddTab" Padding="12,8" AutomationProperties.Name="{local:T project.add}" VerticalAlignment="Center">
-              <StackPanel Orientation="Horizontal" Spacing="8">
-                <Path Data="{StaticResource PlusIcon}" Width="11" Height="11" StrokeThickness="1.6" StrokeLineCap="Round"
-                      Stroke="{DynamicResource TextBrush}" Stretch="Uniform" VerticalAlignment="Center" />
-                <TextBlock Text="{local:T project.add}" />
-              </StackPanel>
-            </Button>
-            <Button Click="OnFindProjects" Padding="12,8" VerticalAlignment="Center"
-                    Content="{local:T import.button}" ToolTip.Tip="{local:T import.button.tip}" />
-          </StackPanel>
-        </Grid>
+        </ScrollViewer>
       </TabItem>
 
       <!-- Flik 2: Allmänt -->
       <TabItem Header="{local:T settings.tab.general}">
-        <ScrollViewer HorizontalScrollBarVisibility="Disabled" Margin="0,16,0,0">
-          <StackPanel Spacing="20">
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+          <StackPanel Spacing="20" Margin="0,0,12,12">
+            <StackPanel Spacing="4">
+              <TextBlock Classes="title" Text="{local:T settings.tab.general}" />
+              <TextBlock Classes="body-small muted" Text="{local:T settings.general.intro}" TextWrapping="Wrap" />
+            </StackPanel>
 
             <!-- Fönster och aviseringar -->
             <StackPanel Spacing="8">
@@ -107,40 +125,6 @@
                 <CheckBox IsChecked="{Binding Notifications}" Content="{local:T settings.notifications}"
                           ToolTip.Tip="{local:T settings.notifications.tip}" />
               </StackPanel>
-            </StackPanel>
-
-            <!-- Hitta projekt -->
-            <StackPanel Spacing="8">
-              <TextBlock Classes="sectionhead" Text="{local:T settings.section.findProjects}" />
-              <TextBlock Classes="muted" Text="{local:T settings.findRoot.hint}" TextWrapping="Wrap" />
-              <Grid ColumnDefinitions="*,Auto,Auto" MaxWidth="560" HorizontalAlignment="Left">
-                <TextBox Grid.Column="0" Text="{Binding ProjectSearchRoot}" Watermark="{Binding ProjectSearchRootDefault}"
-                         FontFamily="{StaticResource MonoFont}" MinWidth="320" AutomationProperties.Name="{local:T settings.findRoot.name}" />
-                <Button Grid.Column="1" Content="{local:T settings.findRoot.browse}" Click="OnBrowseSearchRoot" Margin="8,0,0,0" />
-                <Button Grid.Column="2" Content="{local:T settings.findRoot.reset}" Click="OnResetSearchRoot" Margin="8,0,0,0"
-                        IsEnabled="{Binding CanResetProjectSearchRoot}" />
-              </Grid>
-            </StackPanel>
-
-            <!-- Automatisk rensning -->
-            <StackPanel Spacing="8">
-              <TextBlock Classes="sectionhead" Text="{local:T settings.section.autoClear}" />
-              <TextBlock Text="{local:T settings.autoClear.effect}" TextWrapping="Wrap" />
-              <TextBlock Classes="muted" Text="{local:T settings.autoClear.scope}" TextWrapping="Wrap" />
-              <Button Classes="link" Click="OnAgentCompactSettings" HorizontalAlignment="Left">
-                <TextBlock Text="{local:T settings.autoClear.compactLink}" TextWrapping="Wrap" />
-              </Button>
-              <WrapPanel Orientation="Horizontal">
-                <CheckBox IsChecked="{Binding AutoClearIdle}" Content="{local:T settings.autoClear}" VerticalAlignment="Center" Margin="0,0,8,0"
-                          AutomationProperties.HelpText="{local:T settings.autoClear.effect}" />
-                <NumericUpDown Value="{Binding AutoClearMinutes}" Minimum="1" Maximum="240" Increment="1" FormatString="0"
-                               Width="110" IsEnabled="{Binding AutoClearIdle}" VerticalAlignment="Center"
-                               AutomationProperties.Name="{local:T settings.autoClear.name}" Margin="0,0,8,0" />
-                <TextBlock Text="{local:T settings.autoClear.minutes}" VerticalAlignment="Center" />
-              </WrapPanel>
-              <Expander Header="{local:T settings.autoClear.details}" HorizontalAlignment="Stretch">
-                <TextBlock Classes="muted" Text="{local:T settings.autoClear.tip}" TextWrapping="Wrap" />
-              </Expander>
             </StackPanel>
 
             <!-- Uppdateringar -->
@@ -169,12 +153,19 @@
         </ScrollViewer>
       </TabItem>
 
-      <!-- Optimization is split into independently scrollable pages. -->
+      <!-- Minne och kontext: a side navigation (same style and column as AI-agenter) over independently scrollable
+           pages; only the chosen page is visible (OptimizationPages, see SelectedOptimizationSectionIndex). -->
       <TabItem Header="{local:T settings.tab.optimization}">
-        <TabControl x:Name="OptimizationSections" Classes="optimization-sections" TabStripPlacement="Left"
-                    Margin="0,16,0,0" SelectedIndex="0">
-          <TabItem Header="{local:T settings.optimization.nav.usage}">
-            <ScrollViewer HorizontalScrollBarVisibility="Disabled" Margin="20,0,0,0">
+        <Grid ColumnDefinitions="168,*">
+          <ListBox x:Name="OptimizationSections" Classes="sidenav" SelectionMode="AlwaysSelected" SelectedIndex="0"
+                   VerticalAlignment="Top" AutomationProperties.Name="{local:T settings.tab.optimization}">
+            <ListBoxItem Content="{local:T settings.optimization.nav.usage}" />
+            <ListBoxItem Content="{local:T settings.optimization.nav.limit}" />
+            <ListBoxItem Content="{local:T settings.optimization.nav.environment}" />
+            <ListBoxItem Content="{local:T settings.optimization.nav.context}" />
+          </ListBox>
+          <Panel x:Name="OptimizationPages" Grid.Column="1" Margin="24,0,0,0">
+            <ScrollViewer HorizontalScrollBarVisibility="Disabled">
               <StackPanel Spacing="14" Margin="0,0,12,12">
                 <StackPanel Spacing="4">
                   <Grid ColumnDefinitions="*,Auto">
@@ -190,7 +181,7 @@
                       </Button.Flyout>
                     </Button>
                   </Grid>
-                  <TextBlock Classes="muted" Text="{local:T settings.optimization.usageIntro}" TextWrapping="Wrap" />
+                  <TextBlock Classes="body-small muted" Text="{local:T settings.optimization.usageIntro}" TextWrapping="Wrap" />
                 </StackPanel>
                 <StackPanel Spacing="12" IsVisible="{Binding Optimization.IsWindows}">
                   <TextBlock Classes="muted caption" Text="{Binding Optimization.MemoryScaleText}" TextWrapping="Wrap" />
@@ -290,13 +281,11 @@
                 <TextBlock Text="{local:T settings.optimization.linuxNote}" IsVisible="{Binding Optimization.IsLinux}" Classes="muted" TextWrapping="Wrap" />
               </StackPanel>
             </ScrollViewer>
-          </TabItem>
 
-          <TabItem Header="{local:T settings.optimization.nav.limit}">
-            <ScrollViewer HorizontalScrollBarVisibility="Disabled" Margin="20,0,0,0">
+            <ScrollViewer HorizontalScrollBarVisibility="Disabled">
               <StackPanel Spacing="12" Margin="0,0,12,12">
                 <TextBlock Classes="title" Text="{local:T settings.optimization.nav.limit}" />
-                <TextBlock Classes="muted" Text="{local:T settings.optimization.hint}" TextWrapping="Wrap" />
+                <TextBlock Classes="body-small muted" Text="{local:T settings.optimization.hint}" TextWrapping="Wrap" Margin="0,-8,0,0" />
                 <Grid ColumnDefinitions="160,*" RowDefinitions="Auto,Auto" Margin="0,8,0,0">
                   <TextBlock Classes="label" Text="{local:T settings.optimization.totalRam}" />
                   <TextBlock Grid.Column="1" Text="{Binding Optimization.TotalMemoryText}" FontWeight="SemiBold" />
@@ -354,13 +343,11 @@
                 <TextBlock Classes="muted" Text="{local:T settings.optimization.linuxNote}" IsVisible="{Binding Optimization.IsLinux}" TextWrapping="Wrap" />
               </StackPanel>
             </ScrollViewer>
-          </TabItem>
 
-          <TabItem Header="{local:T settings.optimization.nav.environment}">
-            <ScrollViewer HorizontalScrollBarVisibility="Disabled" Margin="20,0,0,0">
+            <ScrollViewer HorizontalScrollBarVisibility="Disabled">
               <StackPanel Spacing="16" Margin="0,0,12,12">
                 <TextBlock Classes="title" Text="{local:T settings.optimization.nav.environment}" />
-                <TextBlock Classes="muted" Text="{local:T settings.optimization.environmentIntro}" TextWrapping="Wrap" />
+                <TextBlock Classes="body-small muted" Text="{local:T settings.optimization.environmentIntro}" TextWrapping="Wrap" Margin="0,-12,0,0" />
                 <StackPanel Spacing="8" IsVisible="{Binding Optimization.IsWindows}">
                   <TextBlock Classes="label" Text="{local:T wsl.distro}" />
                   <TextBox Text="{Binding WslDistro}" HorizontalAlignment="Left" Width="300"
@@ -386,43 +373,74 @@
                 <TextBlock Classes="muted" Text="{local:T settings.optimization.linuxNote}" IsVisible="{Binding Optimization.IsLinux}" TextWrapping="Wrap" />
               </StackPanel>
             </ScrollViewer>
-          </TabItem>
-          <TabItem Header="{local:T compact.title}">
-            <ScrollViewer HorizontalScrollBarVisibility="Disabled" Margin="20,0,0,0">
-              <StackPanel Spacing="10" Margin="0,0,12,12">
-                <TextBlock Classes="title" Text="{local:T compact.global.title}" TextWrapping="Wrap" />
-                <TextBlock Text="{local:T compact.guide.benefit}" TextWrapping="Wrap" />
-                <local:CompactBenefitView />
-                <ComboBox x:Name="CompactGlobalMode" ItemsSource="{Binding CompactGlobalModes}" SelectedItem="{Binding SelectedCompactMode}"
-                          HorizontalAlignment="Left" MaxWidth="400" AutomationProperties.Name="{local:T compact.global.title}">
-                  <ComboBox.ItemTemplate><DataTemplate x:DataType="local:CompactChoice"><TextBlock Text="{Binding Label}" TextWrapping="Wrap" /></DataTemplate></ComboBox.ItemTemplate>
-                </ComboBox>
+            <!-- Kontext (#157): auto-clear moved here from Allmänt, beside auto-compact. The intro names the three
+                 choices (off, clear when idle, summarize); the two controls stay separate because both can be on at
+                 once today and a single three-way choice could not represent that saved combination. -->
+            <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+              <StackPanel Spacing="20" Margin="0,0,12,12">
                 <StackPanel Spacing="4">
-                  <TextBlock Classes="caption" Text="{Binding CompactModeExplanation}" TextWrapping="Wrap" />
-                  <TextBlock Classes="muted caption" Text="{local:T compact.guide.applies}" TextWrapping="Wrap" />
+                  <TextBlock Classes="title" Text="{local:T settings.optimization.nav.context}" />
+                  <TextBlock Classes="body-small muted" Text="{local:T settings.context.intro}" TextWrapping="Wrap" />
                 </StackPanel>
-                <local:CompactAutoGuideView />
-                <Button Classes="link" Content="{local:T compact.global.advanced}" Click="OnShowCompactAgents" HorizontalAlignment="Left" />
-                <Expander HorizontalAlignment="Stretch">
-                  <Expander.Header><TextBlock Text="{local:T compact.guide.details}" TextWrapping="Wrap" /></Expander.Header>
-                  <StackPanel Spacing="8" Margin="0,8,0,0">
-                    <TextBlock Classes="caption" Text="{local:T compact.global.modes}" TextWrapping="Wrap" />
-                    <TextBlock Classes="caption" Text="{local:T compact.global.auto.profile}" TextWrapping="Wrap" />
-                    <TextBlock Classes="caption" Text="{Binding CompactMetadataStatus}" IsVisible="{Binding CompactIsAuto}" TextWrapping="Wrap" />
-                    <TextBlock Classes="caption" Text="{local:T compact.global.auto.fallback}" TextWrapping="Wrap" />
-                    <TextBlock Classes="caption" Text="{local:T compact.global.applies}" TextWrapping="Wrap" />
+
+                <!-- Rensa vid inaktivitet: AppConfig.AutoClearIdle / AutoClearMinutes (#69). -->
+                <StackPanel x:Name="ContextClearSection" Spacing="8">
+                  <TextBlock Classes="sectionhead" Text="{local:T settings.context.clear}" />
+                  <TextBlock Text="{local:T settings.autoClear.effect}" TextWrapping="Wrap" />
+                  <TextBlock Classes="body-small muted" Text="{local:T settings.autoClear.scope}" TextWrapping="Wrap" />
+                  <WrapPanel Orientation="Horizontal">
+                    <CheckBox IsChecked="{Binding AutoClearIdle}" Content="{local:T settings.autoClear}" VerticalAlignment="Center" Margin="0,0,8,0"
+                              AutomationProperties.HelpText="{local:T settings.autoClear.effect}" />
+                    <NumericUpDown Value="{Binding AutoClearMinutes}" Minimum="1" Maximum="240" Increment="1" FormatString="0"
+                                   Width="110" IsEnabled="{Binding AutoClearIdle}" VerticalAlignment="Center"
+                                   AutomationProperties.Name="{local:T settings.autoClear.name}" Margin="0,0,8,0" />
+                    <TextBlock Text="{local:T settings.autoClear.minutes}" VerticalAlignment="Center" />
+                  </WrapPanel>
+                  <Expander Header="{local:T settings.autoClear.details}" HorizontalAlignment="Stretch">
+                    <TextBlock Classes="body-small muted" Text="{local:T settings.autoClear.tip}" TextWrapping="Wrap" />
+                  </Expander>
+                </StackPanel>
+
+                <!-- Sammanfatta: AppConfig.AutoCompactMode (off / auto / manual). -->
+                <StackPanel x:Name="ContextCompactSection" Spacing="10">
+                  <TextBlock Classes="sectionhead" Text="{local:T settings.context.compact}" />
+                  <TextBlock Text="{local:T compact.guide.benefit}" TextWrapping="Wrap" />
+                  <local:CompactBenefitView />
+                  <ComboBox x:Name="CompactGlobalMode" ItemsSource="{Binding CompactGlobalModes}" SelectedItem="{Binding SelectedCompactMode}"
+                            HorizontalAlignment="Left" MaxWidth="400" AutomationProperties.Name="{local:T compact.global.title}">
+                    <ComboBox.ItemTemplate><DataTemplate x:DataType="local:CompactChoice"><TextBlock Text="{Binding Label}" TextWrapping="Wrap" /></DataTemplate></ComboBox.ItemTemplate>
+                  </ComboBox>
+                  <StackPanel Spacing="4">
+                    <TextBlock Classes="caption" Text="{Binding CompactModeExplanation}" TextWrapping="Wrap" />
+                    <TextBlock Classes="muted caption" Text="{local:T compact.guide.applies}" TextWrapping="Wrap" />
                   </StackPanel>
-                </Expander>
+                  <local:CompactAutoGuideView />
+                  <Button Classes="link" Content="{local:T compact.global.advanced}" Click="OnShowCompactAgents" HorizontalAlignment="Left" />
+                  <Expander HorizontalAlignment="Stretch">
+                    <Expander.Header><TextBlock Text="{local:T compact.guide.details}" TextWrapping="Wrap" /></Expander.Header>
+                    <StackPanel Spacing="8" Margin="0,8,0,0">
+                      <TextBlock Classes="caption" Text="{local:T compact.global.modes}" TextWrapping="Wrap" />
+                      <TextBlock Classes="caption" Text="{local:T compact.global.auto.profile}" TextWrapping="Wrap" />
+                      <TextBlock Classes="caption" Text="{Binding CompactMetadataStatus}" IsVisible="{Binding CompactIsAuto}" TextWrapping="Wrap" />
+                      <TextBlock Classes="caption" Text="{local:T compact.global.auto.fallback}" TextWrapping="Wrap" />
+                      <TextBlock Classes="caption" Text="{local:T compact.global.applies}" TextWrapping="Wrap" />
+                    </StackPanel>
+                  </Expander>
+                </StackPanel>
               </StackPanel>
             </ScrollViewer>
-          </TabItem>
-        </TabControl>
+          </Panel>
+        </Grid>
       </TabItem>
 
       <!-- Flik 4: Utseende -->
       <TabItem Header="{local:T settings.tab.appearance}">
-        <ScrollViewer HorizontalScrollBarVisibility="Disabled" Margin="0,16,0,0">
-          <StackPanel Spacing="24">
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+          <StackPanel Spacing="20" Margin="0,0,12,12">
+            <StackPanel Spacing="4">
+              <TextBlock Classes="title" Text="{local:T settings.tab.appearance}" />
+              <TextBlock Classes="body-small muted" Text="{local:T settings.appearance.intro}" TextWrapping="Wrap" />
+            </StackPanel>
 
             <!-- Tema och språk -->
             <StackPanel Spacing="10">
@@ -506,28 +524,28 @@
 
       <!-- Agent pages stay mounted: switching sections never recreates editable controls. -->
       <TabItem x:Name="AgentsTab" Header="{local:T settings.tab.agents}">
-        <Grid RowDefinitions="*,Auto,Auto" Margin="0,16,0,0">
-          <Grid ColumnDefinitions="136,*">
+        <Grid RowDefinitions="*,Auto,Auto">
+          <!-- Same side navigation and content x as Minne och kontext (#157). -->
+          <Grid ColumnDefinitions="168,*">
             <ScrollViewer HorizontalScrollBarVisibility="Disabled">
-            <StackPanel Spacing="10">
-              <Button Content="{local:T agents.overview.all}" Click="OnAgentOverview" Classes="agent-nav" Classes.chosen="{Binding Setup.IsAgentOverview}" HorizontalAlignment="Stretch" />
-              <Button x:Name="LocalModelsButton" Content="{local:T models.title}" Click="OnLocalModels" Classes="agent-nav" HorizontalAlignment="Stretch" ToolTip.Tip="{local:T models.openHint}" />
-              <ListBox x:Name="AgentSections" Classes="agent-sections" ItemsSource="{Binding Setup.Agents}"
-                       SelectedItem="{Binding Setup.SelectedAgent}" Background="Transparent" BorderThickness="0"
-                       AutomationProperties.Name="{local:T settings.tab.agents}">
-                <ListBox.ItemTemplate>
-                  <DataTemplate x:DataType="local:AgentInfo">
-                    <StackPanel Orientation="Horizontal" Spacing="8"><local:AgentIcon Cli="{Binding Cli}" Width="20" Height="20" /><TextBlock Text="{Binding Name}" VerticalAlignment="Center" /></StackPanel>
-                  </DataTemplate>
-                </ListBox.ItemTemplate>
-              </ListBox>
-            </StackPanel>
+              <StackPanel>
+                <Button Content="{local:T agents.overview.all}" Click="OnAgentOverview" Classes="sidenav" Classes.chosen="{Binding Setup.IsAgentOverview}" />
+                <Button x:Name="LocalModelsButton" Content="{local:T models.title}" Click="OnLocalModels" Classes="sidenav" ToolTip.Tip="{local:T models.openHint}" />
+                <ListBox x:Name="AgentSections" Classes="sidenav" ItemsSource="{Binding Setup.Agents}"
+                         SelectedItem="{Binding Setup.SelectedAgent}" AutomationProperties.Name="{local:T settings.tab.agents}">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="local:AgentInfo">
+                      <StackPanel Orientation="Horizontal" Spacing="8"><local:AgentIcon Cli="{Binding Cli}" Width="20" Height="20" /><TextBlock Text="{Binding Name}" VerticalAlignment="Center" /></StackPanel>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+              </StackPanel>
             </ScrollViewer>
-            <Panel Grid.Column="1" Margin="16,0,0,0">
+            <Panel Grid.Column="1" Margin="24,0,0,0">
               <ScrollViewer IsVisible="{Binding Setup.IsAgentOverview}" HorizontalScrollBarVisibility="Disabled">
                 <StackPanel Spacing="16" Margin="0,0,12,12">
                   <TextBlock Classes="title" Text="{local:T agents.overview.title}" />
-                  <TextBlock Classes="muted" Text="{local:T agents.overview.hint}" TextWrapping="Wrap" />
+                  <TextBlock Classes="body-small muted" Text="{local:T agents.overview.hint}" TextWrapping="Wrap" Margin="0,-12,0,0" />
                   <ItemsControl ItemsSource="{Binding Setup.Agents}">
                     <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>

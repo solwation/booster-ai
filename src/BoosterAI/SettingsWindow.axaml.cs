@@ -24,6 +24,8 @@ public partial class SettingsWindow : Window
         };
         Opened += (_, _) => { if (ReferenceEquals(TabsControl.SelectedItem, AgentsTab)) _vm.SetupAgentsOpened(); };
         Activated += (_, _) => { if (ReferenceEquals(TabsControl.SelectedItem, AgentsTab)) _vm.SetupAgentsOpened(); };
+        OptimizationSections.SelectionChanged += (_, _) => ShowOptimizationPage();
+        ShowOptimizationPage();
         ConfigureHardwareAdvice();
         Closing += (_, _) => _vm.Save();
     }
@@ -38,6 +40,13 @@ public partial class SettingsWindow : Window
     {
         get => OptimizationSections.SelectedIndex;
         set => OptimizationSections.SelectedIndex = value;
+    }
+
+    /// <summary>Minne och kontext's side navigation picks one of its pages; the others stay mounted but hidden.</summary>
+    private void ShowOptimizationPage()
+    {
+        var index = Math.Max(0, OptimizationSections.SelectedIndex);
+        for (var i = 0; i < OptimizationPages.Children.Count; i++) OptimizationPages.Children[i].IsVisible = i == index;
     }
 
     public string? SelectedAgentCli

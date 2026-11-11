@@ -65,22 +65,66 @@
     <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
   </Style>
 
-  <!-- Settings tab navigation -->
-  <Style Selector="TabControl.settings-tabs TabControl.optimization-sections TabItem">
-    <Setter Property="MinWidth" Value="150" />
-    <Setter Property="MinHeight" Value="44" />
-    <Setter Property="FontSize" Value="13" />
-    <Setter Property="Padding" Value="10,12" />
-    <Setter Property="Margin" Value="0,0,0,4" />
-    <Setter Property="HorizontalContentAlignment" Value="Left" />
+  <!-- Settings side navigation (#157): one look for Minne och kontext and AI-agenter. A 168 px column of 36 px items,
+       13 Medium; the chosen item gets the row hover fill, a 3 px accent bar on the left and SemiBold. -->
+  <Style Selector="ListBox.sidenav">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
   </Style>
-  <Style Selector="ListBox.agent-sections ListBoxItem">
-    <Setter Property="MinWidth" Value="130" />
-    <Setter Property="MinHeight" Value="32" />
-    <Setter Property="FontSize" Value="13" />
-    <Setter Property="Padding" Value="8,7" />
+  <Style Selector="ListBox.sidenav ListBoxItem, Button.sidenav">
+    <Setter Property="Height" Value="36" />
+    <Setter Property="MinHeight" Value="36" />
+    <Setter Property="Padding" Value="12,0" />
     <Setter Property="Margin" Value="0,0,0,2" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="FontWeight" Value="Medium" />
+    <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="HorizontalContentAlignment" Value="Left" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="ListBox.sidenav ListBoxItem">
+    <Setter Property="Template">
+      <ControlTemplate TargetType="ListBoxItem">
+        <Border Name="PART_Root" Background="{TemplateBinding Background}" CornerRadius="{StaticResource RadiusSmall}">
+          <Panel>
+            <Border Name="PART_Bar" Width="3" HorizontalAlignment="Left" CornerRadius="1.5" IsVisible="False"
+                    Background="{DynamicResource SystemAccentColor}" />
+            <ContentPresenter Name="PART_NavContent" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
+                              Padding="{TemplateBinding Padding}" HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                              VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+          </Panel>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="Button.sidenav">
+    <Setter Property="Template">
+      <ControlTemplate TargetType="Button">
+        <Border Name="PART_Root" Background="{TemplateBinding Background}" CornerRadius="{StaticResource RadiusSmall}">
+          <Panel>
+            <Border Name="PART_Bar" Width="3" HorizontalAlignment="Left" CornerRadius="1.5" IsVisible="False"
+                    Background="{DynamicResource SystemAccentColor}" />
+            <ContentPresenter Name="PART_NavContent" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
+                              Padding="{TemplateBinding Padding}" HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                              VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+          </Panel>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="ListBox.sidenav ListBoxItem:pointerover, Button.sidenav:pointerover">
+    <Setter Property="Background" Value="{DynamicResource RowHoverBrush}" />
+  </Style>
+  <Style Selector="ListBox.sidenav ListBoxItem:selected, Button.sidenav.chosen">
+    <Setter Property="Background" Value="{DynamicResource RowHoverBrush}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="ListBox.sidenav ListBoxItem:selected /template/ Border#PART_Bar, Button.sidenav.chosen /template/ Border#PART_Bar">
+    <Setter Property="IsVisible" Value="True" />
   </Style>
   <Style Selector="Button.agent-nav">
     <Setter Property="Padding" Value="10,8" /><Setter Property="Background" Value="Transparent" /><Setter Property="BorderThickness" Value="0" />
@@ -110,15 +154,33 @@
     <Setter Property="FontSize" Value="12" />
     <Setter Property="Foreground" Value="{DynamicResource MutedBrush}" />
   </Style>
+  <!-- Settings main tabs (#157): unselected Regular in MutedBrush, selected SemiBold in TextBrush over a 2 px accent line.
+       Every page starts with its title at the same y: the tab content's top padding is the only gap above it. -->
   <Style Selector="TabControl.settings-tabs">
     <Setter Property="Padding" Value="0,16,0,0" />
   </Style>
-  <Style Selector="TabControl.settings-tabs TabItem">
+  <Style Selector="TabControl.settings-tabs > TabItem">
     <Setter Property="FontSize" Value="14" />
-    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontWeight" Value="Regular" />
+    <Setter Property="Foreground" Value="{DynamicResource MutedBrush}" />
     <Setter Property="MinHeight" Value="34" />
     <Setter Property="Padding" Value="14,6" />
     <Setter Property="Margin" Value="0,0,8,0" />
+  </Style>
+  <Style Selector="TabControl.settings-tabs > TabItem /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Foreground" Value="{DynamicResource MutedBrush}" />
+  </Style>
+  <Style Selector="TabControl.settings-tabs > TabItem:selected">
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+  </Style>
+  <Style Selector="TabControl.settings-tabs > TabItem:selected /template/ ContentPresenter#PART_ContentPresenter,
+                   TabControl.settings-tabs > TabItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+  </Style>
+  <Style Selector="TabControl.settings-tabs > TabItem /template/ Border#PART_SelectedPipe">
+    <Setter Property="Height" Value="2" />
+    <Setter Property="Background" Value="{DynamicResource SystemAccentColor}" />
   </Style>
   <Style Selector="TextBlock.name">
     <Setter Property="FontSize" Value="16" />

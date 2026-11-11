@@ -40,12 +40,10 @@ public enum ErrorAction
     Retry,
     /// <summary>"Visa detaljer": opens the tab's status popup with its last lines.</summary>
     Details,
-    /// <summary>Settings → WSL och miljö (Windows) or Allmänt, where the Linux terminal is chosen.</summary>
+    /// <summary>Settings → Minne och kontext → WSL och miljö (Windows) or Allmänt, where the Linux terminal is chosen.</summary>
     TerminalSettings,
-    /// <summary>Settings → Projekt.</summary>
+    /// <summary>Settings → Projekt (also where the Find projects base folder is chosen, #157).</summary>
     ProjectSettings,
-    /// <summary>Settings → Allmänt.</summary>
-    GeneralSettings,
     /// <summary>Settings → AI-agenter.</summary>
     AgentSettings,
 }
@@ -71,20 +69,23 @@ public sealed class ErrorBannerViewModel : Observable
         ErrorKind.AgentConfig => [ErrorAction.AgentSettings],
         ErrorKind.Rules => [ErrorAction.Retry],
         ErrorKind.ProjectPicker => [ErrorAction.ProjectSettings],
-        ErrorKind.SearchRootPicker => [ErrorAction.GeneralSettings],
+        ErrorKind.SearchRootPicker => [ErrorAction.ProjectSettings],
         ErrorKind.ProjectRemoval => [ErrorAction.ProjectSettings],
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
     };
 
     /// <summary>The button text of an action.</summary>
-    public static string Label(ErrorAction action) => action switch
+    public static string Label(ErrorAction action) => Label(action, OperatingSystem.IsWindows());
+
+    /// <summary>The button text of an action on Windows or elsewhere; the path names the settings tab and page it opens.</summary>
+    internal static string Label(ErrorAction action, bool windows) => action switch
     {
         ErrorAction.Retry => Loc.Get("error.retry"),
         ErrorAction.Details => Loc.Get("error.details"),
-        ErrorAction.TerminalSettings => Loc.Format("error.openSettings",
-            Loc.Get(OperatingSystem.IsWindows() ? "settings.optimization.nav.environment" : "settings.tab.general")),
+        ErrorAction.TerminalSettings => Loc.Format("error.openSettings", windows
+            ? Loc.Get("settings.tab.optimization") + " → " + Loc.Get("settings.optimization.nav.environment")
+            : Loc.Get("settings.tab.general")),
         ErrorAction.ProjectSettings => Loc.Format("error.openSettings", Loc.Get("settings.tab.projects")),
-        ErrorAction.GeneralSettings => Loc.Format("error.openSettings", Loc.Get("settings.tab.general")),
         ErrorAction.AgentSettings => Loc.Format("error.openSettings", Loc.Get("settings.tab.agents")),
         _ => throw new ArgumentOutOfRangeException(nameof(action), action, null),
     };
