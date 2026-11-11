@@ -91,7 +91,7 @@
       <ControlTemplate TargetType="ListBoxItem">
         <Border Name="PART_Root" Background="{TemplateBinding Background}" CornerRadius="{StaticResource RadiusSmall}">
           <Panel>
-            <Border Name="PART_Bar" Width="3" HorizontalAlignment="Left" CornerRadius="1.5" IsVisible="False"
+            <Border Name="PART_Bar" Width="3" HorizontalAlignment="Left" CornerRadius="{StaticResource RadiusSmall}" IsVisible="False"
                     Background="{DynamicResource SystemAccentColor}" />
             <ContentPresenter Name="PART_NavContent" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
                               Padding="{TemplateBinding Padding}" HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
@@ -106,7 +106,7 @@
       <ControlTemplate TargetType="Button">
         <Border Name="PART_Root" Background="{TemplateBinding Background}" CornerRadius="{StaticResource RadiusSmall}">
           <Panel>
-            <Border Name="PART_Bar" Width="3" HorizontalAlignment="Left" CornerRadius="1.5" IsVisible="False"
+            <Border Name="PART_Bar" Width="3" HorizontalAlignment="Left" CornerRadius="{StaticResource RadiusSmall}" IsVisible="False"
                     Background="{DynamicResource SystemAccentColor}" />
             <ContentPresenter Name="PART_NavContent" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
                               Padding="{TemplateBinding Padding}" HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
