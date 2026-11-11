@@ -135,6 +135,15 @@
   <Style Selector="Button.agent-card">
     <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" /><Setter Property="Padding" Value="14" /><Setter Property="CornerRadius" Value="{StaticResource RadiusLarge}" /><Setter Property="BorderThickness" Value="1" /><Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" /><Setter Property="HorizontalContentAlignment" Value="Stretch" />
   </Style>
+  <!-- Logo plate on the agent overview cards (#158): 28x28 SurfaceStrong, radius 6, a 16 px logo. -->
+  <Style Selector="Border.logo-plate">
+    <Setter Property="Width" Value="28" /><Setter Property="Height" Value="28" />
+    <Setter Property="Background" Value="{DynamicResource SurfaceStrongBrush}" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusMedium}" />
+  </Style>
+  <Style Selector="TextBlock.link-text">
+    <Setter Property="Foreground" Value="{DynamicResource LinkBrush}" />
+  </Style>
   <Style Selector="Border.agent-group">
     <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
     <Setter Property="CornerRadius" Value="{StaticResource RadiusLarge}" />

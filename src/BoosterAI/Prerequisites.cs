@@ -11,6 +11,8 @@ public enum WslState { Ok, Missing, DistroMissing, Unknown }
 public sealed record CliStatus(string Cli, string Kind, string? Path)
 {
     public string? Version { get; init; }
+    /// <summary>A newer version is known (#158 shows "Needs update"); nothing sets it until a check supplies the fact.</summary>
+    public bool Outdated { get; init; }
     public string Help { get; init; } = "";
     public string? AliasDefinition { get; init; }
     public string? ManagedAlias { get; init; }

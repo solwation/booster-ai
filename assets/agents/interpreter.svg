@@ -1,1 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" shape-rendering="geometricPrecision"><circle cx="100" cy="100" r="92" fill="none" stroke="#171717" stroke-width="4"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" shape-rendering="geometricPrecision"><path fill="#171717" fill-rule="evenodd" d="M100 8a92 92 0 1 0 0 184a92 92 0 1 0 0-184z M58 62l12-12l52 50l-52 50l-12-12l40-38z M108 128h38v14h-38z"/></svg>
