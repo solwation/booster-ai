@@ -40,7 +40,7 @@
       <Grid ColumnDefinitions="Auto,*,Auto,Auto">
         <Path Grid.Column="0" Data="{StaticResource WarningIcon}" Width="15" Height="15" Stretch="Uniform" StrokeThickness="1.5"
               StrokeLineCap="Round" StrokeJoin="Round" Stroke="{DynamicResource DangerBrush}" VerticalAlignment="Center" Margin="0,0,10,0" />
-        <SelectableTextBlock Grid.Column="1" Text="{Binding Error.Text}" TextWrapping="Wrap" VerticalAlignment="Center" FontSize="13.5"
+        <SelectableTextBlock Classes="body-small" Grid.Column="1" Text="{Binding Error.Text}" TextWrapping="Wrap" VerticalAlignment="Center"
                              Foreground="{DynamicResource TextBrush}" />
         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" Margin="16,0,0,0" VerticalAlignment="Center">
           <Button Classes.primary="{Binding Error.FirstIsPrimary}" Content="{Binding Error.FirstLabel}" Click="OnErrorFirst"
@@ -60,13 +60,13 @@
         <Path Grid.Column="0" Data="{StaticResource DownloadIcon}" Width="14" Height="14" Stretch="Uniform" StrokeThickness="1.5"
               StrokeLineCap="Round" StrokeJoin="Round" Stroke="{DynamicResource LinkBrush}" VerticalAlignment="Center" Margin="0,0,10,0" />
         <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
-          <TextBlock Text="{Binding Update.Text}" TextWrapping="Wrap" FontSize="13.5" Classes.failed="{Binding Update.Failed}" />
+          <TextBlock Classes="body-small" Text="{Binding Update.Text}" TextWrapping="Wrap" Classes.failed="{Binding Update.Failed}" />
           <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding Update.HasSummary}">
-            <TextBlock Text="{Binding Update.Summary}" TextTrimming="CharacterEllipsis" MaxLines="1" FontSize="12.5"
+            <TextBlock Classes="caption" Text="{Binding Update.Summary}" TextTrimming="CharacterEllipsis" MaxLines="1"
                        Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" ToolTip.Tip="{Binding Update.Summary}" />
             <Button Grid.Column="1" Classes="link" Click="OnUpdateMore" Margin="10,0,0,0" Padding="0"
                     ToolTip.Tip="{Binding Update.MoreUrl}" AutomationProperties.Name="{local:T update.more.name}">
-              <TextBlock Text="{local:T update.more}" FontSize="12.5" />
+              <TextBlock Classes="caption" Text="{local:T update.more}" />
             </Button>
           </Grid>
         </StackPanel>
@@ -86,7 +86,7 @@
       <Grid ColumnDefinitions="Auto,*,Auto">
         <Path Grid.Column="0" Data="{StaticResource ShieldIcon}" Width="14" Height="14" Stretch="Uniform" StrokeThickness="1.5"
               StrokeLineCap="Round" StrokeJoin="Round" Stroke="{DynamicResource LinkBrush}" VerticalAlignment="Center" Margin="0,0,10,0" />
-        <TextBlock Grid.Column="1" Text="{Binding Denial.Text}" TextWrapping="Wrap" VerticalAlignment="Center" FontSize="13.5" />
+        <TextBlock Classes="body-small" Grid.Column="1" Text="{Binding Denial.Text}" TextWrapping="Wrap" VerticalAlignment="Center" />
         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" Margin="16,0,0,0" VerticalAlignment="Center">
           <Button Classes.primary="{Binding DenialPrimary}" Content="{local:T denied.allow}" Click="OnAllowDenied" ToolTip.Tip="{Binding Denial.AllowTip}" Padding="14,6" />
           <Button Content="{local:T denied.dismiss}" Click="OnDismissDenied" Padding="14,6" />
@@ -99,7 +99,7 @@
       <Grid ColumnDefinitions="Auto,*,Auto">
         <Path Grid.Column="0" Data="{StaticResource DownloadIcon}" Width="14" Height="14" Stretch="Uniform" StrokeThickness="1.5"
               StrokeLineCap="Round" StrokeJoin="Round" Stroke="{DynamicResource LinkBrush}" VerticalAlignment="Center" Margin="0,0,10,0" />
-        <TextBlock Grid.Column="1" Text="{Binding Setup.WslText}" TextWrapping="Wrap" VerticalAlignment="Center" FontSize="13.5" />
+        <TextBlock Classes="body-small" Grid.Column="1" Text="{Binding Setup.WslText}" TextWrapping="Wrap" VerticalAlignment="Center" />
         <Button Grid.Column="2" Classes.primary="{Binding WslPrimary}" Content="{local:T setup.wsl.install}" Click="OnInstallWsl" IsVisible="{Binding Setup.CanInstallWsl}"
                 ToolTip.Tip="{local:T setup.wsl.install.tip}" Padding="14,6" Margin="16,0,0,0" VerticalAlignment="Center" />
       </Grid>
@@ -109,7 +109,7 @@
       <Grid ColumnDefinitions="Auto,*,Auto">
         <Path Grid.Column="0" Data="{StaticResource DownloadIcon}" Width="14" Height="14" Stretch="Uniform" StrokeThickness="1.5"
               StrokeLineCap="Round" StrokeJoin="Round" Stroke="{DynamicResource LinkBrush}" VerticalAlignment="Center" Margin="0,0,10,0" />
-        <TextBlock Grid.Column="1" Text="{Binding Setup.MissingText}" TextWrapping="Wrap" VerticalAlignment="Center" FontSize="13.5" />
+        <TextBlock Classes="body-small" Grid.Column="1" Text="{Binding Setup.MissingText}" TextWrapping="Wrap" VerticalAlignment="Center" />
         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" Margin="16,0,0,0" VerticalAlignment="Center">
           <ItemsControl ItemsSource="{Binding Setup.Missing}">
             <ItemsControl.ItemsPanel>
@@ -133,7 +133,7 @@
       <Grid ColumnDefinitions="Auto,*,Auto">
         <Path Grid.Column="0" Data="{StaticResource BoltIcon}" Width="14" Height="14" Stretch="Uniform"
               Fill="{DynamicResource LinkBrush}" VerticalAlignment="Center" Margin="0,0,10,0" />
-        <TextBlock Grid.Column="1" Text="{local:T optimization.banner.text}" TextWrapping="Wrap" VerticalAlignment="Center" FontSize="13.5" />
+        <TextBlock Classes="body-small" Grid.Column="1" Text="{local:T optimization.banner.text}" TextWrapping="Wrap" VerticalAlignment="Center" />
         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" Margin="16,0,0,0" VerticalAlignment="Center">
           <Button Classes.primary="{Binding OptimizationPrimary}" Content="{local:T optimization.banner.button}" Click="OnOptimizeWsl" Padding="14,6" />
           <Button Content="{local:T optimization.banner.dismiss}" Click="OnDismissOptimization" Padding="14,6" />
@@ -162,7 +162,7 @@
                 <StackPanel>
                 <Grid Classes="project-columns" Loaded="OnProjectGridLoaded" ColumnDefinitions="4,20,46,4*,5*,166,195,168">
                   <Border Grid.Column="0" Background="{Binding ColorBrush}" CornerRadius="{StaticResource RadiusSmall}" />
-                  <TextBlock Grid.Column="1" Text="⋮" Foreground="{DynamicResource FaintBrush}" FontSize="16"
+                  <TextBlock Classes="subtitle" Grid.Column="1" Text="⋮" Foreground="{DynamicResource FaintBrush}"
                              HorizontalAlignment="Center" VerticalAlignment="Center" PointerPressed="OnTabDragStart"
                              ToolTip.Tip="{local:T tab.reorder.tip}" />
 
@@ -204,7 +204,7 @@
                       </ToolTip.Tip>
                       <Grid ColumnDefinitions="Auto,*">
                         <Ellipse Grid.Column="0" Width="8" Height="8" Fill="{Binding StatusBrush}" VerticalAlignment="Center" Margin="0,0,7,0" />
-                        <TextBlock Grid.Column="1" Text="{Binding StatusText}" FontSize="12.5" VerticalAlignment="Center"
+                        <TextBlock Classes="caption" Grid.Column="1" Text="{Binding StatusText}" VerticalAlignment="Center"
                                    TextTrimming="CharacterEllipsis" />
                       </Grid>
                     </local:StatusPeekButton>
@@ -253,7 +253,7 @@
                   <StackPanel Orientation="Horizontal" Spacing="12" Margin="62,6,0,2" IsVisible="{Binding Expanded}">
                     <Button Classes="link" Content="{local:T subtab.add}" Click="OnAddSubTab" Padding="0,2"
                             AutomationProperties.Name="{local:T subtab.add}" />
-                    <TextBlock Classes="muted" Text="{Binding SubTabSummary}" VerticalAlignment="Center" FontSize="12" />
+                    <TextBlock Classes="muted caption" Text="{Binding SubTabSummary}" VerticalAlignment="Center" />
                   </StackPanel>
                 </StackPanel>
                 </StackPanel>
@@ -279,7 +279,7 @@
            The status line is for neutral acknowledgements only; errors use the banner at the top (#153). -->
       <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,20,0" Spacing="4">
         <TextBlock Classes="muted" Text="{Binding Status}" TextWrapping="Wrap" IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-        <TextBlock Classes="muted" Text="{Binding VersionText}" FontSize="11.5" ToolTip.Tip="{local:T version.tip}" />
+        <TextBlock Classes="muted caption" Text="{Binding VersionText}" ToolTip.Tip="{local:T version.tip}" />
       </StackPanel>
       <Button Grid.Column="1" Classes="main-action secondary" Height="{Binding #LaunchButton.Bounds.Height}" Content="{Binding RestartAllLabel}" Click="OnRestartAll"
               IsVisible="{Binding CanRestartAll}" ToolTip.Tip="{local:T restartAll.tip}" AutomationProperties.Name="{local:T restartAll.name}" Margin="0,0,12,0" Padding="16,8" />
