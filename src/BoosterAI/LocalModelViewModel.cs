@@ -25,14 +25,33 @@ internal sealed class LocalModelViewModel : Observable
     public bool CpuOnly { get => _cpuOnly; set { if (Set(ref _cpuOnly, value)) Invalidate(); } }
     public bool Busy { get => _busy; private set { if (Set(ref _busy, value)) Raise(nameof(CanCheck)); } }
     public bool CanCheck => !Busy;
-    public string Result { get => _result; private set => Set(ref _result, value); }
+    /// <summary>The full verdict and reason, as the Settings advice expander shows it.</summary>
+    public string Result { get => _result; private set { if (Set(ref _result, value)) RaiseCard(); } }
+    // The advice window's result card: one headline (Passar / Osäker / Passar inte) and one sentence; the full reason
+    // moves into the collapsed measurements section. Before an assessment the card is neutral and shows the status.
+    public string ResultTitle => Loc.Get("localAdvice.card." + (Assessment is { } a ? Card(a.Suitability) : "none"));
+    public string ResultSummary => Assessment is { } a ? Loc.Get("localAdvice.why." + a.Reason) : Result;
+    public string ResultDetails => Assessment is null ? "" : Result;
+    public bool ResultFits => Assessment is { } a && Card(a.Suitability) == "fits";
+    public bool ResultUncertain => Assessment is { } a && Card(a.Suitability) == "uncertain";
+    public bool ResultLimited => Assessment is { } a && Card(a.Suitability) == "limited";
+    internal static string Card(ModelSuitability suitability) => suitability switch
+    {
+        ModelSuitability.Fits => "fits",
+        ModelSuitability.Limited => "limited",
+        _ => "uncertain",
+    };
+    private void RaiseCard()
+    {
+        foreach (var name in new[] { nameof(ResultTitle), nameof(ResultSummary), nameof(ResultDetails), nameof(ResultFits), nameof(ResultUncertain), nameof(ResultLimited) }) Raise(name);
+    }
     public string Hardware { get => _hardware; private set => Set(ref _hardware, value); }
     public string Metadata { get => _metadata; private set => Set(ref _metadata, value); }
     private void Invalidate()
     {
         _assessmentVersion++;
         Assessment = null;
-        Raise(nameof(Assessment));
+        Raise(nameof(Assessment)); RaiseCard();
         Result = Loc.Get("localAdvice.selection." + _selection.Backend);
         Metadata = "";
     }
@@ -71,7 +90,7 @@ internal sealed class LocalModelViewModel : Observable
         var running = installed is null ? null : snapshot.Running.FirstOrDefault(r => r.Name == installed.Name && r.Digest == installed.Digest);
         var assessment = LocalModelAdvice.Assess(installed, running, hardware, cpuOnly);
         Assessment = assessment;
-        Raise(nameof(Assessment));
+        Raise(nameof(Assessment)); RaiseCard();
         Result = Loc.Get("localAdvice.verdict." + assessment.Suitability) + "\n" + Loc.Get("localAdvice.reason." + assessment.Reason);
         if (installed is { Remote: false } && assessment.Suitability == ModelSuitability.Unknown)
             foreach (var gpu in hardware.Gpus.Where(g => g.TotalBytes < installed.Bytes))
@@ -80,7 +99,8 @@ internal sealed class LocalModelViewModel : Observable
             + (snapshot.RuntimeKnown ? "" : "\n" + Loc.Get("localAdvice.runtimeUnknown"));
     }
 
-    internal static string Memory(long? bytes) => bytes.HasValue ? $"{bytes.Value / (double)LocalModelAdvice.GiB:0.0} GiB" : Loc.Get("localAdvice.unknown");
+    // One unit in every window: decimal GB, as model pages and the catalog publish sizes (#155).
+    internal static string Memory(long? bytes) => bytes.HasValue ? $"{bytes.Value / 1e9:0.0} GB" : Loc.Get("localAdvice.unknown");
     internal static string HardwareText(HardwareSnapshot hardware) =>
         Loc.Format("localAdvice.ram", Memory(hardware.TotalRam), Memory(hardware.AvailableRam)) + "\n"
         + Loc.Format("localAdvice.cpu", hardware.Cpu.Length > 0 ? hardware.Cpu : Loc.Get("localAdvice.unknown"), hardware.Processors) + "\n"

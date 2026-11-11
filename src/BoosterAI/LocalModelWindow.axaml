@@ -4,23 +4,49 @@
         x:Class="BoosterAI.LocalModelWindow" x:DataType="local:LocalModelViewModel"
         Title="{local:T localAdvice.title}" Icon="avares://BoosterAI/Assets/boosterai.ico"
         Width="710" Height="760" MinWidth="540" MinHeight="450" WindowStartupLocation="CenterOwner">
+  <Window.Styles>
+    <Style Selector="Path.verdict">
+      <Setter Property="Width" Value="18" />
+      <Setter Property="Height" Value="18" />
+      <Setter Property="Stretch" Value="Uniform" />
+      <Setter Property="StrokeThickness" Value="1.8" />
+      <Setter Property="StrokeLineCap" Value="Round" />
+      <Setter Property="StrokeJoin" Value="Round" />
+      <Setter Property="VerticalAlignment" Value="Top" />
+      <Setter Property="Margin" Value="0,1,10,0" />
+    </Style>
+  </Window.Styles>
   <Grid RowDefinitions="*,Auto" Margin="28,22">
     <ScrollViewer HorizontalScrollBarVisibility="Disabled">
       <StackPanel Spacing="12" Margin="0,0,12,8">
         <TextBlock Classes="title" Text="{local:T localAdvice.title}" TextWrapping="Wrap" />
-        <TextBlock Text="{Binding Selection}" FontWeight="SemiBold" TextWrapping="Wrap" />
-        <TextBlock Classes="muted" Text="{local:T localAdvice.intro}" TextWrapping="Wrap" />
-        <Border Classes="row" Padding="12">
-          <TextBlock Text="{Binding Result}" TextWrapping="Wrap" LineHeight="21" AutomationProperties.LiveSetting="Polite" />
+
+        <!-- Result card first: Passar / Osäker / Passar inte with a semantic left edge and icon, then one sentence. -->
+        <Border Classes="callout" Classes.success="{Binding ResultFits}" Classes.warning="{Binding ResultUncertain}" Classes.danger="{Binding ResultLimited}">
+          <Grid ColumnDefinitions="Auto,*">
+            <Path Classes="verdict" Data="{StaticResource CheckIcon}" Stroke="{DynamicResource SuccessBrush}" IsVisible="{Binding ResultFits}" />
+            <Path Classes="verdict" Data="{StaticResource WarningIcon}" Stroke="{DynamicResource WarningBrush}" IsVisible="{Binding ResultUncertain}" />
+            <Path Classes="verdict" Data="{StaticResource ErrorIcon}" Stroke="{DynamicResource DangerBrush}" IsVisible="{Binding ResultLimited}" />
+            <StackPanel Grid.Column="1" Spacing="4" AutomationProperties.LiveSetting="Polite">
+              <TextBlock Text="{Binding ResultTitle}" FontWeight="SemiBold" FontSize="15" TextWrapping="Wrap" />
+              <TextBlock Text="{Binding ResultSummary}" TextWrapping="Wrap" LineHeight="20" />
+            </StackPanel>
+          </Grid>
         </Border>
-        <TextBlock Text="{Binding Hardware}" TextWrapping="Wrap" FontSize="12" />
-        <TextBlock Classes="muted" Text="{local:T localAdvice.platform}" TextWrapping="Wrap" FontSize="12" />
+
+        <!-- Inputs -->
+        <StackPanel Spacing="6" Margin="0,6,0,0">
+          <TextBlock Classes="sectionhead" Text="{local:T localAdvice.inputs}" />
+          <TextBlock Classes="caption muted" Text="{Binding Selection}" TextWrapping="Wrap" />
+          <TextBlock Classes="caption muted" Text="{local:T localAdvice.intro}" TextWrapping="Wrap" />
+        </StackPanel>
         <StackPanel Spacing="6" IsEnabled="{Binding CanCheck}">
-          <TextBlock Text="{local:T localAdvice.model}" />
-          <TextBox Text="{Binding Model}" Watermark="qwen2.5-coder:7b" AutomationProperties.Name="{local:T localAdvice.model}" />
-          <TextBlock Text="{local:T localAdvice.endpoint}" />
+          <TextBlock Classes="label" Text="{local:T localAdvice.model}" TextWrapping="Wrap" />
+          <TextBox Text="{Binding Model}" FontFamily="{StaticResource MonoFont}" FontSize="13" Watermark="qwen2.5-coder:7b" AutomationProperties.Name="{local:T localAdvice.model}" />
+          <TextBlock Classes="label" Text="{local:T localAdvice.endpoint}" TextWrapping="Wrap" Margin="0,4,0,0" />
           <TextBox Text="{Binding Endpoint}" AutomationProperties.Name="{local:T localAdvice.endpoint}" />
-          <CheckBox IsChecked="{Binding Confirmed}">
+          <!-- Without this tick the check reads hardware only and gives no local verdict; the label says so. -->
+          <CheckBox IsChecked="{Binding Confirmed}" Margin="0,4,0,0">
             <TextBlock Text="{local:T localAdvice.confirm}" TextWrapping="Wrap" />
           </CheckBox>
           <CheckBox IsChecked="{Binding CpuOnly}">
@@ -28,10 +54,17 @@
           </CheckBox>
         </StackPanel>
         <Button Classes="primary" Content="{local:T localAdvice.check}" Click="OnCheck" IsEnabled="{Binding CanCheck}" HorizontalAlignment="Left" Padding="14,8" />
-        <TextBlock Text="{Binding Metadata}" TextWrapping="Wrap" FontSize="12" />
-        <Expander Header="{local:T localAdvice.details}">
-          <StackPanel Spacing="8" Margin="0,8,0,0">
-            <TextBlock Classes="muted" Text="{local:T localAdvice.limits}" TextWrapping="Wrap" FontSize="12" />
+
+        <!-- Measurements and limitations: collapsed by default. -->
+        <Expander Header="{local:T localAdvice.details}" HorizontalAlignment="Stretch">
+          <StackPanel Spacing="8">
+            <TextBlock Text="{Binding ResultDetails}" TextWrapping="Wrap" FontSize="12"
+                       IsVisible="{Binding ResultDetails, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            <TextBlock Text="{Binding Metadata}" TextWrapping="Wrap" FontSize="12"
+                       IsVisible="{Binding Metadata, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            <TextBlock Text="{Binding Hardware}" TextWrapping="Wrap" FontSize="12" />
+            <TextBlock Classes="caption muted" Text="{local:T localAdvice.platform}" TextWrapping="Wrap" />
+            <TextBlock Classes="caption muted" Text="{local:T localAdvice.limits}" TextWrapping="Wrap" />
             <Button Classes="link" Content="{local:T localAdvice.sources}" Click="OnSources" HorizontalAlignment="Left" />
           </StackPanel>
         </Expander>

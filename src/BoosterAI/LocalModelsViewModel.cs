@@ -11,12 +11,13 @@ public sealed class DownloadableModelRow : Observable
     public string Purpose => Loc.Get("models.purpose." + Model.Purpose);
     public string Fit => Loc.Get("models.fit." + _fit);
     public bool Installed { get => _installed; private set => Set(ref _installed, value); }
-    public string InstalledText => Loc.Get(Installed ? "models.installed" : "models.notInstalled");
+    // Size, planning fit and (only when confirmed) installation in one caption line.
+    public string Caption => string.Join(" · ", new[] { Size, Fit, Installed ? Loc.Get("models.installedShort") : null }.OfType<string>());
     internal void Refresh(HardwareSnapshot hardware, IReadOnlyList<OllamaModel> models)
     {
         _fit = DownloadableModels.Assess(Model, hardware);
         Installed = models.Any(m => m.Name == Id && !m.Remote && m.Bytes > 0);
-        Raise(nameof(Fit)); Raise(nameof(InstalledText));
+        Raise(nameof(Fit)); Raise(nameof(Caption));
     }
 }
 
@@ -30,7 +31,7 @@ public sealed class LocalModelsViewModel : Observable, IDisposable
     private IReadOnlyList<OllamaModel> _installed = [];
     private string _endpoint = "http://127.0.0.1:11434";
     private string _status = Loc.Get("models.serverUnchecked"), _downloadStatus = "";
-    private bool _busy, _connected, _confirmed, _disposed;
+    private bool _busy, _connected, _serverFailed, _downloading, _confirmed, _disposed;
     private double _percent;
     private CancellationTokenSource? _operation;
     public IReadOnlyList<DownloadableModelRow> Models { get; } = DownloadableModels.All.Select(m => new DownloadableModelRow(m)).ToArray();
@@ -56,7 +57,7 @@ public sealed class LocalModelsViewModel : Observable, IDisposable
         set
         {
             if (Busy || !Set(ref _endpoint, value?.Trim() ?? "")) return;
-            _connected = false; _installed = []; _confirmed = false;
+            _connected = false; _serverFailed = false; _installed = []; _confirmed = false;
             Status = Loc.Get("models.serverUnchecked"); DownloadStatus = ""; Raise(nameof(Confirmed)); Refresh();
         }
     }
@@ -66,23 +67,35 @@ public sealed class LocalModelsViewModel : Observable, IDisposable
     public bool CanDownload => !_disposed && !Busy && _connected && Confirmed && !Selected.Installed;
     public bool CanCancel => Busy && !_disposed;
     public string Status { get => _status; private set => Set(ref _status, value); }
+    // Step 1's ✓/✗: the server answered, or the last check failed. Neither while unchecked or checking.
+    public bool ServerOk => _connected;
+    public bool ServerFailed => !_connected && _serverFailed;
     public string DownloadStatus { get => _downloadStatus; private set => Set(ref _downloadStatus, value); }
     public double Percent { get => _percent; private set => Set(ref _percent, value); }
     public string Hardware => _hardware.HasReading ? LocalModelViewModel.HardwareText(_hardware.Snapshot) : Loc.Get("localAdvice.notMeasured");
+    private DownloadableModel? Recommended => _hardware.HasReading && _hardware.Snapshot.AvailableRam is not null ? DownloadableModels.Recommend(_hardware.Snapshot) : null;
+    /// <summary>The suggested exact tag for the callout (mono), or empty when there is none.</summary>
+    public string RecommendedId => Recommended?.Id ?? "";
+    public bool HasRecommendation => Recommended is not null;
     public string Recommendation
     {
         get
         {
             if (!_hardware.HasReading || _hardware.Snapshot.AvailableRam is null) return Loc.Get("models.recommendationUnknown");
-            var model = DownloadableModels.Recommend(_hardware.Snapshot);
+            var model = Recommended;
             return model is null ? Loc.Get("models.recommendationNone")
-                : Loc.Format("models.recommendation." + DownloadableModels.Assess(model, _hardware.Snapshot), model.Id);
+                : Loc.Get("models.recommendation." + DownloadableModels.Assess(model, _hardware.Snapshot));
         }
     }
     public string SourceDate => Loc.Format("models.sourceDate", DownloadableModels.Reviewed);
     public string SelectedPlan => Loc.Format("models.plan", LocalModelViewModel.Memory(Selected.Model.PlanningBytes));
-    public string DownloadHint => _connected && Selected.Installed ? Loc.Get("models.installed")
-        : !_connected ? Loc.Get("models.needServer") : !Confirmed ? Loc.Get("models.needConsent") : "";
+    /// <summary>Why <see cref="CanDownload"/> is false, shown beside the inactive button; empty exactly when it is true.</summary>
+    public string DownloadBlockedReason => CanDownload ? ""
+        : _disposed ? Loc.Get("models.blocked.closed")
+        : Busy ? Loc.Get(_downloading ? "models.blocked.downloading" : "models.blocked.checking")
+        : !_connected ? Loc.Get("models.blocked.server")
+        : Selected.Installed ? Loc.Get("models.blocked.installed")
+        : Loc.Get("models.blocked.consent");
     public string DownloadTarget => Loc.Format("models.target", Selected.Id, Selected.Size, Endpoint);
     public string Compatibility => Loc.Get(Selected.Model.OpenHandsExample ? "models.compatibility.openhands" : "models.compatibility.general");
     public string InstalledModels => !_connected ? Loc.Get("models.installedUnknown") : _installed.Count == 0 ? Loc.Get("models.installedEmpty")
@@ -96,9 +109,9 @@ public sealed class LocalModelsViewModel : Observable, IDisposable
         _operation = operation;
         try
         {
-            _connected = false; _installed = [];
+            _connected = false; _serverFailed = false; _installed = [];
             await _hardware.EnsureAsync(operation.Token);
-            if (LocalOllamaProbe.Endpoint(Endpoint) is not { } uri) { Status = Loc.Get("localAdvice.invalidEndpoint"); return; }
+            if (LocalOllamaProbe.Endpoint(Endpoint) is not { } uri) { _serverFailed = true; Status = Loc.Get("localAdvice.invalidEndpoint"); return; }
             Status = Loc.Get("models.connecting");
             _connected = false;
             var snapshot = await _readModels(uri, operation.Token);
@@ -106,8 +119,13 @@ public sealed class LocalModelsViewModel : Observable, IDisposable
             _installed = snapshot.Models;
             _connected = true; Status = Loc.Get("models.connected");
         }
-        catch (OperationCanceledException) { Status = Loc.Get(cancellation.IsCancellationRequested || operation.IsCancellationRequested ? "models.checkCancelled" : "models.unreachable"); }
-        catch (Exception ex) when (IsReadFailure(ex)) { Status = Loc.Get("models.unreachable"); }
+        catch (OperationCanceledException)
+        {
+            var cancelled = cancellation.IsCancellationRequested || operation.IsCancellationRequested;
+            _serverFailed = !cancelled;
+            Status = Loc.Get(cancelled ? "models.checkCancelled" : "models.unreachable");
+        }
+        catch (Exception ex) when (IsReadFailure(ex)) { _serverFailed = true; Status = Loc.Get("models.unreachable"); }
         finally { _operation = null; Busy = false; }
     }
 
@@ -115,7 +133,7 @@ public sealed class LocalModelsViewModel : Observable, IDisposable
     {
         if (!CanDownload || LocalOllamaProbe.Endpoint(Endpoint) is not { } endpoint) return;
         var model = Selected.Model;
-        Busy = true; Percent = 0; DownloadStatus = Loc.Get("models.downloading");
+        _downloading = true; Busy = true; Percent = 0; DownloadStatus = Loc.Get("models.downloading");
         using var operation = CancellationTokenSource.CreateLinkedTokenSource(cancellation);
         _operation = operation;
         try
@@ -140,7 +158,7 @@ public sealed class LocalModelsViewModel : Observable, IDisposable
         catch (OperationCanceledException)
         { DownloadStatus = Loc.Get(operation.IsCancellationRequested ? "models.downloadCancelled" : "models.downloadFailed"); }
         catch (Exception ex) when (IsReadFailure(ex)) { DownloadStatus = Loc.Get("models.downloadFailed"); }
-        finally { _operation = null; Busy = false; }
+        finally { _operation = null; _downloading = false; Busy = false; }
     }
     private static bool IsReadFailure(Exception ex) => ex is HttpRequestException or IOException or System.Text.Json.JsonException or KeyNotFoundException or InvalidOperationException;
     public void Cancel() => _operation?.Cancel();
@@ -156,7 +174,7 @@ public sealed class LocalModelsViewModel : Observable, IDisposable
     {
         if (_disposed) return;
         foreach (var row in Models) row.Refresh(_hardware.Snapshot, _installed);
-        foreach (var name in new[] { nameof(CanEdit), nameof(CanDownload), nameof(CanCancel), nameof(Hardware), nameof(Recommendation), nameof(SelectedPlan), nameof(DownloadTarget), nameof(DownloadHint), nameof(Compatibility), nameof(InstalledModels) }) Raise(name);
+        foreach (var name in new[] { nameof(CanEdit), nameof(CanDownload), nameof(CanCancel), nameof(Hardware), nameof(Recommendation), nameof(RecommendedId), nameof(HasRecommendation), nameof(SelectedPlan), nameof(DownloadTarget), nameof(DownloadBlockedReason), nameof(Compatibility), nameof(InstalledModels), nameof(ServerOk), nameof(ServerFailed) }) Raise(name);
     }
     internal void ShowSample(string? section)
     {
@@ -164,10 +182,16 @@ public sealed class LocalModelsViewModel : Observable, IDisposable
         _hardware.SetSnapshot(section == "unknown" ? HardwareSnapshot.Empty : new(32 * gb, 20 * gb, "Example CPU", 12,
             section == "cpu" ? [] : [new("Example GPU", 12 * gb, 10 * gb)]));
         _connected = section != "missing";
+        _serverFailed = !_connected;
         _confirmed = _connected;
         _installed = _connected ? [new(Models[1].Id, "sample-digest", Models[1].Model.DownloadBytes, false)] : [];
         Status = Loc.Get(_connected ? "models.connected" : "models.unreachable");
-        if (section == "download") { DownloadStatus = Loc.Format("models.progress", "42", "1.4 GiB", "3.3 GiB"); _busy = true; Percent = 42; }
-        Refresh(); Raise(nameof(Confirmed)); Raise(nameof(Busy));
+        if (section == "download")
+        {
+            // A download of a model that is not installed yet: the recommended GPU example.
+            _selected = Models[3]; _busy = _downloading = true; Percent = 42;
+            DownloadStatus = Loc.Format("models.progress", "42", LocalModelViewModel.Memory(Models[3].Model.DownloadBytes * 42 / 100), LocalModelViewModel.Memory(Models[3].Model.DownloadBytes));
+        }
+        Refresh(); Raise(nameof(Selected)); Raise(nameof(Confirmed)); Raise(nameof(Busy));
     }
 }

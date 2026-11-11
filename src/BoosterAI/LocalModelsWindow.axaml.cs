@@ -16,6 +16,8 @@ public partial class LocalModelsWindow : Window
         ViewModel = vm;
         DataContext = vm;
         InitializeComponent();
+        // Fill the viewport so the list's * row grows with the window; content taller than that scrolls instead.
+        ModelScroll.SizeChanged += (_, e) => ScrollContent.MinHeight = Math.Max(0, e.NewSize.Height - ScrollContent.Margin.Bottom);
         Opened += (_, _) => { DoneButton.Focus(); ModelScroll.Offset = default; };
         Opened += async (_, _) => { if (liveReads && !Screenshot.Active) await vm.RefreshAsync(_lifetime.Token); };
         Closed += (_, _) => { _lifetime.Cancel(); vm.Dispose(); _lifetime.Dispose(); };

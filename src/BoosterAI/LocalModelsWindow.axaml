@@ -4,79 +4,168 @@
         x:Class="BoosterAI.LocalModelsWindow" x:DataType="local:LocalModelsViewModel"
         Title="{local:T models.title}" Icon="avares://BoosterAI/Assets/boosterai.ico"
         Width="860" Height="790" MinWidth="640" MinHeight="400" WindowStartupLocation="CenterOwner">
+  <Window.Styles>
+    <!-- The catalog list: token background, a quiet hover and a 1 px accent outline for the selected row (no fill). -->
+    <Style Selector="ListBox.models">
+      <Setter Property="Background" Value="{DynamicResource BackgroundBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="{StaticResource RadiusLarge}" />
+      <Setter Property="Padding" Value="4" />
+    </Style>
+    <Style Selector="ListBox.models ListBoxItem">
+      <Setter Property="Padding" Value="10,7" />
+      <Setter Property="Margin" Value="0,1" />
+      <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+    </Style>
+    <Style Selector="ListBox.models ListBoxItem /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="CornerRadius" Value="{StaticResource RadiusMedium}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="ListBox.models ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter, ListBox.models ListBoxItem:pressed /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource RowHoverBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+    </Style>
+    <Style Selector="ListBox.models ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter, ListBox.models ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter, ListBox.models ListBoxItem:selected:pressed /template/ ContentPresenter#PART_ContentPresenter, ListBox.models ListBoxItem:selected:focus /template/ ContentPresenter#PART_ContentPresenter, ListBox.models ListBoxItem:selected:disabled /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource RowHoverBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColor}" />
+      <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+    </Style>
+    <Style Selector="Path.status-mark">
+      <Setter Property="Width" Value="14" />
+      <Setter Property="Height" Value="14" />
+      <Setter Property="Stretch" Value="Uniform" />
+      <Setter Property="StrokeThickness" Value="1.8" />
+      <Setter Property="StrokeLineCap" Value="Round" />
+      <Setter Property="StrokeJoin" Value="Round" />
+      <Setter Property="VerticalAlignment" Value="Top" />
+      <Setter Property="Margin" Value="0,1,8,0" />
+    </Style>
+  </Window.Styles>
   <Grid RowDefinitions="*,Auto" Margin="24,18">
+    <!-- The content grid is at least as tall as the viewport (code-behind), so the list's * row takes the spare height
+         and is never drawn over other content; on a short window everything scrolls instead. -->
     <ScrollViewer x:Name="ModelScroll" HorizontalScrollBarVisibility="Disabled">
-      <StackPanel Spacing="12" Margin="0,0,12,8">
-        <TextBlock Classes="title" Text="{local:T models.title}" TextWrapping="Wrap" />
-        <TextBlock Text="{local:T models.intro}" Classes="muted" TextWrapping="Wrap" />
-        <Border Classes="row" Padding="12">
-          <StackPanel Spacing="6">
-            <TextBlock Text="{Binding Recommendation}" FontWeight="SemiBold" TextWrapping="Wrap" />
-            <Expander Header="{local:T models.hardware}">
-              <StackPanel Spacing="6" Margin="0,6,0,0">
-                <TextBlock Text="{Binding Hardware}" FontSize="12" TextWrapping="Wrap" />
-                <TextBlock Text="{local:T models.hardwareScope}" Classes="muted" FontSize="12" TextWrapping="Wrap" />
-              </StackPanel>
-            </Expander>
-          </StackPanel>
+      <Grid x:Name="ScrollContent" RowDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto" Margin="0,0,12,4">
+        <StackPanel Spacing="6">
+          <TextBlock Classes="title" Text="{local:T models.title}" TextWrapping="Wrap" />
+          <TextBlock Text="{local:T models.intro}" Classes="muted" TextWrapping="Wrap" />
+        </StackPanel>
+
+        <Border Grid.Row="1" Classes="callout" Margin="0,14,0,0">
+          <Grid ColumnDefinitions="Auto,*">
+            <Path Data="{StaticResource BoltIcon}" Fill="{DynamicResource SystemAccentColor}" Width="16" Height="16" Stretch="Uniform"
+                  VerticalAlignment="Top" Margin="0,1,10,0" />
+            <StackPanel Grid.Column="1" Spacing="4">
+              <TextBlock Classes="caption muted" Text="{local:T models.recommendationTitle}" />
+              <TextBlock Text="{Binding RecommendedId}" FontFamily="{StaticResource MonoFont}" FontSize="13" FontWeight="SemiBold"
+                         IsVisible="{Binding HasRecommendation}" TextWrapping="Wrap" />
+              <TextBlock Text="{Binding Recommendation}" TextWrapping="Wrap" />
+            </StackPanel>
+          </Grid>
         </Border>
-        <TextBlock Text="{local:T models.choose}" FontWeight="SemiBold" />
-        <ListBox x:Name="ModelList" ItemsSource="{Binding Models}" SelectedItem="{Binding Selected}" IsEnabled="{Binding CanEdit}"
-                 MaxHeight="210" AutoScrollToSelectedItem="False" ScrollViewer.HorizontalScrollBarVisibility="Disabled" AutomationProperties.Name="{local:T models.choose}">
+
+        <!-- 1 Server -->
+        <StackPanel Grid.Row="2" Spacing="8" Margin="0,18,0,0">
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Border Classes="step current"><TextBlock Text="1" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border>
+            <TextBlock Classes="stepname current" Text="{local:T models.step.server}" VerticalAlignment="Center" />
+          </StackPanel>
+          <StackPanel Spacing="6" Margin="30,0,0,0">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBox x:Name="EndpointBox" Text="{Binding Endpoint}" IsEnabled="{Binding CanEdit}" AutomationProperties.Name="{local:T models.server}" />
+              <Button Grid.Column="1" Classes="secondary" Content="{local:T models.refresh}" Click="OnRefresh" IsEnabled="{Binding CanEdit}" Margin="8,0,0,0" />
+            </Grid>
+            <Grid ColumnDefinitions="Auto,*">
+              <Path Classes="status-mark" Data="{StaticResource CheckIcon}" Stroke="{DynamicResource SuccessBrush}" IsVisible="{Binding ServerOk}" />
+              <Path Classes="status-mark" Data="{StaticResource CloseIcon}" Stroke="{DynamicResource DangerBrush}" IsVisible="{Binding ServerFailed}" />
+              <TextBlock Grid.Column="1" Classes="caption" Text="{Binding Status}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
+            </Grid>
+          </StackPanel>
+        </StackPanel>
+
+        <!-- 2 Välj modell -->
+        <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="8" Margin="0,18,0,8">
+          <Border Classes="step" Classes.current="{Binding ServerOk}"><TextBlock Text="2" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border>
+          <TextBlock Classes="stepname" Classes.current="{Binding ServerOk}" Text="{local:T models.step.choose}" VerticalAlignment="Center" />
+        </StackPanel>
+        <ListBox x:Name="ModelList" Grid.Row="4" Classes="models" MinHeight="180" Margin="30,0,0,0"
+                 ItemsSource="{Binding Models}" SelectedItem="{Binding Selected}" IsEnabled="{Binding CanEdit}"
+                 AutoScrollToSelectedItem="False" ScrollViewer.HorizontalScrollBarVisibility="Disabled" AutomationProperties.Name="{local:T models.choose}">
           <ListBox.ItemTemplate>
             <DataTemplate x:DataType="local:DownloadableModelRow">
-              <StackPanel Spacing="3" Margin="4">
-                <TextBlock Text="{Binding Id}" FontWeight="SemiBold" FontSize="12" TextWrapping="Wrap" />
-                <WrapPanel><TextBlock Text="{Binding Size}" FontSize="12" Margin="0,0,12,0" /><TextBlock Text="{Binding Fit}" FontSize="12" /></WrapPanel>
+              <StackPanel Spacing="2">
+                <TextBlock Text="{Binding Id}" FontFamily="{StaticResource MonoFont}" FontSize="13" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding Caption}" Classes="caption muted" TextWrapping="Wrap" />
               </StackPanel>
             </DataTemplate>
           </ListBox.ItemTemplate>
         </ListBox>
-        <StackPanel Spacing="5">
+        <StackPanel Grid.Row="5" Spacing="5" Margin="30,10,0,0">
           <TextBlock Text="{Binding Selected.Purpose}" TextWrapping="Wrap" />
-          <TextBlock Text="{Binding SelectedPlan}" Classes="muted" FontSize="12" TextWrapping="Wrap" />
-          <TextBlock Text="{Binding Selected.InstalledText}" FontSize="12" />
-          <WrapPanel><Button Classes="link" Content="{local:T models.source}" Click="OnSource" Margin="0,0,12,0" /><TextBlock Text="{Binding SourceDate}" Classes="muted" FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap" /></WrapPanel>
+          <TextBlock Text="{Binding SelectedPlan}" Classes="caption muted" TextWrapping="Wrap" />
+          <WrapPanel>
+            <Button Classes="link" Content="{local:T models.source}" Click="OnSource" Margin="0,0,12,0" />
+            <TextBlock Text="{Binding SourceDate}" Classes="caption muted" VerticalAlignment="Center" TextWrapping="Wrap" />
+          </WrapPanel>
         </StackPanel>
-        <TextBlock Text="{local:T models.server}" FontWeight="SemiBold" />
-        <Grid ColumnDefinitions="*,Auto">
-          <TextBox x:Name="EndpointBox" Text="{Binding Endpoint}" IsEnabled="{Binding CanEdit}" AutomationProperties.Name="{local:T models.server}" />
-          <Button Grid.Column="1" Content="{local:T models.refresh}" Click="OnRefresh" IsEnabled="{Binding CanEdit}" Margin="8,0,0,0" />
-        </Grid>
-        <TextBlock Text="{Binding Status}" FontSize="12" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
-        <CheckBox IsChecked="{Binding Confirmed}" IsEnabled="{Binding CanEdit}"><TextBlock Text="{local:T models.confirm}" TextWrapping="Wrap" /></CheckBox>
-        <Expander Header="{local:T models.setupAndInstalled}">
-          <StackPanel Spacing="8" Margin="0,8,0,0">
-            <TextBlock Text="{local:T models.runtimeHint}" TextWrapping="Wrap" FontSize="12" />
-            <Button Classes="link" Content="{local:T models.installOllama}" Click="OnInstallOllama" HorizontalAlignment="Left" />
-            <TextBlock Text="{Binding InstalledModels}" FontSize="12" TextWrapping="Wrap" />
-          </StackPanel>
-        </Expander>
-        <Expander Header="{local:T models.agents}">
-          <StackPanel Spacing="8" Margin="0,8,0,0">
-            <TextBlock Text="{Binding Compatibility}" FontSize="12" TextWrapping="Wrap" />
-            <TextBlock Text="{local:T models.connectionScope}" FontSize="12" TextWrapping="Wrap" />
-            <WrapPanel>
-              <Button Content="Aider" Classes="link" Tag="aider" Click="OnAgentDocs" Margin="0,0,12,0" />
-              <Button Content="Open Interpreter" Classes="link" Tag="interpreter" Click="OnAgentDocs" Margin="0,0,12,0" />
-              <Button Content="OpenHands" Classes="link" Tag="openhands" Click="OnAgentDocs" />
-            </WrapPanel>
-          </StackPanel>
-        </Expander>
-      </StackPanel>
-    </ScrollViewer>
-    <StackPanel Grid.Row="1" Spacing="7" Margin="0,12,0,0">
-      <TextBlock Text="{Binding DownloadTarget}" TextWrapping="Wrap" FontSize="12" />
-      <TextBlock Text="{Binding DownloadHint}" Classes="muted" TextWrapping="Wrap" FontSize="12" />
-      <ProgressBar Value="{Binding Percent}" Minimum="0" Maximum="100" IsVisible="{Binding Busy}" Height="4" />
-      <TextBlock Text="{Binding DownloadStatus}" TextWrapping="Wrap" FontSize="12" AutomationProperties.LiveSetting="Polite" />
-      <Grid ColumnDefinitions="*,Auto">
-        <WrapPanel>
-          <Button x:Name="DownloadButton" Classes="primary" Content="{local:T models.download}" Click="OnDownload" IsEnabled="{Binding CanDownload}" Margin="0,0,8,0" />
-          <Button Content="{local:T models.cancel}" Click="OnCancel" IsEnabled="{Binding CanCancel}" />
-        </WrapPanel>
-        <Button x:Name="DoneButton" Grid.Column="1" Classes="secondary" Content="{local:T done}" Click="OnDone" IsCancel="True" />
+
+        <!-- Background and links, collapsed: measured hardware, the server's inventory, agent setup. -->
+        <StackPanel Grid.Row="6" Spacing="6" Margin="0,16,0,0">
+          <Expander Header="{local:T models.hardware}" HorizontalAlignment="Stretch">
+            <StackPanel Spacing="6">
+              <TextBlock Text="{Binding Hardware}" FontSize="12" TextWrapping="Wrap" />
+              <TextBlock Text="{local:T models.hardwareScope}" Classes="caption muted" TextWrapping="Wrap" />
+            </StackPanel>
+          </Expander>
+          <Expander Header="{local:T models.setupAndInstalled}" HorizontalAlignment="Stretch">
+            <StackPanel Spacing="8">
+              <TextBlock Text="{local:T models.runtimeHint}" TextWrapping="Wrap" FontSize="12" />
+              <Button Classes="link" Content="{local:T models.installOllama}" Click="OnInstallOllama" HorizontalAlignment="Left" />
+              <TextBlock Text="{Binding InstalledModels}" FontSize="12" TextWrapping="Wrap" />
+            </StackPanel>
+          </Expander>
+          <Expander Header="{local:T models.agents}" HorizontalAlignment="Stretch">
+            <StackPanel Spacing="8">
+              <TextBlock Text="{Binding Compatibility}" FontSize="12" TextWrapping="Wrap" />
+              <TextBlock Text="{local:T models.connectionScope}" FontSize="12" TextWrapping="Wrap" />
+              <WrapPanel>
+                <Button Content="Aider" Classes="link" Tag="aider" Click="OnAgentDocs" Margin="0,0,12,0" />
+                <Button Content="Open Interpreter" Classes="link" Tag="interpreter" Click="OnAgentDocs" Margin="0,0,12,0" />
+                <Button Content="OpenHands" Classes="link" Tag="openhands" Click="OnAgentDocs" />
+              </WrapPanel>
+            </StackPanel>
+          </Expander>
+        </StackPanel>
       </Grid>
-    </StackPanel>
+    </ScrollViewer>
+
+    <!-- 3 Hämta: always visible, outside the scroll area. -->
+    <Border Grid.Row="1" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="0,12,0,0" Margin="0,8,0,0">
+      <StackPanel Spacing="8">
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <Border Classes="step" Classes.current="{Binding ServerOk}"><TextBlock Text="3" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border>
+          <TextBlock Classes="stepname" Classes.current="{Binding ServerOk}" Text="{local:T models.step.download}" VerticalAlignment="Center" />
+        </StackPanel>
+        <StackPanel Spacing="6" Margin="30,0,0,0">
+          <TextBlock Text="{Binding DownloadTarget}" FontFamily="{StaticResource MonoFont}" FontSize="12" TextWrapping="Wrap" />
+          <CheckBox IsChecked="{Binding Confirmed}" IsEnabled="{Binding CanEdit}"><TextBlock Text="{local:T models.confirm}" TextWrapping="Wrap" FontSize="13" /></CheckBox>
+          <ProgressBar Value="{Binding Percent}" Minimum="0" Maximum="100" IsVisible="{Binding Busy}" Height="4" />
+          <TextBlock Classes="caption" Text="{Binding DownloadStatus}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite"
+                     IsVisible="{Binding DownloadStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        </StackPanel>
+        <Grid ColumnDefinitions="*,Auto,Auto,Auto" Margin="30,4,0,0">
+          <!-- Hämta modell is never inactive without saying why (#155). -->
+          <TextBlock x:Name="DownloadReason" Classes="caption muted" Text="{Binding DownloadBlockedReason}" TextWrapping="Wrap" TextAlignment="Right"
+                     VerticalAlignment="Center" Margin="0,0,12,0" />
+          <Button x:Name="DownloadButton" Grid.Column="1" Classes="primary" Content="{local:T models.download}" Click="OnDownload" IsEnabled="{Binding CanDownload}"
+                  AutomationProperties.HelpText="{Binding DownloadBlockedReason}" />
+          <Button Grid.Column="2" Classes="secondary" Content="{local:T models.cancel}" Click="OnCancel" IsVisible="{Binding CanCancel}" Margin="8,0,0,0" />
+          <Button x:Name="DoneButton" Grid.Column="3" Classes="secondary" Content="{local:T done}" Click="OnDone" IsCancel="True" Margin="16,0,0,0" />
+        </Grid>
+      </StackPanel>
+    </Border>
   </Grid>
 </Window>

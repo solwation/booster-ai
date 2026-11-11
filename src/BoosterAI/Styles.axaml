@@ -153,6 +153,49 @@
     <Setter Property="BorderThickness" Value="0" />
   </Style>
 
+  <!-- Small secondary text (the 12/16 step of the type scale); pair with muted for captions beside controls. -->
+  <Style Selector="TextBlock.caption">
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="LineHeight" Value="16" />
+  </Style>
+  <!-- A callout: a recommendation or a result card. The success/warning/danger variants add a 3 px left edge. -->
+  <Style Selector="Border.callout">
+    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusLarge}" />
+    <Setter Property="Padding" Value="14,12" />
+  </Style>
+  <Style Selector="Border.callout.success"><Setter Property="BorderThickness" Value="3,0,0,0" /><Setter Property="BorderBrush" Value="{DynamicResource SuccessBrush}" /></Style>
+  <Style Selector="Border.callout.warning"><Setter Property="BorderThickness" Value="3,0,0,0" /><Setter Property="BorderBrush" Value="{DynamicResource WarningBrush}" /></Style>
+  <Style Selector="Border.callout.danger"><Setter Property="BorderThickness" Value="3,0,0,0" /><Setter Property="BorderBrush" Value="{DynamicResource DangerBrush}" /></Style>
+
+  <!-- Numbered step circles: the setup wizard and the Local models window (#155). -->
+  <Style Selector="Border.step">
+    <Setter Property="Width" Value="22" />
+    <Setter Property="Height" Value="22" />
+    <Setter Property="CornerRadius" Value="11" />
+    <Setter Property="BorderThickness" Value="1.5" />
+    <Setter Property="BorderBrush" Value="{DynamicResource FaintBrush}" />
+  </Style>
+  <Style Selector="Border.step.current, Border.step.past">
+    <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColor}" />
+    <Setter Property="Background" Value="{DynamicResource SystemAccentColor}" />
+  </Style>
+  <Style Selector="Border.step TextBlock">
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="Foreground" Value="{DynamicResource MutedBrush}" />
+  </Style>
+  <Style Selector="Border.step.current TextBlock, Border.step.past TextBlock">
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+  <Style Selector="TextBlock.stepname">
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="Foreground" Value="{DynamicResource MutedBrush}" />
+  </Style>
+  <Style Selector="TextBlock.stepname.current">
+    <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+
   <!-- A list row: quiet until hovered. -->
   <Style Selector="Border.row">
     <Setter Property="CornerRadius" Value="{StaticResource RadiusLarge}" />

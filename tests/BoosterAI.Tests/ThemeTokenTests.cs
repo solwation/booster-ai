@@ -44,8 +44,8 @@ public class ThemeTokenTests
         Assert.True(offenders.Count == 0, "Use a theme token from App.axaml instead of:\n" + string.Join('\n', offenders));
     }
 
-    // Circles keep a radius of half their size; everything else is on the 4/6/8 scale.
-    private static readonly string[] Circles = ["InstallWizardView.axaml: 11"];
+    // Circles (the numbered step circles) keep a radius of half their size; everything else is on the 4/6/8 scale.
+    private static readonly string[] Circles = ["Styles.axaml: 11"];
 
     [Fact]
     public void CornerRadiiAreFourSixOrEight()

@@ -3,8 +3,10 @@ namespace BoosterAI;
 internal sealed record DownloadableModel(string Id, long DownloadBytes, string Purpose, bool OpenHandsExample = false)
 {
     public string Source => "https://ollama.com/library/" + Id;
-    // This is a deliberately visible planning heuristic, not a measured runtime requirement.
-    public long PlanningBytes => (long)Math.Ceiling(DownloadBytes * 1.25) + 2 * LocalModelAdvice.GiB;
+    // This is a deliberately visible planning heuristic, not a measured runtime requirement. Decimal GB, like the
+    // download sizes and every size the windows show.
+    internal const long Allowance = 2_000_000_000;
+    public long PlanningBytes => (long)Math.Ceiling(DownloadBytes * 1.25) + Allowance;
 }
 
 internal enum PlanningFit { Unknown, GpuCandidate, CpuCandidate, Limited }
@@ -24,7 +26,7 @@ internal static class DownloadableModels
     {
         // Each GPU is a separate candidate. Never pool cards or infer GPU support from its name.
         if (hardware.Gpus.Any(g => g.FreeBytes >= model.PlanningBytes)
-            && hardware.AvailableRam is >= 2 * LocalModelAdvice.GiB) return PlanningFit.GpuCandidate;
+            && hardware.AvailableRam is >= DownloadableModel.Allowance) return PlanningFit.GpuCandidate;
         if (hardware.AvailableRam >= model.PlanningBytes) return PlanningFit.CpuCandidate;
         return hardware.AvailableRam.HasValue ? PlanningFit.Limited : PlanningFit.Unknown;
     }
