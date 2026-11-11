@@ -76,7 +76,23 @@ public sealed class TabViewModel : Observable
         };
     }
 
-    public string Name { get => _name; set { if (Set(ref _name, value)) Raise(nameof(StatusActionName)); } }
+    public string Name
+    {
+        get => _name;
+        set
+        {
+            if (!Set(ref _name, value)) return;
+            Raise(nameof(StatusActionName));
+            Raise(nameof(OpenTip));
+            _owner.RaiseLaunchTip();
+        }
+    }
+
+    /// <summary>Tooltip and accessible name of the row's Start checkbox: what ticking it means, or why a running row is left alone (#151).</summary>
+    public string OpenTip => Loc.Format(IsAlive ? "tab.open.alive" : "tab.open.tip", Name);
+
+    /// <summary>A ticked row that is not running is the only kind Start opens; this is the one the accent fill marks.</summary>
+    public bool WillStart => Enabled && !IsAlive;
     public bool Orkester
     {
         get => _orkester;
@@ -114,6 +130,7 @@ public sealed class TabViewModel : Observable
         {
             if (!Set(ref _enabled, value)) return;
             Raise(nameof(RowOpacity));
+            Raise(nameof(WillStart));
             _owner.TabsChanged();
         }
     }
@@ -429,7 +446,7 @@ public sealed class TabViewModel : Observable
         _watchingSince = watchingSince;
         _clearedAt = clearedAt;
         if (state != TabState.Running) PendingRestart = false;
-        foreach (var n in new[] { nameof(HasStatus), nameof(IsRunning), nameof(IsAlive), nameof(Activity), nameof(StatusText), nameof(StatusTip), nameof(StatusBrush),
+        foreach (var n in new[] { nameof(HasStatus), nameof(IsRunning), nameof(IsAlive), nameof(OpenTip), nameof(WillStart), nameof(Activity), nameof(StatusText), nameof(StatusTip), nameof(StatusBrush),
             nameof(ShowsOutput), nameof(HasOutput), nameof(OutputNote), nameof(HasOutputNote), nameof(CanRemoveSubTab) }) Raise(n);
         RaiseRestart();
         (Parent ?? this).GroupChanged();
@@ -585,6 +602,10 @@ public sealed partial class MainViewModel : Observable
     /// <summary>The chosen tabs Start opens: those not already running.</summary>
     public int ToStartCount => Tabs.Count(t => t.Enabled && !t.IsAlive);
     public bool CanLaunch => !IsClosingAll && ToStartCount > 0;
+    /// <summary>"Opens Cirrus, Delta": the tabs Start opens, so the button's count can be checked against the list.</summary>
+    public string? LaunchTip => ToStartCount == 0 ? null
+        : Loc.Format("launch.tip", string.Join(", ", Tabs.Where(t => t.WillStart).Select(t => t.Name)));
+    internal void RaiseLaunchTip() => Raise(nameof(LaunchTip));
     public string LaunchLabel => ToStartCount switch
     {
         0 when EnabledCount > 0 => Loc.Get("launch.allRunning"),
@@ -710,6 +731,7 @@ public sealed partial class MainViewModel : Observable
         Raise(nameof(ToStartCount));
         Raise(nameof(CanLaunch));
         Raise(nameof(LaunchLabel));
+        Raise(nameof(LaunchTip));
         Raise(nameof(CanCloseAll));
         Raise(nameof(CloseAllTip));
         RestartableChanged();

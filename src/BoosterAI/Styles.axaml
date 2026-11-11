@@ -383,4 +383,26 @@
     <Setter Property="BorderBrush" Value="{DynamicResource DisabledBorderBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource FaintBrush}" />
   </Style>
+
+  <!-- A ticked row that is already running (#151): Start leaves it alone, so it gets no accent fill. Outline in
+       MutedBrush and a TextBrush check keep it clearly ticked without looking disabled or indeterminate;
+       only rows Start will open keep the accent fill. -->
+  <Style Selector="CheckBox.alive:checked /template/ Border#NormalRectangle">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource MutedBrush}" />
+  </Style>
+  <Style Selector="CheckBox.alive:checked:pointerover /template/ Border#NormalRectangle">
+    <Setter Property="Background" Value="{DynamicResource SurfaceStrongBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource MutedBrush}" />
+  </Style>
+  <Style Selector="CheckBox.alive:checked:pressed /template/ Border#NormalRectangle">
+    <Setter Property="Background" Value="{DynamicResource SurfaceStrongBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource MutedBrush}" />
+  </Style>
+  <Style Selector="CheckBox.alive:checked /template/ Path#CheckGlyph">
+    <Setter Property="Fill" Value="{DynamicResource TextBrush}" />
+  </Style>
+  <Style Selector="CheckBox.alive:checked:pointerover /template/ Path#CheckGlyph, CheckBox.alive:checked:pressed /template/ Path#CheckGlyph">
+    <Setter Property="Fill" Value="{DynamicResource TextBrush}" />
+  </Style>
 </Styles>

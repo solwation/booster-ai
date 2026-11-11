@@ -122,7 +122,7 @@
     </Border>
     </StackPanel>
 
-    <Grid Grid.Row="2" Classes="project-columns" Loaded="OnProjectGridLoaded" ColumnDefinitions="4,20,36,*,200,166,195,110,130" Margin="0,0,0,6" IsVisible="{Binding HasTabs}">
+    <Grid Grid.Row="2" Classes="project-columns" Loaded="OnProjectGridLoaded" ColumnDefinitions="4,20,46,*,200,166,195,110,130" Margin="0,0,0,6" IsVisible="{Binding HasTabs}">
       <TextBlock Grid.Column="2" Classes="colhead" Text="{local:T col.with}" />
       <TextBlock Grid.Column="3" Classes="colhead" Text="{local:T col.project}" />
       <TextBlock Grid.Column="4" Classes="colhead" Text="{local:T col.status}" />
@@ -140,14 +140,14 @@
               <Border Classes="row" DragDrop.AllowDrop="True" DragDrop.DragOver="OnTabDragOver"
                       DragDrop.DragLeave="OnTabDragLeave" DragDrop.Drop="OnTabDrop">
                 <StackPanel>
-                <Grid Classes="project-columns" Loaded="OnProjectGridLoaded" ColumnDefinitions="4,20,36,*,200,166,195,110,130">
+                <Grid Classes="project-columns" Loaded="OnProjectGridLoaded" ColumnDefinitions="4,20,46,*,200,166,195,110,130">
                   <Border Grid.Column="0" Background="{Binding ColorBrush}" CornerRadius="{StaticResource RadiusSmall}" />
                   <TextBlock Grid.Column="1" Text="⋮" Foreground="{DynamicResource FaintBrush}" FontSize="16"
                              HorizontalAlignment="Center" VerticalAlignment="Center" PointerPressed="OnTabDragStart"
                              ToolTip.Tip="{local:T tab.reorder.tip}" />
 
-                  <CheckBox Grid.Column="2" IsChecked="{Binding Enabled}" AutomationProperties.Name="{Binding Name}" VerticalAlignment="Center"
-                            MinWidth="0" ToolTip.Tip="{local:T tab.open.tip}" />
+                  <CheckBox Grid.Column="2" IsChecked="{Binding Enabled}" Classes.alive="{Binding IsAlive}" AutomationProperties.Name="{Binding OpenTip}"
+                            VerticalAlignment="Center" MinWidth="0" ToolTip.Tip="{Binding OpenTip}" />
 
                   <!-- The folder belongs to the project; children only edit their own tab name. -->
                   <Grid Grid.Column="3" ColumnDefinitions="Auto,*,Auto,Auto" VerticalAlignment="Center"
@@ -263,7 +263,7 @@
       <!-- Hidden only in the empty state; otherwise inactive with a reason while no tab is open (#148). -->
       <Button Grid.Column="2" Classes="main-action secondary" Height="{Binding #LaunchButton.Bounds.Height}" Content="{local:T close.title}" Click="OnCloseAll"
               IsVisible="{Binding HasTabs}" IsEnabled="{Binding CanCloseAll}" ToolTip.Tip="{Binding CloseAllTip}" ToolTip.ShowOnDisabled="True" Margin="0,0,12,0" Padding="16,8" />
-      <Button x:Name="LaunchButton" Grid.Column="3" Classes="boost" Click="OnLaunch" AutomationProperties.Name="{Binding LaunchLabel}" IsDefault="True" IsEnabled="{Binding CanLaunch}">
+      <Button x:Name="LaunchButton" Grid.Column="3" Classes="boost" Click="OnLaunch" AutomationProperties.Name="{Binding LaunchLabel}" ToolTip.Tip="{Binding LaunchTip}" IsDefault="True" IsEnabled="{Binding CanLaunch}">
         <StackPanel Orientation="Horizontal" Spacing="9">
           <Path Data="{StaticResource BoltIcon}" Fill="{Binding $parent[Button].Foreground}" Width="12" Height="15" Stretch="Uniform"
                 VerticalAlignment="Center" />
