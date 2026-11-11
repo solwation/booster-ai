@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Input;
+using Avalonia.Threading;
 using Avalonia.VisualTree;
 
 namespace BoosterAI;
@@ -177,9 +178,41 @@ public partial class MainWindow : Window
         if ((sender as Control)?.DataContext is TabViewModel tab) _vm.RemoveSubTab(tab);
     }
 
+    /// <summary>Alt+Up/Down moves the row holding the focus one step and saves the order (#156). A ComboBox keeps its own
+    /// Alt+Down (open the list): it handles the key first, so a handled event is left alone.</summary>
+    private void OnRowKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Handled || e.KeyModifiers != KeyModifiers.Alt || e.Key is not (Key.Up or Key.Down)) return;
+        if ((sender as Control)?.DataContext is not TabViewModel tab) return;
+        e.Handled = true;
+        MoveRow(tab, e.Key == Key.Up ? -1 : 1);
+    }
+
+    private void OnRowMoveUp(object? sender, RoutedEventArgs e)
+    {
+        if ((sender as Control)?.DataContext is TabViewModel tab) MoveRow(tab, -1);
+    }
+
+    private void OnRowMoveDown(object? sender, RoutedEventArgs e)
+    {
+        if ((sender as Control)?.DataContext is TabViewModel tab) MoveRow(tab, 1);
+    }
+
+    /// <summary>The list rebuilds its rows after a move, so the moved row's grip takes the focus back (Alt+Down again moves it on).</summary>
+    private void MoveRow(TabViewModel tab, int delta)
+    {
+        if (!_vm.MoveStep(tab, delta)) return;
+        Dispatcher.UIThread.Post(() => FocusGrip(tab), DispatcherPriority.Loaded);
+    }
+
+    internal bool FocusGrip(TabViewModel tab) =>
+        this.GetVisualDescendants().OfType<Border>().FirstOrDefault(b => b.Classes.Contains("grip") && b.DataContext == tab)
+            ?.Focus(NavigationMethod.Tab) == true;
+
     private async void OnTabDragStart(object? sender, PointerPressedEventArgs e)
     {
-        if ((sender as Control)?.DataContext is not TabViewModel tab) return;
+        // Only the left button drags; the right one opens the row menu (#156).
+        if ((sender as Control)?.DataContext is not TabViewModel tab || !e.GetCurrentPoint(sender as Visual).Properties.IsLeftButtonPressed) return;
         var index = _vm.Tabs.IndexOf(tab);
         if (index < 0) return;
         var data = new DataTransfer();

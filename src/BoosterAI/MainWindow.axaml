@@ -26,8 +26,8 @@
       <Button Grid.Column="2" Classes="main-action secondary" Click="OnSettings" Padding="12,8" AutomationProperties.Name="{local:T settings.button}" VerticalAlignment="Center"
               ToolTip.Tip="{local:T settings.tip}">
         <StackPanel Orientation="Horizontal" Spacing="8">
-          <Path Data="{StaticResource GearIcon}" Width="15" Height="15" Stretch="Uniform" StrokeThickness="1.5"
-                StrokeLineCap="Round" Stroke="{DynamicResource TextBrush}" VerticalAlignment="Center" />
+          <Path Data="{StaticResource GearIcon}" Width="16" Height="16" Stretch="None" StrokeThickness="1.5"
+                StrokeLineCap="Round" StrokeJoin="Round" Stroke="{DynamicResource TextBrush}" VerticalAlignment="Center" />
           <TextBlock Text="{local:T settings.button}" />
         </StackPanel>
       </Button>
@@ -49,7 +49,7 @@
         </StackPanel>
         <Button Grid.Column="3" Classes="icon" Click="OnErrorClose" Margin="10,0,-4,0" VerticalAlignment="Center"
                 ToolTip.Tip="{local:T error.close}" AutomationProperties.Name="{local:T error.close}">
-          <Path Data="{StaticResource CloseIcon}" Width="10" Height="10" />
+          <Path Data="{StaticResource CloseIcon}" />
         </Button>
       </Grid>
     </Border>
@@ -157,45 +157,65 @@
         <ItemsControl ItemsSource="{Binding VisibleTabs}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="local:TabViewModel">
+              <!-- Keyboard (#156): Alt+Up/Down moves the focused row (KeyDown), and the row menu offers the row's actions. -->
               <Border Classes="row" DragDrop.AllowDrop="True" DragDrop.DragOver="OnTabDragOver"
-                      DragDrop.DragLeave="OnTabDragLeave" DragDrop.Drop="OnTabDrop">
+                      DragDrop.DragLeave="OnTabDragLeave" DragDrop.Drop="OnTabDrop" KeyDown="OnRowKeyDown">
+                <Border.ContextMenu>
+                  <ContextMenu>
+                    <MenuItem Header="{local:T row.menu.up}" Click="OnRowMoveUp" IsEnabled="{Binding CanMoveUp}" />
+                    <MenuItem Header="{local:T row.menu.down}" Click="OnRowMoveDown" IsEnabled="{Binding CanMoveDown}" />
+                    <Separator />
+                    <MenuItem Header="{local:T row.menu.restart}" Click="OnRestart" IsEnabled="{Binding CanRestart}" />
+                    <MenuItem Header="{local:T row.menu.continue}" Click="OnContinue" IsEnabled="{Binding CanContinueClosed}" />
+                    <Separator />
+                    <MenuItem Header="{x:Static local:TabViewModel.OpenFolderName}" Click="OnOpenFolder" />
+                  </ContextMenu>
+                </Border.ContextMenu>
                 <StackPanel>
                 <Grid Classes="project-columns" Loaded="OnProjectGridLoaded" ColumnDefinitions="4,20,46,4*,5*,166,195,168">
-                  <Border Grid.Column="0" Background="{Binding ColorBrush}" CornerRadius="{StaticResource RadiusSmall}" />
-                  <TextBlock Classes="subtitle" Grid.Column="1" Text="⋮" Foreground="{DynamicResource FaintBrush}"
-                             HorizontalAlignment="Center" VerticalAlignment="Center" PointerPressed="OnTabDragStart"
-                             ToolTip.Tip="{local:T tab.reorder.tip}" />
+                  <!-- A project's colour stripe; a subtab instead continues it as a 1 px guide (#156). -->
+                  <Border Grid.Column="0" Background="{Binding ColorBrush}" CornerRadius="{StaticResource RadiusSmall}" IsVisible="{Binding IsProject}" />
+                  <Border Grid.Column="0" Classes="subtab-guide" IsVisible="{Binding IsSubTab}" Margin="1,-12,0,-10" />
+                  <Border Grid.Column="1" Classes="grip" PointerPressed="OnTabDragStart"
+                          ToolTip.Tip="{local:T tab.reorder.tip}" AutomationProperties.Name="{Binding ReorderName}">
+                    <Path Data="{StaticResource GripIcon}" />
+                  </Border>
 
                   <CheckBox Grid.Column="2" IsChecked="{Binding Enabled}" Classes.alive="{Binding IsAlive}" AutomationProperties.Name="{Binding OpenTip}"
                             VerticalAlignment="Center" MinWidth="0" ToolTip.Tip="{Binding OpenTip}" />
 
-                  <!-- The folder belongs to the project; children only edit their own tab name. -->
-                  <Grid Grid.Column="3" ColumnDefinitions="Auto,*,Auto,Auto" VerticalAlignment="Center"
-                        Opacity="{Binding RowOpacity}" Margin="0,0,10,0">
+                  <!-- The folder belongs to the project; children only edit their own tab name, indented 20 px. Only the
+                       name dims on an unticked row; the icon buttons keep full opacity (#156). -->
+                  <Grid Grid.Column="3" ColumnDefinitions="Auto,*,Auto,Auto" VerticalAlignment="Center" Margin="0,0,10,0">
                     <Button Grid.Column="0" Classes="icon" Click="OnExpandProject" IsVisible="{Binding IsProject}"
-                            Content="{Binding ExpandGlyph}" Padding="2,4" Margin="-4,0,4,0" Width="20"
-                            ToolTip.Tip="{local:T subtab.expand}" AutomationProperties.Name="{local:T subtab.expand}" />
-                    <TextBlock Grid.Column="0" Text="↳" IsVisible="{Binding IsSubTab}" Width="20"
-                               Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" />
-                    <TextBlock Grid.Column="1" Classes="name" Text="{Binding Name}" IsVisible="{Binding IsProject}"
+                            Padding="2,4" Margin="-4,0,4,0" Width="20"
+                            ToolTip.Tip="{local:T subtab.expand}" AutomationProperties.Name="{local:T subtab.expand}">
+                      <Panel>
+                        <Path Data="{StaticResource ChevronRightIcon}" IsVisible="{Binding !Expanded}" />
+                        <Path Data="{StaticResource ChevronDownIcon}" IsVisible="{Binding Expanded}" />
+                      </Panel>
+                    </Button>
+                    <Border Grid.Column="0" Width="40" IsVisible="{Binding IsSubTab}" />
+                    <TextBlock Grid.Column="1" Classes="name" Text="{Binding Name}" IsVisible="{Binding IsProject}" Opacity="{Binding RowOpacity}"
                                VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Directory}" />
-                    <TextBox Grid.Column="1" Classes="inline name" Text="{Binding Name}" IsVisible="{Binding IsSubTab}"
+                    <TextBox Grid.Column="1" Classes="inline name" Text="{Binding Name}" IsVisible="{Binding IsSubTab}" Opacity="{Binding RowOpacity}"
                              Watermark="{local:T col.tabname}" ToolTip.Tip="{Binding Directory}" MinWidth="30" />
                     <Button Grid.Column="2" Classes="icon" Click="OnOpenFolder" Margin="4,-6,0,-6" IsVisible="{Binding IsProject}"
-                            ToolTip.Tip="{local:T folder.open.tip}" AutomationProperties.Name="{local:T folder.open.name}">
-                      <Path Data="{StaticResource OpenExternalIcon}" Width="12" Height="12" />
+                            ToolTip.Tip="{x:Static local:TabViewModel.OpenFolderName}" AutomationProperties.Name="{x:Static local:TabViewModel.OpenFolderName}">
+                      <Path Data="{StaticResource FolderIcon}" />
                     </Button>
-                    <Button Grid.Column="3" Classes="icon remove" Click="OnRemoveSubTab" IsVisible="{Binding IsSubTab}"
+                    <Button Grid.Column="3" Classes="icon" Click="OnRemoveSubTab" IsVisible="{Binding IsSubTab}"
                             IsEnabled="{Binding CanRemoveSubTab}" Margin="2,0,0,0"
                             ToolTip.Tip="{local:T subtab.remove.tip}" AutomationProperties.Name="{local:T subtab.remove}">
-                      <Path Data="{StaticResource CloseIcon}" Width="9" Height="9" />
+                      <Path Data="{StaticResource CloseIcon}" />
                     </Button>
                   </Grid>
 
-                  <Grid Grid.Column="4" ColumnDefinitions="Auto,*,Auto,Auto" VerticalAlignment="Center"
+                  <Grid Grid.Column="4" ColumnDefinitions="*,Auto" VerticalAlignment="Center"
                         Margin="0,0,12,0" IsVisible="{Binding HasStatus}" ClipToBounds="True">
-                    <!-- Hover previews; keyboard or click opens the same details until dismissed. -->
-                    <local:StatusPeekButton Grid.Column="0" Grid.ColumnSpan="2" Classes="status-peek"
+                    <!-- Hover previews; keyboard or click opens the same details until dismissed. It fills its column (#156):
+                         left-aligned, it could keep a stale narrow arrange after ↻/Continue hid and truncate the status. -->
+                    <local:StatusPeekButton Grid.Column="0" Classes="status-peek" HorizontalAlignment="Stretch"
                           Click="OnStatusPeek" KeyDown="OnStatusPeekKeyDown"
                           AutomationProperties.Name="{Binding StatusActionName}"
                           ToolTip.ToolTipOpening="OnStatusTipOpening" PropertyChanged="OnStatusTipIsOpenChanged">
@@ -208,14 +228,18 @@
                                    TextTrimming="CharacterEllipsis" />
                       </Grid>
                     </local:StatusPeekButton>
-                    <Button Grid.Column="2" Classes="icon" Click="OnRestart" IsVisible="{Binding ShowReload}" Margin="7,-6,0,-6"
-                            ToolTip.Tip="{Binding RestartTip}" AutomationProperties.Name="{Binding ReloadName}">
-                      <Path Data="{StaticResource RestartIcon}" Width="12" Height="12" />
-                    </Button>
-                    <Button Grid.Column="3" Classes="icon" Click="OnContinue" IsVisible="{Binding CanContinueClosed}" Margin="4,-6,0,-6"
-                            ToolTip.Tip="{Binding ContinueTip}" AutomationProperties.Name="{local:T restart.continue.name}">
-                      <Path Data="M3,2 L13,8 L3,14 Z M1,2 L1,14" Width="12" Height="12" />
-                    </Button>
+                    <!-- Restart is ↻; Continue is a word, shown only when the conversation can be continued (#156). -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                      <Button Classes="icon" Click="OnRestart" IsVisible="{Binding ShowReload}" Margin="7,-6,0,-6"
+                              ToolTip.Tip="{Binding RestartTip}" AutomationProperties.Name="{Binding ReloadName}">
+                        <Path Data="{StaticResource RestartIcon}" />
+                      </Button>
+                      <Button Classes="link" Click="OnContinue" IsVisible="{Binding CanContinueClosed}" Margin="6,0,0,0"
+                              Padding="0,4" VerticalAlignment="Center"
+                              ToolTip.Tip="{Binding ContinueTip}" AutomationProperties.Name="{Binding ContinueName}">
+                        <TextBlock Classes="caption" Text="{local:T restart.continue.link}" />
+                      </Button>
+                    </StackPanel>
                   </Grid>
 
                   <ComboBox Grid.Column="5" Classes="field" ItemsSource="{Binding Llms}" SelectedItem="{Binding Llm}"
@@ -249,13 +273,16 @@
                   </Panel>
                 </Grid>
                 <!-- Only an expanded project carries a line under it, so collapsed rows keep one rhythm (#152). -->
-                <StackPanel Orientation="Horizontal" IsVisible="{Binding IsProject}">
-                  <StackPanel Orientation="Horizontal" Spacing="12" Margin="62,6,0,2" IsVisible="{Binding Expanded}">
-                    <Button Classes="link" Content="{local:T subtab.add}" Click="OnAddSubTab" Padding="0,2"
-                            AutomationProperties.Name="{local:T subtab.add}" />
-                    <TextBlock Classes="muted caption" Text="{Binding SubTabSummary}" VerticalAlignment="Center" />
-                  </StackPanel>
-                </StackPanel>
+                <Panel IsVisible="{Binding IsProject}">
+                  <Panel IsVisible="{Binding Expanded}">
+                    <Border Classes="subtab-guide" Margin="1,0,0,-10" />
+                    <StackPanel Orientation="Horizontal" Spacing="12" Margin="62,6,0,2">
+                      <Button Classes="link" Content="{local:T subtab.add}" Click="OnAddSubTab" Padding="0,2"
+                              AutomationProperties.Name="{local:T subtab.add}" />
+                      <TextBlock Classes="muted caption" Text="{Binding SubTabSummary}" VerticalAlignment="Center" />
+                    </StackPanel>
+                  </Panel>
+                </Panel>
                 </StackPanel>
               </Border>
             </DataTemplate>

@@ -1,5 +1,4 @@
 using Avalonia;
-using Avalonia.Headless;
 using Avalonia.Media;
 using BoosterAI;
 using Xunit;
@@ -14,18 +13,11 @@ public sealed class AvaloniaPlatformCollection;
 [Collection("Avalonia platform")]
 public class MonoFontTests
 {
-    private static readonly object Gate = new();
-
-    private static FontFamily MonoFont()
+    private static FontFamily MonoFont() => UiSession.Run(() =>
     {
-        lock (Gate)
-        {
-            if (Application.Current is null)
-                AppBuilder.Configure<App>().UseSkia().UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false }).SetupWithoutStarting();
-            Assert.True(Application.Current!.TryGetResource("MonoFont", null, out var value));
-            return Assert.IsType<FontFamily>(value);
-        }
-    }
+        Assert.True(Application.Current!.TryGetResource("MonoFont", null, out var value));
+        return Assert.IsType<FontFamily>(value);
+    });
 
     [Theory]
     [InlineData(0x23BF, "⎿")]
@@ -38,9 +30,9 @@ public class MonoFontTests
     {
         var chain = MonoFont().ToString().Split(',', StringSplitOptions.TrimEntries);
         Assert.True(chain.Length >= 3, "MonoFont is a fallback chain");
-        var found = chain.Any(entry =>
+        var found = UiSession.Run(() => chain.Any(entry =>
             FontManager.Current.TryGetGlyphTypeface(new Typeface(new FontFamily(entry)), out var face)
-            && face.TryGetGlyph((uint)codePoint, out var id) && id != 0);
+            && face.TryGetGlyph((uint)codePoint, out var id) && id != 0));
         Assert.True(found, $"No font in the MonoFont chain has {glyph} (U+{codePoint:X4})");
     }
 
@@ -50,7 +42,8 @@ public class MonoFontTests
     public void BundledSymbolsFontCarriesTheGlyphsNoSystemFontHas(int codePoint)
     {
         MonoFont();
-        Assert.True(FontManager.Current.TryGetGlyphTypeface(new Typeface(new FontFamily("avares://BoosterAI/Assets/Fonts#BoosterAI Symbols")), out var face));
-        Assert.True(face.TryGetGlyph((uint)codePoint, out var id) && id != 0);
+        Assert.True(UiSession.Run(() =>
+            FontManager.Current.TryGetGlyphTypeface(new Typeface(new FontFamily("avares://BoosterAI/Assets/Fonts#BoosterAI Symbols")), out var face)
+            && face.TryGetGlyph((uint)codePoint, out var id) && id != 0));
     }
 }

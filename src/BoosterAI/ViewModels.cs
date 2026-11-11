@@ -38,11 +38,9 @@ public sealed class TabViewModel : Observable
         set
         {
             if (!Set(ref _expanded, value)) return;
-            Raise(nameof(ExpandGlyph));
             _owner.TabsChanged();
         }
     }
-    public string ExpandGlyph => Expanded ? "▾" : "▸";
     public bool CanRemoveSubTab => IsSubTab && !HasOpenTerminal && !IsAlive;
     public bool CanRemoveProject => _owner.CanRemoveProject(this);
     public string ProjectRemovalHint => Loc.Get("project.remove.blocked");
@@ -85,6 +83,8 @@ public sealed class TabViewModel : Observable
             if (!Set(ref _name, value)) return;
             Raise(nameof(StatusActionName));
             Raise(nameof(OpenTip));
+            Raise(nameof(ContinueName));
+            Raise(nameof(ReorderName));
             _owner.RaiseLaunchTip();
         }
     }
@@ -340,6 +340,23 @@ public sealed class TabViewModel : Observable
     public bool CanContinueClosed => CanRestart && !IsAlive && LaunchedAs is { } launched && Launcher.CanContinue(launched)
         && !_owner.SharesConversationDirectory(this, launched.Llm);
     public string ContinueTip => Loc.Get("restart.continue.tip");
+    /// <summary>
+    /// Tooltip and accessible name of the folder icon, the same in the main window and Settings → Projects (#156):
+    /// it always opens the folder, in Explorer on Windows and the file manager elsewhere.
+    /// </summary>
+    public static string OpenFolderName => Loc.Get(OperatingSystem.IsWindows() ? "folder.open.name" : "folder.open.name.files");
+    /// <summary>The accessible name of the row's "Fortsätt" link (#156): which conversation it continues.</summary>
+    public string ContinueName => Loc.Format("restart.continue.name", Name);
+    /// <summary>The row menu's Move up / Move down (#156): only where there is a neighbour to swap with.</summary>
+    public bool CanMoveUp => _owner.CanMoveStep(this, -1);
+    public bool CanMoveDown => _owner.CanMoveStep(this, 1);
+    internal void OrderChanged()
+    {
+        Raise(nameof(CanMoveUp));
+        Raise(nameof(CanMoveDown));
+    }
+    /// <summary>The accessible name of the row's grip, which moves the row with Alt+Up/Down (#156).</summary>
+    public string ReorderName => Loc.Format("tab.reorder.name", Name);
 
     private void ChoiceChanged()
     {
@@ -800,6 +817,7 @@ public sealed partial class MainViewModel : Observable
             Raise(nameof(VisibleTabs));
         }
         foreach (var project in Projects) project.GroupChanged();
+        foreach (var tab in Tabs) tab.OrderChanged();
         OrchestraColumnChanged();
         RefreshConversationChoices();
         Raise(nameof(HasTabs));
@@ -858,6 +876,28 @@ public sealed partial class MainViewModel : Observable
             for (var i = 0; i < order.Count; i++) Tabs.Move(Tabs.IndexOf(order[i]), i);
         }
         Save();
+    }
+
+    /// <summary>
+    /// The row a keyboard move (Alt+Up/Down, the row menu) swaps with (#156): the neighbouring project for a project,
+    /// the neighbouring subtab within the same project for a subtab; null at either end.
+    /// </summary>
+    internal TabViewModel? StepTarget(TabViewModel tab, int delta)
+    {
+        if (!Tabs.Contains(tab) || delta == 0) return null;
+        var peers = tab.Parent is { } parent ? Tabs.Where(t => t.Parent == parent).ToList() : Projects.ToList();
+        var index = peers.IndexOf(tab) + Math.Sign(delta);
+        return index >= 0 && index < peers.Count ? peers[index] : null;
+    }
+
+    public bool CanMoveStep(TabViewModel tab, int delta) => StepTarget(tab, delta) is not null;
+
+    /// <summary>Moves a row one step up (-1) or down (+1) among its peers, a project with its subtabs, and saves the order.</summary>
+    public bool MoveStep(TabViewModel tab, int delta)
+    {
+        if (StepTarget(tab, delta) is not { } target) return false;
+        MoveTabRelative(tab, target, after: delta > 0);
+        return true;
     }
 
     /// <summary>A drop belongs before/after an entire project, even when its main row is followed by children.</summary>

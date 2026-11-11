@@ -290,7 +290,8 @@
     <Setter Property="Stroke" Value="{DynamicResource WarningBrush}" />
   </Style>
 
-  <!-- Small borderless icon buttons. -->
+  <!-- Small borderless icon buttons (#156): a 16 px icon box drawn with a 1.5 px stroke at native geometry size, full
+       opacity in FaintBrush (>= 4.5:1), TextBrush on hover and keyboard focus. Only an inactive button is dimmed. -->
   <Style Selector="Button.icon">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderThickness" Value="0" />
@@ -301,22 +302,60 @@
     <Setter Property="VerticalContentAlignment" Value="Center" />
   </Style>
   <Style Selector="Button.icon Path">
-    <Setter Property="Stroke" Value="{DynamicResource MutedBrush}" />
+    <Setter Property="Width" Value="16" />
+    <Setter Property="Height" Value="16" />
+    <Setter Property="Stretch" Value="None" />
+    <Setter Property="Stroke" Value="{DynamicResource FaintBrush}" />
     <Setter Property="StrokeThickness" Value="1.5" />
     <Setter Property="StrokeLineCap" Value="Round" />
     <Setter Property="StrokeJoin" Value="Round" />
-    <Setter Property="Stretch" Value="Uniform" />
+  </Style>
+  <Style Selector="Button.icon:pointerover Path, Button.icon:focus-visible Path">
+    <Setter Property="Stroke" Value="{DynamicResource TextBrush}" />
   </Style>
   <!-- A disabled icon button (the subtab's × while its tab is open) gets no grey box, only its dimmed glyph (#152). -->
   <Style Selector="Button.icon:disabled /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderBrush" Value="Transparent" />
   </Style>
-  <Style Selector="Button.remove">
-    <Setter Property="Opacity" Value="0.35" />
+  <Style Selector="Button.icon:disabled Path">
+    <Setter Property="Opacity" Value="0.45" />
   </Style>
-  <Style Selector="Border.row:pointerover Button.remove, Button.remove:focus-visible">
-    <Setter Property="Opacity" Value="1" />
+
+  <!-- The drag grip (#156): focusable, so Alt+Up/Down can move its row; keyboard focus shows a ring. -->
+  <Style Selector="Border.grip">
+    <Setter Property="Focusable" Value="True" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="2" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusSmall}" />
+    <Setter Property="Cursor" Value="SizeAll" />
+    <Setter Property="Height" Value="28" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.grip:focus-visible">
+    <Setter Property="BorderBrush" Value="{DynamicResource LinkBrush}" />
+  </Style>
+  <Style Selector="Border.grip Path">
+    <Setter Property="Width" Value="16" />
+    <Setter Property="Height" Value="16" />
+    <Setter Property="Stretch" Value="None" />
+    <Setter Property="Stroke" Value="{DynamicResource FaintBrush}" />
+    <Setter Property="StrokeThickness" Value="2" />
+    <Setter Property="StrokeLineCap" Value="Round" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.grip:pointerover Path, Border.grip:focus-visible Path">
+    <Setter Property="Stroke" Value="{DynamicResource TextBrush}" />
+  </Style>
+
+  <!-- A subtab's guide (#156): a 1 px line continuing down from the parent's colour stripe. -->
+  <Style Selector="Border.subtab-guide">
+    <Setter Property="Width" Value="1" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+    <Setter Property="Margin" Value="1,0,0,0" />
+    <Setter Property="Background" Value="{DynamicResource BorderBrush}" />
   </Style>
 
   <!-- The update prompt: a soft outlined bar, not a dialog. -->
@@ -361,6 +400,10 @@
   <Style Selector="Button.link TextBlock">
     <Setter Property="FontSize" Value="13" />
     <Setter Property="Foreground" Value="{DynamicResource LinkBrush}" />
+  </Style>
+  <!-- A caption link (Fortsätt, #156; Show more) keeps the 12 px caption size instead of the link's 13. -->
+  <Style Selector="Button.link TextBlock.caption">
+    <Setter Property="FontSize" Value="12" />
   </Style>
   <Style Selector="Button.link:pointerover TextBlock">
     <Setter Property="Foreground" Value="{DynamicResource LinkHoverBrush}" />
