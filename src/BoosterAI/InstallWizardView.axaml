@@ -36,7 +36,7 @@
     <!-- Header: icon, title, step indicator -->
     <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="12">
       <Image Source="avares://BoosterAI/Assets/boosterai-small.png" Width="28" Height="28" VerticalAlignment="Center" />
-      <TextBlock Classes="title" FontSize="20" Text="{local:T setup.title}" VerticalAlignment="Center" />
+      <TextBlock Classes="title" Text="{local:T setup.title}" VerticalAlignment="Center" />
     </StackPanel>
 
     <ItemsControl Grid.Row="1" ItemsSource="{Binding Steps}" Margin="0,18,0,0" IsVisible="{Binding ShowSteps}"
@@ -62,7 +62,7 @@
 
       <!-- 1. Welcome -->
       <StackPanel Spacing="14" IsVisible="{Binding IsWelcome}">
-        <TextBlock Classes="sectionhead" FontSize="17" Text="{local:T setup.welcome.heading}" />
+        <TextBlock Classes="subtitle" Text="{local:T setup.welcome.heading}" />
         <TextBlock TextWrapping="Wrap" LineHeight="21" Text="{local:T setup.welcome.body}" />
         <TextBlock Classes="muted" TextWrapping="Wrap" LineHeight="20" Text="{local:T setup.welcome.skip}" />
         <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="{StaticResource RadiusMedium}" Padding="12,9" IsVisible="{Binding IsUpgrade}">
@@ -72,7 +72,7 @@
 
       <!-- 2. Settings -->
       <StackPanel Spacing="14" IsVisible="{Binding IsSettings}">
-        <TextBlock Classes="sectionhead" FontSize="17" Text="{local:T setup.settings.heading}" />
+        <TextBlock Classes="subtitle" Text="{local:T setup.settings.heading}" />
         <TextBlock Classes="muted" TextWrapping="Wrap" LineHeight="20" Text="{local:T setup.settings.body}" />
         <Grid ColumnDefinitions="120,180,*" RowDefinitions="Auto,Auto" Margin="0,6,0,0">
           <TextBlock Grid.Row="0" Grid.Column="0" Classes="colhead" Text="{local:T language.title}" Margin="0,0,14,0" />
@@ -118,7 +118,7 @@
 
       <!-- 3. Projects: the existing "Hitta projekt" dialog does the search -->
       <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,*" IsVisible="{Binding IsProjects}">
-        <TextBlock Grid.Row="0" Classes="sectionhead" FontSize="17" Text="{local:T setup.projects.heading}" />
+        <TextBlock Grid.Row="0" Classes="subtitle" Text="{local:T setup.projects.heading}" />
         <TextBlock Grid.Row="1" Classes="muted" TextWrapping="Wrap" LineHeight="20" Margin="0,14,0,0" Text="{local:T setup.projects.body}" />
         <StackPanel Grid.Row="2" Spacing="6" Margin="0,14,0,0">
           <TextBlock Classes="colhead" Text="{local:T settings.findRoot.name}" />
@@ -141,7 +141,7 @@
 
       <!-- 4. Install -->
       <StackPanel Spacing="12" IsVisible="{Binding IsInstall}">
-        <TextBlock Classes="sectionhead" FontSize="17" Text="{local:T setup.install.heading}" />
+        <TextBlock Classes="subtitle" Text="{local:T setup.install.heading}" />
         <TextBlock Classes="muted" Text="{local:T setup.install.body}" />
         <ItemsControl ItemsSource="{Binding InstallLines}">
           <ItemsControl.ItemTemplate>
@@ -165,7 +165,7 @@
 
       <!-- 5. Done -->
       <StackPanel Spacing="14" IsVisible="{Binding IsDone}">
-        <TextBlock Classes="sectionhead" FontSize="17" Text="{local:T setup.done.heading}" />
+        <TextBlock Classes="subtitle" Text="{local:T setup.done.heading}" />
         <TextBlock TextWrapping="Wrap" LineHeight="21" Text="{local:T setup.done.body}" />
         <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="{StaticResource RadiusMedium}" Padding="12,9" IsVisible="{Binding HasDoneNote}">
           <TextBlock TextWrapping="Wrap" LineHeight="20" Text="{Binding DoneNote}" />

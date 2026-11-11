@@ -32,7 +32,7 @@
                   VerticalAlignment="Top" Margin="0,1,10,0" />
             <StackPanel Grid.Column="1" Spacing="4">
               <TextBlock Classes="caption muted" Text="{local:T models.recommendationTitle}" />
-              <TextBlock Text="{Binding RecommendedId}" FontFamily="{StaticResource MonoFont}" FontSize="13" FontWeight="SemiBold"
+              <TextBlock Classes="body-small" Text="{Binding RecommendedId}" FontFamily="{StaticResource MonoFont}" FontWeight="SemiBold"
                          IsVisible="{Binding HasRecommendation}" TextWrapping="Wrap" />
               <TextBlock Text="{Binding Recommendation}" TextWrapping="Wrap" />
             </StackPanel>
@@ -69,7 +69,7 @@
           <ListBox.ItemTemplate>
             <DataTemplate x:DataType="local:DownloadableModelRow">
               <StackPanel Spacing="2">
-                <TextBlock Text="{Binding Id}" FontFamily="{StaticResource MonoFont}" FontSize="13" TextWrapping="Wrap" />
+                <TextBlock Classes="body-small" Text="{Binding Id}" FontFamily="{StaticResource MonoFont}" TextWrapping="Wrap" />
                 <TextBlock Text="{Binding Caption}" Classes="caption muted" TextWrapping="Wrap" />
               </StackPanel>
             </DataTemplate>
@@ -88,21 +88,21 @@
         <StackPanel Grid.Row="6" Spacing="6" Margin="0,16,0,0">
           <Expander Header="{local:T models.hardware}" HorizontalAlignment="Stretch">
             <StackPanel Spacing="6">
-              <TextBlock Text="{Binding Hardware}" FontSize="12" TextWrapping="Wrap" />
+              <TextBlock Classes="caption" Text="{Binding Hardware}" TextWrapping="Wrap" />
               <TextBlock Text="{local:T models.hardwareScope}" Classes="caption muted" TextWrapping="Wrap" />
             </StackPanel>
           </Expander>
           <Expander Header="{local:T models.setupAndInstalled}" HorizontalAlignment="Stretch">
             <StackPanel Spacing="8">
-              <TextBlock Text="{local:T models.runtimeHint}" TextWrapping="Wrap" FontSize="12" />
+              <TextBlock Classes="caption" Text="{local:T models.runtimeHint}" TextWrapping="Wrap" />
               <Button Classes="link" Content="{local:T models.installOllama}" Click="OnInstallOllama" HorizontalAlignment="Left" />
-              <TextBlock Text="{Binding InstalledModels}" FontSize="12" TextWrapping="Wrap" />
+              <TextBlock Classes="caption" Text="{Binding InstalledModels}" TextWrapping="Wrap" />
             </StackPanel>
           </Expander>
           <Expander Header="{local:T models.agents}" HorizontalAlignment="Stretch">
             <StackPanel Spacing="8">
-              <TextBlock Text="{Binding Compatibility}" FontSize="12" TextWrapping="Wrap" />
-              <TextBlock Text="{local:T models.connectionScope}" FontSize="12" TextWrapping="Wrap" />
+              <TextBlock Classes="caption" Text="{Binding Compatibility}" TextWrapping="Wrap" />
+              <TextBlock Classes="caption" Text="{local:T models.connectionScope}" TextWrapping="Wrap" />
               <WrapPanel>
                 <Button Content="Aider" Classes="link" Tag="aider" Click="OnAgentDocs" Margin="0,0,12,0" />
                 <Button Content="Open Interpreter" Classes="link" Tag="interpreter" Click="OnAgentDocs" Margin="0,0,12,0" />
@@ -122,8 +122,8 @@
           <TextBlock Classes="stepname" Classes.current="{Binding ServerOk}" Text="{local:T models.step.download}" VerticalAlignment="Center" />
         </StackPanel>
         <StackPanel Spacing="6" Margin="30,0,0,0">
-          <TextBlock Text="{Binding DownloadTarget}" FontFamily="{StaticResource MonoFont}" FontSize="12" TextWrapping="Wrap" />
-          <CheckBox IsChecked="{Binding Confirmed}" IsEnabled="{Binding CanEdit}"><TextBlock Text="{local:T models.confirm}" TextWrapping="Wrap" FontSize="13" /></CheckBox>
+          <TextBlock Classes="caption" Text="{Binding DownloadTarget}" FontFamily="{StaticResource MonoFont}" TextWrapping="Wrap" />
+          <CheckBox IsChecked="{Binding Confirmed}" IsEnabled="{Binding CanEdit}"><TextBlock Classes="body-small" Text="{local:T models.confirm}" TextWrapping="Wrap" /></CheckBox>
           <ProgressBar Value="{Binding Percent}" Minimum="0" Maximum="100" IsVisible="{Binding Busy}" Height="4" />
           <TextBlock Classes="caption" Text="{Binding DownloadStatus}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite"
                      IsVisible="{Binding DownloadStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />

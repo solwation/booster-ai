@@ -14,8 +14,8 @@
               <Rectangle Canvas.Top="36" Canvas.Left="17" Width="63" Height="8" RadiusX="3" RadiusY="3" Fill="{DynamicResource LinkBrush}" />
             </Canvas>
           </Viewbox>
-          <TextBlock Text="{local:T compact.guide.before}" FontWeight="SemiBold" FontSize="12" TextWrapping="Wrap" />
-          <TextBlock Text="{local:T compact.guide.before.caption}" Classes="muted" FontSize="12" TextWrapping="Wrap" />
+          <TextBlock Classes="caption" Text="{local:T compact.guide.before}" FontWeight="SemiBold" TextWrapping="Wrap" />
+          <TextBlock Text="{local:T compact.guide.before.caption}" Classes="muted caption" TextWrapping="Wrap" />
         </StackPanel>
       </Border>
       <Path Grid.Column="1" Data="M0,5 H12 M7,0 L12,5 L7,10" Stroke="{DynamicResource MutedBrush}" StrokeThickness="1.5" Width="12" Height="10" HorizontalAlignment="Center" VerticalAlignment="Center" />
@@ -27,8 +27,8 @@
               <Path Data="M25,12 H55 M25,21 H55 M25,30 H44" Stroke="{DynamicResource LinkBrush}" StrokeThickness="3" />
             </Canvas>
           </Viewbox>
-          <TextBlock Text="{local:T compact.guide.summarize}" FontWeight="SemiBold" FontSize="12" TextWrapping="Wrap" />
-          <TextBlock Text="{local:T compact.guide.summarize.caption}" Classes="muted" FontSize="12" TextWrapping="Wrap" />
+          <TextBlock Classes="caption" Text="{local:T compact.guide.summarize}" FontWeight="SemiBold" TextWrapping="Wrap" />
+          <TextBlock Text="{local:T compact.guide.summarize.caption}" Classes="muted caption" TextWrapping="Wrap" />
         </StackPanel>
       </Border>
       <Path Grid.Column="3" Data="M0,5 H12 M7,0 L12,5 L7,10" Stroke="{DynamicResource MutedBrush}" StrokeThickness="1.5" Width="12" Height="10" HorizontalAlignment="Center" VerticalAlignment="Center" />
@@ -41,11 +41,11 @@
               <Path Data="M34,30 H46 M40,24 V36" Stroke="{DynamicResource LinkBrush}" StrokeThickness="2" />
             </Canvas>
           </Viewbox>
-          <TextBlock Text="{local:T compact.guide.after}" FontWeight="SemiBold" FontSize="12" TextWrapping="Wrap" />
-          <TextBlock Text="{local:T compact.guide.after.caption}" Classes="muted" FontSize="12" TextWrapping="Wrap" />
+          <TextBlock Classes="caption" Text="{local:T compact.guide.after}" FontWeight="SemiBold" TextWrapping="Wrap" />
+          <TextBlock Text="{local:T compact.guide.after.caption}" Classes="muted caption" TextWrapping="Wrap" />
         </StackPanel>
       </Border>
     </Grid>
-    <TextBlock Text="{local:T compact.guide.tradeoff}" Classes="muted" FontSize="12" TextWrapping="Wrap" />
+    <TextBlock Text="{local:T compact.guide.tradeoff}" Classes="muted caption" TextWrapping="Wrap" />
   </StackPanel>
 </UserControl>

@@ -8,7 +8,7 @@
         Width="560" SizeToContent="Height" CanResize="False"
         WindowStartupLocation="CenterOwner">
   <StackPanel Margin="28,24,28,22" Spacing="14">
-    <TextBlock Classes="title" FontSize="20" TextWrapping="Wrap" Text="{Binding Heading}" />
+    <TextBlock Classes="title" TextWrapping="Wrap" Text="{Binding Heading}" />
     <TextBlock TextWrapping="Wrap" LineHeight="21" Text="{Binding Body}" />
     <StackPanel Spacing="6">
       <TextBlock Classes="muted" TextWrapping="Wrap" Text="{Binding CodeLabel}" />
@@ -16,12 +16,12 @@
         <Panel>
           <!-- A command or preview wraps; a list of paths (uninstall) stays one line each, trimmed, never broken mid-word (#159). -->
           <ScrollViewer MaxHeight="160" HorizontalScrollBarVisibility="Disabled" IsVisible="{Binding !CodeIsPaths}">
-            <SelectableTextBlock Classes="path" FontSize="13" Text="{Binding Code}" TextWrapping="Wrap" Foreground="{DynamicResource TextBrush}" />
+            <SelectableTextBlock Classes="path body-small" Text="{Binding Code}" TextWrapping="Wrap" Foreground="{DynamicResource TextBrush}" />
           </ScrollViewer>
           <ItemsControl ItemsSource="{Binding CodeLines}" IsVisible="{Binding CodeIsPaths}">
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="x:String">
-                <TextBlock Classes="path" FontSize="13" Text="{Binding}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"
+                <TextBlock Classes="path body-small" Text="{Binding}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"
                            Foreground="{DynamicResource TextBrush}" ToolTip.Tip="{Binding}" />
               </DataTemplate>
             </ItemsControl.ItemTemplate>
@@ -30,7 +30,7 @@
       </Border>
     </StackPanel>
     <TextBlock Classes="muted" TextWrapping="Wrap" LineHeight="20" Text="{Binding Detail}" />
-    <TextBlock Classes="path" FontSize="13" Text="{Binding DetailPath}" IsVisible="{Binding HasDetailPath}" TextWrapping="NoWrap"
+    <TextBlock Classes="path body-small" Text="{Binding DetailPath}" IsVisible="{Binding HasDetailPath}" TextWrapping="NoWrap"
                TextTrimming="CharacterEllipsis" Foreground="{DynamicResource TextBrush}" ToolTip.Tip="{Binding DetailPath}" />
     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,6,0,0">
       <Button Content="{Binding CancelText}" Click="OnCancel" IsCancel="True" IsDefault="True" Padding="18,8" />

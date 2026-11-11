@@ -28,7 +28,7 @@
             <Path Classes="verdict" Data="{StaticResource WarningIcon}" Stroke="{DynamicResource WarningBrush}" IsVisible="{Binding ResultUncertain}" />
             <Path Classes="verdict" Data="{StaticResource ErrorIcon}" Stroke="{DynamicResource DangerBrush}" IsVisible="{Binding ResultLimited}" />
             <StackPanel Grid.Column="1" Spacing="4" AutomationProperties.LiveSetting="Polite">
-              <TextBlock Text="{Binding ResultTitle}" FontWeight="SemiBold" FontSize="15" TextWrapping="Wrap" />
+              <TextBlock Classes="subtitle" Text="{Binding ResultTitle}" TextWrapping="Wrap" />
               <TextBlock Text="{Binding ResultSummary}" TextWrapping="Wrap" LineHeight="20" />
             </StackPanel>
           </Grid>
@@ -58,11 +58,11 @@
         <!-- Measurements and limitations: collapsed by default. -->
         <Expander Header="{local:T localAdvice.details}" HorizontalAlignment="Stretch">
           <StackPanel Spacing="8">
-            <TextBlock Text="{Binding ResultDetails}" TextWrapping="Wrap" FontSize="12"
+            <TextBlock Classes="caption" Text="{Binding ResultDetails}" TextWrapping="Wrap"
                        IsVisible="{Binding ResultDetails, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-            <TextBlock Text="{Binding Metadata}" TextWrapping="Wrap" FontSize="12"
+            <TextBlock Classes="caption" Text="{Binding Metadata}" TextWrapping="Wrap"
                        IsVisible="{Binding Metadata, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-            <TextBlock Text="{Binding Hardware}" TextWrapping="Wrap" FontSize="12" />
+            <TextBlock Classes="caption" Text="{Binding Hardware}" TextWrapping="Wrap" />
             <TextBlock Classes="caption muted" Text="{local:T localAdvice.platform}" TextWrapping="Wrap" />
             <TextBlock Classes="caption muted" Text="{local:T localAdvice.limits}" TextWrapping="Wrap" />
             <Button Classes="link" Content="{local:T localAdvice.sources}" Click="OnSources" HorizontalAlignment="Left" />

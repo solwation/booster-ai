@@ -51,7 +51,7 @@
                         <Path Data="{StaticResource CloseIcon}" Width="10" Height="10" />
                       </Button>
                       <TextBlock Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="3" Text="{Binding ProjectRemovalHint}"
-                                 IsVisible="{Binding !CanRemoveProject}" Classes="muted" FontSize="12" TextWrapping="Wrap" Margin="0,6,0,2" />
+                                 IsVisible="{Binding !CanRemoveProject}" Classes="muted caption" TextWrapping="Wrap" Margin="0,6,0,2" />
                     </Grid>
                   </Border>
                 </DataTemplate>
@@ -191,12 +191,12 @@
                   <TextBlock Classes="muted" Text="{local:T settings.optimization.usageIntro}" TextWrapping="Wrap" />
                 </StackPanel>
                 <StackPanel Spacing="12" IsVisible="{Binding Optimization.IsWindows}">
-                  <TextBlock Classes="muted" Text="{Binding Optimization.MemoryScaleText}" FontSize="12" TextWrapping="Wrap" />
+                  <TextBlock Classes="muted caption" Text="{Binding Optimization.MemoryScaleText}" TextWrapping="Wrap" />
 
                   <StackPanel Spacing="6">
                     <Grid ColumnDefinitions="*,Auto">
                       <TextBlock Text="{local:T settings.optimization.now}" VerticalAlignment="Center" FontWeight="SemiBold" />
-                      <TextBlock Grid.Column="1" Text="{Binding Optimization.MemoryCurrentValue}" FontSize="30" FontWeight="SemiBold" />
+                      <TextBlock Classes="display" Grid.Column="1" Text="{Binding Optimization.MemoryCurrentValue}" />
                     </Grid>
                     <TextBlock Text="{Binding Optimization.MemoryCurrentText}" IsVisible="{Binding !Optimization.HasCurrentMemory}"
                                Classes="muted" TextWrapping="Wrap" />
@@ -211,7 +211,7 @@
                   <StackPanel Spacing="7">
                     <Grid ColumnDefinitions="*,Auto">
                       <TextBlock Text="{local:T settings.optimization.history}" TextWrapping="Wrap" FontWeight="SemiBold" />
-                      <TextBlock Grid.Column="1" Text="{local:T settings.optimization.averageMarker}" Classes="muted" FontSize="12" />
+                      <TextBlock Grid.Column="1" Text="{local:T settings.optimization.averageMarker}" Classes="muted caption" />
                     </Grid>
                     <Border Classes="memory-track">
                       <Panel IsHitTestVisible="False" IsVisible="{Binding Optimization.HasMemoryHistory}">
@@ -228,30 +228,30 @@
                     <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
                       <Border Grid.Column="0" Classes="memory-stat">
                         <StackPanel Spacing="2">
-                          <TextBlock Classes="muted" Text="{local:T settings.optimization.minimum}" FontSize="12" />
-                          <TextBlock Text="{Binding Optimization.MemoryMinimumValue}" FontSize="19" FontWeight="SemiBold" />
+                          <TextBlock Classes="muted caption" Text="{local:T settings.optimization.minimum}" />
+                          <TextBlock Classes="subtitle" Text="{Binding Optimization.MemoryMinimumValue}" />
                         </StackPanel>
                       </Border>
                       <Border Grid.Column="1" Classes="memory-stat">
                         <StackPanel Spacing="2">
-                          <TextBlock Classes="muted" Text="{local:T settings.optimization.average}" FontSize="12" />
-                          <TextBlock Text="{Binding Optimization.MemoryAverageValue}" FontSize="19" FontWeight="SemiBold" />
+                          <TextBlock Classes="muted caption" Text="{local:T settings.optimization.average}" />
+                          <TextBlock Classes="subtitle" Text="{Binding Optimization.MemoryAverageValue}" />
                         </StackPanel>
                       </Border>
                       <Border Grid.Column="2" Classes="memory-stat">
                         <StackPanel Spacing="2">
-                          <TextBlock Classes="muted" Text="{local:T settings.optimization.maximum}" FontSize="12" />
-                          <TextBlock Text="{Binding Optimization.MemoryMaximumValue}" FontSize="19" FontWeight="SemiBold" />
+                          <TextBlock Classes="muted caption" Text="{local:T settings.optimization.maximum}" />
+                          <TextBlock Classes="subtitle" Text="{Binding Optimization.MemoryMaximumValue}" />
                         </StackPanel>
                       </Border>
                     </Grid>
-                    <TextBlock Text="{Binding Optimization.MemoryPeriodText}" Classes="muted" FontSize="12" TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding Optimization.MemoryPeriodText}" Classes="muted caption" TextWrapping="Wrap" />
                   </StackPanel>
 
                   <StackPanel Spacing="7">
                     <Grid ColumnDefinitions="*,Auto">
                       <TextBlock Text="{local:T settings.optimization.suggested}" FontWeight="SemiBold" />
-                      <TextBlock Grid.Column="1" Text="{Binding Optimization.RecommendationValue}" Foreground="{DynamicResource RecommendedBrush}" FontSize="12" />
+                      <TextBlock Classes="caption" Grid.Column="1" Text="{Binding Optimization.RecommendationValue}" Foreground="{DynamicResource RecommendedBrush}" />
                     </Grid>
                     <Border Classes="memory-track">
                       <local:SliderRangePanel LowerFraction="{Binding Optimization.SuggestedLowerFraction}"
@@ -265,7 +265,7 @@
                   <StackPanel Spacing="7">
                     <Grid ColumnDefinitions="*,Auto">
                       <TextBlock Text="{local:T settings.optimization.savedCap}" FontWeight="SemiBold" />
-                      <TextBlock Grid.Column="1" Text="{Binding Optimization.MemoryCapText}" FontSize="12" />
+                      <TextBlock Classes="caption" Grid.Column="1" Text="{Binding Optimization.MemoryCapText}" />
                     </Grid>
                     <Border Classes="memory-track">
                       <local:SliderRangePanel LowerFraction="0" UpperFraction="{Binding Optimization.MemoryCapFraction}" Inset="0" IsHitTestVisible="False">
@@ -281,7 +281,7 @@
                       <local:SliderMarkerPanel Fraction="1" Inset="0"><TextBlock Text="{Binding Optimization.TotalMemoryText}" Classes="memory-axis" /></local:SliderMarkerPanel>
                     </Panel>
                     <TextBlock Text="{local:T settings.optimization.outsideScale}" IsVisible="{Binding Optimization.MemoryOutsideScale}"
-                               Classes="muted" FontSize="12" TextWrapping="Wrap" />
+                               Classes="muted caption" TextWrapping="Wrap" />
                   </StackPanel>
                   <Button Content="{local:T settings.optimization.editCap}" Click="OnShowMemoryLimit" HorizontalAlignment="Left" Padding="14,8" />
                 </StackPanel>
@@ -305,7 +305,7 @@
               <StackPanel Spacing="8" Margin="0,8,0,0" IsVisible="{Binding Optimization.IsWindows}">
                 <Grid ColumnDefinitions="*,Auto">
                   <TextBlock Grid.Column="0" Classes="label" Text="{local:T settings.optimization.memorySlider}" VerticalAlignment="Center" />
-                  <TextBlock Grid.Column="1" Text="{Binding Optimization.SliderMemoryText}" FontWeight="Bold" FontSize="16" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" />
+                  <TextBlock Classes="subtitle" Grid.Column="1" Text="{Binding Optimization.SliderMemoryText}" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" />
                 </Grid>
 
                 <!-- Both bracket boundaries meet the slider track and stay visible behind its thumb. -->
@@ -325,13 +325,13 @@
                 </Panel>
                 <local:SliderMarkerPanel Fraction="{Binding Optimization.RecommendationCentreFraction}" Inset="10"
                                          IsHitTestVisible="False" Margin="0,-10,0,4">
-                  <TextBlock Text="{Binding Optimization.RecommendationText}" FontSize="12" FontWeight="SemiBold"
+                  <TextBlock Classes="caption" Text="{Binding Optimization.RecommendationText}" FontWeight="SemiBold"
                              Foreground="{DynamicResource RecommendedBrush}" />
                 </local:SliderMarkerPanel>
 
-                <TextBlock Classes="muted" FontSize="12.5" Text="{local:T settings.optimization.rangeHint}" TextWrapping="Wrap" />
-                <TextBlock Classes="muted" FontSize="12.5" Text="{local:T settings.optimization.lowerHint}" TextWrapping="Wrap" />
-                <TextBlock Classes="muted" FontSize="12.5" Text="{local:T settings.optimization.upperHint}" TextWrapping="Wrap" />
+                <TextBlock Classes="muted caption" Text="{local:T settings.optimization.rangeHint}" TextWrapping="Wrap" />
+                <TextBlock Classes="muted caption" Text="{local:T settings.optimization.lowerHint}" TextWrapping="Wrap" />
+                <TextBlock Classes="muted caption" Text="{local:T settings.optimization.upperHint}" TextWrapping="Wrap" />
                 <Button Classes="link" Click="OnUseRecommendedMemory" HorizontalAlignment="Left"
                         Content="{local:T settings.optimization.useRecommendation}"
                         ToolTip.Tip="{local:T settings.optimization.useRecommendation}" />
@@ -343,8 +343,8 @@
                 </WrapPanel>
 
                 <!-- Feedback from explicit save/restart. -->
-                <TextBlock Text="{Binding Optimization.StatusMessage}" IsVisible="{Binding Optimization.HasStatusMessage}"
-                           Classes.error="{Binding Optimization.StatusIsError}" Classes.success="{Binding !Optimization.StatusIsError}" TextWrapping="Wrap" Margin="0,6,0,0" FontSize="13" />
+                <TextBlock Classes="body-small" Text="{Binding Optimization.StatusMessage}" IsVisible="{Binding Optimization.HasStatusMessage}"
+                           Classes.error="{Binding Optimization.StatusIsError}" Classes.success="{Binding !Optimization.StatusIsError}" TextWrapping="Wrap" Margin="0,6,0,0" />
               </StackPanel>
 
 
@@ -396,19 +396,19 @@
                   <ComboBox.ItemTemplate><DataTemplate x:DataType="local:CompactChoice"><TextBlock Text="{Binding Label}" TextWrapping="Wrap" /></DataTemplate></ComboBox.ItemTemplate>
                 </ComboBox>
                 <StackPanel Spacing="4">
-                  <TextBlock Text="{Binding CompactModeExplanation}" TextWrapping="Wrap" FontSize="12" />
-                  <TextBlock Classes="muted" Text="{local:T compact.guide.applies}" TextWrapping="Wrap" FontSize="12" />
+                  <TextBlock Classes="caption" Text="{Binding CompactModeExplanation}" TextWrapping="Wrap" />
+                  <TextBlock Classes="muted caption" Text="{local:T compact.guide.applies}" TextWrapping="Wrap" />
                 </StackPanel>
                 <local:CompactAutoGuideView />
                 <Button Classes="link" Content="{local:T compact.global.advanced}" Click="OnShowCompactAgents" HorizontalAlignment="Left" />
                 <Expander HorizontalAlignment="Stretch">
                   <Expander.Header><TextBlock Text="{local:T compact.guide.details}" TextWrapping="Wrap" /></Expander.Header>
                   <StackPanel Spacing="8" Margin="0,8,0,0">
-                    <TextBlock Text="{local:T compact.global.modes}" TextWrapping="Wrap" FontSize="12" />
-                    <TextBlock Text="{local:T compact.global.auto.profile}" TextWrapping="Wrap" FontSize="12" />
-                    <TextBlock Text="{Binding CompactMetadataStatus}" IsVisible="{Binding CompactIsAuto}" TextWrapping="Wrap" FontSize="12" />
-                    <TextBlock Text="{local:T compact.global.auto.fallback}" TextWrapping="Wrap" FontSize="12" />
-                    <TextBlock Text="{local:T compact.global.applies}" TextWrapping="Wrap" FontSize="12" />
+                    <TextBlock Classes="caption" Text="{local:T compact.global.modes}" TextWrapping="Wrap" />
+                    <TextBlock Classes="caption" Text="{local:T compact.global.auto.profile}" TextWrapping="Wrap" />
+                    <TextBlock Classes="caption" Text="{Binding CompactMetadataStatus}" IsVisible="{Binding CompactIsAuto}" TextWrapping="Wrap" />
+                    <TextBlock Classes="caption" Text="{local:T compact.global.auto.fallback}" TextWrapping="Wrap" />
+                    <TextBlock Classes="caption" Text="{local:T compact.global.applies}" TextWrapping="Wrap" />
                   </StackPanel>
                 </Expander>
               </StackPanel>
@@ -491,7 +491,7 @@
                           </DataTemplate>
                         </ItemsControl.ItemTemplate>
                       </ItemsControl>
-                      <TextBlock Text="{Binding DisplayName}" FontSize="12.5" />
+                      <TextBlock Classes="caption" Text="{Binding DisplayName}" />
                     </StackPanel>
                   </DataTemplate>
                 </ListBox.ItemTemplate>
@@ -533,9 +533,9 @@
                         <Button Classes="agent-card" Click="OnOpenAgent" Width="198" Margin="0,0,10,10" AutomationProperties.Name="{Binding DisplayName}">
                           <StackPanel Spacing="10">
                             <StackPanel Orientation="Horizontal" Spacing="10"><local:AgentIcon Cli="{Binding Cli}" Width="28" Height="28" /><TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap" MaxWidth="140" /></StackPanel>
-                            <StackPanel Orientation="Horizontal" Spacing="8"><Ellipse Width="7" Height="7" Fill="{DynamicResource SuccessDotBrush}" IsVisible="{Binding IsInstalled}" /><TextBlock Text="{Binding StatusText}" FontSize="12" /><TextBlock Text="{Binding VersionText}" Classes="muted" FontSize="12" /></StackPanel>
-                            <TextBlock Text="{Binding CurrentModeText}" Classes="muted" FontSize="12" TextWrapping="Wrap" />
-                            <TextBlock Text="{Binding Advice.CardStatus}" IsVisible="{Binding Advice.IsSupported}" TextWrapping="Wrap" FontSize="12" FontWeight="SemiBold" />
+                            <StackPanel Orientation="Horizontal" Spacing="8"><Ellipse Width="7" Height="7" Fill="{DynamicResource SuccessDotBrush}" IsVisible="{Binding IsInstalled}" /><TextBlock Classes="caption" Text="{Binding StatusText}" /><TextBlock Text="{Binding VersionText}" Classes="muted caption" /></StackPanel>
+                            <TextBlock Text="{Binding CurrentModeText}" Classes="muted caption" TextWrapping="Wrap" />
+                            <TextBlock Classes="caption" Text="{Binding Advice.CardStatus}" IsVisible="{Binding Advice.IsSupported}" TextWrapping="Wrap" FontWeight="SemiBold" />
                           </StackPanel>
                         </Button>
                       </DataTemplate>
@@ -553,7 +553,7 @@
                           <local:AgentIcon Cli="{Binding Cli}" Width="36" Height="36" Margin="0,0,12,0" />
                           <StackPanel Grid.Column="1" Spacing="3">
                             <TextBlock Classes="title" Text="{Binding DisplayName}" />
-                            <WrapPanel IsVisible="{Binding IsInstalled}"><TextBlock Text="{Binding StatusText}" FontSize="12" Margin="0,0,10,0" /><TextBlock Text="{local:T agents.version}" Classes="muted" FontSize="12" Margin="0,0,5,0" /><TextBlock Text="{Binding VersionText}" FontSize="12" /></WrapPanel>
+                            <WrapPanel IsVisible="{Binding IsInstalled}"><TextBlock Classes="caption" Text="{Binding StatusText}" Margin="0,0,10,0" /><TextBlock Text="{local:T agents.version}" Classes="muted caption" Margin="0,0,5,0" /><TextBlock Classes="caption" Text="{Binding VersionText}" /></WrapPanel>
                           </StackPanel>
                           <Button Grid.Column="2" Classes="secondary" Content="{Binding InstallButtonText}" Click="OnInstallAgent"
                                   ToolTip.Tip="{Binding InstallTip}" IsVisible="{Binding !IsInstalled}" VerticalAlignment="Center" Margin="12,0,0,0" />
@@ -569,25 +569,25 @@
                           <StackPanel Spacing="14" IsVisible="{Binding IsOverview}">
                             <TextBlock Text="{Binding Description}" Classes="muted" TextWrapping="Wrap" />
                             <Button Classes="agent-card" Click="OnAgentSection" Tag="1" HorizontalAlignment="Stretch">
-                              <Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="5"><TextBlock Text="{local:T agents.section.permissions}" FontWeight="SemiBold" /><TextBlock Text="{Binding CurrentModeText}" Classes="muted" /></StackPanel><TextBlock Grid.Column="1" Text="›" FontSize="25" VerticalAlignment="Center" /></Grid>
+                              <Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="5"><TextBlock Text="{local:T agents.section.permissions}" FontWeight="SemiBold" /><TextBlock Text="{Binding CurrentModeText}" Classes="muted" /></StackPanel><TextBlock Grid.Column="1" Text="›" FontSize="20" VerticalAlignment="Center" /></Grid>
                             </Button>
                             <Button Classes="agent-card" Click="OnAgentSection" Tag="2" HorizontalAlignment="Stretch">
-                              <Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="5"><TextBlock Text="{local:T agents.section.context}" FontWeight="SemiBold" /><TextBlock Text="{Binding $parent[Window].((local:MainViewModel)DataContext).SelectedCompactMode.Label}" Classes="muted" /></StackPanel><TextBlock Grid.Column="1" Text="›" FontSize="25" VerticalAlignment="Center" /></Grid>
+                              <Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="5"><TextBlock Text="{local:T agents.section.context}" FontWeight="SemiBold" /><TextBlock Text="{Binding $parent[Window].((local:MainViewModel)DataContext).SelectedCompactMode.Label}" Classes="muted" /></StackPanel><TextBlock Grid.Column="1" Text="›" FontSize="20" VerticalAlignment="Center" /></Grid>
                             </Button>
                             <Button Content="{Binding InstallButtonText}" Click="OnInstallAgent" ToolTip.Tip="{Binding InstallTip}" HorizontalAlignment="Left" />
                             <Expander Header="{local:T agents.details.installation}" HorizontalAlignment="Stretch">
-                              <StackPanel Spacing="8"><TextBlock Text="{local:T agents.intro}" TextWrapping="Wrap" FontSize="12" /><TextBlock Text="{Binding UpdateInfo}" TextWrapping="Wrap" FontSize="12" /></StackPanel>
+                              <StackPanel Spacing="8"><TextBlock Classes="caption" Text="{local:T agents.intro}" TextWrapping="Wrap" /><TextBlock Classes="caption" Text="{Binding UpdateInfo}" TextWrapping="Wrap" /></StackPanel>
                             </Expander>
                           </StackPanel>
                           <StackPanel Spacing="12" IsVisible="{Binding IsPermissions}">
-                            <TextBlock Text="{local:T agents.alias.what}" Classes="muted" TextWrapping="Wrap" FontSize="12" />
+                            <TextBlock Text="{local:T agents.alias.what}" Classes="muted caption" TextWrapping="Wrap" />
                             <Border Classes="agent-group">
                               <StackPanel Spacing="6">
                                 <WrapPanel><TextBlock Text="{local:T agents.alias.current}" FontWeight="SemiBold" Margin="0,0,8,0" /><TextBlock Text="{Binding CurrentModeText}" /></WrapPanel>
-                                <ScrollViewer MaxHeight="100" IsVisible="{Binding HasCurrentAliasCommand}" HorizontalScrollBarVisibility="Disabled"><SelectableTextBlock Text="{Binding CurrentAliasCommand}" Classes="path" TextWrapping="Wrap" FontSize="12" /></ScrollViewer>
-                                <TextBlock Text="{local:T agents.alias.truncated}" IsVisible="{Binding DefinitionTruncated}" Classes="muted" TextWrapping="Wrap" FontSize="12" />
-                                <TextBlock Text="{local:T agents.alias.definitionMissing}" IsVisible="{Binding MissingDefinition}" TextWrapping="Wrap" FontSize="12" />
-                                <TextBlock Text="{Binding CurrentAliasExplanation}" TextWrapping="Wrap" FontSize="12" />
+                                <ScrollViewer MaxHeight="100" IsVisible="{Binding HasCurrentAliasCommand}" HorizontalScrollBarVisibility="Disabled"><SelectableTextBlock Text="{Binding CurrentAliasCommand}" Classes="path caption" TextWrapping="Wrap" /></ScrollViewer>
+                                <TextBlock Text="{local:T agents.alias.truncated}" IsVisible="{Binding DefinitionTruncated}" Classes="muted caption" TextWrapping="Wrap" />
+                                <TextBlock Classes="caption" Text="{local:T agents.alias.definitionMissing}" IsVisible="{Binding MissingDefinition}" TextWrapping="Wrap" />
+                                <TextBlock Classes="caption" Text="{Binding CurrentAliasExplanation}" TextWrapping="Wrap" />
                               </StackPanel>
                             </Border>
                             <StackPanel Spacing="6">
@@ -595,17 +595,17 @@
                               <ComboBox ItemsSource="{Binding ModeChoices}" SelectedItem="{Binding SelectedMode}" IsEnabled="{Binding CanSelectMode}" HorizontalAlignment="Stretch" AutomationProperties.Name="{local:T agents.alias.choose}">
                                 <ComboBox.ItemTemplate><DataTemplate x:DataType="local:AgentModeChoice"><TextBlock Text="{Binding Label}" /></DataTemplate></ComboBox.ItemTemplate>
                               </ComboBox>
-                              <TextBlock Text="{Binding AliasRecommendation}" Classes="muted" TextWrapping="Wrap" FontSize="12" />
+                              <TextBlock Text="{Binding AliasRecommendation}" Classes="muted caption" TextWrapping="Wrap" />
                             </StackPanel>
                             <Border Background="{DynamicResource WarningSurfaceBrush}" CornerRadius="{StaticResource RadiusMedium}" Padding="10" IsVisible="{Binding IsYolo}"><TextBlock Text="{local:T agents.permissions.warning}" TextWrapping="Wrap" FontWeight="SemiBold" /></Border>
-                            <TextBlock Text="{Binding ModeExplanation}" TextWrapping="Wrap" FontSize="12" />
+                            <TextBlock Classes="caption" Text="{Binding ModeExplanation}" TextWrapping="Wrap" />
                             <StackPanel Spacing="5" IsVisible="{Binding HasPresetPreview}">
-                              <TextBlock Text="{local:T agents.alias.preview}" FontWeight="SemiBold" FontSize="12" />
-                              <SelectableTextBlock Text="{Binding ModePreview}" Classes="path" TextWrapping="Wrap" FontSize="12" />
-                              <TextBlock Text="{Binding ModePreviewEffect}" Classes="muted" TextWrapping="Wrap" FontSize="12" />
+                              <TextBlock Classes="caption" Text="{local:T agents.alias.preview}" FontWeight="SemiBold" />
+                              <SelectableTextBlock Text="{Binding ModePreview}" Classes="path caption" TextWrapping="Wrap" />
+                              <TextBlock Text="{Binding ModePreviewEffect}" Classes="muted caption" TextWrapping="Wrap" />
                             </StackPanel>
                             <Button Classes="secondary" Content="{local:T agents.mode.apply}" Click="OnApplyAgentMode" IsEnabled="{Binding CanApply}" HorizontalAlignment="Left" />
-                            <TextBlock Text="{local:T agents.alias.scope}" Classes="muted" TextWrapping="Wrap" FontSize="12" />
+                            <TextBlock Text="{local:T agents.alias.scope}" Classes="muted caption" TextWrapping="Wrap" />
                           </StackPanel>
                           <StackPanel Spacing="12" IsVisible="{Binding IsContext}">
                             <WrapPanel><TextBlock Text="{Binding $parent[Window].((local:MainViewModel)DataContext).SelectedCompactMode.Label}" FontWeight="SemiBold" Margin="0,6,12,6" /><Button Classes="link" Content="{local:T agents.context.global}" Click="OnAgentCompactSettings" /></WrapPanel>
@@ -619,8 +619,8 @@
               </ItemsControl>
             </Panel>
           </Grid>
-          <TextBlock Grid.Row="1" Text="{Binding Setup.CheckNotice}" Classes="muted" TextWrapping="Wrap" FontSize="12" Margin="0,6,0,0" AutomationProperties.LiveSetting="Polite" />
-          <TextBlock Grid.Row="2" Text="{Binding Status}" TextWrapping="Wrap" FontSize="12" Margin="0,6,0,0" />
+          <TextBlock Grid.Row="1" Text="{Binding Setup.CheckNotice}" Classes="muted caption" TextWrapping="Wrap" Margin="0,6,0,0" AutomationProperties.LiveSetting="Polite" />
+          <TextBlock Classes="caption" Grid.Row="2" Text="{Binding Status}" TextWrapping="Wrap" Margin="0,6,0,0" />
         </Grid>
       </TabItem>
 

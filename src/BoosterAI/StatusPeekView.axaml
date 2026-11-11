@@ -9,11 +9,9 @@
         <Ellipse Width="8" Height="8" Fill="{Binding StatusBrush}" VerticalAlignment="Center" />
         <TextBlock Classes="peek-header" Text="{Binding PeekHeader}" TextTrimming="CharacterEllipsis" />
       </StackPanel>
-      <TextBlock Classes="muted" Text="{Binding PeekDetail}" IsVisible="{Binding HasPeekDetail}"
-                 FontSize="12" TextWrapping="Wrap" />
+      <TextBlock Classes="muted caption" Text="{Binding PeekDetail}" IsVisible="{Binding HasPeekDetail}" TextWrapping="Wrap" />
       <local:TabOutputView IsVisible="{Binding HasOutput}" />
-      <TextBlock Classes="muted" Text="{Binding OutputNote}" IsVisible="{Binding HasOutputNote}"
-                 FontSize="12" TextWrapping="Wrap" />
+      <TextBlock Classes="muted caption" Text="{Binding OutputNote}" IsVisible="{Binding HasOutputNote}" TextWrapping="Wrap" />
       <!-- After an exit with an error, ↻ is the popup's primary action (#153); only where it can be clicked. -->
       <Button x:Name="RestartButton" Classes="primary" HorizontalAlignment="Left" Padding="12,6" IsVisible="False"
               Click="OnRestart" ToolTip.Tip="{Binding RestartTip}" AutomationProperties.Name="{Binding ReloadName}">

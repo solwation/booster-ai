@@ -9,11 +9,11 @@
       <StackPanel Spacing="10" IsVisible="{Binding Supported}">
         <Grid ColumnDefinitions="*,*">
           <StackPanel Spacing="5" Margin="0,0,12,0">
-            <TextBlock Text="{local:T compact.model}" FontSize="12" />
+            <TextBlock Classes="caption" Text="{local:T compact.model}" />
             <ComboBox x:Name="CompactModel" IsEditable="True" Text="{Binding Model}" ItemsSource="{Binding Models}" HorizontalAlignment="Stretch" AutomationProperties.Name="{local:T compact.model}" />
           </StackPanel>
           <StackPanel Grid.Column="1" Spacing="5">
-            <TextBlock Text="{local:T compact.profile}" FontSize="12" />
+            <TextBlock Classes="caption" Text="{local:T compact.profile}" />
             <ComboBox ItemsSource="{Binding Profiles}" SelectedItem="{Binding Profile}" HorizontalAlignment="Stretch" AutomationProperties.Name="{local:T compact.profile}">
               <ComboBox.ItemTemplate><DataTemplate x:DataType="local:CompactChoice"><TextBlock Text="{Binding Label}" /></DataTemplate></ComboBox.ItemTemplate>
             </ComboBox>
@@ -25,28 +25,28 @@
         <TextBox x:Name="CompactCustom" Text="{Binding Custom}" IsVisible="{Binding IsCustom}" Watermark="{local:T compact.custom.tokens}" AutomationProperties.Name="{local:T compact.custom.tokens}" />
         <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="{StaticResource RadiusLarge}" Padding="16" IsVisible="{Binding ShowBudget}">
           <StackPanel Spacing="8">
-            <TextBlock Text="{local:T compact.visual.budget}" FontSize="12" />
-            <WrapPanel><TextBlock Text="{Binding BudgetValue}" FontSize="26" FontWeight="SemiBold" Margin="0,0,10,0" /><TextBlock Text="{Binding BudgetCapacity}" VerticalAlignment="Bottom" Margin="0,0,0,4" /></WrapPanel>
+            <TextBlock Classes="caption" Text="{local:T compact.visual.budget}" />
+            <WrapPanel><TextBlock Classes="display" Text="{Binding BudgetValue}" Margin="0,0,10,0" /><TextBlock Text="{Binding BudgetCapacity}" VerticalAlignment="Bottom" Margin="0,0,0,4" /></WrapPanel>
             <ProgressBar Value="{Binding BudgetPercent}" Maximum="100" Height="8" AutomationProperties.Name="{local:T compact.visual.budget}" />
           </StackPanel>
         </Border>
-        <TextBlock Text="{Binding BudgetHint}" TextWrapping="Wrap" Classes="muted" FontSize="12" />
-        <TextBlock Text="{Binding Validation}" TextWrapping="Wrap" FontSize="12" />
+        <TextBlock Text="{Binding BudgetHint}" TextWrapping="Wrap" Classes="muted caption" />
+        <TextBlock Classes="caption" Text="{Binding Validation}" TextWrapping="Wrap" />
         <Button x:Name="SaveCompact" Content="{local:T compact.save}" Click="OnSave" IsEnabled="{Binding CanSave}" Classes="secondary" HorizontalAlignment="Left" />
         <Expander Header="{local:T compact.visual.details}" HorizontalAlignment="Stretch">
           <StackPanel Spacing="10">
-            <TextBlock Text="{local:T compact.context}" FontSize="12" />
+            <TextBlock Classes="caption" Text="{local:T compact.context}" />
             <TextBox Text="{Binding Context}" Watermark="{local:T compact.context.unknown}" AutomationProperties.Name="{local:T compact.context}" />
-            <TextBlock Text="{Binding ContextSource}" TextWrapping="Wrap" Classes="muted" FontSize="12" />
-            <TextBlock Text="{Binding UnitExplanation}" TextWrapping="Wrap" FontSize="12" />
-            <TextBlock Text="{Binding Recommendation}" TextWrapping="Wrap" FontSize="12" />
-            <TextBlock Text="{local:T compact.tradeoff}" TextWrapping="Wrap" Classes="muted" FontSize="12" />
+            <TextBlock Text="{Binding ContextSource}" TextWrapping="Wrap" Classes="muted caption" />
+            <TextBlock Classes="caption" Text="{Binding UnitExplanation}" TextWrapping="Wrap" />
+            <TextBlock Classes="caption" Text="{Binding Recommendation}" TextWrapping="Wrap" />
+            <TextBlock Text="{local:T compact.tradeoff}" TextWrapping="Wrap" Classes="muted caption" />
           </StackPanel>
         </Expander>
-        <TextBlock Text="{local:T compact.visual.apply}" TextWrapping="Wrap" Classes="muted" FontSize="12" />
+        <TextBlock Text="{local:T compact.visual.apply}" TextWrapping="Wrap" Classes="muted caption" />
       </StackPanel>
       <Button x:Name="ResetCompact" Content="{local:T compact.visual.reset}" Click="OnReset" HorizontalAlignment="Left" ToolTip.Tip="{local:T compact.reset.detail}" />
-      <TextBlock Text="{Binding Status}" TextWrapping="Wrap" FontSize="12" />
+      <TextBlock Classes="caption" Text="{Binding Status}" TextWrapping="Wrap" />
     </StackPanel>
   </StackPanel>
 </UserControl>

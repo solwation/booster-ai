@@ -8,7 +8,7 @@
         Width="560" SizeToContent="Height" CanResize="False"
         WindowStartupLocation="CenterOwner">
   <StackPanel Margin="28,24,28,22" Spacing="14">
-    <TextBlock Classes="title" FontSize="20" TextWrapping="Wrap"
+    <TextBlock Classes="title" TextWrapping="Wrap"
                Text="{Binding InstallTitle}" />
 
     <TextBlock TextWrapping="Wrap" LineHeight="21"

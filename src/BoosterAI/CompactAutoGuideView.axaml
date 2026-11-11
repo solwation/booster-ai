@@ -5,41 +5,41 @@
   <StackPanel Spacing="8">
     <TextBlock Text="{local:T compact.guide.auto.title}" FontWeight="SemiBold" TextWrapping="Wrap" />
     <Grid ColumnDefinitions="*,18,*,18,*">
-      <Border Classes="agent-group" Padding="10"><TextBlock Text="{local:T compact.guide.capacity}" FontWeight="SemiBold" FontSize="12" TextWrapping="Wrap" /></Border>
+      <Border Classes="agent-group" Padding="10"><TextBlock Classes="caption" Text="{local:T compact.guide.capacity}" FontWeight="SemiBold" TextWrapping="Wrap" /></Border>
       <TextBlock Grid.Column="1" Text="−" HorizontalAlignment="Center" VerticalAlignment="Center" />
-      <Border Grid.Column="2" Classes="agent-group" Padding="10"><TextBlock Text="{local:T compact.guide.reserve}" FontWeight="SemiBold" FontSize="12" TextWrapping="Wrap" /></Border>
+      <Border Grid.Column="2" Classes="agent-group" Padding="10"><TextBlock Classes="caption" Text="{local:T compact.guide.reserve}" FontWeight="SemiBold" TextWrapping="Wrap" /></Border>
       <TextBlock Grid.Column="3" Text="→" HorizontalAlignment="Center" VerticalAlignment="Center" />
-      <Border Grid.Column="4" Classes="agent-group" Padding="10"><TextBlock Text="{local:T compact.guide.budget}" FontWeight="SemiBold" FontSize="12" TextWrapping="Wrap" /></Border>
+      <Border Grid.Column="4" Classes="agent-group" Padding="10"><TextBlock Classes="caption" Text="{local:T compact.guide.budget}" FontWeight="SemiBold" TextWrapping="Wrap" /></Border>
     </Grid>
     <Grid ColumnDefinitions="*,*">
       <StackPanel Spacing="3" Margin="0,0,12,0">
-        <TextBlock Text="{local:T compact.guide.code}" FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap" />
+        <TextBlock Classes="caption" Text="{local:T compact.guide.code}" FontWeight="SemiBold" TextWrapping="Wrap" />
         <Grid Height="12" ColumnDefinitions="3*,*" Margin="0,2,0,2" AutomationProperties.Name="{local:T compact.guide.reserve.picture}">
           <Border Background="{DynamicResource LinkBrush}" CornerRadius="4,0,0,4" />
           <Border Grid.Column="1" BorderBrush="{DynamicResource LinkBrush}" BorderThickness="1" CornerRadius="0,4,4,0" />
         </Grid>
-        <TextBlock Text="{local:T compact.guide.code.reserve}" Classes="muted" FontSize="12" TextWrapping="Wrap" />
+        <TextBlock Text="{local:T compact.guide.code.reserve}" Classes="muted caption" TextWrapping="Wrap" />
       </StackPanel>
       <StackPanel Grid.Column="1" Spacing="3">
-        <TextBlock Text="{local:T compact.guide.orchestra}" FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap" />
+        <TextBlock Classes="caption" Text="{local:T compact.guide.orchestra}" FontWeight="SemiBold" TextWrapping="Wrap" />
         <Grid Height="12" ColumnDefinitions="3*,2*" Margin="0,2,0,2" AutomationProperties.Name="{local:T compact.guide.reserve.picture}">
           <Border Background="{DynamicResource LinkBrush}" CornerRadius="4,0,0,4" />
           <Border Grid.Column="1" BorderBrush="{DynamicResource LinkBrush}" BorderThickness="1" CornerRadius="0,4,4,0" />
         </Grid>
-        <TextBlock Text="{local:T compact.guide.orchestra.reserve}" Classes="muted" FontSize="12" TextWrapping="Wrap" />
+        <TextBlock Text="{local:T compact.guide.orchestra.reserve}" Classes="muted caption" TextWrapping="Wrap" />
       </StackPanel>
     </Grid>
     <WrapPanel>
       <StackPanel Orientation="Horizontal" Margin="0,0,14,0" Spacing="5">
         <Border Width="10" Height="10" Background="{DynamicResource LinkBrush}" VerticalAlignment="Center" />
-        <TextBlock Text="{local:T compact.guide.legend.budget}" FontSize="12" />
+        <TextBlock Classes="caption" Text="{local:T compact.guide.legend.budget}" />
       </StackPanel>
       <StackPanel Orientation="Horizontal" Spacing="5">
         <Border Width="10" Height="10" BorderBrush="{DynamicResource LinkBrush}" BorderThickness="1" VerticalAlignment="Center" />
-        <TextBlock Text="{local:T compact.guide.legend.reserve}" FontSize="12" />
+        <TextBlock Classes="caption" Text="{local:T compact.guide.legend.reserve}" />
       </StackPanel>
     </WrapPanel>
-    <TextBlock Text="{local:T compact.guide.auto.caption}" Classes="muted" FontSize="12" TextWrapping="Wrap" />
-    <TextBlock Text="{local:T compact.guide.unknown}" FontSize="12" TextWrapping="Wrap" />
+    <TextBlock Text="{local:T compact.guide.auto.caption}" Classes="muted caption" TextWrapping="Wrap" />
+    <TextBlock Classes="caption" Text="{local:T compact.guide.unknown}" TextWrapping="Wrap" />
   </StackPanel>
 </UserControl>

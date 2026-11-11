@@ -31,10 +31,9 @@
                 <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center" Margin="0,0,12,0">
                   <TextBlock Classes="name" Text="{Binding Name}" />
                   <TextBlock Classes="path" Text="{Binding Path}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Path}" />
-                  <TextBlock Classes="muted" Classes.orchestra="{Binding HasOrchestra}" Text="{Binding Orchestra}"
-                             FontSize="12.5" TextWrapping="Wrap" />
+                  <TextBlock Classes="muted caption" Classes.orchestra="{Binding HasOrchestra}" Text="{Binding Orchestra}" TextWrapping="Wrap" />
                 </StackPanel>
-                <TextBlock Grid.Column="2" Classes="muted" Text="{Binding Kind}" VerticalAlignment="Center" FontSize="12.5" />
+                <TextBlock Grid.Column="2" Classes="muted caption" Text="{Binding Kind}" VerticalAlignment="Center" />
               </Grid>
             </Border>
           </DataTemplate>

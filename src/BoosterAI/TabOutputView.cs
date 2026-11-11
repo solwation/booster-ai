@@ -12,8 +12,8 @@ namespace BoosterAI;
 /// </summary>
 public sealed class TabOutputView : Border
 {
-    private const double FontSizeValue = 11.5;
-    private const double LineHeightValue = 15;
+    private const double FontSizeValue = 12;
+    private const double LineHeightValue = 16;
 
     /// <summary>The box width, which the popup's other texts wrap to as well.</summary>
     public static double PopupWidth => Math.Ceiling(TabViewModel.OutputColumns * FontSizeValue * 0.6) + 20;

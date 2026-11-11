@@ -31,7 +31,7 @@
     </Style>
   </Window.Styles>
   <Grid Margin="28,24,28,22" RowDefinitions="Auto,Auto,*,Auto">
-    <TextBlock Classes="title" FontSize="20" Text="{local:T close.title}" />
+    <TextBlock Classes="title" Text="{local:T close.title}" />
     <TextBlock Grid.Row="1" Text="{Binding Message}" TextWrapping="Wrap" LineHeight="21" Margin="0,14,0,16" />
     <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Disabled">
       <ItemsControl ItemsSource="{Binding Tabs}">
