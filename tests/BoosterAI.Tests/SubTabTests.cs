@@ -97,6 +97,24 @@ public sealed class SubTabTests : IDisposable
         Assert.Empty(Assert.Single(ConfigStore.Load().Tabs).SubTabs);
     }
 
+    [Theory]
+    [InlineData("sv", "1 underflik · samma mapp", "2 underflikar · samma mapp")]
+    [InlineData("en", "1 subtab · same folder", "2 subtabs · same folder")]
+    public void SubtabSummaryUsesTheCorrectPlural(string lang, string one, string two)
+    {
+        try
+        {
+            Loc.Use(lang);
+            var vm = new MainViewModel(new AppConfig { Tabs = [new() { Name = "Alpha", Directory = "~/alpha", Llm = "claude" }] });
+            var parent = vm.Tabs[0];
+            vm.AddSubTab(parent);
+            Assert.Equal(one, parent.SubTabSummary);
+            vm.AddSubTab(parent);
+            Assert.Equal(two, parent.SubTabSummary);
+        }
+        finally { Loc.Use("en"); }
+    }
+
     [Fact]
     public void SubtabsShareOneFolderButKeepIndependentChoicesAndSavedExpansion()
     {

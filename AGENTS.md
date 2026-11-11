@@ -15,6 +15,8 @@ leftovers with `Kill(entireProcessTree: true)` in `finally`, and in tab-lib.sh n
 `$BASHPID` on a line ending in `&` (it expands in the background child, not the caller).
 The user writes Swedish; reply in Swedish. Code, comments and docs are English; UI text is Swedish.
 
+UI glossary (one word per concept, never "tabb" or "LLM" for the agent): Swedish **Agent** (claude, codex ...), **Modell**, **Flik**, **Underflik** (plural underflikar); English Agent, Model, Tab, Subtab. Counted nouns use `Loc.FormatCount` with `.one`/`.other` keys.
+
 Apply the core's [chat intake](.orchestra/shared/ORCHESTRA.md#turn-chat-requests-into-work)
 to change requests: create or reuse issues and resolve them within the requested
 scope, even when no run is active or a previous idle watch ended. Reuse an active

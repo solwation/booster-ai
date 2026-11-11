@@ -78,6 +78,10 @@ public static class Loc
     public static string Format(string key, params object[] args) =>
         string.Format(CultureInfo.CurrentCulture, Get(key), args);
 
+    /// <summary>Formats a counted noun: uses key + ".one" when count is 1, otherwise key + ".other"; {0} is the count.</summary>
+    public static string FormatCount(string key, int count) =>
+        Format(key + (count == 1 ? ".one" : ".other"), count);
+
     /// <summary>All keys of a language, for the completeness tests.</summary>
     public static IReadOnlyDictionary<string, string> Table(string language) => Load(language);
 

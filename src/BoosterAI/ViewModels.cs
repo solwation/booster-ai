@@ -46,7 +46,7 @@ public sealed class TabViewModel : Observable
     public bool CanRemoveSubTab => IsSubTab && !HasOpenTerminal && !IsAlive;
     public bool CanRemoveProject => _owner.CanRemoveProject(this);
     public string ProjectRemovalHint => Loc.Get("project.remove.blocked");
-    public string SubTabSummary => Loc.Format("subtab.summary", _owner.Tabs.Count(t => t.Parent == this));
+    public string SubTabSummary => Loc.FormatCount("subtab.summary", _owner.Tabs.Count(t => t.Parent == this));
     internal void GroupChanged()
     {
         Raise(nameof(SubTabSummary));
