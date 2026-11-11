@@ -373,9 +373,8 @@
                 <TextBlock Classes="muted" Text="{local:T settings.optimization.linuxNote}" IsVisible="{Binding Optimization.IsLinux}" TextWrapping="Wrap" />
               </StackPanel>
             </ScrollViewer>
-            <!-- Kontext (#157): auto-clear moved here from Allmänt, beside auto-compact. The intro names the three
-                 choices (off, clear when idle, summarize); the two controls stay separate because both can be on at
-                 once today and a single three-way choice could not represent that saved combination. -->
+            <!-- Context has one main choice; older configurations combining clear and summary are retained until
+                 the user explicitly picks a mode. Auto/Manual remain available as summary refinements. -->
             <ScrollViewer HorizontalScrollBarVisibility="Disabled">
               <StackPanel Spacing="20" Margin="0,0,12,12">
                 <StackPanel Spacing="4">
@@ -383,14 +382,21 @@
                   <TextBlock Classes="body-small muted" Text="{local:T settings.context.intro}" TextWrapping="Wrap" />
                 </StackPanel>
 
-                <!-- Rensa vid inaktivitet: AppConfig.AutoClearIdle / AutoClearMinutes (#69). -->
-                <StackPanel x:Name="ContextClearSection" Spacing="8">
+                <ComboBox x:Name="ContextMode" ItemsSource="{Binding ContextModes}" SelectedItem="{Binding SelectedContextMode}"
+                          PlaceholderText="{local:T settings.context.choose}" HorizontalAlignment="Left" MaxWidth="400"
+                          AutomationProperties.Name="{local:T settings.context.mode.name}">
+                  <ComboBox.ItemTemplate><DataTemplate x:DataType="local:CompactChoice"><TextBlock Text="{Binding Label}" /></DataTemplate></ComboBox.ItemTemplate>
+                </ComboBox>
+                <TextBlock Text="{local:T settings.context.legacy}" Classes="body-small muted" TextWrapping="Wrap"
+                           IsVisible="{Binding ContextHasLegacyCombination}" />
+
+                <!-- Clear when idle: AppConfig.AutoClearIdle / AutoClearMinutes (#69). -->
+                <StackPanel x:Name="ContextClearSection" Spacing="8" IsVisible="{Binding AutoClearIdle}">
                   <TextBlock Classes="sectionhead" Text="{local:T settings.context.clear}" />
                   <TextBlock Text="{local:T settings.autoClear.effect}" TextWrapping="Wrap" />
                   <TextBlock Classes="body-small muted" Text="{local:T settings.autoClear.scope}" TextWrapping="Wrap" />
                   <WrapPanel Orientation="Horizontal">
-                    <CheckBox IsChecked="{Binding AutoClearIdle}" Content="{local:T settings.autoClear}" VerticalAlignment="Center" Margin="0,0,8,0"
-                              AutomationProperties.HelpText="{local:T settings.autoClear.effect}" />
+                    <TextBlock Text="{local:T settings.context.after}" VerticalAlignment="Center" Margin="0,0,8,0" />
                     <NumericUpDown Value="{Binding AutoClearMinutes}" Minimum="1" Maximum="240" Increment="1" FormatString="0"
                                    Width="110" IsEnabled="{Binding AutoClearIdle}" VerticalAlignment="Center"
                                    AutomationProperties.Name="{local:T settings.autoClear.name}" Margin="0,0,8,0" />
@@ -406,8 +412,8 @@
                   <TextBlock Classes="sectionhead" Text="{local:T settings.context.compact}" />
                   <TextBlock Text="{local:T compact.guide.benefit}" TextWrapping="Wrap" />
                   <local:CompactBenefitView />
-                  <ComboBox x:Name="CompactGlobalMode" ItemsSource="{Binding CompactGlobalModes}" SelectedItem="{Binding SelectedCompactMode}"
-                            HorizontalAlignment="Left" MaxWidth="400" AutomationProperties.Name="{local:T compact.global.title}">
+                  <ComboBox x:Name="CompactGlobalMode" ItemsSource="{Binding ContextSummaryModes}" SelectedItem="{Binding SelectedCompactMode}"
+                            IsVisible="{Binding ContextHasSummary}" HorizontalAlignment="Left" MaxWidth="400" AutomationProperties.Name="{local:T compact.global.title}">
                     <ComboBox.ItemTemplate><DataTemplate x:DataType="local:CompactChoice"><TextBlock Text="{Binding Label}" TextWrapping="Wrap" /></DataTemplate></ComboBox.ItemTemplate>
                   </ComboBox>
                   <StackPanel Spacing="4">

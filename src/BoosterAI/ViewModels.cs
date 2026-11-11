@@ -712,7 +712,7 @@ public sealed partial class MainViewModel : Observable
     public bool MinimizeToTray { get => _cfg.MinimizeToTray; set { _cfg.MinimizeToTray = value; Raise(); } }
     public bool Notifications { get => _cfg.Notifications; set { _cfg.Notifications = value; Raise(); } }
     public bool AutoUpdateClis { get => _cfg.AutoUpdateClis; set { _cfg.AutoUpdateClis = value; Raise(); } }
-    public bool AutoClearIdle { get => _cfg.AutoClearIdle; set { _cfg.AutoClearIdle = value; Raise(); } }
+    public bool AutoClearIdle { get => _cfg.AutoClearIdle; set { _cfg.AutoClearIdle = value; Raise(); RefreshContextMode(); } }
     /// <summary>The auto-clear minutes for the number box (decimal? is what it binds); an empty box keeps the last value.</summary>
     public decimal? AutoClearMinutes
     {

@@ -217,6 +217,7 @@ public sealed partial class MainViewModel
 
     private void RefreshCompactMode()
     {
+        RefreshContextMode();
         foreach (var editor in _compactEditors.Values) editor.UpdateManualMode(_cfg.AutoCompactMode == AutoCompactPolicy.Manual);
         foreach (var tab in Tabs) tab.RaiseRestartTip();
         foreach (var name in new[] { nameof(SelectedCompactMode), nameof(CompactModeExplanation), nameof(CompactIsAuto), nameof(CompactMetadataStatus) }) Raise(name);

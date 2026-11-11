@@ -318,7 +318,7 @@
   "settings.optimization.nav.limit": "Minnesgräns",
   "settings.optimization.nav.environment": "WSL och miljö",
   "settings.optimization.nav.context": "Kontext",
-  "settings.context.intro": "Välj hur agentens kontext hålls nere: av, rensa vid inaktivitet eller sammanfatta. Rensa och sammanfatta är separata inställningar och kan användas tillsammans; av i båda lämnar CLI:ns egna standarder.",
+  "settings.context.intro": "Välj hur BoosterAI hanterar agentens kontext. Inställningen gäller nya eller uttryckligen omstartade sessioner.",
   "settings.context.clear": "Rensa vid inaktivitet",
   "settings.context.compact": "Sammanfatta (auto-compact)",
   "settings.optimization.usageTitle": "RAM i WSL",
@@ -466,7 +466,7 @@
   "compact.global.metadata.missing": "Codex-kapacitet är ännu inte känd: CLI-standard används tills modellmetadata har lästs. Ingen gräns gissas.",
   "compact.global.auto.fallback": "Claude använder dokumenterat nativt kontextfönster för kända modell-ID:n. Gateway, egen provider eller begränsat kontextläge kan kräva verifierad kapacitet i Manuell. Standardmodeller, okända/lokala modeller och övriga agenter utan verifierad kapacitet behåller CLI-standard. Auto är en heuristik, ingen garanti för bäst effektivitet.",
   "compact.global.advanced": "Öppna AI-agenter för manuell finjustering",
-  "compact.global.applies": "Gäller nya och uttryckligen omstartade sessioner. Pågående arbete avbryts inte. Sparade manuella val finns kvar i alla lägen. Auto-clear är separat och tömmer historiken.",
+  "compact.global.applies": "Gäller nya och uttryckligen omstartade sessioner. Pågående arbete avbryts inte. Sparade manuella modellval finns kvar i alla lägen.",
   "compact.edit.manual": "Manuell är valt i Minne och kontext. Ändringarna gäller bara denna agents compact-inställningar.",
   "compact.edit.locked": "Välj Manuell under Minne och kontext → Kontext för att redigera, spara eller återställa. Dina sparade värden och utkast ligger kvar.",
   "compact.reset": "Återställ standardvärden",
@@ -811,5 +811,12 @@
   "models.blocked.consent": "Bekräfta serverns körplats först",
   "models.blocked.checking": "Kontrollerar servern…",
   "models.blocked.downloading": "Hämtning pågår",
-  "models.blocked.closed": "Fönstret stängs"
+  "models.blocked.closed": "Fönstret stängs",
+  "settings.context.mode.off": "Av",
+  "settings.context.mode.clear": "Rensa vid inaktivitet",
+  "settings.context.mode.summary": "Sammanfatta",
+  "settings.context.mode.name": "Hantering av kontext",
+  "settings.context.choose": "Välj hur kontexten ska hanteras",
+  "settings.context.after": "Rensa efter",
+  "settings.context.legacy": "Din befintliga kombination av rensning och sammanfattning är kvar. Välj ett läge ovan för att ersätta den."
 }

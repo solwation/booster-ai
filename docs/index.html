@@ -764,7 +764,7 @@
               <button class="tab-btn" onclick="switchPreview('appearance', this)">Settings (Appearance)</button>
               <button class="tab-btn" onclick="switchPreview('memory', this)">RAM usage</button>
               <button class="tab-btn" onclick="switchPreview('wsl', this)">WSL &amp; environment</button>
-              <button class="tab-btn" onclick="switchPreview('compact', this)">Auto-compact</button>
+              <button class="tab-btn" onclick="switchPreview('compact', this)">Context</button>
             </div>
             <div style="width: 20px;"></div>
           </div>
@@ -830,7 +830,7 @@
           <div class="card-icon">🧠</div>
           <h3>Models &amp; Context Budgets</h3>
           <p>
-            Choose a model per tab or keep the CLI default. Apply a model change with an explicit restart; Claude, Codex and Aider can keep the conversation when its directory is unambiguous. Under Optimization, choose Off, Auto or Manual context budgets; Auto uses known model capacity and an explained reserve.
+            Choose a model per tab or keep the CLI default. Apply a model change with an explicit restart; Claude, Codex and Aider can keep the conversation when its directory is unambiguous. Under Memory and context → Context, choose Off, Clear when idle or Summarize. Summarize offers Auto or Manual budgets; Auto uses known model capacity and an explained reserve.
           </p>
         </div>
 
@@ -994,17 +994,17 @@
         appearance: 'Appearance settings in BoosterAI',
         memory: 'WSL RAM usage with current memory, 30-minute history and the configured cap',
         wsl: 'WSL environment settings and detected distributions',
-        compact: 'Auto-compact context settings in BoosterAI'
+        compact: 'Context settings with Off, Clear when idle and Summarize choices in BoosterAI'
       };
       img.alt = descriptions[mode] || 'BoosterAI app screenshot';
       setTimeout(() => {
         if (mode === 'dark') img.src = 'screenshot-dark.png?v=20261111-156';
         else if (mode === 'light') img.src = 'screenshot.png?v=20261111-156';
-        else if (mode === 'settings') img.src = 'settings-general.png?v=20261111-149';
-        else if (mode === 'appearance') img.src = 'settings-appearance.png?v=20261111-149';
-        else if (mode === 'memory') img.src = 'settings-ram.png?v=20261111-149';
-        else if (mode === 'wsl') img.src = 'settings-wsl.png?v=20261111-149';
-        else if (mode === 'compact') img.src = 'settings-compact.png?v=20261111-149';
+        else if (mode === 'settings') img.src = 'settings-general.png?v=20261111-157';
+        else if (mode === 'appearance') img.src = 'settings-appearance.png?v=20261111-157';
+        else if (mode === 'memory') img.src = 'settings-ram.png?v=20261111-157';
+        else if (mode === 'wsl') img.src = 'settings-wsl.png?v=20261111-157';
+        else if (mode === 'compact') img.src = 'settings-compact.png?v=20261111-157';
         img.onload = () => { img.style.opacity = '1'; };
         // Fallback in case image is already cached
         setTimeout(() => { img.style.opacity = '1'; }, 100);

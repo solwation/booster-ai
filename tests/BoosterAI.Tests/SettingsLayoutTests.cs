@@ -130,13 +130,11 @@ public class SettingsLayoutTests : IDisposable
                 }
                 return string.Join(",", hits);
             }
-            var autoClear = Tabs(x => Shown<CheckBox>(x).Any(c => Equals(c.Content, Loc.Get("settings.autoClear"))));
+            var context = Tabs(x => Shown<ComboBox>(x).Any(c => c.Name == "ContextMode"));
             var baseFolder = Tabs(x => Shown<TextBox>(x).Any(t => AutomationProperties.GetName(t) == Loc.Get("settings.findRoot.name")));
-            var compact = Tabs(x => Shown<ComboBox>(x).Any(c => c.Name == "CompactGlobalMode"));
-            return (autoClear, baseFolder, compact);
+            return (context, baseFolder);
         });
-        Assert.Equal("2.3", where.autoClear);   // Minne och kontext → Kontext
-        Assert.Equal("2.3", where.compact);     // beside auto-compact
+        Assert.Equal("2.3", where.context);   // Memory and context → Context
         Assert.Equal("0", where.baseFolder);    // Projekt, next to Hitta projekt
         Assert.Equal("Minne och kontext", Loc.Table("sv")["settings.tab.optimization"]);
         Assert.Equal("Memory and context", Loc.Table("en")["settings.tab.optimization"]);
@@ -144,50 +142,71 @@ public class SettingsLayoutTests : IDisposable
     }
 
     [Fact]
-    public void TheKontextControlsRoundTripToTheExistingSettings()
+    public void ContextChoicesRoundTripAndKeepSavedManualBudgets()
     {
-        ConfigStore.Save(new AppConfig { Tabs = [new TabConfig { Name = "Alpha", Directory = "/srv/alpha" }] });
+        var savedBudget = new AutoCompactSetting { Cli = "claude", Model = "example-model", Mode = "custom", CustomTokens = 123000 };
+        ConfigStore.Save(new AppConfig { AutoCompactMode = AutoCompactPolicy.Manual, AutoCompactSettings = [savedBudget],
+            Tabs = [new TabConfig { Name = "Alpha", Directory = "/srv/alpha" }] });
         var vm = new MainViewModel(ConfigStore.Load());
         WithWindow(vm, w =>
         {
             w.SelectedTabIndex = 2;
             w.SelectedOptimizationSectionIndex = 3;
             Settle(w);
-            var clear = w.FindControl<StackPanel>("ContextClearSection")!;
-            var check = clear.GetVisualDescendants().OfType<CheckBox>().Single();
-            var minutes = clear.GetVisualDescendants().OfType<NumericUpDown>().Single();
-            var compact = w.FindControl<ComboBox>("CompactGlobalMode")!;
-            Assert.True(check.IsEffectivelyVisible && compact.IsEffectivelyVisible);
-
-            // Off in both: the CLI defaults.
-            Assert.False(check.IsChecked);
-            Assert.Equal(AutoCompactPolicy.Off, ((CompactChoice)compact.SelectedItem!).Id);
-
-            // Clear when idle and summarize can both be on: the saved combination the controls keep.
-            check.IsChecked = true;
-            minutes.Value = 12;
-            compact.SelectedItem = vm.CompactGlobalModes.Single(c => c.Id == AutoCompactPolicy.Auto);
+            var mode = w.FindControl<ComboBox>("ContextMode")!;
+            Assert.Equal(["Av", "Rensa vid inaktivitet", "Sammanfatta"], vm.ContextModes.Select(c => c.Label));
+            Assert.Equal("summary", ((CompactChoice)mode.SelectedItem!).Id);
+            mode.SelectedItem = vm.ContextModes.Single(c => c.Id == "clear");
             Settle(w);
+            var clear = w.FindControl<StackPanel>("ContextClearSection")!;
+            Assert.True(clear.IsEffectivelyVisible);
+            clear.GetVisualDescendants().OfType<NumericUpDown>().Single().Value = 12;
+            Assert.Equal(AutoCompactPolicy.Off, vm.SelectedCompactMode.Id);
             return 0;
         });
-        vm.Save();
-        var saved = ConfigStore.Load();
-        Assert.True(saved.AutoClearIdle);
-        Assert.Equal(12, saved.AutoClearMinutes);
-        Assert.Equal(AutoCompactPolicy.Auto, saved.AutoCompactMode);
+        var clearSaved = ConfigStore.Load();
+        Assert.True(clearSaved.AutoClearIdle);
+        Assert.Equal(12, clearSaved.AutoClearMinutes);
+        Assert.Equal(AutoCompactPolicy.Off, clearSaved.AutoCompactMode);
+        Assert.Equal(savedBudget, Assert.Single(clearSaved.AutoCompactSettings));
 
-        // And back: a fresh window over the saved file shows the same choices.
-        var reread = WithWindow(new MainViewModel(ConfigStore.Load()), w =>
+        // Toggling back to summary in this editor restores its previous Manual refinement.
+        vm.SelectedContextMode = vm.ContextModes.Single(c => c.Id == "summary");
+        vm.Save();
+        Assert.False(ConfigStore.Load().AutoClearIdle);
+        Assert.Equal(AutoCompactPolicy.Manual, ConfigStore.Load().AutoCompactMode);
+        vm.SelectedContextMode = vm.ContextModes.Single(c => c.Id == "off");
+        vm.Save();
+        var off = ConfigStore.Load();
+        Assert.False(off.AutoClearIdle);
+        Assert.Equal(AutoCompactPolicy.Off, off.AutoCompactMode);
+        Assert.Equal(savedBudget, Assert.Single(off.AutoCompactSettings));
+    }
+
+    [Fact]
+    public void ExistingClearAndSummaryCombinationSurvivesOpeningAndSavingUntilAnExplicitChoice()
+    {
+        var config = new AppConfig { AutoClearIdle = true, AutoClearMinutes = 17, AutoCompactMode = AutoCompactPolicy.Manual };
+        ConfigStore.Save(config);
+        var vm = new MainViewModel(ConfigStore.Load());
+        WithWindow(vm, w =>
         {
             w.SelectedTabIndex = 2;
             w.SelectedOptimizationSectionIndex = 3;
             Settle(w);
-            var clear = w.FindControl<StackPanel>("ContextClearSection")!;
-            return (clear.GetVisualDescendants().OfType<CheckBox>().Single().IsChecked,
-                clear.GetVisualDescendants().OfType<NumericUpDown>().Single().Value,
-                ((CompactChoice)w.FindControl<ComboBox>("CompactGlobalMode")!.SelectedItem!).Id);
+            Assert.True(vm.ContextHasLegacyCombination);
+            Assert.Null(w.FindControl<ComboBox>("ContextMode")!.SelectedItem);
+            Assert.Contains(Shown<TextBlock>(w), t => t.Text == Loc.Get("settings.context.legacy"));
+            return 0;
         });
-        Assert.Equal((true, 12m, AutoCompactPolicy.Auto), reread);
+        Assert.True(ConfigStore.Load().AutoClearIdle);
+        Assert.Equal(17, ConfigStore.Load().AutoClearMinutes);
+        Assert.Equal(AutoCompactPolicy.Manual, ConfigStore.Load().AutoCompactMode);
+        vm.SelectedContextMode = vm.ContextModes.Single(c => c.Id == "summary");
+        vm.Save();
+        Assert.False(vm.ContextHasLegacyCombination);
+        Assert.False(ConfigStore.Load().AutoClearIdle);
+        Assert.Equal(AutoCompactPolicy.Manual, ConfigStore.Load().AutoCompactMode);
     }
 
     [Fact]

@@ -318,7 +318,7 @@
   "settings.optimization.nav.limit": "Memory limit",
   "settings.optimization.nav.environment": "WSL & environment",
   "settings.optimization.nav.context": "Context",
-  "settings.context.intro": "Choose how the agent’s context is kept small: off, clear when idle or summarize. Clearing and summarizing are separate settings and can be used together; off in both leaves the CLI’s own defaults.",
+  "settings.context.intro": "Choose how BoosterAI manages agent context. The setting applies to new or explicitly restarted sessions.",
   "settings.context.clear": "Clear when idle",
   "settings.context.compact": "Summarize (auto-compact)",
   "settings.optimization.usageTitle": "WSL memory",
@@ -466,7 +466,7 @@
   "compact.global.metadata.missing": "Codex capacity is not known yet: CLI defaults apply until model metadata has been read. No budget is guessed.",
   "compact.global.auto.fallback": "Claude uses documented native context for known model IDs. Gateways, custom providers or restricted context modes may require verified capacity in Manual. Default models, unknown/local models and other agents without verified capacity retain CLI defaults. Auto is a heuristic, not a guarantee of optimal efficiency.",
   "compact.global.advanced": "Open AI agents for manual tuning",
-  "compact.global.applies": "Applies to new and explicitly restarted sessions. Running work is not interrupted. Saved manual choices remain in every mode. Auto-clear is separate and empties history.",
+  "compact.global.applies": "Applies to new and explicitly restarted sessions. Running work is not interrupted. Saved manual model choices are kept in every mode.",
   "compact.edit.manual": "Manual is selected in Memory and context. These changes affect only this agent’s compaction settings.",
   "compact.edit.locked": "Select Manual under Memory and context → Context to edit, save or reset. Your saved values and drafts are preserved.",
   "compact.reset": "Restore defaults",
@@ -811,5 +811,12 @@
   "models.blocked.consent": "Confirm where the server runs first",
   "models.blocked.checking": "Checking the server…",
   "models.blocked.downloading": "Download in progress",
-  "models.blocked.closed": "The window is closing"
+  "models.blocked.closed": "The window is closing",
+  "settings.context.mode.off": "Off",
+  "settings.context.mode.clear": "Clear when idle",
+  "settings.context.mode.summary": "Summarize",
+  "settings.context.mode.name": "Context management",
+  "settings.context.choose": "Choose how to manage context",
+  "settings.context.after": "Clear after",
+  "settings.context.legacy": "Your existing combination of clearing and summarizing is retained. Choose a mode above to replace it."
 }
