@@ -4,6 +4,32 @@
         x:Class="BoosterAI.CloseAllWindow" x:DataType="local:CloseAllOperation"
         Title="{local:T close.title}" Icon="avares://BoosterAI/Assets/boosterai.ico"
         Width="620" Height="450" MinHeight="320" CanResize="True" WindowStartupLocation="CenterOwner">
+  <Window.Styles>
+    <!-- Row status (#148): saving/closing spins in the info colour, a failure is a danger dot, the rest neutral. -->
+    <Style Selector="Ellipse.status">
+      <Setter Property="Width" Value="8" />
+      <Setter Property="Height" Value="8" />
+      <Setter Property="Fill" Value="{DynamicResource NeutralStatusBrush}" />
+    </Style>
+    <Style Selector="Ellipse.status.failed">
+      <Setter Property="Fill" Value="{DynamicResource DangerDotBrush}" />
+    </Style>
+    <Style Selector="Arc.spinner">
+      <Setter Property="Width" Value="12" />
+      <Setter Property="Height" Value="12" />
+      <Setter Property="StartAngle" Value="0" />
+      <Setter Property="SweepAngle" Value="270" />
+      <Setter Property="Stroke" Value="{DynamicResource InfoDotBrush}" />
+      <Setter Property="StrokeThickness" Value="2" />
+      <Setter Property="StrokeLineCap" Value="Round" />
+      <Style.Animations>
+        <Animation Duration="0:0:1" IterationCount="INFINITE">
+          <KeyFrame Cue="0%"><Setter Property="RotateTransform.Angle" Value="0" /></KeyFrame>
+          <KeyFrame Cue="100%"><Setter Property="RotateTransform.Angle" Value="360" /></KeyFrame>
+        </Animation>
+      </Style.Animations>
+    </Style>
+  </Window.Styles>
   <Grid Margin="28,24,28,22" RowDefinitions="Auto,Auto,*,Auto">
     <TextBlock Classes="title" FontSize="20" Text="{local:T close.title}" />
     <TextBlock Grid.Row="1" Text="{Binding Message}" TextWrapping="Wrap" LineHeight="21" Margin="0,14,0,16" />
@@ -11,18 +37,29 @@
       <ItemsControl ItemsSource="{Binding Tabs}">
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="local:ClosingTab">
-            <Grid ColumnDefinitions="*,2*" Margin="0,7">
-              <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" Margin="0,0,16,0" />
-              <TextBlock Grid.Column="1" Text="{Binding Text}" TextWrapping="Wrap" />
+            <Grid ColumnDefinitions="22,*,2*" Margin="0,7">
+              <Panel Width="12" Height="12" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,4,0,0">
+                <Arc Classes="spinner" IsVisible="{Binding IsBusy}">
+                  <Arc.RenderTransform><RotateTransform /></Arc.RenderTransform>
+                </Arc>
+                <Ellipse Classes="status" Classes.failed="{Binding IsFailed}" IsVisible="{Binding !IsBusy}"
+                         HorizontalAlignment="Center" VerticalAlignment="Center" />
+              </Panel>
+              <TextBlock Grid.Column="1" Text="{Binding Name}" TextTrimming="CharacterEllipsis" Margin="0,0,16,0" />
+              <TextBlock Grid.Column="2" Text="{Binding Text}" TextWrapping="Wrap"
+                         Classes.error="{Binding IsFailed}" Classes.muted="{Binding IsIdle}" />
             </Grid>
           </DataTemplate>
         </ItemsControl.ItemTemplate>
       </ItemsControl>
     </ScrollViewer>
-    <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,18,0,0">
-      <Button Content="{local:T cancel}" Click="OnCancel" IsCancel="True" Padding="18,8" />
-      <Button Content="{local:T close.force}" Click="OnForce" IsVisible="{Binding CanForce}" Padding="18,8" />
-      <Button Classes="accent" Content="{local:T close.start}" Click="OnStart" IsVisible="{Binding NotStarted}" Padding="18,8" />
-    </StackPanel>
+    <!-- No primary while closing: waiting is the safe choice. The dangerous path stands apart, on the left. -->
+    <Grid Grid.Row="3" ColumnDefinitions="Auto,*,Auto" Margin="0,18,0,0">
+      <Button Grid.Column="0" Classes="danger" Content="{local:T close.force}" Click="OnForce" IsVisible="{Binding CanForce}" Padding="18,8" />
+      <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10">
+        <Button Classes="secondary" Content="{local:T cancel}" Click="OnCancel" IsCancel="True" Padding="18,8" />
+        <Button Classes="primary" Content="{local:T close.start}" Click="OnStart" IsVisible="{Binding NotStarted}" Padding="18,8" />
+      </StackPanel>
+    </Grid>
   </Grid>
 </Window>

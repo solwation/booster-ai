@@ -72,10 +72,10 @@
       <TextBlock Text="{Binding DownloadStatus}" TextWrapping="Wrap" FontSize="12" AutomationProperties.LiveSetting="Polite" />
       <Grid ColumnDefinitions="*,Auto">
         <WrapPanel>
-          <Button x:Name="DownloadButton" Content="{local:T models.download}" Click="OnDownload" IsEnabled="{Binding CanDownload}" Margin="0,0,8,0" />
+          <Button x:Name="DownloadButton" Classes="primary" Content="{local:T models.download}" Click="OnDownload" IsEnabled="{Binding CanDownload}" Margin="0,0,8,0" />
           <Button Content="{local:T models.cancel}" Click="OnCancel" IsEnabled="{Binding CanCancel}" />
         </WrapPanel>
-        <Button x:Name="DoneButton" Grid.Column="1" Content="{local:T done}" Click="OnDone" IsCancel="True" />
+        <Button x:Name="DoneButton" Grid.Column="1" Classes="secondary" Content="{local:T done}" Click="OnDone" IsCancel="True" />
       </Grid>
     </StackPanel>
   </Grid>

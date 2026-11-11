@@ -14,7 +14,7 @@
     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,6,0,0">
       <Button Content="{local:T cancel}" Click="OnCancel" IsCancel="True" Padding="18,8" />
       <Button Content="{local:T restartConfirm.now}" Click="OnNow" Padding="18,8" />
-      <Button Classes="accent" Content="{local:T restartConfirm.whenIdle}" Click="OnWhenIdle" IsDefault="True" Padding="18,8"
+      <Button Classes="primary" Content="{local:T restartConfirm.whenIdle}" Click="OnWhenIdle" IsDefault="True" Padding="18,8"
               IsVisible="{Binding CanWait}" />
     </StackPanel>
   </StackPanel>

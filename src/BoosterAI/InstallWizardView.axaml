@@ -188,12 +188,12 @@
               IsVisible="{Binding CanBack}" />
       <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10">
         <Button Content="{Binding SkipLabel}" Click="OnSkip" Padding="18,8" IsVisible="{Binding CanSkip}" />
-        <Button Classes="accent" Content="{local:T setup.button.next}" Click="OnNext" IsDefault="True" Padding="18,8"
+        <Button Classes="primary" Content="{local:T setup.button.next}" Click="OnNext" IsDefault="True" Padding="18,8"
                 IsVisible="{Binding ShowNext}" />
-        <Button Classes="accent" Content="{local:T setup.button.install}" Click="OnInstall" Padding="18,8"
+        <Button Classes="primary" Content="{local:T setup.button.install}" Click="OnInstall" Padding="18,8"
                 IsVisible="{Binding ShowInstall}" IsEnabled="{Binding CanInstall}" />
         <Button Content="{local:T setup.button.close}" Click="OnClose" Padding="18,8" IsVisible="{Binding IsDone}" />
-        <Button Classes="accent" Content="{local:T setup.button.open}" Click="OnOpen" Padding="18,8" IsVisible="{Binding IsDone}" />
+        <Button Classes="primary" Content="{local:T setup.button.open}" Click="OnOpen" Padding="18,8" IsVisible="{Binding IsDone}" />
       </StackPanel>
     </Grid>
   </Grid>

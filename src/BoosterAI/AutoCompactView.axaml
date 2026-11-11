@@ -32,7 +32,7 @@
         </Border>
         <TextBlock Text="{Binding BudgetHint}" TextWrapping="Wrap" Classes="muted" FontSize="12" />
         <TextBlock Text="{Binding Validation}" TextWrapping="Wrap" FontSize="12" />
-        <Button x:Name="SaveCompact" Content="{local:T compact.save}" Click="OnSave" IsEnabled="{Binding CanSave}" Classes="accent" HorizontalAlignment="Left" />
+        <Button x:Name="SaveCompact" Content="{local:T compact.save}" Click="OnSave" IsEnabled="{Binding CanSave}" Classes="secondary" HorizontalAlignment="Left" />
         <Expander Header="{local:T compact.visual.details}" HorizontalAlignment="Stretch">
           <StackPanel Spacing="10">
             <TextBlock Text="{local:T compact.context}" FontSize="12" />

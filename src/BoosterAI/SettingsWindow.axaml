@@ -337,7 +337,7 @@
                         ToolTip.Tip="{local:T settings.optimization.useRecommendation}" />
 
                 <WrapPanel Orientation="Horizontal" Margin="0,14,0,0">
-                  <Button Classes="accent" Content="{local:T settings.optimization.save}" Click="OnSaveOptimization"
+                  <Button Classes="secondary" Content="{local:T settings.optimization.save}" Click="OnSaveOptimization"
                           IsEnabled="{Binding Optimization.CanSave}" Padding="14,7" Margin="0,0,8,8" />
                   <Button Content="{local:T settings.optimization.restartWsl}" Click="OnRestartWsl" Padding="14,7" Margin="0,0,0,8" ToolTip.Tip="{local:T settings.optimization.restartWsl.tip}" />
                 </WrapPanel>
@@ -555,7 +555,7 @@
                             <TextBlock Classes="title" Text="{Binding DisplayName}" />
                             <WrapPanel IsVisible="{Binding IsInstalled}"><TextBlock Text="{Binding StatusText}" FontSize="12" Margin="0,0,10,0" /><TextBlock Text="{local:T agents.version}" Classes="muted" FontSize="12" Margin="0,0,5,0" /><TextBlock Text="{Binding VersionText}" FontSize="12" /></WrapPanel>
                           </StackPanel>
-                          <Button Grid.Column="2" Classes="accent" Content="{Binding InstallButtonText}" Click="OnInstallAgent"
+                          <Button Grid.Column="2" Classes="secondary" Content="{Binding InstallButtonText}" Click="OnInstallAgent"
                                   ToolTip.Tip="{Binding InstallTip}" IsVisible="{Binding !IsInstalled}" VerticalAlignment="Center" Margin="12,0,0,0" />
                         </Grid>
                         <WrapPanel IsVisible="{Binding IsInstalled}">
@@ -604,7 +604,7 @@
                               <SelectableTextBlock Text="{Binding ModePreview}" Classes="path" TextWrapping="Wrap" FontSize="12" />
                               <TextBlock Text="{Binding ModePreviewEffect}" Classes="muted" TextWrapping="Wrap" FontSize="12" />
                             </StackPanel>
-                            <Button Classes="accent" Content="{local:T agents.mode.apply}" Click="OnApplyAgentMode" IsEnabled="{Binding CanApply}" HorizontalAlignment="Left" />
+                            <Button Classes="secondary" Content="{local:T agents.mode.apply}" Click="OnApplyAgentMode" IsEnabled="{Binding CanApply}" HorizontalAlignment="Left" />
                             <TextBlock Text="{local:T agents.alias.scope}" Classes="muted" TextWrapping="Wrap" FontSize="12" />
                           </StackPanel>
                           <StackPanel Spacing="12" IsVisible="{Binding IsContext}">
@@ -628,7 +628,7 @@
 
     <!-- Fönsterfot: endast Klar-knappen, högerställd -->
     <Grid Grid.Row="1" Margin="0,16,0,0">
-      <Button Classes="accent" Content="{local:T done}" Click="OnDone" Padding="24,9" HorizontalAlignment="Right" IsDefault="True" />
+      <Button Classes="primary" Content="{local:T done}" Click="OnDone" Padding="24,9" HorizontalAlignment="Right" IsDefault="True" />
     </Grid>
 
   </Grid>

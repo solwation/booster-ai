@@ -27,7 +27,7 @@
             <TextBlock Text="{local:T localAdvice.cpuOnly}" TextWrapping="Wrap" />
           </CheckBox>
         </StackPanel>
-        <Button Content="{local:T localAdvice.check}" Click="OnCheck" IsEnabled="{Binding CanCheck}" HorizontalAlignment="Left" Padding="14,8" />
+        <Button Classes="primary" Content="{local:T localAdvice.check}" Click="OnCheck" IsEnabled="{Binding CanCheck}" HorizontalAlignment="Left" Padding="14,8" />
         <TextBlock Text="{Binding Metadata}" TextWrapping="Wrap" FontSize="12" />
         <Expander Header="{local:T localAdvice.details}">
           <StackPanel Spacing="8" Margin="0,8,0,0">
@@ -37,6 +37,6 @@
         </Expander>
       </StackPanel>
     </ScrollViewer>
-    <Button Grid.Row="1" Content="{local:T done}" Click="OnDone" IsCancel="True" HorizontalAlignment="Right" Padding="18,8" Margin="0,12,0,0" />
+    <Button Grid.Row="1" Classes="secondary" Content="{local:T done}" Click="OnDone" IsCancel="True" HorizontalAlignment="Right" Padding="18,8" Margin="0,12,0,0" />
   </Grid>
 </Window>

@@ -33,7 +33,7 @@
 
     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,6,0,0">
       <Button Content="{local:T cancel}" Click="OnCancel" IsCancel="True" Padding="18,8" />
-      <Button Classes="accent" Click="OnConfirm" IsDefault="True" Padding="18,8"
+      <Button Classes="primary" Click="OnConfirm" IsDefault="True" Padding="18,8"
               Content="{Binding InstallButton}" />
     </StackPanel>
   </StackPanel>

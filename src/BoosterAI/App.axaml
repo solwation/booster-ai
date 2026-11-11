@@ -49,12 +49,24 @@
         <SolidColorBrush x:Key="DangerSurfaceBrush" Color="#2A1518" />
         <SolidColorBrush x:Key="WarningSurfaceBrush" Color="#2A2112" />
         <SolidColorBrush x:Key="DangerFillBrush" Color="#C62F35" />
+        <SolidColorBrush x:Key="DangerFillHoverBrush" Color="#A8262C" />
+        <SolidColorBrush x:Key="DangerFillPressedBrush" Color="#8F2025" />
+        <SolidColorBrush x:Key="PrimaryFillBrush" Color="#5B5FF2" />
+        <SolidColorBrush x:Key="PrimaryFillHoverBrush" Color="#4C4FDB" />
+        <SolidColorBrush x:Key="PrimaryFillPressedBrush" Color="#3E40C0" />
+        <!-- Inactive buttons of every variant: no fill, FieldBorderBrush at 50 % opacity, FaintBrush text. -->
+        <SolidColorBrush x:Key="DisabledBorderBrush" Color="#8070758A" />
 
         <!-- Fluent keys mapped onto the tokens above (same values; keep them in step). -->
         <SolidColorBrush x:Key="ButtonBackground" Color="#262935" />
         <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#343846" />
         <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#1C1E26" />
-        <SolidColorBrush x:Key="ButtonBackgroundDisabled" Color="#1C1E26" />
+        <SolidColorBrush x:Key="ButtonBackgroundDisabled" Color="#00000000" />
+        <SolidColorBrush x:Key="ButtonBorderBrush" Color="#343846" />
+        <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="#343846" />
+        <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="#343846" />
+        <SolidColorBrush x:Key="ButtonBorderBrushDisabled" Color="#8070758A" />
+        <SolidColorBrush x:Key="ButtonForegroundDisabled" Color="#8A8EA0" />
         <SolidColorBrush x:Key="ToolTipBackground" Color="#1C1E26" />
         <SolidColorBrush x:Key="ToolTipBorderBrush" Color="#343846" />
         <SolidColorBrush x:Key="ComboBoxBackground" Color="#14151B" />
@@ -104,12 +116,24 @@
         <SolidColorBrush x:Key="DangerSurfaceBrush" Color="#FDF0F0" />
         <SolidColorBrush x:Key="WarningSurfaceBrush" Color="#FDF4E3" />
         <SolidColorBrush x:Key="DangerFillBrush" Color="#C62F35" />
+        <SolidColorBrush x:Key="DangerFillHoverBrush" Color="#A8262C" />
+        <SolidColorBrush x:Key="DangerFillPressedBrush" Color="#8F2025" />
+        <SolidColorBrush x:Key="PrimaryFillBrush" Color="#5B5FF2" />
+        <SolidColorBrush x:Key="PrimaryFillHoverBrush" Color="#4C4FDB" />
+        <SolidColorBrush x:Key="PrimaryFillPressedBrush" Color="#3E40C0" />
+        <!-- Inactive buttons of every variant: no fill, FieldBorderBrush at 50 % opacity, FaintBrush text. -->
+        <SolidColorBrush x:Key="DisabledBorderBrush" Color="#8080859A" />
 
         <!-- Fluent keys mapped onto the tokens above (same values; keep them in step). -->
         <SolidColorBrush x:Key="ButtonBackground" Color="#ECEEF3" />
         <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#D9DCE5" />
         <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#F5F6F9" />
-        <SolidColorBrush x:Key="ButtonBackgroundDisabled" Color="#F5F6F9" />
+        <SolidColorBrush x:Key="ButtonBackgroundDisabled" Color="#00FFFFFF" />
+        <SolidColorBrush x:Key="ButtonBorderBrush" Color="#D9DCE5" />
+        <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="#D9DCE5" />
+        <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="#D9DCE5" />
+        <SolidColorBrush x:Key="ButtonBorderBrushDisabled" Color="#8080859A" />
+        <SolidColorBrush x:Key="ButtonForegroundDisabled" Color="#6B6F80" />
         <SolidColorBrush x:Key="ToolTipBackground" Color="#F5F6F9" />
         <SolidColorBrush x:Key="ToolTipBorderBrush" Color="#D9DCE5" />
         <SolidColorBrush x:Key="ComboBoxBackground" Color="#FFFFFF" />

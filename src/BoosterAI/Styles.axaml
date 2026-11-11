@@ -273,14 +273,76 @@
     <Setter Property="Background" Value="{DynamicResource RowHoverBrush}" />
   </Style>
 
-  <!-- Main-window actions share their shape; only boost gets the launch gradient. -->
+  <!-- Button system (#148): boost (Starta only), primary (at most one per view: the view's task), secondary (the
+       default look, also for plain buttons via the Fluent keys in App.axaml), danger (a dangerous path beside a safe
+       one). Every variant is inactive the same way: no fill, a half-opaque border and FaintBrush text. -->
   <Style Selector="Button.boost, Button.main-action">
-    <Setter Property="CornerRadius" Value="{StaticResource RadiusLarge}" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusMedium}" />
+  </Style>
+  <Style Selector="Button.main-action">
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+
+  <Style Selector="Button.secondary">
+    <Setter Property="Background" Value="{DynamicResource SurfaceStrongBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+  </Style>
+  <Style Selector="Button.secondary:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource DisabledBorderBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource FaintBrush}" />
+  </Style>
+
+  <Style Selector="Button.primary">
+    <Setter Property="Background" Value="{DynamicResource PrimaryFillBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource PrimaryFillBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+  <Style Selector="Button.primary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource PrimaryFillHoverBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource PrimaryFillHoverBrush}" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+  <Style Selector="Button.primary:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource PrimaryFillPressedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource PrimaryFillPressedBrush}" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+  <Style Selector="Button.primary:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource DisabledBorderBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource FaintBrush}" />
+  </Style>
+
+  <Style Selector="Button.danger">
+    <Setter Property="Background" Value="{DynamicResource DangerFillBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource DangerFillBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+  <Style Selector="Button.danger:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource DangerFillHoverBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource DangerFillHoverBrush}" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+  <Style Selector="Button.danger:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource DangerFillPressedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource DangerFillPressedBrush}" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+  <Style Selector="Button.danger:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource DisabledBorderBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource FaintBrush}" />
   </Style>
 
   <!-- The one loud element: the launch button in the icon's gradient. -->
   <Style Selector="Button.boost">
     <Setter Property="Background" Value="{StaticResource BoostBrush}" />
+    <Setter Property="BorderBrush" Value="Transparent" />
     <Setter Property="Foreground" Value="White" />
     <Setter Property="Padding" Value="22,11" />
     <Setter Property="FontSize" Value="15" />
@@ -288,15 +350,18 @@
   </Style>
   <Style Selector="Button.boost:pointerover /template/ ContentPresenter">
     <Setter Property="Background" Value="{StaticResource BoostBrush}" />
+    <Setter Property="BorderBrush" Value="Transparent" />
     <Setter Property="Foreground" Value="White" />
     <Setter Property="Opacity" Value="0.92" />
   </Style>
   <Style Selector="Button.boost:pressed /template/ ContentPresenter">
     <Setter Property="Background" Value="{StaticResource BoostBrush}" />
+    <Setter Property="BorderBrush" Value="Transparent" />
     <Setter Property="Opacity" Value="0.8" />
   </Style>
   <Style Selector="Button.boost:disabled /template/ ContentPresenter">
-    <Setter Property="Background" Value="{DynamicResource ButtonBackgroundDisabled}" />
-    <Setter Property="Foreground" Value="{DynamicResource ButtonForegroundDisabled}" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource DisabledBorderBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource FaintBrush}" />
   </Style>
 </Styles>

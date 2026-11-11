@@ -24,6 +24,17 @@ public class LocTests
             Assert.False(string.IsNullOrWhiteSpace(value), $"{lang}:{key} is empty");
     }
 
+    // #148: the confirmation before Close all is at most three points and under 50 words.
+    [Theory]
+    [InlineData("sv")]
+    [InlineData("en")]
+    public void CloseConfirmIsShort(string lang)
+    {
+        var text = Loc.Table(lang)["close.confirm"];
+        Assert.InRange(text.Split('\n').Length, 1, 3);
+        Assert.True(text.Split((char[])[' ', '\n'], StringSplitOptions.RemoveEmptyEntries).Count(w => w != "•") < 50);
+    }
+
     [Fact]
     public void PlaceholdersMatchBetweenLanguages()
     {

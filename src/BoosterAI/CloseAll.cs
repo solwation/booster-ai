@@ -33,11 +33,18 @@ public sealed class ClosingTab : Observable
             if (!Set(ref _phase, value)) return;
             if (value != ClosePhase.Failed) _error = null;
             Raise(nameof(Text));
+            Raise(nameof(IsBusy));
+            Raise(nameof(IsFailed));
+            Raise(nameof(IsIdle));
             Tab.SetCloseProgress(value == ClosePhase.Closed ? null : Text);
         }
     }
     private string? _error;
     public string Text => _error ?? Loc.Get("close.phase." + Phase);
+    /// <summary>Saving or closing: an info spinner. Failed: a danger dot. Otherwise (waiting, closed): a neutral dot.</summary>
+    public bool IsBusy => Phase is ClosePhase.Saving or ClosePhase.Closing;
+    public bool IsFailed => Phase == ClosePhase.Failed;
+    public bool IsIdle => !IsBusy && !IsFailed;
     internal void Fail(string message) { _error = message; Phase = ClosePhase.Failed; Tab.SetCloseProgress(Text); Raise(nameof(Text)); }
 }
 
@@ -260,7 +267,7 @@ public sealed class CloseAllOperation : Observable
         _timer.Stop();
         _began = DateTime.UtcNow;
         Started = Active = true;
-        foreach (var (tab, i) in Tabs.Select((t, i) => (t, i))) tab.Phase = i == 0 ? ClosePhase.Saving : ClosePhase.Closed;
+        foreach (var (tab, i) in Tabs.Select((t, i) => (t, i))) tab.Phase = i switch { 0 => ClosePhase.Saving, 2 => ClosePhase.Failed, _ => ClosePhase.Closed };
         Raise(nameof(Message));
     }
 }
@@ -270,11 +277,14 @@ public sealed partial class MainViewModel
     public CloseAllOperation? ClosingAll { get; private set; }
     public bool IsClosingAll => ClosingAll is { Active: true };
     public bool CanCloseAll => !IsClosingAll && Tabs.Any(t => t.HasOpenTerminal);
-    public CloseAllOperation PrepareCloseAll(bool sample = false)
+    /// <summary>Why Close all is inactive when no tab is open; no tip otherwise.</summary>
+    public string? CloseAllTip => Tabs.Any(t => t.HasOpenTerminal) ? null : Loc.Get("close.none");
+    /// <param name="sample">Screenshots: the sample tabs, shown mid-closing unless <paramref name="confirm"/> keeps the confirmation step.</param>
+    public CloseAllOperation PrepareCloseAll(bool sample = false, bool confirm = false)
     {
         ClosingAll = new CloseAllOperation(Tabs.Where(t => sample ? t.HasStatus : t.HasOpenTerminal), _cfg.WslDistro,
             () => { Raise(nameof(IsClosingAll)); TabsChanged(); }, _wslHome);
-        if (sample) ClosingAll.ShowSample();
+        if (sample && !confirm) ClosingAll.ShowSample();
         return ClosingAll;
     }
 }

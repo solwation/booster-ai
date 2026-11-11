@@ -701,6 +701,7 @@ public sealed partial class MainViewModel : Observable
         Raise(nameof(CanLaunch));
         Raise(nameof(LaunchLabel));
         Raise(nameof(CanCloseAll));
+        Raise(nameof(CloseAllTip));
         RestartableChanged();
         SetupRowsChanged();
     }

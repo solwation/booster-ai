@@ -69,7 +69,7 @@
       </Button>
       <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10">
         <Button Content="{local:T cancel}" Click="OnCancel" IsCancel="True" Padding="18,8" />
-        <Button Classes="accent" Click="OnImport" IsDefault="True" Padding="18,8"
+        <Button Classes="primary" Click="OnImport" IsDefault="True" Padding="18,8"
                 Content="{Binding ImportLabel}" IsEnabled="{Binding CanImport}" />
       </StackPanel>
     </Grid>

@@ -23,7 +23,7 @@
         <TextBlock Classes="title" Text="BoosterAI" />
         <TextBlock Classes="muted" Text="{local:T main.subtitle}" />
       </StackPanel>
-      <Button Grid.Column="2" Classes="main-action" Click="OnSettings" Padding="12,8" AutomationProperties.Name="{local:T settings.button}" VerticalAlignment="Center"
+      <Button Grid.Column="2" Classes="main-action secondary" Click="OnSettings" Padding="12,8" AutomationProperties.Name="{local:T settings.button}" VerticalAlignment="Center"
               ToolTip.Tip="{local:T settings.tip}">
         <StackPanel Orientation="Horizontal" Spacing="8">
           <Path Data="{StaticResource GearIcon}" Width="15" Height="15" Stretch="Uniform" StrokeThickness="1.5"
@@ -51,9 +51,9 @@
           </Grid>
         </StackPanel>
         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" Margin="16,0,0,0" VerticalAlignment="Center">
-          <Button Classes="accent" Content="{local:T update.install}" Click="OnUpdateInstall" IsVisible="{Binding Update.ShowInstall}"
+          <Button Classes="primary" Content="{local:T update.install}" Click="OnUpdateInstall" IsVisible="{Binding Update.ShowInstall}"
                   ToolTip.Tip="{Binding Update.InstallTip}" Padding="14,6" />
-          <Button Classes="accent" Content="{local:T update.page}" Click="OnUpdatePage" IsVisible="{Binding Update.ShowPage}"
+          <Button Classes="primary" Content="{local:T update.page}" Click="OnUpdatePage" IsVisible="{Binding Update.ShowPage}"
                   ToolTip.Tip="{Binding Update.PageUrl}" Padding="14,6" />
           <Button Content="{local:T update.later}" Click="OnUpdateLater" IsVisible="{Binding Update.ShowDismiss}" Padding="14,6" />
           <Button Content="{local:T update.skip}" Click="OnUpdateSkip" IsVisible="{Binding Update.ShowDismiss}" Padding="14,6" />
@@ -68,7 +68,7 @@
               StrokeLineCap="Round" StrokeJoin="Round" Stroke="{DynamicResource LinkBrush}" VerticalAlignment="Center" Margin="0,0,10,0" />
         <TextBlock Grid.Column="1" Text="{Binding Denial.Text}" TextWrapping="Wrap" VerticalAlignment="Center" FontSize="13.5" />
         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" Margin="16,0,0,0" VerticalAlignment="Center">
-          <Button Classes="accent" Content="{local:T denied.allow}" Click="OnAllowDenied" ToolTip.Tip="{Binding Denial.AllowTip}" Padding="14,6" />
+          <Button Classes="primary" Content="{local:T denied.allow}" Click="OnAllowDenied" ToolTip.Tip="{Binding Denial.AllowTip}" Padding="14,6" />
           <Button Content="{local:T denied.dismiss}" Click="OnDismissDenied" Padding="14,6" />
         </StackPanel>
       </Grid>
@@ -80,7 +80,7 @@
         <Path Grid.Column="0" Data="{StaticResource DownloadIcon}" Width="14" Height="14" Stretch="Uniform" StrokeThickness="1.5"
               StrokeLineCap="Round" StrokeJoin="Round" Stroke="{DynamicResource LinkBrush}" VerticalAlignment="Center" Margin="0,0,10,0" />
         <TextBlock Grid.Column="1" Text="{Binding Setup.WslText}" TextWrapping="Wrap" VerticalAlignment="Center" FontSize="13.5" />
-        <Button Grid.Column="2" Classes="accent" Content="{local:T setup.wsl.install}" Click="OnInstallWsl" IsVisible="{Binding Setup.CanInstallWsl}"
+        <Button Grid.Column="2" Classes="primary" Content="{local:T setup.wsl.install}" Click="OnInstallWsl" IsVisible="{Binding Setup.CanInstallWsl}"
                 ToolTip.Tip="{local:T setup.wsl.install.tip}" Padding="14,6" Margin="16,0,0,0" VerticalAlignment="Center" />
       </Grid>
     </Border>
@@ -99,7 +99,7 @@
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="local:CliOffer">
-                <Button Classes="accent" Content="{Binding Label}" Click="OnInstallCli" ToolTip.Tip="{Binding Tip}" Padding="14,6" />
+                <Button Classes="primary" Content="{Binding Label}" Click="OnInstallCli" ToolTip.Tip="{Binding Tip}" Padding="14,6" />
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>
@@ -115,7 +115,7 @@
               Fill="{DynamicResource LinkBrush}" VerticalAlignment="Center" Margin="0,0,10,0" />
         <TextBlock Grid.Column="1" Text="{local:T optimization.banner.text}" TextWrapping="Wrap" VerticalAlignment="Center" FontSize="13.5" />
         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" Margin="16,0,0,0" VerticalAlignment="Center">
-          <Button Classes="accent" Content="{local:T optimization.banner.button}" Click="OnOptimizeWsl" Padding="14,6" />
+          <Button Classes="primary" Content="{local:T optimization.banner.button}" Click="OnOptimizeWsl" Padding="14,6" />
           <Button Content="{local:T optimization.banner.dismiss}" Click="OnDismissOptimization" Padding="14,6" />
         </StackPanel>
       </Grid>
@@ -244,7 +244,7 @@
           <TextBlock Classes="muted" Text="{local:T empty.text}"
                      HorizontalAlignment="Center" />
           <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
-            <Button Content="{local:T import.button}" Click="OnFindProjects" Classes="accent" ToolTip.Tip="{local:T import.button.tip}" />
+            <Button Content="{local:T import.button}" Click="OnFindProjects" Classes="primary" ToolTip.Tip="{local:T import.button.tip}" />
             <Button Content="{local:T empty.add}" Click="OnAddProject" />
           </StackPanel>
         </StackPanel>
@@ -258,12 +258,14 @@
                    Classes.muted="{Binding !StatusIsError}" Classes.error="{Binding StatusIsError}" />
         <TextBlock Classes="muted" Text="{Binding VersionText}" FontSize="11.5" ToolTip.Tip="{local:T version.tip}" />
       </StackPanel>
-      <Button Grid.Column="1" Classes="main-action" Height="{Binding #LaunchButton.Bounds.Height}" Content="{Binding RestartAllLabel}" Click="OnRestartAll"
+      <Button Grid.Column="1" Classes="main-action secondary" Height="{Binding #LaunchButton.Bounds.Height}" Content="{Binding RestartAllLabel}" Click="OnRestartAll"
               IsVisible="{Binding CanRestartAll}" ToolTip.Tip="{local:T restartAll.tip}" AutomationProperties.Name="{local:T restartAll.name}" Margin="0,0,12,0" Padding="16,8" />
-      <Button Grid.Column="2" Classes="main-action" Height="{Binding #LaunchButton.Bounds.Height}" Content="{local:T close.title}" Click="OnCloseAll" IsEnabled="{Binding CanCloseAll}" Margin="0,0,12,0" Padding="16,8" />
+      <!-- Hidden only in the empty state; otherwise inactive with a reason while no tab is open (#148). -->
+      <Button Grid.Column="2" Classes="main-action secondary" Height="{Binding #LaunchButton.Bounds.Height}" Content="{local:T close.title}" Click="OnCloseAll"
+              IsVisible="{Binding HasTabs}" IsEnabled="{Binding CanCloseAll}" ToolTip.Tip="{Binding CloseAllTip}" ToolTip.ShowOnDisabled="True" Margin="0,0,12,0" Padding="16,8" />
       <Button x:Name="LaunchButton" Grid.Column="3" Classes="boost" Click="OnLaunch" AutomationProperties.Name="{Binding LaunchLabel}" IsDefault="True" IsEnabled="{Binding CanLaunch}">
         <StackPanel Orientation="Horizontal" Spacing="9">
-          <Path Data="{StaticResource BoltIcon}" Fill="White" Width="12" Height="15" Stretch="Uniform"
+          <Path Data="{StaticResource BoltIcon}" Fill="{Binding $parent[ContentPresenter].Foreground}" Width="12" Height="15" Stretch="Uniform"
                 VerticalAlignment="Center" />
           <TextBlock Text="{Binding LaunchLabel}" />
         </StackPanel>

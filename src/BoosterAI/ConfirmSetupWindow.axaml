@@ -21,7 +21,7 @@
     <TextBlock Classes="muted" TextWrapping="Wrap" LineHeight="20" Text="{Binding Detail}" />
     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,6,0,0">
       <Button Content="{Binding CancelText}" Click="OnCancel" IsCancel="True" IsDefault="True" Padding="18,8" />
-      <Button Classes="accent" Click="OnConfirm" Padding="18,8" Content="{Binding Button}" />
+      <Button Classes="primary" Click="OnConfirm" Padding="18,8" Content="{Binding Button}" />
     </StackPanel>
   </StackPanel>
 </Window>

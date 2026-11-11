@@ -133,7 +133,7 @@ internal static class Screenshot
             "main" => new MainWindow(vm),
             "local-model" => SampleLocalModel(o.Section),
             "local-models" => SampleLocalModels(o.Section),
-            "close" => new CloseAllWindow(vm.PrepareCloseAll(sample: true)),
+            "close" => new CloseAllWindow(vm.PrepareCloseAll(sample: true, confirm: o.Section == "confirm")),
             "settings" => new SettingsWindow(vm),
             "install" => new ConfirmInstallWindow(vm.Tabs.First()),
             "import" => new ImportProjectsWindow(SampleImport()),
