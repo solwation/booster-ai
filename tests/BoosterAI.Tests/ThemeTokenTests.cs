@@ -11,6 +11,26 @@ public class ThemeTokenTests
 {
     private static readonly string Src = Path.Combine(RepoRoot(), "src", "BoosterAI");
 
+    /// <summary>A key defined twice in one dictionary compiles but makes the resources fail to load at run time
+    /// (two parallel deliveries each added WarningIcon). Theme dictionaries repeat keys per theme, so compare siblings only.</summary>
+    [Theory]
+    [InlineData("App.axaml")]
+    [InlineData("Styles.axaml")]
+    public void NoResourceKeyIsDefinedTwiceInOneDictionary(string file)
+    {
+        XNamespace x = "http://schemas.microsoft.com/winfx/2006/xaml";
+        var doc = XDocument.Load(Path.Combine(Src, file));
+        var duplicates = doc.Descendants()
+            .SelectMany(parent => parent.Elements()
+                .Select(e => (string?)e.Attribute(x + "Key"))
+                .Where(k => k != null)
+                .GroupBy(k => k)
+                .Where(g => g.Count() > 1)
+                .Select(g => g.Key))
+            .ToList();
+        Assert.Empty(duplicates);
+    }
+
     private static string RepoRoot()
     {
         for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir is not null; dir = dir.Parent)

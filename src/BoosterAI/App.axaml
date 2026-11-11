@@ -179,7 +179,6 @@
     <StreamGeometry x:Key="BoltIcon">M9.4,1 L3,9.2 L7.4,9.2 L6.4,15 L13,6.6 L8.6,6.6 Z</StreamGeometry>
     <!-- Stroked status marks (16 px box): result cards and the server check in Local models. -->
     <StreamGeometry x:Key="CheckIcon">M3,8.5 L6.5,12 L13,4.5</StreamGeometry>
-    <StreamGeometry x:Key="WarningIcon">M8,1.8 L14.8,13.8 L1.2,13.8 Z M8,6 L8,9.6 M8,11.5 L8,11.9</StreamGeometry>
     <StreamGeometry x:Key="ErrorIcon">M8,1.5 A6.5,6.5 0 1 1 8,14.5 A6.5,6.5 0 1 1 8,1.5 Z M5.6,5.6 L10.4,10.4 M10.4,5.6 L5.6,10.4</StreamGeometry>
       </ResourceDictionary>
   </Application.Resources>
