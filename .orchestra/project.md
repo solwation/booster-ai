@@ -120,7 +120,7 @@ the repository; personal tabs live only in the user's local `config.json`.
 
 ## Shared version
 
-Shared release: **v0.14.1**, commit **412b663a134cd0198f6ca992f677b34de136cf1b**, imported as a
+Shared release: **v0.14.2**, commit **c7929aea49ea76d4edf943e43807989788c67128**, imported as a
 squashed subtree at `.orchestra/shared`. Improve the core in
 `solwation/dirigenten-och-orkestern`, never in this subtree. At conductor startup and
 resume, check that repository's stable releases/tags against this pin (reuse a
