@@ -913,6 +913,84 @@ public class FindRunningTabsTests
     }
 
     [Fact]
+    public void CorruptTabFilesDoNotHideOtherTabs()
+    {
+        var root = Directory.CreateTempSubdirectory("bs-corrupt").FullName;
+        try
+        {
+            var a = new TabConfig { Name = "a" };
+            var b = new TabConfig { Name = "b" };
+            var older = Session(root, "20261027-080000", ("tab1", "1 start pid=10 starttime=100\n", null), ("tab2", "1 start pid=10 starttime=100\n", a));
+            File.WriteAllText(Path.Combine(older, "tab1.tab.json"), "");
+            var newer = Session(root, "20261027-090000", ("tab1", "1 start pid=20 starttime=200\n", null), ("tab2", "1 start pid=20 starttime=200\n", b));
+            File.WriteAllText(Path.Combine(newer, "tab1.tab.json"), "{\"Name\": \"trunc");
+            Assert.Equal(["b", "a"], TabSession.FindRunning(root, Live).Select(f => f.Tab.Name));
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
+    [Fact]
+    public void UnreadableLogGivesNullAndDoesNotHideOtherTabs()
+    {
+        if (OperatingSystem.IsWindows() || Environment.IsPrivilegedProcess) return; // chmod has no effect there
+        var root = Directory.CreateTempSubdirectory("bs-unreadable").FullName;
+        var bad = "";
+        try
+        {
+            var dir = Session(root, "s", ("tab1", "1 start pid=10 starttime=100\n", new TabConfig { Name = "bad" }),
+                ("tab2", "1 start pid=10 starttime=100\n", new TabConfig { Name = "good" }));
+            bad = Path.Combine(dir, "tab1.log");
+            File.SetUnixFileMode(bad, UnixFileMode.None);
+            Assert.Null(TabSession.Open(dir).ReadLog("tab1"));
+            Assert.Equal(["good"], TabSession.FindRunning(root, Live).Select(f => f.Tab.Name));
+        }
+        finally
+        {
+            if (bad != "" && File.Exists(bad)) File.SetUnixFileMode(bad, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void CleanUpContinuesPastADirectoryItCannotHandle()
+    {
+        if (OperatingSystem.IsWindows() || Environment.IsPrivilegedProcess) return;
+        var root = Directory.CreateTempSubdirectory("bs-clean-bad").FullName;
+        var locked = "";
+        try
+        {
+            locked = Session(root, "a-locked", ("tab1", "1 start pid=11 starttime=5\n", null));
+            var dead = Session(root, "z-dead", ("tab1", "1 start pid=11 starttime=5\n", null));
+            foreach (var d in new[] { locked, dead }) Directory.SetCreationTime(d, DateTime.Now.AddDays(-3));
+            File.SetUnixFileMode(locked, UnixFileMode.None);
+            TabSession.CleanUp(root, DateTime.Now, Live);
+            Assert.False(Directory.Exists(dead));
+        }
+        finally
+        {
+            if (locked != "" && Directory.Exists(locked))
+                File.SetUnixFileMode(locked, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void SaveTabLeavesNoTemporaryFileAndIsFound()
+    {
+        var root = Directory.CreateTempSubdirectory("bs-save").FullName;
+        try
+        {
+            var dir = Session(root, "s", ("tab1", "1 start pid=10 starttime=100\n", null));
+            var session = TabSession.Open(dir);
+            session.SaveTab("tab1", new TabConfig { Name = "old" });
+            session.SaveTab("tab1", new TabConfig { Name = "saved" });
+            Assert.Equal(["tab1.log", "tab1.tab.json"], Directory.GetFiles(dir).Select(f => Path.GetFileName(f)).Where(n => n.StartsWith("tab1")).Order().ToArray());
+            Assert.Equal(["saved"], TabSession.FindRunning(root, Live).Select(f => f.Tab.Name));
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
+    [Fact]
     public void CleanUpKeepsOldSessionsWhoseTabsStillRun()
     {
         var root = Directory.CreateTempSubdirectory("bs-clean").FullName;

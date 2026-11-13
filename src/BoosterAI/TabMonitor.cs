@@ -792,8 +792,17 @@ for line in sys.stdin:
     /// <summary>Remembers what tab <paramref name="id"/> was started with, so a later BoosterAI can find it again (FindRunning).</summary>
     public void SaveTab(string id, TabConfig tab)
     {
-        try { File.WriteAllText(Path.Combine(Directory, id + ".tab.json"), JsonSerializer.Serialize(tab, ConfigJsonContext.Default.TabConfig)); }
+        // Written beside the target and renamed over it, so a crash never leaves a truncated tabN.tab.json
+        // (the temporary name does not match the tab*.tab.json glob).
+        var path = Path.Combine(Directory, id + ".tab.json");
+        var temporary = path + "." + Guid.NewGuid().ToString("N");
+        try
+        {
+            File.WriteAllText(temporary, JsonSerializer.Serialize(tab, ConfigJsonContext.Default.TabConfig));
+            File.Move(temporary, path, overwrite: true);
+        }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException) { /* not found again after a restart */ }
+        finally { try { File.Delete(temporary); } catch (Exception e) when (e is IOException or UnauthorizedAccessException) { } }
     }
 
     /// <summary>A known tab from an earlier BoosterAI run, with liveness checked during discovery.</summary>
@@ -812,10 +821,18 @@ for line in sys.stdin:
     {
         var found = new List<RunningTab>();
         if (live is null || !System.IO.Directory.Exists(root)) return found;
-        try
+        string[] dirs;
+        try { dirs = System.IO.Directory.GetDirectories(root).OrderByDescending(Path.GetFileName, StringComparer.Ordinal).ToArray(); }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return found; }
+        foreach (var dir in dirs)
         {
-            foreach (var dir in System.IO.Directory.GetDirectories(root).OrderByDescending(Path.GetFileName, StringComparer.Ordinal))
-                foreach (var meta in System.IO.Directory.GetFiles(dir, "tab*.tab.json").Order(StringComparer.Ordinal))
+            string[] metas;
+            try { metas = System.IO.Directory.GetFiles(dir, "tab*.tab.json").Order(StringComparer.Ordinal).ToArray(); }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException) { continue; }
+            foreach (var meta in metas)
+            {
+                // One unreadable or corrupt tab must not hide the others.
+                try
                 {
                     var id = Path.GetFileName(meta)[..^".tab.json".Length];
                     var logPath = Path.Combine(dir, id + ".log");
@@ -826,8 +843,9 @@ for line in sys.stdin:
                     if (JsonSerializer.Deserialize(File.ReadAllText(meta), ConfigJsonContext.Default.TabConfig) is { } tab)
                         found.Add(new RunningTab(dir, id, tab, log) { ShellAlive = alive });
                 }
+                catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException) { }
+            }
         }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException) { }
         return found.OrderByDescending(tab => tab.ShellAlive).ToList();
     }
 
@@ -935,7 +953,7 @@ for line in sys.stdin:
             var path = Path.Combine(Directory, id + ".log");
             return File.Exists(path) ? TabLog.Parse(File.ReadAllText(path)) : null;
         }
-        catch (IOException) { return null; }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return null; }
     }
 
     /// <summary>Uses explicit CLI hooks when available, otherwise the last terminal output time.</summary>
@@ -1035,12 +1053,15 @@ for line in sys.stdin:
     /// <summary>Old sessions are only logs; keep two days, and longer while one of their tabs still runs.</summary>
     internal static void CleanUp(string root, DateTime now, Func<int, long?>? live)
     {
-        try
+        DirectoryInfo[] dirs;
+        try { dirs = new DirectoryInfo(root).GetDirectories(); }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return; }
+        foreach (var d in dirs)
         {
-            foreach (var d in new DirectoryInfo(root).GetDirectories())
-                if (d.CreationTime < now.AddDays(-2) && !HasLiveTab(d.FullName, live)) d.Delete(recursive: true);
+            // One directory that cannot be read or deleted must not keep the others.
+            try { if (d.CreationTime < now.AddDays(-2) && !HasLiveTab(d.FullName, live)) d.Delete(recursive: true); }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }
         }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }
     }
 
     private static bool HasLiveTab(string dir, Func<int, long?>? live) =>
