@@ -19,6 +19,7 @@
     <AvaloniaResource Include="../../assets/agents/README.md" Link="Assets/Agents/README.md" />
     <AvaloniaResource Include="../../assets/agents/*.png" Link="Assets/Agents/%(Filename)%(Extension)" />
     <AvaloniaResource Include="../../assets/fonts/*.ttf" Link="Assets/Fonts/%(Filename)%(Extension)" />
+    <AvaloniaResource Include="../../assets/fonts/*.txt" Link="Assets/Fonts/%(Filename)%(Extension)" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Resources/Strings.*.json" WithCulture="false" />

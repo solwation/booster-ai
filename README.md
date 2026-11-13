@@ -73,6 +73,5 @@ BoosterAI-*-linux-x64/install-linux.sh
 The app embeds fonts and agent icons under their own licences. The release zip and tar.gz ship the texts
 under `licenses/fonts/` (`OFL.txt` for IBM Plex Sans/Mono, SIL OFL 1.1; `LICENSE-BoosterAISymbols.txt` for
 `BoosterAISymbols-Regular.ttf`, derived from DejaVu Sans Mono, Bitstream Vera licence) and
-`licenses/agent-icons/`. The standalone setup exe is a single file without them; the same texts are in the
-repository under [`assets/fonts/`](assets/fonts/) and [`assets/agents/`](assets/agents/), and in the zip/tar.gz
-of the same release.
+`licenses/agent-icons/`. The texts are also embedded in the exe/binary itself (Avalonia resources `Assets/Fonts/` and
+`Assets/Agents/`), so the standalone setup exe carries them too; they are also in the repository under [`assets/fonts/`](assets/fonts/) and [`assets/agents/`](assets/agents/).
