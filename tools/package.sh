@@ -32,6 +32,8 @@ mkdir -p "$win"
 cp dist/win-x64/BoosterAI.exe "$installer" "$win/"
 mkdir -p "$win/licenses/agent-icons"
 cp assets/agents/LICENSE-*.txt assets/agents/README.md "$win/licenses/agent-icons/"
+mkdir -p "$win/licenses/fonts"
+cp assets/fonts/OFL.txt assets/fonts/LICENSE-BoosterAISymbols.txt "$win/licenses/fonts/"
 (cd dist/stage && python3 -m zipfile -c "$out/BoosterAI-$ver-win-x64.zip" "BoosterAI-$ver-win-x64")
 
 # Windows setup: the same (already signed, when signing is on) exe under a BoosterAI-Setup name, which makes
@@ -45,6 +47,8 @@ mkdir -p "$lin"
 cp dist/linux-x64/BoosterAI tools/install-linux.sh assets/boosterai.svg assets/boosterai.png "$lin/"
 mkdir -p "$lin/licenses/agent-icons"
 cp assets/agents/LICENSE-*.txt assets/agents/README.md "$lin/licenses/agent-icons/"
+mkdir -p "$lin/licenses/fonts"
+cp assets/fonts/OFL.txt assets/fonts/LICENSE-BoosterAISymbols.txt "$lin/licenses/fonts/"
 chmod 755 "$lin/BoosterAI" "$lin/install-linux.sh"
 tar -C dist/stage -czf "$out/BoosterAI-$ver-linux-x64.tar.gz" "BoosterAI-$ver-linux-x64"
 
