@@ -1,3 +1,3 @@
-version: 0.37.0
-sv: Tydligare projektlista, enhetliga inställningar och kontextval samt förbättrade agentkort och installation.
-en: Clearer project rows, consistent settings and context choices, plus improved agent cards and setup.
+version: 0.37.1
+sv: Licenstexterna för appens typsnitt följer nu med i appen och i release-paketen.
+en: The licence texts for the app's fonts now ship inside the app and in the release packages.
