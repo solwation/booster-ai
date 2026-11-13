@@ -11,8 +11,8 @@
 #   active      in use: carries a claim marker (see below) whose issue is not known
 #               to be closed; has no commits of its own and its HEAD changed within
 #               --min-age (a fresh worker checkout); or references an open issue
-#               (branch name or unmerged commit subjects, looked up with gh): never
-#               removed
+#               (a number ending the branch name, or #N in unmerged commit subjects,
+#               looked up with gh): never removed
 #   unproven    uncommitted changes, or commits whose patch is not on main, with no
 #               open issue: removed with --apply only together with --archive DIR,
 #               which first writes DIR/<name>.bundle (all local refs beyond main)
@@ -136,7 +136,7 @@ for d in "${candidates[@]}"; do
       ahead=$((ahead + $(git -C "$d" rev-list --count "$base..$ref" 2>/dev/null || echo 0)))
       new=$((new + $(git -C "$d" cherry "$base" "$ref" 2>/dev/null | grep -c '^+')))
     done
-    nums=$( { printf '%s\n' "$branch" | grep -oE '[0-9]{2,6}$'; git -C "$d" log --format=%s "$base..HEAD" 2>/dev/null | grep -oE '#[0-9]+' | tr -d '#'; } | sort -un)
+    nums=$( { printf '%s\n' "$branch" | grep -oE '[0-9]{1,6}$'; git -C "$d" log --format=%s "$base..HEAD" 2>/dev/null | grep -oE '#[0-9]+' | tr -d '#'; } | sort -un)
     open=0
     for n in $nums; do
       st=unknown
