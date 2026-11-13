@@ -301,11 +301,27 @@ true
             catch (System.ComponentModel.Win32Exception) { return (false, -1, null); }
             if (p is null) return (false, -1, null);
             p.StandardInput.Close();
-            var output = p.StandardOutput.ReadToEndAsync();
-            _ = p.StandardError.ReadToEndAsync();
+            var deadline = DateTime.UtcNow + limit;
+            var collected = new StringBuilder();
+            var output = Task.Run(async () =>
+            {
+                var buf = new char[4096];
+                int n;
+                while ((n = await p.StandardOutput.ReadAsync(buf)) > 0) lock (collected) collected.Append(buf, 0, n);
+            });
+            var errors = Task.Run(() => p.StandardError.ReadToEndAsync());
+            _ = output.ContinueWith(static t => _ = t.Exception, TaskContinuationOptions.OnlyOnFaulted);
+            _ = errors.ContinueWith(static t => _ = t.Exception, TaskContinuationOptions.OnlyOnFaulted);
             if (!p.WaitForExit(limit)) return (true, -1, null);
-            p.WaitForExit();
-            return (true, p.ExitCode, output.Result);
+            // The shell has exited, but a background job it started (a .bashrc's `daemon &`) may still hold the pipe
+            // open, so the read ends only when that job does: wait for it no longer than the remaining time and
+            // use what has arrived. Such an orphan is not part of the shell's tree and cannot be killed from here;
+            // it gets SIGPIPE at its next write once the pipe is disposed below.
+            var remaining = deadline - DateTime.UtcNow;
+            var drained = remaining > TimeSpan.Zero && output.Wait(remaining);
+            string text;
+            lock (collected) text = collected.ToString();
+            return (true, p.ExitCode, drained || text.Length > 0 ? text : null);
         }
         catch (Exception e) when (e is IOException or InvalidOperationException) { return (true, -1, null); }
         finally

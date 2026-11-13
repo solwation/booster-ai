@@ -221,6 +221,37 @@ public class PrerequisitesTests
 
     [Fact]
     [System.Runtime.Versioning.UnsupportedOSPlatform("windows")]
+    public void RunReturnsWithinTheLimitWhenABackgroundJobKeepsStdoutOpen()
+    {
+        if (!OperatingSystem.IsLinux()) return;
+        using var home = new TempHome();
+        // Like a .bashrc starting `daemon &`: the shell exits at once, the job inherits the pipe and holds it open.
+        var psi = home.Bash("-c", "sleep 30 & echo $!; echo hi");
+        psi.Environment["PATH"] = "/usr/bin:/bin";
+        int? pid = null;
+        try
+        {
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            var (started, code, output) = Prerequisites.Run(psi, TimeSpan.FromSeconds(3));
+            watch.Stop();
+            if (output is not null && int.TryParse(output.Split('\n')[0].Trim(), out var p)) pid = p;
+            Assert.True(started);
+            Assert.True(watch.Elapsed < TimeSpan.FromSeconds(6), $"Run took {watch.Elapsed}");
+            Assert.Equal(0, code);
+            Assert.NotNull(output);
+            Assert.Contains("hi", output);
+        }
+        finally
+        {
+            // Never by name: only the sleep this test started, by the PID it printed.
+            if (pid is { } id)
+                try { System.Diagnostics.Process.GetProcessById(id).Kill(); }
+                catch (Exception e) when (e is ArgumentException or InvalidOperationException) { }
+        }
+    }
+
+    [Fact]
+    [System.Runtime.Versioning.UnsupportedOSPlatform("windows")]
     public void DetectScriptCapturesHelpWrittenToStderr()
     {
         if (!OperatingSystem.IsLinux()) return;
