@@ -1,3 +1,3 @@
-version: 0.37.2
-sv: Musrörelser räknas inte längre som tangenttryckningar, så Kör /orkester igen och auto-clear fungerar som tänkt.
-en: Mouse movement no longer counts as typing, so Run /orkester again and auto-clear work as intended.
+version: 0.37.3
+sv: Agentkontrollen fastnar inte längre när .bashrc startar bakgrundsjobb, och .wslconfig-minne i KB eller B läses rätt.
+en: The agent check no longer hangs when .bashrc starts background jobs, and .wslconfig memory in KB or B is read correctly.
