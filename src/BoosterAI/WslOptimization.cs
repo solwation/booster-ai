@@ -212,7 +212,11 @@ public static class WslConfigFile
         return null;
     }
 
-    /// <summary>Parses values like "16GB", "16384MB", "8gb", "32G" into integer GB.</summary>
+    /// <summary>
+    /// Parses values like "16GB", "16384MB", "8gb", "32G", "4194304KB" or "8589934592B" into whole GB
+    /// (minimum 1). A missing unit means GB. Unknown units, and values that do not fit in an
+    /// <see cref="int"/> of GB, return <c>null</c> (unknown limit) instead of a wrong number.
+    /// </summary>
     public static int? ParseMemoryString(string? value)
     {
         if (string.IsNullOrWhiteSpace(value)) return null;
@@ -225,13 +229,20 @@ public static class WslConfigFile
             return null;
 
         var unit = match.Groups[2].Success ? match.Groups[2].Value.ToUpperInvariant() : "GB";
-        return unit switch
+        double gb;
+        switch (unit)
         {
-            "MB" or "M" => Math.Max(1, (int)Math.Round(num / 1024.0, MidpointRounding.AwayFromZero)),
-            "GB" or "G" => Math.Max(1, (int)Math.Round(num, MidpointRounding.AwayFromZero)),
-            "TB" or "T" => Math.Max(1, (int)Math.Round(num * 1024.0, MidpointRounding.AwayFromZero)),
-            _ => (int)Math.Round(num, MidpointRounding.AwayFromZero)
-        };
+            case "B": gb = num / (1024.0 * 1024.0 * 1024.0); break;
+            case "KB" or "K": gb = num / (1024.0 * 1024.0); break;
+            case "MB" or "M": gb = num / 1024.0; break;
+            case "GB" or "G": gb = num; break;
+            case "TB" or "T": gb = num * 1024.0; break;
+            default: return null;
+        }
+
+        var rounded = Math.Round(gb, MidpointRounding.AwayFromZero);
+        if (double.IsNaN(rounded) || rounded > int.MaxValue) return null;
+        return Math.Max(1, (int)rounded);
     }
 
     /// <summary>

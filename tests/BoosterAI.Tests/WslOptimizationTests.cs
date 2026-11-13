@@ -16,6 +16,11 @@ public class WslOptimizationTests
     [InlineData("16384mb", 16)]
     [InlineData("16.5GB", 17)]
     [InlineData("1TB", 1024)]
+    [InlineData("4194304KB", 4)]
+    [InlineData("4194304k", 4)]
+    [InlineData("8589934592B", 8)]
+    [InlineData("1024KB", 1)]
+    [InlineData("1B", 1)]
     public void ParseMemoryStringParsesValidUnits(string input, int expectedGb)
     {
         Assert.Equal(expectedGb, WslConfigFile.ParseMemoryString(input));
@@ -27,6 +32,11 @@ public class WslOptimizationTests
     [InlineData(null)]
     [InlineData("invalid")]
     [InlineData("GB")]
+    [InlineData("16XB")]
+    [InlineData("16PB")]
+    [InlineData("99999999999GB")]
+    [InlineData("99999999999TB")]
+    [InlineData("1e400")]
     public void ParseMemoryStringReturnsNullForInvalidInput(string? input)
     {
         Assert.Null(WslConfigFile.ParseMemoryString(input));
