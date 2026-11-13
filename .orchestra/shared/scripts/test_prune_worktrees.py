@@ -35,10 +35,10 @@ class PruneWorktreesTests(unittest.TestCase):
         self.root = self.tmp / "root"
         self.root.mkdir()
 
-    def run_script(self, *args, cwd=None):
+    def run_script(self, *args, cwd=None, issues=False, env=ENV):
         result = subprocess.run(
-            ["bash", str(SCRIPT), "--no-issues", *args, str(self.root)],
-            cwd=cwd or self.main, env=ENV, capture_output=True, text=True, check=True)
+            ["bash", str(SCRIPT), *(() if issues else ("--no-issues",)), *args, str(self.root)],
+            cwd=cwd or self.main, env=env, capture_output=True, text=True, check=True)
         rows = {}
         for line in result.stdout.splitlines()[1:]:
             fields = line.split()
@@ -88,6 +88,33 @@ class PruneWorktreesTests(unittest.TestCase):
         self.assertTrue(fresh.exists())
         self.assertFalse(old.exists())
         self.assertFalse((self.tmp / "archive").exists())
+
+    def test_open_issue_in_branch_name_is_active(self):
+        bindir = self.tmp / "bin"
+        bindir.mkdir()
+        gh = bindir / "gh"  # stands in for GitHub: issues 7 and 57 are open
+        gh.write_text('#!/bin/sh\ncase "$2" in */issues/7|*/issues/57) echo open ;;'
+                      ' *) echo closed ;; esac\n')
+        gh.chmod(0o755)
+        env = dict(ENV, PATH=f"{bindir}{os.pathsep}{ENV['PATH']}")
+        git("remote", "set-url", "origin", "https://github.com/example/demo.git", cwd=self.main)
+        paths = {}
+        for name in ("issue-7", "issue-57", "issue-8"):
+            paths[name] = self.root / name
+            git("worktree", "add", "-q", "-b", name, str(paths[name]), "origin/main",
+                cwd=self.main)
+            (paths[name] / "edit.txt").write_text("work in progress\n")
+        args = ("--no-fetch", "--min-age", "0")
+        rows, _ = self.run_script(*args, issues=True, env=env)
+        self.assertEqual(rows["issue-7"][0], "active")
+        self.assertEqual(rows["issue-57"][0], "active")
+        self.assertEqual(rows["issue-8"][0], "unproven")
+        archive = self.tmp / "archive"
+        self.run_script(*args, "--apply", "--archive", str(archive), issues=True, env=env)
+        self.assertTrue(paths["issue-7"].exists())
+        self.assertTrue(paths["issue-57"].exists())
+        self.assertFalse(paths["issue-8"].exists())
+        self.assertTrue((archive / "root__issue-8.patch").exists())
 
 
 if __name__ == "__main__":
