@@ -300,17 +300,21 @@ bs_run() {
 # copied). It polls for the tab's input request: legacy "<since-ms> <base64 text>" or protocol-2 JSON with the
 # expected idle/busy/input generation. It deletes the request and types the text, a final CR separately 0.3 s later so the CLI
 # sees a typed command, not a paste. State is rechecked before text and Enter. A request is skipped when a key was pressed after <since>,
-# so a draft in the prompt is never sent along. No TIOCSTI (disabled on current kernels), no window. TERM, INT and
+# so a draft in the prompt is never sent along. Terminal replies (DA, DECRPM, CPR, kitty keyboard, DCS/OSC/APC strings, theme
+# and size reports), focus reports and mouse motion/wheel are not keys; anything else, a click, a paste or an unrecognized or
+# unfinished sequence (a lone ESC is the Escape key) is. Only the classification keeps an unfinished sequence's tail (bounded,
+# at most 0.5 s): bytes are forwarded at once. input-typed is logged at most once a second, with the last key's time.
+# No TIOCSTI (disabled on current kernels), no window. TERM, INT and
 # QUIT are passed on; a hangup of the tab stops the command with HUP and TERM (script ignores a hangup it does not see
 # on its own terminal) instead of leaving it behind. Logs input-ready protocol=2 while it accepts requests.
 bs_pty() {
-  BS_INPUT="$bs_input" BS_LOG="$bs_log" BS_TIMING="$bs_timing" python3 -c 'import os, sys, pty, tty, termios, fcntl, signal, select, time, base64, json
+  BS_INPUT="$bs_input" BS_LOG="$bs_log" BS_TIMING="$bs_timing" python3 -c 'import os, sys, pty, tty, termios, fcntl, signal, select, time, base64, json, re
 cmd = sys.argv[1:]
 req = os.environ["BS_INPUT"]
-def ev(s):
+def ev(s, at=None):
     try:
         with open(os.environ["BS_LOG"], "a") as f:
-            f.write("%d %s\n" % (time.time() * 1000, s))
+            f.write("%d %s\n" % ((at or time.time()) * 1000, s))
     except (KeyError, OSError):
         pass
 def drop():
@@ -383,7 +387,28 @@ def fresh(expected, before_text=False):
         return state == "idle" and (ready, idle, busy) == (expected["ready"], expected["idle"], expected["busy"])
     except (OSError, ValueError, KeyError):
         return False
-typed = 0.0
+# Replies and reports the terminal sends on its own; group 1: SGR mouse button, group 2: CPR row (row 1 is also a modified F1-F4).
+rep = re.compile(rb"\x1b(?:\[(?:[IO]|<(\d+);\d+;\d+[Mm]|[?>][\d;]*c|\?[\d;]*[unR]|\??[\d;]*\$y|[\d;]*[nt]|(\d+);\d+R)|[P\]_^][ -~]*(?:\x07|\x1b\\))")
+part = re.compile(rb"\x1b(?:\[[<?>]?[\d;$]*|[P\]_^][ -~]*\x1b?)?")
+# keys(s): (whether s holds anything but terminal reports and mouse motion/wheel, the unfinished sequence it ends with).
+def keys(s):
+    i, typed = 0, False
+    while i < len(s):
+        m = rep.match(s, i)
+        if m:
+            b = int(m.group(1) or 32)
+            typed = typed or not (b & 32 or b & 192 == 64) or m.group(2) == b"1"
+            i = m.end()
+        elif part.fullmatch(s, i) and len(s) - i < 256:
+            return typed, s[i:]
+        else:
+            typed, i = True, i + 1
+    return typed, b""
+def key(at):
+    global typed, unlogged
+    typed, unlogged = max(typed, at), max(unlogged, at)
+typed = logged = unlogged = held_at = 0.0
+held = b""
 due = []
 checked = 0.0
 fds = [0, master]
@@ -414,15 +439,22 @@ try:
                 fds = [master]
                 hangup()
             else:
-                # Focus reports are the terminal, not the user typing.
-                if b.replace(b"\x1b[I", b"").replace(b"\x1b[O", b""):
-                    typed = time.time()
-                    ev("input-typed")
                 put(b)
+                if not held:
+                    held_at = time.time()
+                t, held = keys(held + b)
+                if t:
+                    key(time.time())
         now = time.time()
+        if held and now - held_at >= 0.5:
+            key(held_at)
+            held = b""
+        if unlogged and now - logged >= 1:
+            ev("input-typed", unlogged)
+            logged, unlogged = now, 0.0
         if due and now >= due[0][0]:
             _, data, expected, since, label = due.pop(0)
-            if typed > since:
+            if typed > since or held:
                 ev("input-skipped reason=typed" + label)
             elif not fresh(expected):
                 ev("input-skipped reason=stale" + label)
@@ -458,7 +490,7 @@ try:
                     ev("input-skipped reason=invalid" + label)
                 elif due or not fresh(expected, before_text=True):
                     ev("input-skipped reason=stale" + label)
-                elif typed > since:
+                elif typed > since or held:
                     ev("input-skipped reason=typed" + label)
                 else:
                     put(data.rstrip(b"\r"))
@@ -469,6 +501,8 @@ try:
 except OSError:
     hangup()
 finally:
+    if unlogged:
+        ev("input-typed", unlogged)
     try:
         termios.tcsetattr(0, termios.TCSAFLUSH, attrs)
     except termios.error:

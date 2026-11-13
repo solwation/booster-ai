@@ -441,6 +441,143 @@ public class AutoClearPtyTests
         }
     }
 
+    /// <summary>
+    /// bs_pty's own keys() (the text that ships in tab-lib.sh, run by python3) tells keys from terminal replies and mouse
+    /// motion (#163): each case is one or more reads; the unfinished tail of a read is classified with the next one.
+    /// </summary>
+    [Fact]
+    public void KeysAreToldFromTerminalReports()
+    {
+        if (!OperatingSystem.IsLinux() || !OnPath("python3")) return;
+        var lib = TabSession.Lib;
+        var start = lib.IndexOf("rep = re.compile(", StringComparison.Ordinal);
+        var end = lib.IndexOf("\ndef key(", start, StringComparison.Ordinal);
+        Assert.True(start > 0 && end > start);
+        const string E = "\u001b";
+        (string[] Reads, bool Typed, string Held)[] cases =
+        [
+            ([E + "[?62;22c" + E + "[>1;10;0c" + E + "[?2026;2$y" + E + "[2004;1$y" + E + "[?1u"], false, ""),
+            ([E + "P>|Terminal 1.2" + E + "\\" + E + "]11;rgb:0000/0000/0000" + E + "\\" + E + "]10;rgb:ff/ff/ff\a"], false, ""),
+            ([E + "[24;80R" + E + "[?5;7R" + E + "[?997;1n" + E + "[48;30;100;600;1000t" + E + "[I" + E + "[O"], false, ""),
+            ([E + "[<35;10;5M" + E + "[<32;11;5M" + E + "[<64;1;1M" + E + "[<65;1;1M" + E + "[<80;1;1M"], false, ""),
+            (["a"], true, ""),
+            (["å"], true, ""),
+            ([E + "[A"], true, ""),
+            ([E + "x"], true, ""),
+            ([E + "[c"], true, ""),
+            ([E + "[1;5R"], true, ""), // Ctrl+F3 in xterm, or a cursor report from row 1: ambiguous, so typed.
+            ([E + "[200~pasted" + E + "[201~"], true, ""),
+            ([E + "[<0;5;5M"], true, ""),
+            ([E + "[<0;5;5m"], true, ""),
+            ([E + "[<128;5;5M"], true, ""),
+            ([E + "[<35;10;5Mx" + E + "[?62c"], true, ""),
+            (["y" + E + "[<35;1;1M"], true, ""),
+            ([E + "[<35;1", "0;5M"], false, ""),
+            ([E + "P>|Termi", "nal 1.2" + E, "\\"], false, ""),
+            ([E + "]11;rgb:00", "00/0000/0000" + E + "\\k"], true, ""),
+            (["k" + E + "[?62;2"], true, E + "[?62;2"),
+            ([E], false, E),
+            ([E, "[A"], true, ""),
+            ([E + "]11;" + new string('x', 300)], true, ""),
+        ];
+        var driver = string.Join("\n",
+            "import re, sys",
+            lib[start..end],
+            "for line in sys.stdin.read().splitlines():",
+            "    typed, held = False, b\"\"",
+            "    for read in line.split(\" \"):",
+            "        t, held = keys(held + bytes.fromhex(read))",
+            "        typed = typed or t",
+            "    print(int(typed), held.hex())");
+        var psi = new System.Diagnostics.ProcessStartInfo("python3") { RedirectStandardInput = true, RedirectStandardOutput = true };
+        psi.ArgumentList.Add("-c");
+        psi.ArgumentList.Add(driver);
+        using var process = System.Diagnostics.Process.Start(psi)!;
+        try
+        {
+            static string Hex(string s) => Convert.ToHexStringLower(System.Text.Encoding.UTF8.GetBytes(s));
+            process.StandardInput.Write(string.Join("\n", cases.Select(c => string.Join(" ", c.Reads.Select(Hex)))) + "\n");
+            process.StandardInput.Close();
+            var got = process.StandardOutput.ReadToEnd().Split('\n', StringSplitOptions.RemoveEmptyEntries);
+            Assert.True(process.WaitForExit(10000));
+            Assert.Equal(cases.Select(c => (c.Typed ? "1 " : "0 ") + Hex(c.Held)), got);
+        }
+        finally
+        {
+            if (!process.HasExited) process.Kill(entireProcessTree: true);
+        }
+    }
+
+    /// <summary>
+    /// On a real pseudo-terminal (#163): terminal replies and mouse motion, also split over two writes, pass through
+    /// unchanged and log nothing; a lone ESC counts as a key and skips a request; a burst of keys logs input-typed at
+    /// most once a second, the last line with the last key's time.
+    /// </summary>
+    [Fact]
+    public void TerminalReportsAreNotTypingAndKeysAreLoggedOnceASecond()
+    {
+        if (!OperatingSystem.IsLinux() || !File.Exists("/usr/bin/script") || !OnPath("python3")) return;
+        var root = Directory.CreateTempSubdirectory("booster-typed-pty").FullName;
+        var session = new TabSession(root, DateTime.UtcNow);
+        var track = session.NewTrack(autoClear: true)!;
+        var tab = new TabConfig { Llm = "claude", Directory = session.Directory };
+        const string E = "\u001b";
+        string[] reports = [E + "[?62;22c" + E + "P>|Terminal 1.2" + E + "\\" + E + "[?1u" + E + "[?2026;2$y" + E + "]11;rgb:0000/0000/0000" + E + "\\"
+            + E + "[24;80R" + E + "[?997;1n" + E + "[I" + E + "[<35;10;5M" + E + "[<64;10;5M" + E + "[<35;4", "0;7M"];
+        var keys = Enumerable.Range(0, 10).Select(i => ((char)('a' + i)).ToString()).ToArray();
+        var sent = string.Concat(reports) + E + string.Concat(keys);
+        // A fake claude on a raw terminal: records every byte it gets, then stays a while (the once-a-second log is not its exit).
+        var body = "claude() { stty raw -echo; : > ready; head -c " + sent.Length + " > got; sleep 3; }\nexport -f claude\n" + Launcher.TabScript(tab, track: track);
+        var psi = new System.Diagnostics.ProcessStartInfo("script") { RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true };
+        psi.ArgumentList.Add("-qefc");
+        psi.ArgumentList.Add("bash --noprofile --norc -ic '" + body.Replace("'", "'\\''") + "'");
+        psi.ArgumentList.Add("/dev/null");
+        TestShell.Configure(psi, root);
+        using var process = System.Diagnostics.Process.Start(psi)!;
+        var log = Path.Combine(session.Directory, track.Id + ".log");
+        long[] Typed() => File.ReadAllLines(log).Where(l => l.EndsWith(" input-typed", StringComparison.Ordinal)).Select(l => long.Parse(l.Split(' ')[0])).ToArray();
+        long Now() => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        void Send(string s) { process.StandardInput.Write(s); process.StandardInput.Flush(); }
+        try
+        {
+            Assert.True(SpinWait.SpinUntil(() => session.ReadLog(track.Id) is { InputReady: true } && File.Exists(Path.Combine(session.Directory, "ready")), 30000));
+            foreach (var r in reports) { Send(r); Thread.Sleep(100); }
+            Thread.Sleep(1500);
+            Assert.Empty(Typed());
+
+            // The Escape key on its own: an unfinished sequence that never completes, so it is a key.
+            var since = Now();
+            Send(E);
+            Thread.Sleep(100);
+            session.RequestInput(track.Id, since, AutoClear.Command);
+            Assert.True(SpinWait.SpinUntil(() => File.ReadAllText(log).Contains("input-skipped reason=typed"), 10000));
+            Assert.True(SpinWait.SpinUntil(() => Typed().Length == 1, 5000));
+            Thread.Sleep(1200);
+
+            long first = Now(), last = 0;
+            foreach (var k in keys) { last = Now(); Send(k); Thread.Sleep(30); }
+            Assert.True(SpinWait.SpinUntil(() => Typed().Length > 1 && Typed()[^1] >= last, 5000), string.Join(" ", Typed()));
+            Thread.Sleep(1500);
+            // Ten separate keys in about a third of a second: the first at once, the rest in one line a second later.
+            Assert.InRange(Typed().Length - 1, 1, 2 + (last - first) / 1000);
+
+            Assert.True(SpinWait.SpinUntil(() => session.ReadLog(track.Id) is { CliExit: 0 }, 10000));
+            Assert.Equal(sent, File.ReadAllText(Path.Combine(session.Directory, "got")));
+            Send("exit\n");
+            Assert.True(process.WaitForExit(30000));
+            Assert.True(SpinWait.SpinUntil(() => InDirectory(session.Directory).Length == 0, 5000));
+        }
+        finally
+        {
+            if (!process.HasExited) process.Kill(entireProcessTree: true);
+            process.WaitForExit(5000);
+            foreach (var pid in InDirectory(session.Directory))
+                try { System.Diagnostics.Process.GetProcessById(pid).Kill(entireProcessTree: true); } catch (ArgumentException) { }
+            TestShell.StopLeftovers(root);
+            Directory.Delete(root, true);
+        }
+    }
+
     /// <summary>The fake claude's "sleep 600" runs (not a helper's "sleep 1").</summary>
     private static bool Sleeping(string dir) =>
         InDirectory(dir).Any(pid => { try { return File.ReadAllText($"/proc/{pid}/cmdline") == "sleep\0600\0"; } catch (IOException) { return false; } });
