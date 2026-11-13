@@ -8,7 +8,7 @@ using Avalonia.Threading;
 namespace BoosterAI;
 
 /// <summary>
-/// <c>--screenshot file.png [--window main|settings|install|import|restart|setup|uninstall] [--theme light|dark] [--config file.json] [--fake-update [manual:]0.3.0] [--fake-status [error:]text] [--fake-denied] [--fake-changed] [--fake-restartable N] [--fake-output [N]] [--fake-setup [cli|wsl|alias]] [--fake-long-status] [--check-clipping]</c>:
+/// <c>--screenshot file.png [--window main|local-model|local-models|close|settings|install|import|restart|remove-project|alias|wsl-shutdown|agent-yolo|wsl|setup|uninstall] [--theme light|dark] [--config file.json] [--fake-update [manual:]0.3.0] [--fake-status [error:]text] [--fake-denied] [--fake-changed] [--fake-restartable N] [--fake-output [N]] [--fake-setup [cli|wsl|alias]] [--fake-long-status] [--check-clipping]</c>:
 /// renders a window with Avalonia's headless Skia platform. Nothing is shown on the desktop and no
 /// focus changes. The window frame (title bar) is not drawn; only the client area.
 /// </summary>
@@ -107,6 +107,37 @@ internal static class Screenshot
         return new LocalModelsWindow(vm);
     }
 
+    /// <summary>The valid <c>--window</c> values and how to build each window. The error message, and the docs checked by a test, use these names.</summary>
+    internal static readonly IReadOnlyDictionary<string, Func<ScreenshotOptions, MainViewModel, App, Window>> Windows =
+        new Dictionary<string, Func<ScreenshotOptions, MainViewModel, App, Window>>
+        {
+            ["main"] = (o, vm, app) => new MainWindow(vm),
+            ["local-model"] = (o, vm, app) => SampleLocalModel(o.Section),
+            ["local-models"] = (o, vm, app) => SampleLocalModels(o.Section),
+            ["close"] = (o, vm, app) => new CloseAllWindow(vm.PrepareCloseAll(sample: true, confirm: o.Section == "confirm")),
+            ["settings"] = (o, vm, app) => new SettingsWindow(vm),
+            ["install"] = (o, vm, app) => new ConfirmInstallWindow(vm.Tabs.First()),
+            ["import"] = (o, vm, app) => new ImportProjectsWindow(SampleImport()),
+            ["restart"] = (o, vm, app) => new ConfirmRestartWindow(vm.Tabs.First(t => t.IsChanged)),
+            ["remove-project"] = (o, vm, app) => new ConfirmRemoveProjectWindow(new(vm.Projects.First().Name, vm.Tabs.Count(t => t.Parent == vm.Projects.First()))),
+            ["alias"] = (o, vm, app) => ConfirmSetupWindow.Aliases(["claude", "codex"]),
+            ["wsl-shutdown"] = (o, vm, app) => ConfirmSetupWindow.ShutdownWsl(),
+            ["agent-yolo"] = (o, vm, app) => ConfirmSetupWindow.AgentMode(SampleYolo()),
+            ["wsl"] = (o, vm, app) => ConfirmSetupWindow.Wsl(),
+            ["setup"] = (o, vm, app) => SampleWizard(app, o.Section),
+            ["uninstall"] = (o, vm, app) => ConfirmSetupWindow.Uninstall(Installer.SamplePlan()),
+        };
+
+    /// <summary>The valid <c>--window</c> values as written in the error message and docs: "a, b or c".</summary>
+    internal static string WindowNames
+    {
+        get
+        {
+            var names = Windows.Keys.ToArray();
+            return string.Join(", ", names[..^1]) + " or " + names[^1];
+        }
+    }
+
     public static int Run(ScreenshotOptions o)
     {
         AppBuilder.Configure<App>()
@@ -138,25 +169,9 @@ internal static class Screenshot
             if (st.StartsWith("error:")) vm.ShowError(ErrorKind.Launch, st[6..], retry: () => { });
             else vm.ShowStatus(st);
         }
-        Window window = o.Window switch
-        {
-            "main" => new MainWindow(vm),
-            "local-model" => SampleLocalModel(o.Section),
-            "local-models" => SampleLocalModels(o.Section),
-            "close" => new CloseAllWindow(vm.PrepareCloseAll(sample: true, confirm: o.Section == "confirm")),
-            "settings" => new SettingsWindow(vm),
-            "install" => new ConfirmInstallWindow(vm.Tabs.First()),
-            "import" => new ImportProjectsWindow(SampleImport()),
-            "restart" => new ConfirmRestartWindow(vm.Tabs.First(t => t.IsChanged)),
-            "remove-project" => new ConfirmRemoveProjectWindow(new(vm.Projects.First().Name, vm.Tabs.Count(t => t.Parent == vm.Projects.First()))),
-            "alias" => ConfirmSetupWindow.Aliases(["claude", "codex"]),
-            "wsl-shutdown" => ConfirmSetupWindow.ShutdownWsl(),
-            "agent-yolo" => ConfirmSetupWindow.AgentMode(SampleYolo()),
-            "wsl" => ConfirmSetupWindow.Wsl(),
-            "setup" => SampleWizard(app, o.Section),
-            "uninstall" => ConfirmSetupWindow.Uninstall(Installer.SamplePlan()),
-            _ => throw new ArgumentException($"Unknown --window '{o.Window}' (main, settings, install, import, restart, alias, wsl, setup or uninstall)"),
-        };
+        if (!Windows.TryGetValue(o.Window, out var make))
+            throw new ArgumentException($"Unknown --window '{o.Window}' ({WindowNames})");
+        Window window = make(o, vm, app);
         if (window is SettingsWindow sw)
         {
             if (o.Tab is "general" or "allmant") sw.SelectedTabIndex = 1;

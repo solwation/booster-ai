@@ -21,4 +21,22 @@ public class ScreenshotTests
         Assert.NotNull(shot);
         Assert.Null(shot.Tab);
     }
+
+    [Fact]
+    public void WindowNamesMatchDocsAndDocComment()
+    {
+        var names = string.Join("|", Screenshot.Windows.Keys);
+        var root = AppContext.BaseDirectory;
+        while (root is not null && !File.Exists(Path.Combine(root, "docs", "DEVELOPMENT.md"))) root = Path.GetDirectoryName(root);
+        Assert.NotNull(root);
+        Assert.Contains("[--window " + names + "]", File.ReadAllText(Path.Combine(root, "docs", "DEVELOPMENT.md")));
+        Assert.Contains("[--window " + names + "]", File.ReadAllText(Path.Combine(root, "src", "BoosterAI", "Screenshot.cs")));
+    }
+
+    [Fact]
+    public void WindowNamesListEveryNameOnce()
+    {
+        Assert.EndsWith(" or uninstall", Screenshot.WindowNames);
+        foreach (var name in Screenshot.Windows.Keys) Assert.Contains(name, Screenshot.WindowNames);
+    }
 }
