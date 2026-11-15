@@ -22,7 +22,7 @@ public class RecoveryNoticeTests
     {
         var vm = RunningTabs(count);
         vm.ShowRecoveredStatus(vm.Tabs, vm.StatusRevision);
-        Assert.Equal(Loc.Format(count == 1 ? "status.foundRunning.one" : "status.foundRunning.many", count), vm.Status);
+        Assert.Equal(Loc.FormatCount("status.foundRunning", count), vm.Status);
         Assert.False(vm.StatusIsError);
         vm.Tabs[0].SetState(next, next == TabState.CliExited ? 0 : null);
         Assert.Equal("", vm.Status);

@@ -432,7 +432,7 @@ public class InstallerTests : IDisposable
         vm.AddProjects([Found("alpha"), Found("beta")]);
         vm.AddProjects([Found("beta"), Found("gamma")]);
         Assert.Equal(["alpha", "beta", "gamma"], vm.Projects.Select(p => p.Name));
-        Assert.Equal(Loc.Format("setup.projects.many", 3), vm.ProjectsText);
+        Assert.Equal(Loc.FormatCount("setup.projects", 3), vm.ProjectsText);
         Assert.Contains(Found("gamma").Path, vm.KnownPaths);
     }
 
@@ -507,7 +507,7 @@ public class InstallerTests : IDisposable
         vm.Items.Single(i => i.Name == "beta").Selected = false;
         Assert.Equal(["alpha", "gamma"], vm.Projects.Select(p => p.Name));
         Assert.Null(vm.AllSelected);
-        Assert.Equal(Loc.Format("setup.projects.many", 2), vm.ProjectsText);
+        Assert.Equal(Loc.FormatCount("setup.projects", 2), vm.ProjectsText);
         Assert.Contains(Loc.Format("setup.install.projects", 2, vm.SelectedLlm.Label), vm.InstallLines.Select(l => l.Text));
         // The unticked project stays known, so the next search does not offer it again.
         Assert.Contains(Found("beta").Path, vm.KnownPaths);

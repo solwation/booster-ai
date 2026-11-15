@@ -627,7 +627,7 @@ public sealed partial class MainViewModel : Observable
         if (StatusRevision != expectedRevision) return;
         var running = rows.Where(row => row.IsAlive).ToHashSet();
         if (running.Count == 0) return;
-        ShowStatus(Loc.Format(running.Count == 1 ? "status.foundRunning.one" : "status.foundRunning.many", running.Count));
+        ShowStatus(Loc.FormatCount("status.foundRunning", running.Count));
         _recoveredStatusRows = running;
     }
 
@@ -687,8 +687,7 @@ public sealed partial class MainViewModel : Observable
     {
         0 when EnabledCount > 0 => Loc.Get("launch.allRunning"),
         0 => Loc.Get("launch.none"),
-        1 => Loc.Get("launch.one"),
-        var n => Loc.Format("launch.many", n),
+        var n => Loc.FormatCount("launch", n),
     };
 
     /// <summary>Language setting shown in Settings; the change applies after a restart.</summary>
@@ -979,7 +978,7 @@ public sealed partial class MainViewModel : Observable
             Tabs.Add(tab);
             CheckOrkester(tab);
         }
-        if (projects.Count > 0) ShowStatus(Loc.Format(projects.Count == 1 ? "status.imported.one" : "status.imported.many", projects.Count));
+        if (projects.Count > 0) ShowStatus(Loc.FormatCount("status.imported", projects.Count));
     }
 
     /// <summary>Resolves the WSL home (for ~ paths on Windows), then checks every tab.</summary>
@@ -2002,7 +2001,7 @@ public sealed class ImportViewModel : Observable, IProjectList
     public bool HasItems => Items.Count > 0;
     public int SelectedCount => Items.Count(i => i.Selected);
     public bool CanImport => SelectedCount > 0;
-    public string ImportLabel => SelectedCount switch { 0 => Loc.Get("import.none"), 1 => Loc.Get("import.one"), var n => Loc.Format("import.many", n) };
+    public string ImportLabel => SelectedCount switch { 0 => Loc.Get("import.none"), var n => Loc.FormatCount("import", n) };
     public IReadOnlyList<FoundProject> Selected => [.. Items.Where(i => i.Selected).Select(i => i.Project)];
 
     /// <summary>The header check box: on when every row is ticked, mixed when some are; setting it ticks or clears all.</summary>

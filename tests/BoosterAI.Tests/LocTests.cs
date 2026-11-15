@@ -24,6 +24,15 @@ public class LocTests
             Assert.False(string.IsNullOrWhiteSpace(value), $"{lang}:{key} is empty");
     }
 
+    // #169: counted nouns use the .one/.other suffixes that Loc.FormatCount picks.
+    [Theory]
+    [InlineData("sv")]
+    [InlineData("en")]
+    public void NoKeyEndsWithMany(string lang)
+    {
+        Assert.Empty(Loc.Table(lang).Keys.Where(k => k.EndsWith(".many", StringComparison.Ordinal)));
+    }
+
     // #148: the confirmation before Close all is at most three points and under 50 words.
     [Theory]
     [InlineData("sv")]

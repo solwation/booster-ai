@@ -215,8 +215,7 @@ public sealed class InstallWizardViewModel : Observable, IProjectList
     {
         _ when !HasItems => Loc.Get("setup.projects.none"),
         0 => Loc.Get("setup.projects.noneTicked"),
-        1 => Loc.Get("setup.projects.one"),
-        var n => Loc.Format("setup.projects.many", n),
+        var n => Loc.FormatCount("setup.projects", n),
     };
 
     /// <summary>The header check box: on when every project is ticked, mixed when some are; setting it ticks or clears all.</summary>
