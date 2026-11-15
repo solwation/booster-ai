@@ -57,12 +57,20 @@ public static partial class PathMapping
                 if (wslHome is null) return null;
                 tabPath = wslHome + (tabPath.Length > 1 ? tabPath[1..] : "");
             }
-            if (tabPath.StartsWith("/mnt/") && tabPath.Length >= 6 && (tabPath.Length == 6 || tabPath[6] == '/'))
-                return $"{char.ToUpperInvariant(tabPath[5])}:\\" + tabPath[Math.Min(7, tabPath.Length)..].Replace('/', '\\');
+            if (TryMntDrive(tabPath) is { } drivePath) return drivePath;
             return $@"\\wsl.localhost\{distro}" + tabPath.Replace('/', '\\');
         }
         return StartFolder(tabPath, distro);
     }
+
+    /// <summary>
+    /// /mnt/c or /mnt/c/… as C:\ or C:\…; null for anything else (/mnt/wsl/foo, /mnt/cx).
+    /// The character after the drive letter must be / or the end of the string.
+    /// </summary>
+    private static string? TryMntDrive(string tabPath) =>
+        tabPath.StartsWith("/mnt/") && tabPath.Length >= 6 && char.IsAsciiLetter(tabPath[5]) && (tabPath.Length == 6 || tabPath[6] == '/')
+            ? $"{char.ToUpperInvariant(tabPath[5])}:\\" + tabPath[Math.Min(7, tabPath.Length)..].Replace('/', '\\')
+            : null;
 
     /// <summary>True when the project has the shared orchestra (policy, Claude command or Codex skill).</summary>
     public static bool HasOrkester(string localPath) =>
@@ -77,8 +85,7 @@ public static partial class PathMapping
         if (OperatingSystem.IsWindows())
         {
             if (IsWindowsPath(tabPath)) return tabPath;
-            if (tabPath.StartsWith("/mnt/") && tabPath.Length >= 6)
-                return $"{char.ToUpperInvariant(tabPath[5])}:\\" + tabPath[Math.Min(7, tabPath.Length)..].Replace('/', '\\');
+            if (TryMntDrive(tabPath) is { } drivePath) return drivePath;
             if (tabPath.StartsWith('/')) return $@"\\wsl.localhost\{distro}" + tabPath.Replace('/', '\\');
             // New projects usually live in Documents.
             return Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);

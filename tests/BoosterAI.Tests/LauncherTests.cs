@@ -444,6 +444,12 @@ public class PathMappingTests
         Assert.Equal(@"D:\work", PathMapping.ToLocalPath("/mnt/d/work", "Ubuntu", "/home/me"));
         Assert.Null(PathMapping.ToLocalPath("~/proj", "Ubuntu", null));
         Assert.Equal(@"\\wsl.localhost\Ubuntu\home\me\proj", PathMapping.StartFolder("/home/me/proj", "Ubuntu"));
+        // Only /mnt/<letter> followed by / or the end is a drive; other /mnt paths stay on the WSL share.
+        Assert.Equal(@"\\wsl.localhost\Ubuntu\mnt\wsl\foo", PathMapping.StartFolder("/mnt/wsl/foo", "Ubuntu"));
+        Assert.Equal(@"\\wsl.localhost\Ubuntu\mnt\cx", PathMapping.StartFolder("/mnt/cx", "Ubuntu"));
+        Assert.Equal(@"\\wsl.localhost\Ubuntu\mnt\wsl\foo", PathMapping.ToLocalPath("/mnt/wsl/foo", "Ubuntu", null));
+        Assert.Equal(@"C:\", PathMapping.StartFolder("/mnt/c", "Ubuntu"));
+        Assert.Equal(@"C:\x", PathMapping.StartFolder("/mnt/c/x", "Ubuntu"));
     }
 
     [Fact]
