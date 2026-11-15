@@ -128,7 +128,7 @@ public static class Launcher
         if (resume && tab.Llm is "claude" or "agy") args.Add("--continue");
         if (resume && tab.Llm == "aider") args.Add("--restore-chat-history");
         if (tab.Model != Catalog.StandardModel) args.Add("--model " + Quote(tab.Model));
-        if (tab.Llm == "claude" && !string.IsNullOrWhiteSpace(tab.Advisor) && tab.Advisor != Catalog.StandardModel && Catalog.IsSafeModel(tab.Advisor))
+        if (AdvisorPolicy.Evaluate(tab.Llm, tab.Model, tab.Advisor) == AdvisorPolicy.Verdict.Ok)
             args.Add("--advisor " + Quote(tab.Advisor));
         // One-shot mode applies to the orchestra command only; a given prompt (the install) stays interactive.
         var once = tab.NonInteractive && tab.Orkester && prompt is null && !resume;

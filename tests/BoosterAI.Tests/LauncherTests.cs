@@ -92,20 +92,36 @@ public class LauncherTests
     [Fact]
     public void ClaudeAdvisorIsPassedOnlyWhenChosen()
     {
-        string Script(string advisor, string llm = "claude", bool once = false) => Launcher.TabScript(
-            new TabConfig { Directory = "~/proj", Llm = llm, Advisor = advisor, Orkester = once, NonInteractive = once });
-        Assert.Equal("cd ~/'proj' && claude || true && exec bash", Script(Catalog.StandardModel));
-        Assert.Equal("cd ~/'proj' && claude --advisor 'fable' || true && exec bash", Script("fable"));
-        Assert.Equal("cd ~/'proj' && claude --advisor 'claude-fable-5-2' -p '/orkester' || true && exec bash", Script("claude-fable-5-2", once: true));
+        string Script(string advisor, string llm = "claude", bool once = false, string model = "claude-sonnet-5-5") => Launcher.TabScript(
+            new TabConfig { Directory = "~/proj", Llm = llm, Model = model, Advisor = advisor, Orkester = once, NonInteractive = once });
+        Assert.Equal("cd ~/'proj' && claude --model 'claude-sonnet-5-5' || true && exec bash", Script(Catalog.StandardModel));
+        Assert.Equal("cd ~/'proj' && claude --model 'claude-sonnet-5-5' --advisor 'fable' || true && exec bash", Script("fable"));
+        Assert.Equal("cd ~/'proj' && claude --model 'claude-sonnet-5-5' --advisor 'claude-fable-5-2' -p '/orkester' || true && exec bash", Script("claude-fable-5-2", once: true));
         Assert.DoesNotContain("--advisor", Script("fable", "codex"));
         Assert.DoesNotContain("--advisor", Script("bad;rm -rf"));
     }
+
+    [Theory]
+    [InlineData("claude-opus-5-5", "fable", false)]
+    [InlineData("claude-fable-5-2", "opus", false)]
+    [InlineData(Catalog.StandardModel, "fable", false)]
+    [InlineData("my-own-model", "opus", false)]
+    [InlineData("claude-sonnet-5-5", "claude-sonnet-5-5", false)]
+    [InlineData("claude-sonnet-5-5", "haiku", false)]
+    [InlineData("claude-sonnet-5-5", "opus", true)]
+    [InlineData("claude-haiku-5-5", "claude-fable-5-1", true)]
+    public void AdvisorNeedsAnAdvisorModelAndACheapWorker(string worker, string advisor, bool sent) =>
+        Assert.Equal(sent, Launcher.TabScript(new TabConfig { Directory = "~/p", Llm = "claude", Model = worker, Advisor = advisor }).Contains("--advisor"));
+
+    [Fact]
+    public void AdvisorChoicesAreStandardOpusAndFableOnly() =>
+        Assert.All(AdvisorPolicy.Choices.Where(c => c != Catalog.StandardModel), c => Assert.True(AdvisorPolicy.IsAdvisorModel(c)));
 
     [Fact]
     public void ClaudeAdvisorFollowsARestartThatContinues()
     {
         var track = new TabTrack("/s/lib.sh", "/s", "tab1");
-        var tab = new TabConfig { Directory = "~/proj", Llm = "claude", Advisor = "fable" };
+        var tab = new TabConfig { Directory = "~/proj", Llm = "claude", Model = "claude-sonnet-5-5", Advisor = "fable" };
         var restart = Launcher.RestartScript(tab, track, resume: true);
         Assert.Contains("--continue", restart);
         Assert.Contains("--advisor '\\''fable'\\''", restart); // inside bs_run's single quotes

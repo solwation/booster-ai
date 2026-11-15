@@ -284,6 +284,8 @@
                         <TextBlock Classes="muted caption" Text="{local:T advisor.label}" VerticalAlignment="Center" />
                         <ComboBox Classes="field" Width="190" IsEditable="True" ItemsSource="{Binding Advisors}" Text="{Binding Advisor}"
                                   ToolTip.Tip="{local:T advisor.tip}" AutomationProperties.Name="{local:T advisor.label}" />
+                        <TextBlock Classes="caption" Foreground="{DynamicResource WarningBrush}" Text="{Binding AdvisorWarning}" IsVisible="{Binding HasAdvisorWarning}"
+                                   TextTrimming="CharacterEllipsis" MaxWidth="440" VerticalAlignment="Center" ToolTip.Tip="{Binding AdvisorWarning}" />
                       </StackPanel>
                     </StackPanel>
                   </Panel>

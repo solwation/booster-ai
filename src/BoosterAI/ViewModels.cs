@@ -135,14 +135,37 @@ public sealed class TabViewModel : Observable
         {
             if (IsSubTab) return;
             var v = string.IsNullOrWhiteSpace(value) ? Catalog.StandardModel : value.Trim();
-            if (Set(ref _advisor, v)) { foreach (var t in _owner.Tabs.Where(t => t.Parent == this)) t.RaiseAdvisor(); ChoiceChanged(); }
+            if (Set(ref _advisor, v)) { RaiseAdvisorWarning(); foreach (var t in _owner.Tabs.Where(t => t.Parent == this)) t.RaiseAdvisor(); ChoiceChanged(); }
         }
     }
     internal void RaiseAdvisor() { Raise(nameof(Advisor)); ChoiceChanged(); }
+    private void AdvisorInputsChanged() => (Parent ?? this).RaiseAdvisorWarning();
     /// <summary>The Advisor choice is shown for a claude project only.</summary>
     public bool CanAdvisor => _llm == "claude";
-    public IReadOnlyList<string> Advisors => Catalog.ModelsFor("claude");
-    public string Model { get => _model; set { if (Set(ref _model, value?.Trim() ?? "")) ChoiceChanged(); } }
+    public IReadOnlyList<string> Advisors => AdvisorPolicy.Choices;
+    /// <summary>Why the chosen advisor is not passed (#172), for this project or any of its subtabs; null when it is fine.</summary>
+    public string? AdvisorWarning
+    {
+        get
+        {
+            if (IsSubTab) return null;
+            foreach (var t in new[] { this }.Concat(_owner.Tabs.Where(t => t.Parent == this)))
+            {
+                var key = AdvisorPolicy.Evaluate(t.Llm, t.Model, Advisor) switch
+                {
+                    AdvisorPolicy.Verdict.NotAdvisorModel => "advisor.warn.model",
+                    AdvisorPolicy.Verdict.ExpensiveWorker => "advisor.warn.expensive",
+                    AdvisorPolicy.Verdict.UnknownWorker => "advisor.warn.unknown",
+                    _ => null,
+                };
+                if (key is not null) return Loc.Get(key);
+            }
+            return null;
+        }
+    }
+    public bool HasAdvisorWarning => AdvisorWarning is not null;
+    internal void RaiseAdvisorWarning() { Raise(nameof(AdvisorWarning)); Raise(nameof(HasAdvisorWarning)); }
+    public string Model { get => _model; set { if (Set(ref _model, value?.Trim() ?? "")) { AdvisorInputsChanged(); ChoiceChanged(); } } }
 
     public string Directory
     {
@@ -246,6 +269,7 @@ public sealed class TabViewModel : Observable
             Raise(nameof(Models));
             Raise(nameof(IsAi));
             Raise(nameof(CanAdvisor));
+            AdvisorInputsChanged();
             Raise(nameof(CanOrkester));
             Raise(nameof(CanNonInteractive));
             Raise(nameof(CanInstallOrkester));
