@@ -15,6 +15,10 @@ public class AgyPermissionsTests
     [InlineData("\"$HOME/bin/tool\" run && ./x.sh", "tool,x.sh")]
     [InlineData("PHASE=$(cat .agent-do-work-phase 2>/dev/null); echo \"$PHASE\"", "cat,echo")]
     [InlineData("X=$( ls ) && git log", "ls,git")]
+    [InlineData("npm test 2>&1 | tail -5", "npm,tail")]
+    [InlineData("echo fail >&2 && exit 1", "echo,exit")]
+    [InlineData("read x <&3; make &>out; make &>>log & sleep 1", "read,make,sleep")]
+    [InlineData("a&>b || c 2>&- | d", "a,c,d")]
     [InlineData("", "")]
     public void FindsTheProgramsOfACommandLine(string line, string expected) =>
         Assert.Equal(expected.Split(',', StringSplitOptions.RemoveEmptyEntries), AgyPermissions.Programs(line));

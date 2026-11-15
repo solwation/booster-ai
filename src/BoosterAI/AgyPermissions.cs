@@ -17,6 +17,10 @@ public static partial class AgyPermissions
     [GeneratedRegex(@"&&|\|\||[|;&\n]")]
     private static partial Regex Separator();
 
+    // fd duplication (2>&1, >&2, <&0) and &>/&>> redirect output; their & separates nothing.
+    [GeneratedRegex(@"\d*(?:[<>]&|&>>?)")]
+    private static partial Regex AmpersandRedirect();
+
     [GeneratedRegex(@"^[A-Za-z0-9._+-]+$")]
     private static partial Regex ProgramName();
 
@@ -28,13 +32,13 @@ public static partial class AgyPermissions
 
     /// <summary>
     /// The programs a command line runs: the first word of each segment between &amp;&amp;, ||, |, ;
-    /// and &amp;, after VAR=value prefixes, as a bare name (/usr/bin/git → git). Shell keywords and
+    /// and &amp; (not the &amp; of a redirect such as 2&gt;&amp;1), after VAR=value prefixes, as a bare name (/usr/bin/git → git). Shell keywords and
     /// words that cannot be a plain program name are left out.
     /// </summary>
     public static IReadOnlyList<string> Programs(string commandLine)
     {
         var found = new List<string>();
-        foreach (var segment in Separator().Split(commandLine))
+        foreach (var segment in Separator().Split(AmpersandRedirect().Replace(commandLine, " >")))
         {
             var words = segment.Trim().TrimStart('(', '{').Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries)
                 // VAR=$(cat f): the substitution's program is what runs.
