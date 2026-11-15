@@ -19,6 +19,8 @@
   "folder.open.name": "Open in Explorer",
   "folder.open.name.files": "Open in the file manager",
   "model.tip": "Pick from the list or type your own model id",
+  "advisor.label": "Advisor",
+  "advisor.tip": "Advisor model for Claude in this project (--advisor). Standard keeps Claude's own /advisor setting",
   "restart.orkester.tip": "Run /orkester again in the idle session without restarting the tab or agent",
   "restart.orkester.name": "Run orchestra again",
   "restart.once.tip": "Run the orchestra again in the tab (a new one-shot run)",

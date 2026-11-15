@@ -12,7 +12,7 @@ Start your whole working day with one click: BoosterAI opens every project you w
 ## Highlights
 
 - **One click, all your workspaces:** Opens each repository in its own color-coded tab in the right directory. Add subtabs sharing a folder for multi-agent workflows.
-- **Model control:** Pick a model per tab. Interactive Claude, Codex and Aider tabs can resume after a model change when no other tab shares their CLI and folder; see the [conversation limits](docs/DETAILS.md#multiple-tabs-for-one-project).
+- **Model control:** Pick a model per tab, and for Claude an optional per-project advisor model (`--advisor`; *Standard* keeps Claude's own `/advisor` setting) in the expanded project row. Interactive Claude, Codex and Aider tabs can resume after a model change when no other tab shares their CLI and folder; see the [conversation limits](docs/DETAILS.md#multiple-tabs-for-one-project).
 - **Agent overview:** Recognize each CLI by its icon; manage installation, permissions and context in separate settings sections.
 - **Context budgets:** Choose Off, Clear when idle or Summarize in Memory and context → Context. Summarize offers Auto or Manual budgets; the illustrated Auto guide explains model capacity and task reserves. Tune individual agents in Manual. [How budgets work](docs/DETAILS.md#auto-compaction-budgets).
 - **Local models:** Open Settings → AI agents → **Local models** to compare downloadable models, get a hardware-based starting suggestion and download a chosen model through a local Ollama server. Agent programs and model downloads have separate interfaces. Existing exact-model assessment remains available on the agent pages. [Evidence and limits](docs/DETAILS.md#local-model-hardware-advice).

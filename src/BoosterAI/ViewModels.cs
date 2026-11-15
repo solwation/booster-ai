@@ -53,6 +53,7 @@ public sealed class TabViewModel : Observable
 
     private string _name, _directory, _llm, _model;
     private int _colorIndex;
+    private string _advisor = Catalog.StandardModel;
     private bool _enabled, _orkester, _nonInteractive;
     private bool? _hasOrkester;
 
@@ -66,6 +67,7 @@ public sealed class TabViewModel : Observable
         _colorIndex = c.ColorIndex >= 0 ? c.ColorIndex : LegacyIndex(c.Color, index);
         _llm = Catalog.Llms.Contains(c.Llm) ? c.Llm : Catalog.DefaultLlm;
         _model = string.IsNullOrWhiteSpace(c.Model) ? Catalog.StandardModel : c.Model;
+        _advisor = string.IsNullOrWhiteSpace(c.Advisor) ? Catalog.StandardModel : c.Advisor;
         _orkester = c.Orkester;
         _nonInteractive = c.NonInteractive;
         PropertyChanged += (_, e) =>
@@ -125,6 +127,21 @@ public sealed class TabViewModel : Observable
 
     /// <summary>One-shot mode applies to the orchestra command only, so it needs the orchestra on.</summary>
     public bool CanNonInteractive => _orkester && CanOrkester;
+    /// <summary>Per-project <c>--advisor</c> for claude (#170); a subtab uses its project's.</summary>
+    public string Advisor
+    {
+        get => Parent?.Advisor ?? _advisor;
+        set
+        {
+            if (IsSubTab) return;
+            var v = string.IsNullOrWhiteSpace(value) ? Catalog.StandardModel : value.Trim();
+            if (Set(ref _advisor, v)) { foreach (var t in _owner.Tabs.Where(t => t.Parent == this)) t.RaiseAdvisor(); ChoiceChanged(); }
+        }
+    }
+    internal void RaiseAdvisor() { Raise(nameof(Advisor)); ChoiceChanged(); }
+    /// <summary>The Advisor choice is shown for a claude project only.</summary>
+    public bool CanAdvisor => _llm == "claude";
+    public IReadOnlyList<string> Advisors => Catalog.ModelsFor("claude");
     public string Model { get => _model; set { if (Set(ref _model, value?.Trim() ?? "")) ChoiceChanged(); } }
 
     public string Directory
@@ -228,6 +245,7 @@ public sealed class TabViewModel : Observable
             Dispatcher.UIThread.Post(RaiseLlms);
             Raise(nameof(Models));
             Raise(nameof(IsAi));
+            Raise(nameof(CanAdvisor));
             Raise(nameof(CanOrkester));
             Raise(nameof(CanNonInteractive));
             Raise(nameof(CanInstallOrkester));
@@ -293,7 +311,9 @@ public sealed class TabViewModel : Observable
     /// <summary>The LLM or model differs from what the running tab was started with.</summary>
     public bool IsChanged => IsRunning && LaunchedAs is { } l && l.Llm != Catalog.ShellOnly
         && (l.Llm != Llm || l.Model != (string.IsNullOrWhiteSpace(Model) ? Catalog.StandardModel : Model)
+            || (Llm == "claude" && NormalAdvisor(l.Advisor) != NormalAdvisor(Advisor))
             || l.CompactTokens != _owner.CompactTokens(Llm, Model, Orkester && CanOrkester));
+    private static string NormalAdvisor(string? a) => string.IsNullOrWhiteSpace(a) ? Catalog.StandardModel : a;
 
     /// <summary>"Starta om när den är ledig" is waiting for the CLI's next idle.</summary>
     public bool PendingRestart
@@ -503,7 +523,7 @@ public sealed class TabViewModel : Observable
     public TabConfig ToConfig(bool forLaunch) => new()
     {
         Id = Id, Expanded = Expanded, Name = Name.Trim(), Color = Color, ColorIndex = _colorIndex, Directory = Directory.Trim(), Enabled = Enabled,
-        Llm = Llm, Model = string.IsNullOrWhiteSpace(Model) ? Catalog.StandardModel : Model,
+        Llm = Llm, Model = string.IsNullOrWhiteSpace(Model) ? Catalog.StandardModel : Model, Advisor = NormalAdvisor(Advisor),
         Orkester = forLaunch ? Orkester && CanOrkester : Orkester,
         NonInteractive = NonInteractive,
         CompactTokens = forLaunch ? _owner.CompactTokens(Llm, Model, Orkester && CanOrkester) : null,

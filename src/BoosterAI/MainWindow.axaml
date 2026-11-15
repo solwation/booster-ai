@@ -280,6 +280,11 @@
                       <Button Classes="link" Content="{local:T subtab.add}" Click="OnAddSubTab" Padding="0,2"
                               AutomationProperties.Name="{local:T subtab.add}" />
                       <TextBlock Classes="muted caption" Text="{Binding SubTabSummary}" VerticalAlignment="Center" />
+                      <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding CanAdvisor}">
+                        <TextBlock Classes="muted caption" Text="{local:T advisor.label}" VerticalAlignment="Center" />
+                        <ComboBox Classes="field" Width="190" IsEditable="True" ItemsSource="{Binding Advisors}" Text="{Binding Advisor}"
+                                  ToolTip.Tip="{local:T advisor.tip}" AutomationProperties.Name="{local:T advisor.label}" />
+                      </StackPanel>
                     </StackPanel>
                   </Panel>
                 </Panel>

@@ -19,6 +19,8 @@
   "folder.open.name": "Öppna i Utforskaren",
   "folder.open.name.files": "Öppna i filhanteraren",
   "model.tip": "Välj i listan eller skriv ett eget modell-id",
+  "advisor.label": "Rådgivare",
+  "advisor.tip": "Rådgivarmodell för Claude i det här projektet (--advisor). Standard behåller Claudes egen /advisor-inställning",
   "restart.orkester.tip": "Kör /orkester igen i den lediga sessionen utan att starta om fliken eller agenten",
   "restart.orkester.name": "Kör orkestern igen",
   "restart.once.tip": "Kör orkestern igen i fliken (ny engångskörning)",

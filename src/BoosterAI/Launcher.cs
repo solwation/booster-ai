@@ -128,6 +128,8 @@ public static class Launcher
         if (resume && tab.Llm is "claude" or "agy") args.Add("--continue");
         if (resume && tab.Llm == "aider") args.Add("--restore-chat-history");
         if (tab.Model != Catalog.StandardModel) args.Add("--model " + Quote(tab.Model));
+        if (tab.Llm == "claude" && !string.IsNullOrWhiteSpace(tab.Advisor) && tab.Advisor != Catalog.StandardModel && Catalog.IsSafeModel(tab.Advisor))
+            args.Add("--advisor " + Quote(tab.Advisor));
         // One-shot mode applies to the orchestra command only; a given prompt (the install) stays interactive.
         var once = tab.NonInteractive && tab.Orkester && prompt is null && !resume;
         // A resumed conversation gets no first prompt: it already ran /orkester or the install.
@@ -584,7 +586,7 @@ fi
     private static TabConfig InWsl(TabConfig t) => new()
     {
         Name = t.Name, Color = t.Color, ColorIndex = t.ColorIndex, Enabled = t.Enabled,
-        CompactTokens = t.CompactTokens, Id = t.Id, Llm = t.Llm, Model = t.Model, Orkester = t.Orkester, NonInteractive = t.NonInteractive, Directory = PathMapping.ToWslPath(t.Directory), Script = t.Script,
+        CompactTokens = t.CompactTokens, Id = t.Id, Llm = t.Llm, Model = t.Model, Advisor = t.Advisor, Orkester = t.Orkester, NonInteractive = t.NonInteractive, Directory = PathMapping.ToWslPath(t.Directory), Script = t.Script,
     };
 
     private static void LaunchWindowsTerminal(IReadOnlyList<TabConfig> tabs, string distro, string? prompt,

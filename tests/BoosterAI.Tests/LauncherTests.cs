@@ -90,6 +90,28 @@ public class LauncherTests
     }
 
     [Fact]
+    public void ClaudeAdvisorIsPassedOnlyWhenChosen()
+    {
+        string Script(string advisor, string llm = "claude", bool once = false) => Launcher.TabScript(
+            new TabConfig { Directory = "~/proj", Llm = llm, Advisor = advisor, Orkester = once, NonInteractive = once });
+        Assert.Equal("cd ~/'proj' && claude || true && exec bash", Script(Catalog.StandardModel));
+        Assert.Equal("cd ~/'proj' && claude --advisor 'fable' || true && exec bash", Script("fable"));
+        Assert.Equal("cd ~/'proj' && claude --advisor 'claude-fable-5-2' -p '/orkester' || true && exec bash", Script("claude-fable-5-2", once: true));
+        Assert.DoesNotContain("--advisor", Script("fable", "codex"));
+        Assert.DoesNotContain("--advisor", Script("bad;rm -rf"));
+    }
+
+    [Fact]
+    public void ClaudeAdvisorFollowsARestartThatContinues()
+    {
+        var track = new TabTrack("/s/lib.sh", "/s", "tab1");
+        var tab = new TabConfig { Directory = "~/proj", Llm = "claude", Advisor = "fable" };
+        var restart = Launcher.RestartScript(tab, track, resume: true);
+        Assert.Contains("--continue", restart);
+        Assert.Contains("--advisor '\\''fable'\\''", restart); // inside bs_run's single quotes
+    }
+
+    [Fact]
     public void OneShotClaudeUsesPrint() => Assert.Equal(
         "cd ~/'proj' && claude --model 'x' -p '/orkester' || true && exec bash",
         Launcher.TabScript(Once("claude")));
