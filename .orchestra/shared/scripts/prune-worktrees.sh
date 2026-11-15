@@ -192,8 +192,10 @@ for d in "${candidates[@]}"; do
   if [ $kind = wt ]; then
     main=$(dirname "$(git -C "$d" rev-parse --path-format=absolute --git-common-dir)")
     if git -C "$main" worktree remove --force "$d" >/dev/null 2>&1 || { rm -rf "$d" && git -C "$main" worktree prune; }; then
-      if [ "$branch" != "(detached)" ] && git -C "$main" merge-base --is-ancestor "$branch" "$base" 2>/dev/null; then
-        git -C "$main" branch -D "$branch" >/dev/null 2>&1 && echo "           removed worktree and merged branch $branch"
+      # integrated: its commits are on main, merged as they are or as patches (rebase, cherry-pick)
+      if [ "$branch" != "(detached)" ] && { git -C "$main" merge-base --is-ancestor "$branch" "$base" 2>/dev/null ||
+           { git -C "$main" cherry "$base" "$branch" >/dev/null 2>&1 && ! git -C "$main" cherry "$base" "$branch" | grep -q '^+'; }; }; then
+        git -C "$main" branch -D "$branch" >/dev/null 2>&1 && echo "           removed worktree and integrated branch $branch"
       elif [ "$branch" = "(detached)" ]; then echo "           removed worktree"
       else echo "           removed worktree (branch $branch kept, not on main)"; fi
       n_removed=$((n_removed+1)); freed_mb=$((freed_mb+mb))
