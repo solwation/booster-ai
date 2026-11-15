@@ -102,7 +102,7 @@ public static class AutoCompactModels
 {
     // Exact native-window model IDs documented at code.claude.com/docs/en/model-config (2026-11-05).
     public static int? ClaudeContext(string model) => model is "claude-opus-5-5" or "claude-sonnet-5-5"
-        or "claude-haiku-5-5" or "claude-fable-5-1" ? 1_000_000 : null;
+        or "claude-haiku-5-5" or "claude-fable-5-1" or "claude-fable-5-2" ? 1_000_000 : null;
 
     public static IReadOnlyDictionary<string, int> ParseCodex(string json)
     {

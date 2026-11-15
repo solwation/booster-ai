@@ -14,7 +14,7 @@ public static class Catalog
     // Lists from `agy models` and the Codex model cache, 2026-10-26.
     private static readonly Dictionary<string, string[]> Models = new()
     {
-        ["claude"] = [StandardModel, "claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5", "claude-fable-5-1"],
+        ["claude"] = [StandardModel, "claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5", "claude-fable-5-2", "claude-fable-5-1"],
         ["codex"] = [StandardModel, "gpt-6.1-sol", "gpt-6-astra", "gpt-6-sol", "gpt-6-luna", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"],
         ["agy"] =
         [
