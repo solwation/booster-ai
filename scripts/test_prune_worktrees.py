@@ -116,6 +116,25 @@ class PruneWorktreesTests(unittest.TestCase):
         self.assertFalse(paths["issue-8"].exists())
         self.assertTrue((archive / "root__issue-8.patch").exists())
 
+    def test_apply_deletes_branch_delivered_as_cherry_pick(self):
+        path = self.root / "issue-5"
+        git("worktree", "add", "-q", "-b", "issue-5", str(path), "origin/main", cwd=self.main)
+        (path / "f").write_text("a\n")
+        git("add", "f", cwd=path)
+        git("commit", "-q", "-m", "change (#5)", cwd=path)
+        git("commit", "-q", "--allow-empty", "-m", "other", cwd=self.main)
+        git("cherry-pick", "issue-5", cwd=self.main)
+        git("push", "-q", "origin", "main", cwd=self.main)
+        gitdir = Path(git("rev-parse", "--absolute-git-dir", cwd=path))
+        then = time.time() - 3 * 3600
+        for f in (gitdir / "HEAD", gitdir / "logs" / "HEAD"):
+            os.utime(f, (then, then))
+        rows, out = self.run_script("--apply")
+        self.assertEqual(rows["issue-5"][0], "integrated")
+        self.assertIn("integrated branch issue-5", out)
+        self.assertFalse(path.exists())
+        self.assertEqual(git("branch", "--list", "issue-5", cwd=self.main), "")
+
 
 if __name__ == "__main__":
     unittest.main()
