@@ -20,6 +20,7 @@
   "folder.open.name.files": "Öppna i filhanteraren",
   "model.tip": "Välj i listan eller skriv ett eget modell-id",
   "advisor.label": "Rådgivare",
+  "advisor.scope": "Gäller projektets flik och dess Claude-underflikar.",
   "advisor.warn.model": "Måste vara Opus eller Fable. Skickas inte.",
   "advisor.warn.expensive": "Skickas inte: Opus/Fable som modell + rådgivare blir dubbelt så dyrt.",
   "advisor.warn.unknown": "Skickas inte: välj Sonnet eller Haiku som modell.",

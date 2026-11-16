@@ -272,6 +272,19 @@
                     </Button>
                   </Panel>
                 </Grid>
+                <!-- Advisor belongs to the project choices, independently of the subtab expander (#173). -->
+                <Panel IsVisible="{Binding IsProject}">
+                  <Grid Classes="project-columns" Loaded="OnProjectGridLoaded" ColumnDefinitions="4,20,46,4*,5*,166,195,168"
+                        RowDefinitions="Auto,Auto" IsVisible="{Binding CanAdvisor}" Margin="0,6,0,0">
+                    <TextBlock Grid.Column="3" Grid.ColumnSpan="2" Classes="muted caption" Text="{local:T advisor.scope}"
+                               TextWrapping="Wrap" VerticalAlignment="Center" Margin="20,0,12,0" />
+                    <TextBlock Grid.Column="5" Classes="muted caption" Text="{local:T advisor.label}" VerticalAlignment="Center" />
+                    <ComboBox Grid.Column="6" Classes="field" IsEditable="True" ItemsSource="{Binding Advisors}" Text="{Binding Advisor}"
+                              Margin="0,0,12,0" ToolTip.Tip="{local:T advisor.tip}" AutomationProperties.Name="{local:T advisor.label}" />
+                    <TextBlock Grid.Row="1" Grid.Column="3" Grid.ColumnSpan="4" Classes="caption" Foreground="{DynamicResource WarningBrush}"
+                               Text="{Binding AdvisorWarning}" IsVisible="{Binding HasAdvisorWarning}" TextWrapping="Wrap" Margin="20,4,12,0" />
+                  </Grid>
+                </Panel>
                 <!-- Only an expanded project carries a line under it, so collapsed rows keep one rhythm (#152). -->
                 <Panel IsVisible="{Binding IsProject}">
                   <Panel IsVisible="{Binding Expanded}">
@@ -280,13 +293,6 @@
                       <Button Classes="link" Content="{local:T subtab.add}" Click="OnAddSubTab" Padding="0,2"
                               AutomationProperties.Name="{local:T subtab.add}" />
                       <TextBlock Classes="muted caption" Text="{Binding SubTabSummary}" VerticalAlignment="Center" />
-                      <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding CanAdvisor}">
-                        <TextBlock Classes="muted caption" Text="{local:T advisor.label}" VerticalAlignment="Center" />
-                        <ComboBox Classes="field" Width="190" IsEditable="True" ItemsSource="{Binding Advisors}" Text="{Binding Advisor}"
-                                  ToolTip.Tip="{local:T advisor.tip}" AutomationProperties.Name="{local:T advisor.label}" />
-                        <TextBlock Classes="caption" Foreground="{DynamicResource WarningBrush}" Text="{Binding AdvisorWarning}" IsVisible="{Binding HasAdvisorWarning}"
-                                   TextTrimming="CharacterEllipsis" MaxWidth="440" VerticalAlignment="Center" ToolTip.Tip="{Binding AdvisorWarning}" />
-                      </StackPanel>
                     </StackPanel>
                   </Panel>
                 </Panel>

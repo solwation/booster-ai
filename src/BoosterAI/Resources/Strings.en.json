@@ -20,6 +20,7 @@
   "folder.open.name.files": "Open in the file manager",
   "model.tip": "Pick from the list or type your own model id",
   "advisor.label": "Advisor",
+  "advisor.scope": "Applies to the project tab and its Claude subtabs.",
   "advisor.warn.model": "Must be Opus or Fable. Not sent.",
   "advisor.warn.expensive": "Not sent: an Opus/Fable model plus an advisor costs twice as much.",
   "advisor.warn.unknown": "Not sent: pick Sonnet or Haiku as the model.",
