@@ -1,0 +1,8 @@
+{
+  "version": "2.1.325",
+  "configuredAdvisor": "opus",
+  "disableEnvironment": "1",
+  "exitCode": 0,
+  "stdout": "/advisor isn't available in this environment.",
+  "stderr": ""
+}

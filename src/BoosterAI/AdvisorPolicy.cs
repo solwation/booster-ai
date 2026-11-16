@@ -9,9 +9,16 @@ public static class AdvisorPolicy
 {
     public enum Verdict { Off, Ok, NotAdvisorModel, ExpensiveWorker, UnknownWorker }
 
-    /// <summary>The advisor choices on offer: Standard (Claude's own setting) and Opus/Fable only.</summary>
+    public const string Disabled = "off";
+
+    /// <summary>Old Standard/empty choices become explicitly disabled; chosen model IDs are preserved.</summary>
+    public static string Normalize(string? advisor) => string.IsNullOrWhiteSpace(advisor)
+        || advisor.Trim().Equals(Catalog.StandardModel, StringComparison.OrdinalIgnoreCase)
+        || advisor.Trim().Equals(Disabled, StringComparison.OrdinalIgnoreCase) ? Disabled : advisor.Trim();
+
+    /// <summary>The advisor choices on offer: Off and Opus/Fable only. The UI localizes Off.</summary>
     public static readonly IReadOnlyList<string> Choices =
-        [Catalog.StandardModel, "opus", "fable", "claude-opus-5-5", "claude-fable-5-2", "claude-fable-5-1"];
+        [Disabled, "opus", "fable", "claude-opus-5-5", "claude-fable-5-2", "claude-fable-5-1"];
 
     public static bool IsAdvisorModel(string model) => Mentions(model, "opus", "fable");
 
@@ -25,7 +32,8 @@ public static class AdvisorPolicy
 
     public static Verdict Evaluate(string llm, string? worker, string? advisor)
     {
-        if (llm != "claude" || string.IsNullOrWhiteSpace(advisor) || advisor == Catalog.StandardModel) return Verdict.Off;
+        advisor = Normalize(advisor);
+        if (llm != "claude" || advisor == Disabled) return Verdict.Off;
         if (!Catalog.IsSafeModel(advisor) || !IsAdvisorModel(advisor)) return Verdict.NotAdvisorModel;
         return IsCheapWorker(worker) switch { true => Verdict.Ok, false => Verdict.ExpensiveWorker, null => Verdict.UnknownWorker };
     }

@@ -111,12 +111,18 @@ public static class Launcher
         string Build(bool compact)
         {
             var cli = CliCommand(tab, prompt, track, resume, compact);
-            return track is null ? cli : TrackedCommand(cli, tab, track);
+            return AdvisorEnvironment(tab) + (track is null ? cli : TrackedCommand(cli, tab, track));
         }
         var selected = Build(true);
         return tab.Llm == "claude" && tab.CompactTokens is { } n && AutoCompact.ValidValue("claude", n)
             ? AutoCompact.GuardClaude(selected, Build(false)) : selected;
     }
+
+    // Scope the documented opt-out to the CLI/runner, including shell aliases and streamed one-shot runs.
+    // Invalid cost-policy choices must not fall back to a saved advisor either. Never change user settings.
+    private static string AdvisorEnvironment(TabConfig tab) => tab.Llm == "claude"
+        && AdvisorPolicy.Evaluate(tab.Llm, tab.Model, tab.Advisor) != AdvisorPolicy.Verdict.Ok
+            ? "CLAUDE_CODE_DISABLE_ADVISOR_TOOL=1 " : "";
 
     private static string CliCommand(TabConfig tab, string? prompt, TabTrack? track, bool resume, bool compact = true)
     {
@@ -213,7 +219,7 @@ public static class Launcher
             "aider" => "bs_run " + Quote("aider --restore-chat-history" + model + " -m " + Quote(SaveAndClosePrompt)),
             _ => throw new ArgumentException("A save turn requires an AI CLI."),
         };
-        return $"{Cd(InWsl(tab))} && bs_cli && bs_ev close-save token={Quote(token)} && {command} && bs_done 0 || bs_done $?";
+        return $"{Cd(InWsl(tab))} && bs_cli && bs_ev close-save token={Quote(token)} && {AdvisorEnvironment(tab)}{command} && bs_done 0 || bs_done $?";
     }
 
     internal static string StopTrackedForegroundScript(int pid, long startTime) => $$"""

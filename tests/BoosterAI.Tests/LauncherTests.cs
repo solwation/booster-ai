@@ -6,7 +6,7 @@ public class LauncherTests
 {
     [Fact]
     public void ClaudeWithModelAndOrkester() => Assert.Equal(
-        "cd ~/'proj' && claude --model 'claude-opus-5-5' '/orkester' || true && exec bash",
+        "cd ~/'proj' && CLAUDE_CODE_DISABLE_ADVISOR_TOOL=1 claude --model 'claude-opus-5-5' '/orkester' || true && exec bash",
         Launcher.TabScript(new TabConfig { Directory = "~/proj", Llm = "claude", Model = "claude-opus-5-5", Orkester = true }));
 
     [Fact]
@@ -94,7 +94,7 @@ public class LauncherTests
     {
         string Script(string advisor, string llm = "claude", bool once = false, string model = "claude-sonnet-5-5") => Launcher.TabScript(
             new TabConfig { Directory = "~/proj", Llm = llm, Model = model, Advisor = advisor, Orkester = once, NonInteractive = once });
-        Assert.Equal("cd ~/'proj' && claude --model 'claude-sonnet-5-5' || true && exec bash", Script(Catalog.StandardModel));
+        Assert.Equal("cd ~/'proj' && CLAUDE_CODE_DISABLE_ADVISOR_TOOL=1 claude --model 'claude-sonnet-5-5' || true && exec bash", Script(Catalog.StandardModel));
         Assert.Equal("cd ~/'proj' && claude --model 'claude-sonnet-5-5' --advisor 'fable' || true && exec bash", Script("fable"));
         Assert.Equal("cd ~/'proj' && claude --model 'claude-sonnet-5-5' --advisor 'claude-fable-5-2' -p '/orkester' || true && exec bash", Script("claude-fable-5-2", once: true));
         Assert.DoesNotContain("--advisor", Script("fable", "codex"));
@@ -114,8 +114,8 @@ public class LauncherTests
         Assert.Equal(sent, Launcher.TabScript(new TabConfig { Directory = "~/p", Llm = "claude", Model = worker, Advisor = advisor }).Contains("--advisor"));
 
     [Fact]
-    public void AdvisorChoicesAreStandardOpusAndFableOnly() =>
-        Assert.All(AdvisorPolicy.Choices.Where(c => c != Catalog.StandardModel), c => Assert.True(AdvisorPolicy.IsAdvisorModel(c)));
+    public void AdvisorChoicesAreOffOpusAndFableOnly() =>
+        Assert.All(AdvisorPolicy.Choices.Where(c => c != AdvisorPolicy.Disabled), c => Assert.True(AdvisorPolicy.IsAdvisorModel(c)));
 
     [Fact]
     public void ClaudeAdvisorFollowsARestartThatContinues()
@@ -129,7 +129,7 @@ public class LauncherTests
 
     [Fact]
     public void OneShotClaudeUsesPrint() => Assert.Equal(
-        "cd ~/'proj' && claude --model 'x' -p '/orkester' || true && exec bash",
+        "cd ~/'proj' && CLAUDE_CODE_DISABLE_ADVISOR_TOOL=1 claude --model 'x' -p '/orkester' || true && exec bash",
         Launcher.TabScript(Once("claude")));
 
     [Fact]
@@ -465,7 +465,7 @@ public class PathMappingTests
     public void WindowsTerminalTabCdsIntoTheWslForm()
     {
         var args = Launcher.WindowsTerminalArgs([new TabConfig { Directory = @"C:\Users\me\Documents\web shop", Llm = "claude" }], "Ubuntu");
-        Assert.StartsWith("cd '/mnt/c/Users/me/Documents/web shop' && claude", args[^5]);
+        Assert.StartsWith("cd '/mnt/c/Users/me/Documents/web shop' && CLAUDE_CODE_DISABLE_ADVISOR_TOOL=1 claude", args[^5]);
     }
 
     [Fact]

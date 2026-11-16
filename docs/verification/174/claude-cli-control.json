@@ -1,0 +1,8 @@
+{
+  "version": "2.1.325",
+  "configuredAdvisor": "opus",
+  "disableEnvironment": null,
+  "exitCode": 0,
+  "stdout": "Advisor: Opus 5.5\nUsage: /advisor <fable|opus|sonnet|off>",
+  "stderr": ""
+}

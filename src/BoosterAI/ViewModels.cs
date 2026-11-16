@@ -53,7 +53,7 @@ public sealed class TabViewModel : Observable
 
     private string _name, _directory, _llm, _model;
     private int _colorIndex;
-    private string _advisor = Catalog.StandardModel;
+    private string _advisor = AdvisorPolicy.Disabled;
     private bool _enabled, _orkester, _nonInteractive;
     private bool? _hasOrkester;
 
@@ -67,7 +67,7 @@ public sealed class TabViewModel : Observable
         _colorIndex = c.ColorIndex >= 0 ? c.ColorIndex : LegacyIndex(c.Color, index);
         _llm = Catalog.Llms.Contains(c.Llm) ? c.Llm : Catalog.DefaultLlm;
         _model = string.IsNullOrWhiteSpace(c.Model) ? Catalog.StandardModel : c.Model;
-        _advisor = string.IsNullOrWhiteSpace(c.Advisor) ? Catalog.StandardModel : c.Advisor;
+        _advisor = AdvisorPolicy.Normalize(c.Advisor);
         _orkester = c.Orkester;
         _nonInteractive = c.NonInteractive;
         PropertyChanged += (_, e) =>
@@ -134,15 +134,21 @@ public sealed class TabViewModel : Observable
         set
         {
             if (IsSubTab) return;
-            var v = string.IsNullOrWhiteSpace(value) ? Catalog.StandardModel : value.Trim();
-            if (Set(ref _advisor, v)) { RaiseAdvisorWarning(); foreach (var t in _owner.Tabs.Where(t => t.Parent == this)) t.RaiseAdvisor(); ChoiceChanged(); }
+            var v = AdvisorPolicy.Normalize(value);
+            if (Set(ref _advisor, v)) { Raise(nameof(AdvisorChoice)); RaiseAdvisorWarning(); foreach (var t in _owner.Tabs.Where(t => t.Parent == this)) t.RaiseAdvisor(); ChoiceChanged(); }
         }
     }
-    internal void RaiseAdvisor() { Raise(nameof(Advisor)); ChoiceChanged(); }
+    /// <summary>The localized editor text is separate from the persisted advisor ID.</summary>
+    public string AdvisorChoice
+    {
+        get => Advisor == AdvisorPolicy.Disabled ? Loc.Get("advisor.off") : Advisor;
+        set => Advisor = value == Loc.Get("advisor.off") ? AdvisorPolicy.Disabled : value;
+    }
+    internal void RaiseAdvisor() { Raise(nameof(Advisor)); Raise(nameof(AdvisorChoice)); ChoiceChanged(); }
     private void AdvisorInputsChanged() => (Parent ?? this).RaiseAdvisorWarning();
     /// <summary>The Advisor choice is shown for a claude project only.</summary>
     public bool CanAdvisor => _llm == "claude";
-    public IReadOnlyList<string> Advisors => AdvisorPolicy.Choices;
+    public IReadOnlyList<string> Advisors => AdvisorPolicy.Choices.Select(a => a == AdvisorPolicy.Disabled ? Loc.Get("advisor.off") : a).ToArray();
     /// <summary>Why the chosen advisor is not passed (#172), for this project or any of its subtabs; null when it is fine.</summary>
     public string? AdvisorWarning
     {
@@ -335,9 +341,10 @@ public sealed class TabViewModel : Observable
     /// <summary>The LLM or model differs from what the running tab was started with.</summary>
     public bool IsChanged => IsRunning && LaunchedAs is { } l && l.Llm != Catalog.ShellOnly
         && (l.Llm != Llm || l.Model != (string.IsNullOrWhiteSpace(Model) ? Catalog.StandardModel : Model)
-            || (Llm == "claude" && NormalAdvisor(l.Advisor) != NormalAdvisor(Advisor))
+            // A pre-upgrade Standard launch may still inherit an advisor until it is restarted.
+            || (Llm == "claude" && l.Advisor != Advisor)
             || l.CompactTokens != _owner.CompactTokens(Llm, Model, Orkester && CanOrkester));
-    private static string NormalAdvisor(string? a) => string.IsNullOrWhiteSpace(a) ? Catalog.StandardModel : a;
+    private static string NormalAdvisor(string? a) => AdvisorPolicy.Normalize(a);
 
     /// <summary>"Starta om när den är ledig" is waiting for the CLI's next idle.</summary>
     public bool PendingRestart

@@ -22,8 +22,8 @@ public sealed class TabConfig
     public bool Enabled { get; set; } = true;
     public string Llm { get; set; } = Catalog.DefaultLlm;
     public string Model { get; set; } = Catalog.StandardModel;
-    /// <summary>claude only: <c>--advisor</c> model for this project (#170); <see cref="Catalog.StandardModel"/> leaves Claude's own saved <c>/advisor</c> choice.</summary>
-    public string Advisor { get; set; } = Catalog.StandardModel;
+    /// <summary>Claude advisor for this project; Off (the default) also suppresses Claude's saved advisor for the process.</summary>
+    public string Advisor { get; set; } = AdvisorPolicy.Disabled;
     public bool Orkester { get; set; }
     /// <summary>Run the orchestra command once non-interactively, then leave a shell. Ignored while Orkester is off.</summary>
     public bool NonInteractive { get; set; }

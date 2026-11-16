@@ -279,7 +279,7 @@
                     <TextBlock Grid.Column="3" Grid.ColumnSpan="2" Classes="muted caption" Text="{local:T advisor.scope}"
                                TextWrapping="Wrap" VerticalAlignment="Center" Margin="20,0,12,0" />
                     <TextBlock Grid.Column="5" Classes="muted caption" Text="{local:T advisor.label}" VerticalAlignment="Center" />
-                    <ComboBox Grid.Column="6" Classes="field" IsEditable="True" ItemsSource="{Binding Advisors}" Text="{Binding Advisor}"
+                    <ComboBox Grid.Column="6" Classes="field" IsEditable="True" ItemsSource="{Binding Advisors}" Text="{Binding AdvisorChoice}"
                               Margin="0,0,12,0" ToolTip.Tip="{local:T advisor.tip}" AutomationProperties.Name="{local:T advisor.label}" />
                     <TextBlock Grid.Row="1" Grid.Column="3" Grid.ColumnSpan="4" Classes="caption" Foreground="{DynamicResource WarningBrush}"
                                Text="{Binding AdvisorWarning}" IsVisible="{Binding HasAdvisorWarning}" TextWrapping="Wrap" Margin="20,4,12,0" />
