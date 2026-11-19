@@ -217,7 +217,8 @@ public class WslOptimizationTests
             WslConfigFile.UseCustomPath(file);
             File.WriteAllText(file, "[wsl2]\nmemory=48GB\nprocessors=4\n");
             var vm = new OptimizationViewModel(new AppConfig());
-            Assert.Equal(48, vm.SliderMemoryGb);
+            // The slider stays within this machine's bounds (#177); the saved cap is still reported as is.
+            Assert.Equal(Math.Min(48, vm.MaxMemoryGb), vm.SliderMemoryGb);
             Assert.Equal(48, vm.CurrentAllocatedGb);
             vm.ShowFakeUnoptimized(64, 48);
             Assert.Equal(48, vm.SliderMemoryGb);
@@ -331,6 +332,41 @@ public class WslOptimizationTests
             vm.SliderMemoryGb = min + 1;
             vm.SaveConfig();
             Assert.Equal(min + 1, WslConfigFile.Load().MemoryGb);
+            Assert.False(vm.CanSave);
+        }
+        finally { WslConfigFile.UseCustomPath(null); File.Delete(file); }
+    }
+
+    [Theory]
+    [InlineData(-1)] // below the slider's minimum
+    [InlineData(+1)] // above its maximum
+    public void SavedCapOutsideTheSliderRangeIsClampedWithoutEnablingSave(int side)
+    {
+        var file = Path.GetTempFileName();
+        try
+        {
+            WslConfigFile.UseCustomPath(file);
+            var (min, max) = WslOptimization.GetSliderBounds(WslOptimization.GetTotalMemoryGb());
+            var saved = side < 0 ? min - 1 : max + 2;
+            var edge = side < 0 ? min : max;
+            File.WriteAllText(file, $"[wsl2]\nmemory={saved}GB\n");
+            var vm = new OptimizationViewModel(new AppConfig());
+
+            Assert.Equal(edge, vm.SliderMemoryGb);
+            Assert.InRange(vm.SliderMemoryGb, vm.MinMemoryGb, vm.MaxMemoryGb);
+            Assert.Equal(saved, vm.CurrentAllocatedGb);
+            Assert.Equal($"{saved} GB", vm.CurrentConfigText);
+            Assert.Equal($"{saved} GB", vm.MemoryCapText);
+            Assert.False(vm.CanSave);
+
+            vm.SliderMemoryGb = edge; // a binding writing back the same value is no choice
+            Assert.False(vm.CanSave);
+            vm.SliderMemoryGb = side < 0 ? min + 1 : max - 1;
+            Assert.True(vm.CanSave);
+            vm.SliderMemoryGb = edge; // the edge itself can be saved once chosen
+            Assert.True(vm.CanSave);
+            vm.SaveConfig();
+            Assert.Equal(edge, WslConfigFile.Load().MemoryGb);
             Assert.False(vm.CanSave);
         }
         finally { WslConfigFile.UseCustomPath(null); File.Delete(file); }

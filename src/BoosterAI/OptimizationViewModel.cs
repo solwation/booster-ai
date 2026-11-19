@@ -11,6 +11,7 @@ public sealed class OptimizationViewModel : Observable
     private int _totalSystemMemoryGb;
     private int? _currentAllocatedGb;
     private int _sliderMemoryGb;
+    private bool _sliderChosen;
     private bool _isOptimized;
     private bool _bannerVisible;
     private string? _statusMessage;
@@ -38,14 +39,19 @@ public sealed class OptimizationViewModel : Observable
             var clamped = Math.Clamp(value, MinMemoryGb, MaxMemoryGb);
             if (Set(ref _sliderMemoryGb, clamped))
             {
+                _sliderChosen = true;
                 Raise(nameof(SliderMemoryText));
                 Raise(nameof(CanSave));
             }
         }
     }
 
-    /// <summary>Saving only does something when the selected cap differs from the one in .wslconfig (or none is set).</summary>
-    public bool CanSave => _currentAllocatedGb != _sliderMemoryGb;
+    /// <summary>
+    /// Saving only does something when the selected cap differs from the one in .wslconfig (or none is set).
+    /// A saved cap outside the slider's range shows the slider at its nearest end (#177); that position is not a
+    /// choice, so saving waits until the user moves the slider.
+    /// </summary>
+    public bool CanSave => _currentAllocatedGb is null || (_sliderChosen && _currentAllocatedGb != _sliderMemoryGb);
 
     public string SliderMemoryText => Loc.Format("settings.optimization.selectedCap", _sliderMemoryGb);
 
@@ -189,7 +195,9 @@ public sealed class OptimizationViewModel : Observable
         _totalSystemMemoryGb = WslOptimization.GetTotalMemoryGb();
         var (_, mem, _) = WslConfigFile.Load();
         _currentAllocatedGb = mem;
-        _sliderMemoryGb = mem ?? RecommendedGb;
+        // Through the bounds, not the setter: loading a file is not a user choice.
+        _sliderMemoryGb = Math.Clamp(mem ?? RecommendedGb, MinMemoryGb, MaxMemoryGb);
+        _sliderChosen = false;
         _isOptimized = mem.HasValue;
 
         // Banner shows on Windows when no explicit memory configuration is set and user hasn't dismissed it
@@ -278,6 +286,7 @@ public sealed class OptimizationViewModel : Observable
         _totalSystemMemoryGb = totalGb;
         _currentAllocatedGb = savedGb;
         _sliderMemoryGb = selectedGb ?? savedGb ?? RecommendedLowerGb;
+        _sliderChosen = false;
         _bannerVisible = savedGb is null;
         Raise(nameof(IsWindows));
         Raise(nameof(IsLinux));
