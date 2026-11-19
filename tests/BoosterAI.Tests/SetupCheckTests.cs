@@ -40,7 +40,6 @@ public class SetupCheckTests
         now = now.AddMinutes(1);
         vm.SetupAgentsOpened();
         vm.SetupWindowActive();
-        vm.CheckSetup();
         Assert.Equal(1, calls);
         pending.SetResult(Installed());
         await vm.SetupCheckTask;
@@ -60,6 +59,46 @@ public class SetupCheckTests
         await vm.SetupCheckTask;
         Assert.Equal(3, calls);
         Assert.Equal("2.0", vm.Setup.Agents.Single(a => a.Cli == "claude").VersionText);
+    }
+
+    [Fact]
+    public async Task ExplicitCheckDuringRunningCheckRunsExactlyOneMoreAfterIt()
+    {
+        var now = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var config = new AppConfig { Tabs = [], WslDistro = "Sample-A" };
+        var gate = new TaskCompletionSource<SetupStatus>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var distros = new List<string>();
+        var vm = new MainViewModel(config)
+        {
+            SetupUtcNow = () => now,
+            DetectSetupAsync = d => { distros.Add(d); return distros.Count == 1 ? gate.Task : Task.FromResult(Installed("2.0")); },
+        };
+        vm.StartSetupChecks();
+        vm.CheckSetup();
+        vm.CheckSetup();
+        vm.SetupWindowActive(); // throttled calls are not queued
+        Assert.Single(distros);
+        gate.SetResult(Installed("1.0"));
+        await vm.SetupCheckTask;
+        Assert.Equal(["Sample-A", "Sample-A"], distros);
+        Assert.False(vm.Setup.IsChecking);
+        Assert.Equal("2.0", vm.Setup.Agents.Single(a => a.Cli == "claude").VersionText);
+    }
+
+    [Fact]
+    public async Task ThrottledCheckDuringRunningCheckIsNotQueued()
+    {
+        var gate = new TaskCompletionSource<SetupStatus>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var calls = 0;
+        var vm = new MainViewModel(new AppConfig { Tabs = [] })
+        {
+            DetectSetupAsync = _ => { calls++; return gate.Task; },
+        };
+        vm.StartSetupChecks();
+        vm.SetupAgentsOpened();
+        gate.SetResult(Installed());
+        await vm.SetupCheckTask;
+        Assert.Equal(1, calls);
     }
 
     [Theory]
@@ -127,12 +166,13 @@ public class SetupCheckTests
         config.WslDistro = "Sample-B";
         vm.SetupAgentsOpened();
         first.SetResult(Installed("old"));
-        await initial;
+        // The task covers the follow-up check too, so hold it open to observe the discarded first result.
+        while (distros.Count < 2) await Task.Delay(5);
         Assert.Equal(new[] { "Sample-A", "Sample-B" }, distros);
         Assert.False(vm.Setup.Status.Checked);
         Assert.True(vm.Setup.IsChecking);
         second.SetResult(Installed("new"));
-        await vm.SetupCheckTask;
+        await initial;
         Assert.Equal("new", vm.Setup.Agents.Single(a => a.Cli == "claude").VersionText);
     }
 

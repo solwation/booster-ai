@@ -284,7 +284,7 @@ public sealed partial class MainViewModel
     /// <summary>The setup bars and the Settings check (#74).</summary>
     public SetupViewModel Setup { get; } = new();
 
-    private bool _setupEnabled, _setupRunning;
+    private bool _setupEnabled, _setupRunning, _setupPending;
     private DateTime _lastSetupCheck = DateTime.MinValue;
     private string? _lastSetupDistro;
     internal Func<DateTime> SetupUtcNow { get; set; } = () => DateTime.UtcNow;
@@ -313,12 +313,29 @@ public sealed partial class MainViewModel
 
     private void RequestSetupCheck(bool onlyIfStale)
     {
-        if (!_setupEnabled || _setupRunning) return;
+        if (!_setupEnabled) return;
+        // An explicit check during a running one must not be lost (#176): queue exactly one more; throttled calls are dropped.
+        if (_setupRunning) { if (!onlyIfStale) _setupPending = true; return; }
         if (onlyIfStale && _lastSetupDistro == _cfg.WslDistro && SetupUtcNow() - _lastSetupCheck < TimeSpan.FromSeconds(30)) return;
         _setupRunning = true;
         _lastSetupCheck = SetupUtcNow();
         _lastSetupDistro = _cfg.WslDistro;
-        SetupCheckTask = RunSetupCheckAsync(_cfg.WslDistro);
+        SetupCheckTask = RunSetupChecksAsync(_cfg.WslDistro);
+    }
+
+    /// <summary>Runs one check, then one more per batch of explicit requests (or a changed distribution) made meanwhile.</summary>
+    private async Task RunSetupChecksAsync(string distro)
+    {
+        await RunSetupCheckAsync(distro);
+        while (_setupPending)
+        {
+            _setupPending = false;
+            if (!_setupEnabled) break;
+            _setupRunning = true;
+            _lastSetupCheck = SetupUtcNow();
+            _lastSetupDistro = _cfg.WslDistro;
+            await RunSetupCheckAsync(_cfg.WslDistro);
+        }
     }
 
     /// <summary>The detector uses hidden processes off the UI thread; only its result is applied on the UI context.</summary>
@@ -348,7 +365,7 @@ public sealed partial class MainViewModel
             _setupRunning = false;
             Setup.IsChecking = false;
             // A distribution changed while a check was running: discard that result and check the current environment.
-            if (_cfg.WslDistro != distro) CheckSetup();
+            if (_cfg.WslDistro != distro) _setupPending = true;
         }
     }
 
