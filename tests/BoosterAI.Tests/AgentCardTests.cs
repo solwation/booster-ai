@@ -2,6 +2,8 @@ using BoosterAI;
 using Xunit;
 
 /// <summary>The overview cards (#158): plain status and permission words, and Install only for a missing agent.</summary>
+// It switches the UI language, like the other tests in this collection.
+[Collection(ConfigFileCollection.Name)]
 public class AgentCardTests
 {
     private static AgentInfo Agent(bool installed, bool outdated = false, string cli = "claude", string aliasKind = "none") =>

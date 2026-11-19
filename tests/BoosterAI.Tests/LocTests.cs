@@ -62,6 +62,24 @@ public class LocTests
     }
 
     [Fact]
+    public void DecimalsFollowTheUiLanguage()
+    {
+        // #178: Swedish text writes "4,7 GB"; computed values must not show "4.7 GB" beside it.
+        try
+        {
+            Loc.Use("sv");
+            Assert.Equal("4,7 GB", LocalModelViewModel.Memory(4_700_000_000));
+            Assert.Equal("7,5", Loc.Number(7.5, "0.#"));
+            Assert.Equal("8", Loc.Number(8, "0.#"));
+            Assert.Equal("7,5 GB · WSL-standard", Loc.Format("settings.optimization.defaultCap", Loc.Number(15 / 2d, "0.#")));
+            Loc.Use("en");
+            Assert.Equal("4.7 GB", LocalModelViewModel.Memory(4_700_000_000));
+            Assert.Equal("7.5", Loc.Number(7.5, "0.#"));
+        }
+        finally { Loc.Use("en"); }
+    }
+
+    [Fact]
     public void InstallPromptFollowsLanguage()
     {
         Loc.Use("sv");

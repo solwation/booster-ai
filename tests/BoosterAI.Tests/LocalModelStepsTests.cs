@@ -42,7 +42,7 @@ public class LocalModelStepsTests : IDisposable
     [Fact]
     public void SizesAreFormattedInDecimalGb()
     {
-        Assert.Equal($"{3.3:0.0} GB", LocalModelViewModel.Memory(3_300_000_000));
+        Assert.Equal("3,3 GB", LocalModelViewModel.Memory(3_300_000_000)); // Swedish decimal comma (#178)
         var hardware = LocalModelViewModel.HardwareText(new(16 * GiB, 3 * GiB, "Example CPU", 8, [new("Example GPU", 8 * GiB, 6 * GiB)]));
         Assert.DoesNotContain("GiB", hardware);
         Assert.Contains("GB", hardware);

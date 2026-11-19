@@ -100,7 +100,7 @@ internal sealed class LocalModelViewModel : Observable
     }
 
     // One unit in every window: decimal GB, as model pages and the catalog publish sizes (#155).
-    internal static string Memory(long? bytes) => bytes.HasValue ? $"{bytes.Value / 1e9:0.0} GB" : Loc.Get("localAdvice.unknown");
+    internal static string Memory(long? bytes) => bytes.HasValue ? Loc.Number(bytes.Value / 1e9, "0.0") + " GB" : Loc.Get("localAdvice.unknown");
     internal static string HardwareText(HardwareSnapshot hardware) =>
         Loc.Format("localAdvice.ram", Memory(hardware.TotalRam), Memory(hardware.AvailableRam)) + "\n"
         + Loc.Format("localAdvice.cpu", hardware.Cpu.Length > 0 ? hardware.Cpu : Loc.Get("localAdvice.unknown"), hardware.Processors) + "\n"

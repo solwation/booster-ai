@@ -78,6 +78,16 @@ public static class Loc
     public static string Format(string key, params object[] args) =>
         string.Format(CultureInfo.CurrentCulture, Get(key), args);
 
+    /// <summary>
+    /// A decimal number in the UI language: comma for Swedish, point for English (#178). The app runs with
+    /// invariant globalization, so the culture would otherwise always give a point.
+    /// </summary>
+    public static string Number(double value, string format)
+    {
+        var text = value.ToString(format, CultureInfo.InvariantCulture);
+        return Language == "sv" ? text.Replace('.', ',') : text;
+    }
+
     /// <summary>Formats a counted noun: uses key + ".one" when count is 1, otherwise key + ".other"; {0} is the count.</summary>
     public static string FormatCount(string key, int count) =>
         Format(key + (count == 1 ? ".one" : ".other"), count);

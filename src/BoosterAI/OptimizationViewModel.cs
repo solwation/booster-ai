@@ -88,7 +88,7 @@ public sealed class OptimizationViewModel : Observable
     public string MemoryHalfText => ScaleValue(0.5);
     public string MemoryThreeQuarterText => ScaleValue(0.75);
     public string MemoryCapText => _currentAllocatedGb is { } cap
-        ? $"{cap} GB" : Loc.Format("settings.optimization.defaultCap", _totalSystemMemoryGb / 2d);
+        ? $"{cap} GB" : Loc.Format("settings.optimization.defaultCap", Loc.Number(_totalSystemMemoryGb / 2d, "0.#"));
     public double MemoryCurrentFraction => MemoryFraction(_memory.CurrentBytes ?? 0);
     public double MemoryCapFraction => HostFraction(_currentAllocatedGb ?? _totalSystemMemoryGb / 2d);
     public double SuggestedLowerFraction => HostFraction(RecommendedLowerGb);
@@ -108,7 +108,7 @@ public sealed class OptimizationViewModel : Observable
         ? Loc.Format("settings.optimization.usageStatistics", Gb(_memory.AverageBytes!.Value),
             Gb(_memory.MinimumBytes!.Value), Gb(_memory.MaximumBytes!.Value)) : "";
     public string MemoryPeriodText => HasMemoryHistory
-        ? Loc.Format("settings.optimization.usagePeriod", _memory.CollectedTime.TotalMinutes.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture), _memory.SampleCount)
+        ? Loc.Format("settings.optimization.usagePeriod", Loc.Number(_memory.CollectedTime.TotalMinutes, "0.#"), _memory.SampleCount)
         : Loc.Get("settings.optimization.usageWaiting");
     public double MemoryLowerFraction => MemoryFraction(_memory.MinimumBytes ?? 0);
     public double MemoryUpperFraction => MemoryFraction(_memory.MaximumBytes ?? 0);
@@ -117,8 +117,8 @@ public sealed class OptimizationViewModel : Observable
     private double MemoryFraction(double bytes) => HostFraction(bytes / BytesPerGb);
     private double HostFraction(double gb) => _totalSystemMemoryGb <= 0 ? 0 : Math.Clamp(gb / _totalSystemMemoryGb, 0, 1);
     private static string MemoryValue(double? bytes) => bytes is { } value ? Gb(value) + " GB" : "—";
-    private string ScaleValue(double fraction) => (_totalSystemMemoryGb * fraction).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture) + " GB";
-    private static string Gb(double bytes) => (bytes / BytesPerGb).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture);
+    private string ScaleValue(double fraction) => Loc.Number(_totalSystemMemoryGb * fraction, "0.#") + " GB";
+    private static string Gb(double bytes) => Loc.Number(bytes / BytesPerGb, "0.0");
 
     /// <summary>Only App startup calls this; tests and headless screenshots never read live memory.</summary>
     public void StartMemoryMonitoring()
