@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 
@@ -23,7 +22,7 @@ public partial class ConfirmInstallWindow : Window
 
     private void OnReadMore(object? sender, RoutedEventArgs e)
     {
-        try { Process.Start(new ProcessStartInfo(OrchestraUrl) { UseShellExecute = true }); }
-        catch (Exception) { /* No browser: the URL is in the README. */ }
+        // No browser: the URL is in the README.
+        ExternalLink.Open(OrchestraUrl);
     }
 }

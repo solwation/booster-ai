@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 
@@ -21,6 +20,6 @@ public partial class LocalModelWindow : Window
         if (!Screenshot.Active) await _vm.CheckAsync(_lifetime.Token);
     }
     private void OnSources(object? sender, RoutedEventArgs e) =>
-        Process.Start(new ProcessStartInfo("https://github.com/solwation/booster-ai/blob/main/docs/DETAILS.md#local-model-hardware-advice") { UseShellExecute = true })?.Dispose();
+        ExternalLink.Open("https://github.com/solwation/booster-ai/blob/main/docs/DETAILS.md#local-model-hardware-advice");
     private void OnDone(object? sender, RoutedEventArgs e) => Close();
 }

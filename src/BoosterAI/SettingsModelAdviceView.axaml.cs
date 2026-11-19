@@ -1,5 +1,3 @@
-using System.ComponentModel;
-using System.Diagnostics;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 
@@ -23,7 +21,6 @@ public partial class SettingsModelAdviceView : UserControl
     private void OnProfileSource(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not SettingsModelAdviceViewModel { HasProfile: true } vm) return;
-        try { Process.Start(new ProcessStartInfo(vm.Source) { UseShellExecute = true })?.Dispose(); }
-        catch (Exception ex) when (ex is Win32Exception or InvalidOperationException) { }
+        ExternalLink.Open(vm.Source);
     }
 }

@@ -1,5 +1,3 @@
-using System.ComponentModel;
-using System.Diagnostics;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 
@@ -40,10 +38,5 @@ public partial class LocalModelsWindow : Window
             _ => "https://docs.openhands.dev/openhands/usage/llms/local-llms",
         });
     }
-    private static void Open(string url)
-    {
-        if (Screenshot.Active) return;
-        try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true })?.Dispose(); }
-        catch (Exception ex) when (ex is Win32Exception or InvalidOperationException) { }
-    }
+    private static void Open(string url) => ExternalLink.Open(url);
 }
