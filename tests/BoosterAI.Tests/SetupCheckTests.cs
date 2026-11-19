@@ -167,7 +167,8 @@ public class SetupCheckTests
         vm.SetupAgentsOpened();
         first.SetResult(Installed("old"));
         // The task covers the follow-up check too, so hold it open to observe the discarded first result.
-        while (distros.Count < 2) await Task.Delay(5);
+        for (var waited = 0; distros.Count < 2 && waited < 2000; waited++) await Task.Delay(5);
+        Assert.Equal(2, distros.Count);
         Assert.Equal(new[] { "Sample-A", "Sample-B" }, distros);
         Assert.False(vm.Setup.Status.Checked);
         Assert.True(vm.Setup.IsChecking);
