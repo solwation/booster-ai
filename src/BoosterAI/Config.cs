@@ -58,6 +58,8 @@ public sealed class AppConfig
     public bool MinimizeToTray { get; set; } = true;
     /// <summary>System notification when a watched tab closes, fails to start or its CLI fails.</summary>
     public bool Notifications { get; set; } = true;
+    /// <summary>Main window: show the Advisor row under Claude projects (#180). Only display; launches never read it.</summary>
+    public bool ShowAdvisor { get; set; }
     /// <summary>Global CLI zoom in percent of the terminal's default font size; 0 = terminal default (nothing is changed).</summary>
     public int ZoomPercent { get; set; }
     /// <summary>Folder "Find projects" searches; empty means <see cref="ProjectScanner.DefaultRoot"/> (Documents, else home).</summary>
@@ -189,6 +191,7 @@ public static class ConfigMerge
         S(c => c.AfterLaunch, (c, v) => c.AfterLaunch = v),
         S(c => c.MinimizeToTray, (c, v) => c.MinimizeToTray = v),
         S(c => c.Notifications, (c, v) => c.Notifications = v),
+        S(c => c.ShowAdvisor, (c, v) => c.ShowAdvisor = v),
         S(c => c.ZoomPercent, (c, v) => c.ZoomPercent = v),
         S(c => c.ProjectSearchRoot, (c, v) => c.ProjectSearchRoot = v),
         S(c => c.AutoUpdateClis, (c, v) => c.AutoUpdateClis = v),

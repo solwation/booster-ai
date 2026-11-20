@@ -1,0 +1,1 @@
+{"Language": "sv", "ShowAdvisor": false, "Tabs": [{"Name": "Atlas", "Directory": "~/projects/atlas", "Llm": "claude", "Model": "sonnet", "Enabled": true}, {"Name": "Nimbus", "Directory": "~/projects/nimbus", "Llm": "codex", "Enabled": true}, {"Name": "Orion", "Directory": "~/projects/orion", "Llm": "claude", "Enabled": false}]}

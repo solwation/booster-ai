@@ -25,6 +25,8 @@
   "advisor.warn.model": "Måste vara Opus eller Fable. Skickas inte.",
   "advisor.warn.expensive": "Skickas inte: Opus/Fable som modell + rådgivare blir dubbelt så dyrt.",
   "advisor.warn.unknown": "Skickas inte: välj Sonnet eller Haiku som modell.",
+  "advisor.switch.tip": "Visa valet av rådgivare under Claude-projekten. Ett projekt med en vald rådgivare visar den alltid.",
+  "advisor.switch.name": "Visa rådgivare",
   "advisor.tip": "Rådgivaren är avstängd som förval. Av blockerar även Claudes sparade rådgivare för den här processen. Välj Opus eller Fable tillsammans med Sonnet eller Haiku för att aktivera, och starta om en redan öppen flik. Av gör /advisor otillgängligt i fliken; inga globala Claude-inställningar ändras.",
   "restart.orkester.tip": "Kör /orkester igen i den lediga sessionen utan att starta om fliken eller agenten",
   "restart.orkester.name": "Kör orkestern igen",

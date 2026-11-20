@@ -68,6 +68,7 @@ public sealed class TabViewModel : Observable
         _llm = Catalog.Llms.Contains(c.Llm) ? c.Llm : Catalog.DefaultLlm;
         _model = string.IsNullOrWhiteSpace(c.Model) ? Catalog.StandardModel : c.Model;
         _advisor = AdvisorPolicy.Normalize(c.Advisor);
+        _advisorPinned = _advisor != AdvisorPolicy.Disabled;
         _orkester = c.Orkester;
         _nonInteractive = c.NonInteractive;
         PropertyChanged += (_, e) =>
@@ -148,6 +149,13 @@ public sealed class TabViewModel : Observable
     private void AdvisorInputsChanged() => (Parent ?? this).RaiseAdvisorWarning();
     /// <summary>The Advisor choice is shown for a claude project only.</summary>
     public bool CanAdvisor => _llm == "claude";
+    // A chosen advisor keeps its row while the main window's Advisor switch is off, so an active choice is never hidden (#180).
+    // Fixed at load and whenever the switch turns off, so clearing the field while editing does not hide the row mid-edit.
+    private bool _advisorPinned;
+    internal void RaiseAdvisorVisible() => Raise(nameof(AdvisorVisible));
+    internal void PinAdvisor() { _advisorPinned = IsProject && Advisor != AdvisorPolicy.Disabled; Raise(nameof(AdvisorVisible)); }
+    /// <summary>The Advisor row under a claude project: when the main window's switch is on, or this project has an advisor chosen.</summary>
+    public bool AdvisorVisible => IsProject && CanAdvisor && (_owner.ShowAdvisor || _advisorPinned);
     public IReadOnlyList<string> Advisors => AdvisorPolicy.Choices.Select(a => a == AdvisorPolicy.Disabled ? Loc.Get("advisor.off") : a).ToArray();
     /// <summary>Why the chosen advisor is not passed (#172), for this project or any of its subtabs; null when it is fine.</summary>
     public string? AdvisorWarning
@@ -275,6 +283,8 @@ public sealed class TabViewModel : Observable
             Raise(nameof(Models));
             Raise(nameof(IsAi));
             Raise(nameof(CanAdvisor));
+            Raise(nameof(AdvisorVisible));
+            _owner.AdvisorSwitchChanged();
             AdvisorInputsChanged();
             Raise(nameof(CanOrkester));
             Raise(nameof(CanNonInteractive));
@@ -595,6 +605,9 @@ public sealed partial class MainViewModel : Observable
         }
         _projects = Tabs.Where(t => t.IsProject).ToArray();
         _visibleTabs = Tabs.Where(IsVisibleTab).ToArray();
+        // An existing chosen advisor starts with the switch on, so the switch and the visible rows agree (#180).
+        if (_projects.Any(p => p.CanAdvisor && p.Advisor != AdvisorPolicy.Disabled)) cfg.ShowAdvisor = true;
+        AdvisorSwitchChanged();
         OrchestraColumnChanged();
         Tabs.CollectionChanged += (_, _) => TabsChanged();
         Update = new UpdateViewModel(cfg, Save);
@@ -761,6 +774,28 @@ public sealed partial class MainViewModel : Observable
     }
     public bool MinimizeToTray { get => _cfg.MinimizeToTray; set { _cfg.MinimizeToTray = value; Raise(); } }
     public bool Notifications { get => _cfg.Notifications; set { _cfg.Notifications = value; Raise(); } }
+    /// <summary>The main window's Advisor switch (#180): shows the Advisor row under every Claude project.</summary>
+    public bool ShowAdvisor
+    {
+        get => _cfg.ShowAdvisor;
+        set
+        {
+            if (_cfg.ShowAdvisor == value) return;
+            _cfg.ShowAdvisor = value;
+            Raise();
+            foreach (var p in Projects) p.PinAdvisor();
+        }
+    }
+    /// <summary>The Advisor switch shows only while some project runs claude; it has nothing to show otherwise.</summary>
+    public bool CanShowAdvisor => _canShowAdvisor;
+    private bool _canShowAdvisor;
+    internal void AdvisorSwitchChanged()
+    {
+        var can = _projects.Any(p => p.CanAdvisor);
+        if (can == _canShowAdvisor) return;
+        _canShowAdvisor = can;
+        Raise(nameof(CanShowAdvisor));
+    }
     public bool AutoUpdateClis { get => _cfg.AutoUpdateClis; set { _cfg.AutoUpdateClis = value; Raise(); } }
     public bool AutoClearIdle { get => _cfg.AutoClearIdle; set { _cfg.AutoClearIdle = value; Raise(); RefreshContextMode(); } }
     /// <summary>The auto-clear minutes for the number box (decimal? is what it binds); an empty box keeps the last value.</summary>
@@ -858,6 +893,7 @@ public sealed partial class MainViewModel : Observable
         if (!_projects.SequenceEqual(projects))
         {
             _projects = projects;
+            AdvisorSwitchChanged();
             Raise(nameof(Projects));
         }
         var visible = Tabs.Where(IsVisibleTab).ToArray();
@@ -1105,9 +1141,10 @@ public sealed partial class MainViewModel : Observable
         foreach (var editor in _compactEditors.Values) editor.UpdateSettings(_cfg.AutoCompactSettings);
         RefreshCompactMode();
         foreach (var name in new[] { nameof(WslDistro), nameof(LinuxTerminal), nameof(ProjectSearchRoot), nameof(CanResetProjectSearchRoot), nameof(Theme), nameof(SelectedTheme), nameof(SelectedLanguage),
-            nameof(SelectedAppearance), nameof(SelectedAfterLaunch), nameof(MinimizeToTray), nameof(Notifications), nameof(SelectedZoom), nameof(AutoUpdateClis), nameof(AutoClearIdle), nameof(AutoClearMinutes), nameof(CheckForUpdates) })
+            nameof(SelectedAppearance), nameof(SelectedAfterLaunch), nameof(MinimizeToTray), nameof(Notifications), nameof(ShowAdvisor), nameof(SelectedZoom), nameof(AutoUpdateClis), nameof(AutoClearIdle), nameof(AutoClearMinutes), nameof(CheckForUpdates) })
             Raise(name);
         foreach (var t in Tabs) t.RaiseColor();
+        foreach (var p in Projects) p.RaiseAdvisorVisible();
         (Avalonia.Application.Current as App)?.ApplyTheme();
     }
 

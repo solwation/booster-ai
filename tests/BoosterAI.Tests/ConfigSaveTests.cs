@@ -84,7 +84,7 @@ public class ConfigMergeTests
         var disk = new AppConfig
         {
             WslDistro = "Debian", LinuxTerminal = "kitty", ColorTheme = "Other", Language = "en", AppTheme = "dark",
-            AfterLaunch = "close", MinimizeToTray = false, Notifications = false, ZoomPercent = 80, AutoUpdateClis = false, CheckForUpdates = false,
+            AfterLaunch = "close", MinimizeToTray = false, Notifications = false, ShowAdvisor = true, ZoomPercent = 80, AutoUpdateClis = false, CheckForUpdates = false,
             AutoClearIdle = true, AutoClearMinutes = 10, AutoCompactMode = AutoCompactPolicy.Auto,
             SkippedVersion = "9.9.9", LastUpdateCheck = new DateTime(2026, 10, 29, 9, 18, 39, DateTimeKind.Utc),
             DismissedWslOptimization = true, ProjectSearchRoot = "/work/projects",

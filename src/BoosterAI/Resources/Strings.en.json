@@ -25,6 +25,8 @@
   "advisor.warn.model": "Must be Opus or Fable. Not sent.",
   "advisor.warn.expensive": "Not sent: an Opus/Fable model plus an advisor costs twice as much.",
   "advisor.warn.unknown": "Not sent: pick Sonnet or Haiku as the model.",
+  "advisor.switch.tip": "Show the advisor choice under the Claude projects. A project with an advisor chosen always shows it.",
+  "advisor.switch.name": "Show advisor",
   "advisor.tip": "The advisor is off by default. Off also blocks Claude’s saved advisor for this process. To enable it, choose Opus or Fable with Sonnet or Haiku, and restart an already open tab. Off makes /advisor unavailable in the tab; no global Claude settings are changed.",
   "restart.orkester.tip": "Run /orkester again in the idle session without restarting the tab or agent",
   "restart.orkester.name": "Run orchestra again",
