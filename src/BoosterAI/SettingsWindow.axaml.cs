@@ -47,6 +47,13 @@ public partial class SettingsWindow : Window
     {
         var index = Math.Max(0, OptimizationSections.SelectedIndex);
         for (var i = 0; i < OptimizationPages.Children.Count; i++) OptimizationPages.Children[i].IsVisible = i == index;
+        // The memory limit page reads autoMemoryReclaim again and checks the WSL version (hidden wsl --version, #183);
+        // screenshots and other hosts keep their sample state and run no process.
+        if (index == 1 && OperatingSystem.IsWindows() && !Screenshot.Active)
+        {
+            _vm.Optimization.Reclaim.Refresh();
+            _ = _vm.Optimization.Reclaim.CheckVersionAsync();
+        }
     }
 
     public string? SelectedAgentCli
@@ -133,6 +140,17 @@ public partial class SettingsWindow : Window
     {
         var confirmed = await ConfirmSetupWindow.ShutdownWsl().ShowDialog<bool>(this);
         _vm.Optimization.RestartWsl(confirmed);
+    }
+
+    /// <summary>Tag "gradual", "dropCache" or "remove": confirm the exact lines first, then write; WSL is not restarted.</summary>
+    private async void OnSetMemoryReclaim(object? sender, RoutedEventArgs e)
+    {
+        var reclaim = _vm.Optimization.Reclaim;
+        var value = MemoryReclaimViewModel.ValueFor((sender as Control)?.Tag as string);
+        if (!reclaim.CanWrite(value)) return;
+        var path = Screenshot.Active || WslConfigFile.PathOnDisk == "" ? @"C:\Users\me\.wslconfig" : WslConfigFile.PathOnDisk;
+        var confirmed = await ConfirmSetupWindow.MemoryReclaim(value, reclaim.Preview(value), path).ShowDialog<bool>(this);
+        reclaim.Write(value, confirmed);
     }
 
     private void OnResetSearchRoot(object? sender, RoutedEventArgs e) => _vm.ResetProjectSearchRoot();

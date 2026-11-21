@@ -8,14 +8,14 @@ using Avalonia.Threading;
 namespace BoosterAI;
 
 /// <summary>
-/// <c>--screenshot file.png [--window main|local-model|local-models|close|settings|install|import|restart|remove-project|alias|wsl-shutdown|agent-yolo|wsl|setup|uninstall] [--theme light|dark] [--config file.json] [--fake-update [manual:]0.3.0] [--fake-status [error:]text] [--fake-denied] [--fake-changed] [--fake-restartable N] [--fake-output [N]] [--fake-setup [cli|wsl|alias]] [--fake-long-status] [--check-clipping]</c>:
+/// <c>--screenshot file.png [--window main|local-model|local-models|close|settings|install|import|restart|remove-project|alias|wsl-shutdown|memory-reclaim|agent-yolo|wsl|setup|uninstall] [--theme light|dark] [--config file.json] [--fake-update [manual:]0.3.0] [--fake-status [error:]text] [--fake-denied] [--fake-changed] [--fake-restartable N] [--fake-output [N]] [--fake-setup [cli|wsl|alias]] [--fake-long-status] [--check-clipping] [--fake-memory-reclaim gradual|dropcache|disabled|other|old|unknown]</c>:
 /// renders a window with Avalonia's headless Skia platform. Nothing is shown on the desktop and no
 /// focus changes. The window frame (title bar) is not drawn; only the client area.
 /// </summary>
 internal sealed record ScreenshotOptions(string File, string Window, string? FakeUpdate, string? FakeStatus, bool FakeDenied, bool FakeChanged,
     int? FakeOutput = null, int FakeRestartable = 0, string? FakeSetup = null, string? Tab = null, bool FakeOptimization = false, int? FakeMemoryCap = null,
     string? Section = null, string? FakeMemoryState = null, int? Width = null, int? Height = null, bool FakeOrchestraIdle = false, int? FakeMemorySaved = null,
-    bool FakeLongStatus = false, bool CheckClipping = false);
+    bool FakeLongStatus = false, bool CheckClipping = false, string? FakeMemoryReclaim = null);
 
 internal static class Screenshot
 {
@@ -37,7 +37,7 @@ internal static class Screenshot
             int.TryParse(Value(args, "--width"), out var width) ? width : null,
             int.TryParse(Value(args, "--height"), out var height) ? height : null, args.Contains("--fake-orchestra-idle"),
             int.TryParse(Value(args, "--fake-memory-saved"), out var saved) ? saved : null,
-            args.Contains("--fake-long-status"), args.Contains("--check-clipping"));
+            args.Contains("--fake-long-status"), args.Contains("--check-clipping"), Value(args, "--fake-memory-reclaim"));
     }
 
     /// <summary>--fake-output [N]: the popup of the Nth running sample tab (0: the first, interactive; 1: Watching).</summary>
@@ -107,6 +107,36 @@ internal static class Screenshot
         return new LocalModelsWindow(vm);
     }
 
+    /// <summary>
+    /// --fake-memory-reclaim gradual|dropcache|disabled|other|old|unknown: a neutral autoMemoryReclaim state (#183) on the
+    /// optimization pages; old and unknown leave the key unset on WSL 1.2.5 or an unreadable version. Default: unset, WSL 2.6.3.
+    /// </summary>
+    private static void SampleReclaim(MainViewModel vm, string? state)
+    {
+        var supported = new Version(2, 6, 3);
+        var (setting, version) = state switch
+        {
+            null => (new MemoryReclaimSetting(MemoryReclaimMode.NotSet, null), supported),
+            "gradual" => (new(MemoryReclaimMode.Gradual, "gradual"), supported),
+            "dropcache" => (new(MemoryReclaimMode.DropCache, "dropCache"), supported),
+            "disabled" => (new(MemoryReclaimMode.Disabled, "disabled"), supported),
+            "other" => (new(MemoryReclaimMode.Other, "sometimes"), supported),
+            "old" => (new(MemoryReclaimMode.NotSet, null), new Version(1, 2, 5)),
+            "unknown" => (new(MemoryReclaimMode.NotSet, null), (Version?)null),
+            _ => throw new ArgumentException("Unknown --fake-memory-reclaim: " + state),
+        };
+        vm.Optimization.Reclaim.ShowFake(setting, version);
+    }
+
+    /// <summary>--window memory-reclaim: the confirmation for writing gradual (or removing it with --fake-memory-reclaim gradual).</summary>
+    private static ConfirmSetupWindow SampleMemoryReclaim(MainViewModel vm, string? state)
+    {
+        vm.Optimization.ShowFakeUnoptimized(savedGb: 24);
+        SampleReclaim(vm, state);
+        var value = vm.Optimization.Reclaim.Mode == MemoryReclaimMode.Gradual ? null : WslMemoryReclaim.Gradual;
+        return ConfirmSetupWindow.MemoryReclaim(value, vm.Optimization.Reclaim.Preview(value), @"C:\Users\me\.wslconfig");
+    }
+
     /// <summary>The valid <c>--window</c> values and how to build each window. The error message, and the docs checked by a test, use these names.</summary>
     internal static readonly IReadOnlyDictionary<string, Func<ScreenshotOptions, MainViewModel, App, Window>> Windows =
         new Dictionary<string, Func<ScreenshotOptions, MainViewModel, App, Window>>
@@ -122,6 +152,7 @@ internal static class Screenshot
             ["remove-project"] = (o, vm, app) => new ConfirmRemoveProjectWindow(new(vm.Projects.First().Name, vm.Tabs.Count(t => t.Parent == vm.Projects.First()))),
             ["alias"] = (o, vm, app) => ConfirmSetupWindow.Aliases(["claude", "codex"]),
             ["wsl-shutdown"] = (o, vm, app) => ConfirmSetupWindow.ShutdownWsl(),
+            ["memory-reclaim"] = (o, vm, app) => SampleMemoryReclaim(vm, o.FakeMemoryReclaim),
             ["agent-yolo"] = (o, vm, app) => ConfirmSetupWindow.AgentMode(SampleYolo()),
             ["wsl"] = (o, vm, app) => ConfirmSetupWindow.Wsl(),
             ["setup"] = (o, vm, app) => SampleWizard(app, o.Section),
@@ -179,6 +210,7 @@ internal static class Screenshot
             {
                 sw.SelectedTabIndex = 2;
                 vm.Optimization.ShowFakeUnoptimized(selectedGb: o.FakeMemoryCap, savedGb: o.FakeMemorySaved);
+                SampleReclaim(vm, o.FakeMemoryReclaim);
                 sw.SelectedOptimizationSectionIndex = o.Section switch { "limit" => 1, "environment" => 2, "context" or "compact" => 3, _ => 0 };
                 if (o.FakeMemoryState is { } state)
                 {

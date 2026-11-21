@@ -28,6 +28,9 @@ public sealed class OptimizationViewModel : Observable
         Refresh();
     }
 
+    /// <summary>[experimental] autoMemoryReclaim beside the memory cap (#183).</summary>
+    public MemoryReclaimViewModel Reclaim { get; } = new();
+
     public int TotalSystemMemoryGb => _totalSystemMemoryGb;
     public int? CurrentAllocatedGb => _currentAllocatedGb;
 
@@ -199,6 +202,7 @@ public sealed class OptimizationViewModel : Observable
         _sliderMemoryGb = Math.Clamp(mem ?? RecommendedGb, MinMemoryGb, MaxMemoryGb);
         _sliderChosen = false;
         _isOptimized = mem.HasValue;
+        Reclaim.Refresh();
 
         // Banner shows on Windows when no explicit memory configuration is set and user hasn't dismissed it
         _bannerVisible = OperatingSystem.IsWindows() && !_isOptimized && !_cfg.DismissedWslOptimization;
@@ -283,6 +287,8 @@ public sealed class OptimizationViewModel : Observable
     public void ShowFakeUnoptimized(int totalGb = 64, int? selectedGb = null, int? savedGb = null)
     {
         _fakeWindows = true;
+        // A neutral reclaim state on a supported WSL; --fake-memory-reclaim may replace it.
+        Reclaim.ShowFake(new(MemoryReclaimMode.NotSet, null), new Version(2, 6, 3));
         _totalSystemMemoryGb = totalGb;
         _currentAllocatedGb = savedGb;
         _sliderMemoryGb = selectedGb ?? savedGb ?? RecommendedLowerGb;

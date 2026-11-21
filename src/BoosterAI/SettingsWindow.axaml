@@ -338,6 +338,33 @@
                            Classes.error="{Binding Optimization.StatusIsError}" Classes.success="{Binding !Optimization.StatusIsError}" TextWrapping="Wrap" Margin="0,6,0,0" />
               </StackPanel>
 
+              <!-- [experimental] autoMemoryReclaim (#183): current value, gradual recommended; edits are confirmed with the
+                   exact lines first and need a WSL version that knows the key. Nothing restarts WSL from here. -->
+              <StackPanel x:Name="MemoryReclaimSection" Spacing="8" Margin="0,8,0,0" IsVisible="{Binding Optimization.IsWindows}">
+                <TextBlock Classes="sectionhead" Text="{local:T settings.optimization.reclaim.title}" />
+                <TextBlock Classes="body-small muted" Text="{local:T settings.optimization.reclaim.intro}" TextWrapping="Wrap" />
+                <Grid ColumnDefinitions="160,*" Margin="0,4,0,0">
+                  <TextBlock Classes="label" Text="{local:T settings.optimization.reclaim.current}" />
+                  <TextBlock Grid.Column="1" Text="{Binding Optimization.Reclaim.CurrentText}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                </Grid>
+                <TextBlock Classes="caption" Text="{local:T settings.optimization.reclaim.recommendation}" TextWrapping="Wrap"
+                           Foreground="{DynamicResource RecommendedBrush}" />
+                <TextBlock Classes="body-small" Text="{Binding Optimization.Reclaim.VersionText}" IsVisible="{Binding Optimization.Reclaim.HasVersionText}"
+                           Classes.error="{Binding Optimization.Reclaim.VersionBlocks}" Classes.muted="{Binding !Optimization.Reclaim.VersionBlocks}"
+                           TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
+                <WrapPanel Orientation="Horizontal" Margin="0,6,0,0">
+                  <Button Classes="secondary" Tag="gradual" Content="{local:T settings.optimization.reclaim.setGradual}" Click="OnSetMemoryReclaim"
+                          IsEnabled="{Binding Optimization.Reclaim.CanSetGradual}" Padding="14,7" Margin="0,0,8,8" />
+                  <Button Tag="dropCache" Content="{local:T settings.optimization.reclaim.setDropCache}" Click="OnSetMemoryReclaim"
+                          IsEnabled="{Binding Optimization.Reclaim.CanSetDropCache}" Padding="14,7" Margin="0,0,8,8" />
+                  <Button Tag="remove" Content="{local:T settings.optimization.reclaim.remove}" Click="OnSetMemoryReclaim"
+                          IsVisible="{Binding Optimization.Reclaim.CanRemove}" Padding="14,7" Margin="0,0,0,8" />
+                </WrapPanel>
+                <TextBlock Classes="muted caption" Text="{local:T settings.optimization.reclaim.restart}" TextWrapping="Wrap" />
+                <TextBlock Classes="body-small" Text="{Binding Optimization.Reclaim.StatusMessage}" IsVisible="{Binding Optimization.Reclaim.HasStatusMessage}"
+                           Classes.error="{Binding Optimization.Reclaim.StatusIsError}" Classes.success="{Binding !Optimization.Reclaim.StatusIsError}"
+                           TextWrapping="Wrap" Margin="0,4,0,0" />
+              </StackPanel>
 
                 <Button Classes="link" Content="{local:T settings.optimization.showUsage}" Click="OnShowMemoryUsage" HorizontalAlignment="Left" />
                 <TextBlock Classes="muted" Text="{local:T settings.optimization.linuxNote}" IsVisible="{Binding Optimization.IsLinux}" TextWrapping="Wrap" />

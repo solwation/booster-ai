@@ -29,6 +29,17 @@ public partial class ConfirmSetupWindow : Window
         Loc.Get("shutdownWsl.code"), "wsl --shutdown", Loc.Get("shutdownWsl.detail"),
         Loc.Get("settings.optimization.restartWsl"), Loc.Get("cancel"));
 
+    /// <summary>
+    /// Confirms an autoMemoryReclaim edit (#183): the exact lines removed and added, the file, and that it takes effect
+    /// only after WSL is shut down. <paramref name="value"/> null removes the key.
+    /// </summary>
+    public static ConfirmSetupWindow MemoryReclaim(string? value, string preview, string path) => new(
+        value is null ? Loc.Get("settings.optimization.reclaim.confirm.removeHeading") : Loc.Format("settings.optimization.reclaim.confirm.heading", value),
+        Loc.Get(value is null ? "settings.optimization.reclaim.confirm.removeBody" : "settings.optimization.reclaim.confirm.body"),
+        Loc.Get("settings.optimization.reclaim.confirm.code"), preview, Loc.Get("settings.optimization.reclaim.restart"),
+        Loc.Get(value is null ? "settings.optimization.reclaim.confirm.remove" : "settings.optimization.reclaim.confirm.write"), Loc.Get("cancel"),
+        detailPath: path);
+
     public static ConfirmSetupWindow Aliases(IReadOnlyList<string> clis) => new(Loc.Get("setupConfirm.alias.heading"),
         Loc.Format("setupConfirm.alias.body", string.Join(", ", clis)), Loc.Get("setupConfirm.alias.code"),
         Prerequisites.BlockStart + "\n" + string.Join("\n", clis.Select(Prerequisites.AliasLine)) + "\n" + Prerequisites.BlockEnd,
