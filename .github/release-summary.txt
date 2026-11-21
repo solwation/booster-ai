@@ -1,3 +1,3 @@
-version: 0.39.1
-sv: Open Interpreter-flikarnas uppgraderingsmeddelande i terminalen är nu på engelska, som övriga terminalmeddelanden.
-en: Open Interpreter tabs now show their terminal upgrade notice in English, like BoosterAI's other terminal messages.
+version: 0.40.0
+sv: YOLO för Codex gäller nu även skript och tmux via config.toml, och WSL kan lämna tillbaka minne till Windows.
+en: Codex YOLO now also applies to scripts and tmux via config.toml, and WSL can return unused memory to Windows.
