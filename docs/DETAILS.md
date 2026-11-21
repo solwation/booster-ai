@@ -244,6 +244,21 @@ Approval and sandbox behavior differ by CLI:
 | Open Interpreter, current standalone (`--oss` capability) | `--ask-for-approval never --sandbox workspace-write`: no prompts inside the selected sandbox | `--dangerously-bypass-approvals-and-sandbox` | [Sandbox](https://www.openinterpreter.com/docs/terminal/sandbox) |
 | Open Interpreter, legacy Python (`--local`/`--auto_run` capabilities) | Not offered | `--auto_run`: generated code runs without confirmation; no added sandbox | [Legacy parser](https://github.com/openinterpreter/openinterpreter/blob/v0.4.2/interpreter/terminal_interface/start_terminal_interface.py) |
 
+**Codex's config.toml follows YOLO.** An alias only applies in interactive shells;
+Codex started from a script, `exec`, tmux or as a subprocess reads `~/.codex/config.toml`
+instead. Applying YOLO for Codex therefore also sets the top-level
+`sandbox_mode = "danger-full-access"` and `approval_policy = "never"` in that file, after
+the same confirmation. The first time, the file is copied to
+`config.toml.before-boosterai-yolo` (an empty backup when it did not exist); applying YOLO
+again keeps that backup. Choosing **No alias** or **Auto Approve** puts the two keys back
+as the backup had them (removing a key it did not have) and deletes the backup; without a
+backup the file is left alone. Only those two top-level lines change: tables such as
+`[projects."…"]`, `model` and every other line stay byte-identical, and CRLF files keep
+their line endings. The Codex permission page warns when the alias and `config.toml`
+disagree (YOLO alias with a sandboxed config, which *Apply alias* with YOLO selected fixes, or a
+YOLO config under another mode). `CODEX_HOME`, profiles and project-level Codex config
+are not followed.
+
 Normal preset edits retain support for older BoosterAI alias blocks. An explicitly
 confirmed replacement uses a separate, canonical per-agent override; subsequent
 changes edit only that override. Duplicate or malformed override blocks are refused

@@ -76,7 +76,29 @@ public sealed class AgentInfo : Observable
     public string AliasInspectCommand => "type " + Cli + (Detected.Kind == "function" ? "; declare -f " + Cli : "; alias " + Cli);
     public string AliasRecommendation => Loc.Get(ModeChoices.Any(c => c.Mode == AgentMode.AutoApprove) ? "agents.alias.recommend" : "agents.alias.recommend.basic");
     public bool CanSelectMode => IsInstalled;
-    public bool CanApply => CanSelectMode && SelectedMode.Mode != AgentMode.Custom && SelectedMode.Mode != CurrentMode;
+    public bool CanApply => CanSelectMode && SelectedMode.Mode != AgentMode.Custom && (SelectedMode.Mode != CurrentMode || CanRepairConfig);
+
+    /// <summary>Codex's config.toml as the last check read it (#182); null for other agents or when it could not be read.</summary>
+    public CodexConfigState? CodexConfig { get; private set; }
+    /// <summary>The alias says YOLO, but Codex started without an interactive shell still uses config.toml's sandbox.</summary>
+    public bool ConfigNeedsYolo => Cli == "codex" && IsInstalled && CurrentMode == AgentMode.Yolo && CodexConfig is { IsYolo: false };
+    /// <summary>config.toml disables sandbox and approvals although the alias is not YOLO.</summary>
+    public bool ConfigUnexpectedYolo => Cli == "codex" && IsInstalled && CurrentMode is AgentMode.Standard or AgentMode.AutoApprove && CodexConfig is { IsYolo: true };
+    public bool HasConfigWarning => ConfigNeedsYolo || ConfigUnexpectedYolo;
+    /// <summary>Applying the current mode again fixes config.toml: YOLO writes it, Standard/Auto restore BoosterAI's backup.</summary>
+    public bool CanRepairConfig => SelectedMode.Mode == CurrentMode && (ConfigNeedsYolo || ConfigUnexpectedYolo && CodexConfig!.HasBackup);
+    public string ConfigWarningText => ConfigNeedsYolo
+        ? Loc.Format("agents.codexConfig.notYolo", ConfigSetting(global::BoosterAI.CodexConfig.SandboxKey, CodexConfig!.SandboxMode), ConfigSetting(global::BoosterAI.CodexConfig.ApprovalKey, CodexConfig.ApprovalPolicy))
+        : ConfigUnexpectedYolo ? Loc.Format(CodexConfig!.HasBackup ? "agents.codexConfig.unexpectedYolo.backup" : "agents.codexConfig.unexpectedYolo", CurrentModeText) : "";
+    private static string ConfigSetting(string key, string? value) => value is null ? Loc.Format("agents.codexConfig.unset", key) : $"{key} = \"{value}\"";
+
+    internal void SetCodexConfig(CodexConfigState? state)
+    {
+        if (Cli != "codex" || CodexConfig == state) return;
+        CodexConfig = state;
+        foreach (var name in new[] { nameof(CodexConfig), nameof(ConfigNeedsYolo), nameof(ConfigUnexpectedYolo), nameof(HasConfigWarning), nameof(CanRepairConfig), nameof(ConfigWarningText), nameof(CanApply) })
+            Raise(name);
+    }
     public bool HasPresetPreview => SelectedMode.Mode != AgentMode.Custom;
     public string ModeExplanation => SelectedMode.Explanation;
     public string ModeCommand => AgentModes.AliasLine(Cli, SelectedMode);
@@ -92,7 +114,7 @@ public sealed class AgentInfo : Observable
         set
         {
             if (value is null || !Set(ref _selectedMode, value)) return;
-            Raise(nameof(IsYolo)); Raise(nameof(CanApply)); Raise(nameof(HasPresetPreview)); Raise(nameof(ModePreview)); Raise(nameof(ModePreviewEffect)); Raise(nameof(ModeExplanation)); Raise(nameof(ModeCommand)); Raise(nameof(HasModeCommand));
+            Raise(nameof(IsYolo)); Raise(nameof(CanApply)); Raise(nameof(CanRepairConfig)); Raise(nameof(HasPresetPreview)); Raise(nameof(ModePreview)); Raise(nameof(ModePreviewEffect)); Raise(nameof(ModeExplanation)); Raise(nameof(ModeCommand)); Raise(nameof(HasModeCommand));
         }
     }
 
@@ -113,7 +135,8 @@ public sealed class AgentInfo : Observable
                      nameof(CurrentMode), nameof(ModeChoices), nameof(SelectedMode), nameof(IsYolo), nameof(HasExternalDefinition), nameof(CurrentModeText),
                      nameof(CurrentAliasCommand), nameof(MissingDefinition), nameof(HasCurrentAliasCommand), nameof(CurrentAliasExplanation),
                      nameof(DefinitionTruncated), nameof(AliasInspectCommand), nameof(AliasRecommendation), nameof(CanSelectMode), nameof(CanApply),
-                     nameof(HasPresetPreview), nameof(ModeExplanation), nameof(ModeCommand), nameof(HasModeCommand), nameof(ModePreview), nameof(ModePreviewEffect) })
+                     nameof(HasPresetPreview), nameof(ModeExplanation), nameof(ModeCommand), nameof(HasModeCommand), nameof(ModePreview), nameof(ModePreviewEffect),
+                     nameof(ConfigNeedsYolo), nameof(ConfigUnexpectedYolo), nameof(HasConfigWarning), nameof(CanRepairConfig), nameof(ConfigWarningText) })
             Raise(name);
     }
 
@@ -258,6 +281,14 @@ public sealed class SetupViewModel : Observable
 
     public void DismissMissing() { _missingDismissed = true; Refresh(); }
 
+    private CodexConfigState? _codexConfig;
+    /// <summary>Codex's config.toml as last read (#182), shown against its detected alias.</summary>
+    public void SetCodexConfig(CodexConfigState? state)
+    {
+        _codexConfig = state;
+        foreach (var agent in Agents) agent.SetCodexConfig(state);
+    }
+
     private void Refresh()
     {
         Missing = Prerequisites.MissingToOffer(_status, _rowLlms)
@@ -271,6 +302,7 @@ public sealed class SetupViewModel : Observable
         {
             var status = _status.Cli(agent.Cli) ?? new CliStatus(agent.Cli, "none", null);
             agent.RefreshDetection(status, _status.Checked);
+            agent.SetCodexConfig(_codexConfig);
             if (_compactFactory is not null) agent.Compact = _compactFactory(status);
         }
         foreach (var name in new[] { nameof(Status), nameof(WslVisible), nameof(CanInstallWsl), nameof(WslText), nameof(Missing), nameof(MissingVisible),
@@ -345,7 +377,9 @@ public sealed partial class MainViewModel
         try
         {
             var result = await DetectSetupAsync(distro);
+            var codexConfig = await Task.Run(ReadCodexConfig);
             if (_cfg.WslDistro != distro) return;
+            Setup.SetCodexConfig(codexConfig);
             Setup.Apply(result, distro);
             if (result.Cli("codex")?.Installed == true) _ = LoadCompactMetadataAsync(distro);
             SetupRowsChanged();
@@ -413,6 +447,22 @@ public sealed partial class MainViewModel
     internal string? PermissionConfigPath { get; set; }
     private string? BashrcFile => PermissionConfigPath ?? PathMapping.ToLocalPath("~/.bashrc", _cfg.WslDistro, _wslHome);
 
+    /// <summary>Codex's home directory (~/.codex of the tabs' Linux) as this process can read it; null until the WSL home is known.</summary>
+    internal string? CodexHomePath { get; set; }
+    private string? CodexHome => CodexHomePath ?? PathMapping.ToLocalPath(CodexConfig.Home, _cfg.WslDistro, _wslHome);
+
+    /// <summary>What config.toml says now (#182); null when the path is unknown or the file cannot be read.</summary>
+    internal CodexConfigState? ReadCodexConfig()
+    {
+        if (CodexHome is not { } home) return null;
+        try
+        {
+            var path = Path.Combine(home, CodexConfig.FileName);
+            return CodexConfig.State(File.Exists(path) ? File.ReadAllText(path) : null, File.Exists(Path.Combine(home, CodexConfig.BackupName)));
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return null; }
+    }
+
     /// <summary>Called only by the Apply action after its required confirmation; never changes a running CLI.</summary>
     public bool ApplyAgentMode(AgentInfo agent, bool yoloConfirmed, bool replaceCustomConfirmed = false)
     {
@@ -424,25 +474,81 @@ public sealed partial class MainViewModel
             var current = File.Exists(path) ? File.ReadAllText(path) : null;
             var updated = AgentModes.Change(current, agent.Detected, agent.SelectedMode, replaceCustomConfirmed);
             if (updated != (current ?? "")) File.WriteAllText(path, updated);
-            ShowStatus(Loc.Format("agents.mode.applied", agent.Name, agent.SelectedMode.Label));
-            CheckSetup();
-            return true;
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidOperationException)
         {
             ShowError(ErrorKind.AgentConfig, Loc.Format("agents.mode.failed", e.Message));
             return false;
         }
+        var applied = Loc.Format("agents.mode.applied", agent.Name, agent.SelectedMode.Label);
+        if (agent.Cli == "codex")
+        {
+            try
+            {
+                if (ApplyCodexConfig(agent.SelectedMode.Mode) is { } key) applied += " " + Loc.Get(key);
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+            {
+                ShowError(ErrorKind.AgentConfig, Loc.Format("agents.codexConfig.failed", e.Message));
+                Setup.SetCodexConfig(ReadCodexConfig());
+                CheckSetup();
+                return false;
+            }
+            Setup.SetCodexConfig(ReadCodexConfig());
+        }
+        ShowStatus(applied);
+        CheckSetup();
+        return true;
+    }
+
+    /// <summary>
+    /// Makes Codex's config.toml follow the alias (#182): YOLO backs the file up once and sets both keys; Standard and
+    /// Auto Approve restore the backed-up values and remove the backup. Returns the status key of what changed.
+    /// </summary>
+    private string? ApplyCodexConfig(AgentMode mode)
+    {
+        if (CodexHome is not { } home) throw new IOException(Loc.Get("status.wslHomeMissing"));
+        var path = Path.Combine(home, CodexConfig.FileName);
+        var backup = Path.Combine(home, CodexConfig.BackupName);
+        var current = File.Exists(path) ? File.ReadAllText(path) : null;
+        if (mode == AgentMode.Yolo)
+        {
+            System.IO.Directory.CreateDirectory(home);
+            // The first backup holds the user's own values; applying YOLO again never replaces it.
+            if (!File.Exists(backup))
+            {
+                if (current is null) File.WriteAllText(backup, "");
+                else File.Copy(path, backup);
+            }
+            var updated = CodexConfig.ApplyYolo(current);
+            if (updated == current) return null;
+            // Written in place, so the file keeps its permissions.
+            File.WriteAllText(path, updated);
+            return "agents.codexConfig.applied";
+        }
+        if (!File.Exists(backup)) return null;
+        var original = File.ReadAllText(backup);
+        var restored = CodexConfig.Restore(current, original);
+        // The file did not exist before YOLO and holds nothing else now: remove it again.
+        if (original.Length == 0 && restored.Trim().Length == 0) { if (current is not null) File.Delete(path); }
+        else if (restored != current) File.WriteAllText(path, restored);
+        File.Delete(backup);
+        return "agents.codexConfig.restored";
     }
 
     /// <summary>Neutral, deterministic versions and permission states; never reads an installed CLI or a user file.</summary>
-    public void ShowSampleAgents(bool localClisMissing = false)
+    public void ShowSampleAgents(bool localClisMissing = false, bool codexConfigMismatch = false)
     {
+        const string codexYolo = "alias codex='codex --dangerously-bypass-approvals-and-sandbox'";
+        // --section codex-config: the YOLO alias while config.toml still keeps Codex's own sandbox (#182).
+        Setup.SetCodexConfig(codexConfigMismatch ? new CodexConfigState("workspace-write", "on-request", false) : null);
         const string modern = "--approve-for-me --ask-for-approval --sandbox --dangerously-bypass-approvals-and-sandbox --oss --config";
         Setup.Apply(new SetupStatus(WslState.Ok, ["Ubuntu"],
         [
             new("claude", "alias", "/sample/bin/claude") { Version = "2.1.304", Help = "--autocompact acceptEdits --permission-mode --dangerously-skip-permissions", AliasDefinition = "alias claude='claude --permission-mode acceptEdits'", ManagedAlias = "alias claude='claude --permission-mode acceptEdits'" },
-            new("codex", "file", "/sample/bin/codex") { Version = "0.170.0", Help = modern },
+            codexConfigMismatch
+                ? new("codex", "alias", "/sample/bin/codex") { Version = "0.170.0", Help = modern, AliasDefinition = codexYolo, ManagedAlias = codexYolo }
+                : new("codex", "file", "/sample/bin/codex") { Version = "0.170.0", Help = modern },
             new("agy", "function", "/sample/bin/agy") { Version = "1.4.0", Help = "--mode auto --dangerously-skip-permissions", FunctionDefinition = "agy () {\n    command agy --mode=auto \"$@\";\n}" },
             new("aider", localClisMissing ? "none" : "file", localClisMissing ? null : "/sample/bin/aider") { Help = "--yes-always" },
             new("interpreter", localClisMissing ? "none" : "file", localClisMissing ? null : "/sample/bin/interpreter") { Version = "0.0.59", Help = modern },

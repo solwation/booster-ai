@@ -632,6 +632,7 @@
                                 <TextBlock Classes="caption" Text="{Binding CurrentAliasExplanation}" TextWrapping="Wrap" />
                               </StackPanel>
                             </Border>
+                            <Border Background="{DynamicResource WarningSurfaceBrush}" CornerRadius="{StaticResource RadiusMedium}" Padding="10" IsVisible="{Binding HasConfigWarning}"><TextBlock Text="{Binding ConfigWarningText}" TextWrapping="Wrap" /></Border>
                             <StackPanel Spacing="6">
                               <TextBlock Text="{local:T agents.alias.choose}" FontWeight="SemiBold" />
                               <ComboBox ItemsSource="{Binding ModeChoices}" SelectedItem="{Binding SelectedMode}" IsEnabled="{Binding CanSelectMode}" HorizontalAlignment="Stretch" AutomationProperties.Name="{local:T agents.alias.choose}">

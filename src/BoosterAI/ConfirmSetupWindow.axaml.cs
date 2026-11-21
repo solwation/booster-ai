@@ -38,7 +38,9 @@ public partial class ConfirmSetupWindow : Window
         Loc.Format("agents.alias.confirm.title", agent.Name), Loc.Get(agent.HasExternalDefinition ? "agents.alias.confirm.replace" : "agents.alias.confirm.apply"),
         Loc.Get("agents.alias.confirm.preview"), (agent.CurrentAliasCommand.Length > 0 ? agent.CurrentAliasCommand : agent.CurrentModeText)
             + "\n\n→\n\n" + agent.ModePreview,
-        (agent.IsYolo ? Loc.Get("agents.yolo.warning") + "\n\n" : "") + agent.ModeExplanation + "\n\n" + Loc.Get("agents.alias.scope"),
+        (agent.IsYolo ? Loc.Get("agents.yolo.warning") + "\n\n" : "") + agent.ModeExplanation + "\n\n" + Loc.Get("agents.alias.scope")
+            + (agent.Cli != "codex" ? "" : agent.IsYolo ? "\n\n" + Loc.Get("agents.codexConfig.confirm.yolo")
+                : agent.CodexConfig is { HasBackup: true } ? "\n\n" + Loc.Get("agents.codexConfig.confirm.restore") : ""),
         Loc.Get("agents.mode.apply"), Loc.Get("cancel"));
 
     /// <summary>The uninstall confirmation (#131): what goes, and that the config stays.</summary>
