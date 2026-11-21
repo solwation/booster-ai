@@ -274,8 +274,11 @@ public class CliUpdateTests
         if (!CanRunBash) return;
         using var f = new Fakes();
         f.Set("codex-latest", "0.166.0");
+        // Dedicated threads start all three tabs at once: blocking runs on the thread pool can start the third only
+        // after the install finished (slow thread injection on small CI runners), so it never waits (#185).
         var runs = Enumerable.Range(0, 3)
-            .Select(_ => Task.Run(() => f.Run("FAKE_INSTALL_SECONDS=2 && export FAKE_INSTALL_SECONDS && bs_update codex && codex --version")))
+            .Select(_ => Task.Factory.StartNew(() => f.Run("FAKE_INSTALL_SECONDS=4 && export FAKE_INSTALL_SECONDS && bs_update codex && codex --version"),
+                TaskCreationOptions.LongRunning))
             .ToArray();
         Task.WaitAll(runs);
         Assert.Single(f.ReadCalls(), c => c.StartsWith("npm install"));
