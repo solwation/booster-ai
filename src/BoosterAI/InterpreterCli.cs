@@ -6,7 +6,7 @@ internal static class InterpreterCli
     // Both generations use the same executable name. Probe the executable without user aliases,
     // with a deadline; never turn a failed current invocation into a second, legacy invocation.
     private const string CurrentCli = "(set -o pipefail\ncommand timeout --kill-after=1s 5s interpreter --help 2>/dev/null | command grep -- '--oss' >/dev/null)";
-    private const string UpgradeMessage = "BoosterAI: denna funktion kräver aktuella Open Interpreter. Installera via https://www.openinterpreter.com/install eller starta utan orkester och fortsättning.";
+    private const string UpgradeMessage = "BoosterAI: this feature requires the current Open Interpreter CLI. Install it from https://www.openinterpreter.com/install, or start without orchestra and continuation.";
 
     public static string Command(TabConfig tab, string? prompt)
     {

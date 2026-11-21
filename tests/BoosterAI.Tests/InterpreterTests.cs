@@ -67,7 +67,7 @@ public class InterpreterTests
         if (!current)
         {
             Assert.NotEqual(0, result.Code);
-            Assert.Contains("kräver aktuella Open Interpreter", result.Error);
+            Assert.Contains("requires the current Open Interpreter CLI", result.Error);
             Assert.False(File.Exists(fake.Args));
             return;
         }
@@ -88,7 +88,7 @@ public class InterpreterTests
         var result = fake.Run(InterpreterCli.Command(new TabConfig { Llm = "interpreter", Orkester = true }, null));
         Assert.NotEqual(0, result.Code);
         Assert.False(File.Exists(fake.Args));
-        Assert.Contains("kräver aktuella", result.Error);
+        Assert.Contains("requires the current Open Interpreter CLI", result.Error);
     }
 
     [Fact]
