@@ -1,3 +1,3 @@
-version: 0.40.0
-sv: YOLO för Codex gäller nu även skript och tmux via config.toml, och WSL kan lämna tillbaka minne till Windows.
-en: Codex YOLO now also applies to scripts and tmux via config.toml, and WSL can return unused memory to Windows.
+version: 0.41.0
+sv: Flera Claude- och Codex-konton med val per flik, alias ändras direkt med bekräftelse och osparade val går inte förlorade.
+en: Several Claude and Codex accounts with a choice per tab, aliases change at once after confirmation, unsaved choices are kept.
