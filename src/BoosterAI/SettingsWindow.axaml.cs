@@ -38,7 +38,8 @@ public partial class SettingsWindow : Window
     /// </summary>
     private async void OnClosing(object? sender, WindowClosingEventArgs e)
     {
-        if (_closeApproved) { _vm.Save(); return; }
+        // App or OS shutdown is never held up by the question; it closes as before (#188).
+        if (_closeApproved || e.CloseReason is WindowCloseReason.ApplicationShutdown or WindowCloseReason.OSShutdown) { _vm.Save(); return; }
         if (_vm.UnsavedChanges().Count == 0) { _vm.Save(); return; }
         e.Cancel = true;
         if (_asking) return;
