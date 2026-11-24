@@ -1,0 +1,29 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="using:BoosterAI"
+        x:Class="BoosterAI.UnsavedChangesWindow"
+        x:DataType="local:UnsavedChangesWindow"
+        Title="{local:T unsaved.heading}"
+        Icon="avares://BoosterAI/Assets/boosterai.ico"
+        Width="520" SizeToContent="Height" CanResize="False"
+        WindowStartupLocation="CenterOwner">
+  <StackPanel Margin="28,24,28,22" Spacing="14">
+    <TextBlock Classes="title" TextWrapping="Wrap" Text="{local:T unsaved.heading}" />
+    <TextBlock TextWrapping="Wrap" LineHeight="21" Text="{local:T unsaved.body}" />
+    <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="{StaticResource RadiusMedium}" Padding="10,7">
+      <ItemsControl ItemsSource="{Binding Items}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="local:UnsavedItem">
+            <TextBlock Text="{Binding Label}" TextWrapping="Wrap" Margin="0,2" />
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </Border>
+    <TextBlock Classes="muted" TextWrapping="Wrap" LineHeight="20" Text="{local:T unsaved.invalid}" IsVisible="{Binding HasInvalid}" />
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,6,0,0">
+      <Button Content="{local:T cancel}" Click="OnCancel" IsCancel="True" IsDefault="True" Padding="18,8" />
+      <Button Content="{local:T unsaved.discard}" Click="OnDiscard" Padding="18,8" />
+      <Button Classes="primary" Content="{local:T unsaved.save}" Click="OnSave" IsEnabled="{Binding CanSaveAny}" Padding="18,8" />
+    </StackPanel>
+  </StackPanel>
+</Window>

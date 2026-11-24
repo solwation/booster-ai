@@ -56,6 +56,9 @@ public sealed class OptimizationViewModel : Observable
     /// </summary>
     public bool CanSave => _currentAllocatedGb is null || (_sliderChosen && _currentAllocatedGb != _sliderMemoryGb);
 
+    /// <summary>The slider was moved to a cap other than the saved one (#188); closing Settings asks before dropping it.</summary>
+    public bool HasUnsavedCap => _sliderChosen && _currentAllocatedGb != _sliderMemoryGb;
+
     public string SliderMemoryText => Loc.Format("settings.optimization.selectedCap", _sliderMemoryGb);
 
     public int RecommendedGb => RecommendedLowerGb;

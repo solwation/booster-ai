@@ -863,5 +863,12 @@
   "settings.context.mode.name": "Context management",
   "settings.context.choose": "Choose how to manage context",
   "settings.context.after": "Clear after",
-  "settings.context.legacy": "Your existing combination of clearing and summarizing is retained. Choose a mode above to replace it."
+  "settings.context.legacy": "Your existing combination of clearing and summarizing is retained. Choose a mode above to replace it.",
+  "unsaved.heading": "You have unsaved changes",
+  "unsaved.body": "These choices are not saved and will be lost if you close without saving:",
+  "unsaved.compact": "Auto-compact for {0}, model {1}",
+  "unsaved.wsl": "WSL memory limit: {0} GB",
+  "unsaved.invalid": "Choices that are not valid yet cannot be saved; Save skips them.",
+  "unsaved.save": "Save",
+  "unsaved.discard": "Discard"
 }

@@ -8,7 +8,7 @@ using Avalonia.Threading;
 namespace BoosterAI;
 
 /// <summary>
-/// <c>--screenshot file.png [--window main|local-model|local-models|close|settings|install|import|restart|remove-project|alias|wsl-shutdown|memory-reclaim|agent-yolo|wsl|setup|uninstall] [--theme light|dark] [--config file.json] [--fake-update [manual:]0.3.0] [--fake-status [error:]text] [--fake-denied] [--fake-changed] [--fake-restartable N] [--fake-output [N]] [--fake-setup [cli|wsl|alias]] [--fake-long-status] [--check-clipping] [--fake-memory-reclaim gradual|dropcache|disabled|other|old|unknown]</c>:
+/// <c>--screenshot file.png [--window main|local-model|local-models|close|settings|install|import|restart|remove-project|alias|wsl-shutdown|memory-reclaim|unsaved|agent-yolo|wsl|setup|uninstall] [--theme light|dark] [--config file.json] [--fake-update [manual:]0.3.0] [--fake-status [error:]text] [--fake-denied] [--fake-changed] [--fake-restartable N] [--fake-output [N]] [--fake-setup [cli|wsl|alias]] [--fake-long-status] [--check-clipping] [--fake-memory-reclaim gradual|dropcache|disabled|other|old|unknown]</c>:
 /// renders a window with Avalonia's headless Skia platform. Nothing is shown on the desktop and no
 /// focus changes. The window frame (title bar) is not drawn; only the client area.
 /// </summary>
@@ -129,6 +129,10 @@ internal static class Screenshot
     }
 
     /// <summary>--window memory-reclaim: the confirmation for writing gradual (or removing it with --fake-memory-reclaim gradual).</summary>
+    private static IReadOnlyList<UnsavedItem> SampleUnsaved(MainViewModel vm) =>
+        [new(Loc.Format("unsaved.compact", "claude", "sample-model"), true, () => { }, () => { }),
+         new(Loc.Format("unsaved.wsl", 12), true, () => { }, () => { })];
+
     private static ConfirmSetupWindow SampleMemoryReclaim(MainViewModel vm, string? state)
     {
         vm.Optimization.ShowFakeUnoptimized(savedGb: 24);
@@ -155,6 +159,7 @@ internal static class Screenshot
             ["memory-reclaim"] = (o, vm, app) => SampleMemoryReclaim(vm, o.FakeMemoryReclaim),
             ["agent-yolo"] = (o, vm, app) => ConfirmSetupWindow.AgentMode(SampleYolo()),
             ["wsl"] = (o, vm, app) => ConfirmSetupWindow.Wsl(),
+            ["unsaved"] = (o, vm, app) => new UnsavedChangesWindow(SampleUnsaved(vm)),
             ["setup"] = (o, vm, app) => SampleWizard(app, o.Section),
             ["uninstall"] = (o, vm, app) => ConfirmSetupWindow.Uninstall(Installer.SamplePlan()),
         };

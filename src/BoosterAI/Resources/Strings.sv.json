@@ -863,5 +863,12 @@
   "settings.context.mode.name": "Hantering av kontext",
   "settings.context.choose": "Välj hur kontexten ska hanteras",
   "settings.context.after": "Rensa efter",
-  "settings.context.legacy": "Din befintliga kombination av rensning och sammanfattning är kvar. Välj ett läge ovan för att ersätta den."
+  "settings.context.legacy": "Din befintliga kombination av rensning och sammanfattning är kvar. Välj ett läge ovan för att ersätta den.",
+  "unsaved.heading": "Du har osparade ändringar",
+  "unsaved.body": "Dessa val är inte sparade och försvinner om du stänger utan att spara:",
+  "unsaved.compact": "Autokompakt för {0}, modell {1}",
+  "unsaved.wsl": "WSL-minnesgräns: {0} GB",
+  "unsaved.invalid": "Val som inte är giltiga än kan inte sparas; Spara hoppar över dem.",
+  "unsaved.save": "Spara",
+  "unsaved.discard": "Släng"
 }

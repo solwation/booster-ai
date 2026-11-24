@@ -27,8 +27,31 @@ public partial class SettingsWindow : Window
         OptimizationSections.SelectionChanged += (_, _) => ShowOptimizationPage();
         ShowOptimizationPage();
         ConfigureHardwareAdvice();
-        Closing += (_, _) => _vm.Save();
+        Closing += OnClosing;
     }
+
+    private bool _closeApproved;
+
+    /// <summary>
+    /// Unsaved compact or WSL-memory edits are never lost silently (#188): the first close attempt asks, then closes again
+    /// once the answer is Save or Discard; Cancel keeps the window open. Without such edits nothing is asked.
+    /// </summary>
+    private async void OnClosing(object? sender, WindowClosingEventArgs e)
+    {
+        if (_closeApproved) { _vm.Save(); return; }
+        if (_vm.UnsavedChanges().Count == 0) { _vm.Save(); return; }
+        e.Cancel = true;
+        if (_asking) return;
+        _asking = true;
+        try
+        {
+            if (!await _vm.ResolveUnsavedAsync(items => UnsavedChangesWindow.AskAsync(this, items))) return;
+            _closeApproved = true;
+        }
+        finally { _asking = false; }
+        Close();
+    }
+    private bool _asking;
 
     public int SelectedTabIndex
     {

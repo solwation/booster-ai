@@ -4,6 +4,11 @@ namespace BoosterAI;
 
 public sealed record CompactChoice(string Id, string Label);
 
+public enum UnsavedChoice { Save, Discard, Cancel }
+
+/// <summary>One setting with an edit that is not saved yet (#188); <see cref="CanSave"/> is false for an invalid draft.</summary>
+public sealed record UnsavedItem(string Label, bool CanSave, Action Save, Action Discard);
+
 /// <summary>Edits a launch preference without touching a live CLI or its configuration.</summary>
 public sealed class AutoCompactViewModel : Observable
 {
@@ -71,6 +76,22 @@ public sealed class AutoCompactViewModel : Observable
                 Number(r.ReserveTokens), Number(r.FileBudgetTokens));
         }
     }
+    /// <summary>
+    /// True when the fields hold an edit that is not saved (#188): a changed mode, custom limit or capacity compared with
+    /// what Save would replace. Loading metadata or switching model/profile (which reloads) never counts.
+    /// </summary>
+    public bool HasUnsavedChanges
+    {
+        get
+        {
+            if (!_hasDraft || !CanEdit || !Supported) return false;
+            var saved = _settings.LastOrDefault(s => s.Cli == Cli && s.Model == Model && s.Profile == Profile.Id);
+            var savedContext = saved?.ContextTokens is > 0 ? saved.ContextTokens : KnownContext ?? 0;
+            return Mode.Id != (saved?.Mode is { Length: > 0 } m && Modes.Any(x => x.Id == m) ? m : "default")
+                || (Mode.Id == "custom" && CustomValue != (saved?.CustomTokens ?? 0))
+                || (Mode.Id != "default" && ContextValue != savedContext);
+        }
+    }
     public bool CanSave => CanEdit && Supported && Catalog.IsSafeModel(Model) && Model != Catalog.StandardModel
         && (Mode.Id == "default" || Mode.Id == "recommended" && AutoCompact.Resolve(Draft()) is not null
             || Mode.Id == "custom" && (Context == "" || ContextValue is >= 1000 and <= AutoCompact.MaxContext) && AutoCompact.Resolve(Draft()) is not null);
@@ -117,7 +138,7 @@ public sealed class AutoCompactViewModel : Observable
         if (_loading) return;
         if (edited) _hasDraft = true;
         Status = "";
-        foreach (var name in new[] { nameof(CanSave), nameof(IsCustom), nameof(Recommendation), nameof(ContextSource), nameof(Validation), nameof(ShowBudget), nameof(BudgetPercent), nameof(BudgetValue), nameof(BudgetCapacity), nameof(BudgetHint) }) Raise(name);
+        foreach (var name in new[] { nameof(CanSave), nameof(HasUnsavedChanges), nameof(IsCustom), nameof(Recommendation), nameof(ContextSource), nameof(Validation), nameof(ShowBudget), nameof(BudgetPercent), nameof(BudgetValue), nameof(BudgetCapacity), nameof(BudgetHint) }) Raise(name);
     }
 
     public void Save()
@@ -135,6 +156,8 @@ public sealed class AutoCompactViewModel : Observable
         _saved();
         Status = Loc.Get("compact.saved");
     }
+    /// <summary>Throws the unsaved edit away and shows what is saved again.</summary>
+    public void Discard() { _hasDraft = false; Load(); }
     /// <summary>Reset only this agent's complete compaction history and current unsaved draft.</summary>
     public void Reset()
     {
@@ -172,6 +195,38 @@ public sealed partial class MainViewModel
         editor.UpdateManualMode(_cfg.AutoCompactMode == AutoCompactPolicy.Manual);
         editor.UpdateCliSupport(status);
         return editor;
+    }
+
+    /// <summary>
+    /// Unsaved edits that closing Settings would lose (#188): each compact editor with a changed draft, and a WSL memory cap
+    /// moved on the slider. Empty when there are none, so nothing is asked.
+    /// </summary>
+    public IReadOnlyList<UnsavedItem> UnsavedChanges()
+    {
+        var items = new List<UnsavedItem>();
+        foreach (var editor in _compactEditors.Values.Where(e => e.HasUnsavedChanges))
+            items.Add(new(Loc.Format("unsaved.compact", editor.Cli, editor.Model), editor.CanSave, editor.Save, editor.Discard));
+        if (Optimization.HasUnsavedCap)
+            items.Add(new(Loc.Format("unsaved.wsl", Optimization.SliderMemoryGb), true, Optimization.SaveConfig, Optimization.Refresh));
+        return items;
+    }
+
+    /// <summary>
+    /// What Done/close does with unsaved edits: asks once; Save writes the valid ones, Discard drops them, Cancel keeps the
+    /// window open. Returns true when closing may go on. Nothing is asked without changes.
+    /// </summary>
+    public async Task<bool> ResolveUnsavedAsync(Func<IReadOnlyList<UnsavedItem>, Task<UnsavedChoice>> ask)
+    {
+        var items = UnsavedChanges();
+        if (items.Count == 0) return true;
+        var choice = await ask(items);
+        if (choice == UnsavedChoice.Cancel) return false;
+        foreach (var item in items)
+        {
+            if (choice == UnsavedChoice.Save && item.CanSave) item.Save();
+            else item.Discard();
+        }
+        return true;
     }
 
     private int _compactMetadataGeneration;
