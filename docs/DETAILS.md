@@ -209,7 +209,7 @@ guidance. Older BoosterAI alias blocks remain recognized by the agent editor.
 
 ### Agent versions and permission modes
 
-Settings → **AI agents** opens an overview of all six supported programs. Each card has a 28 px logo plate with the theme-aware icon (Open Interpreter's mark is a filled disc, so it is not mistaken for a radio button), the name, exactly two lines, a status dot with **Ready**, **Missing** or **Needs update**, and **Permissions** (*Asks before tools* or *Approves automatically*, *Custom definition* for a definition BoosterAI did not write), and a last row: **Install** (a secondary button running the same install as the agent page) when the agent is missing, otherwise the link *Local model: get advice →* for Aider, Open Interpreter and OpenHands. The version, the alias name (*No alias*, *Auto Approve*, custom function) and *Not verified* are shown on the agent's own page, not on the card. Select a card or a sidebar entry to open an agent. If its executable is missing, the page shows its identity and **Install** button; Aider, Open Interpreter and OpenHands also show local model advice before installation. Installed agents provide **Overview**, **Permission alias** and **Context**; their installation details and context calculations are collapsible, and the actual detected alias and selected preset preview stay visible. Each page scrolls independently; switching agents or sections keeps the same editors and unsaved selections. The same icons identify agents in the main window selectors. The alias **Apply alias** action and compaction **Save for model** action remain separate. Versions are program versions, not model versions. Detection runs in the background in the tab's login environment. Each executable's `--version` and `--help` probe is bounded to two seconds (plus 0.2 seconds to force termination), with bounded output; the overall check remains limited to 30 seconds. A failed version probe leaves an installed CLI marked installed with **Unknown** version. Help failure hides unverified presets. No model or account is contacted intentionally by BoosterAI.
+Settings → **AI agents** opens an overview of all six supported programs. Each card has a 28 px logo plate with the theme-aware icon (Open Interpreter's mark is a filled disc, so it is not mistaken for a radio button), the name, exactly two lines, a status dot with **Ready**, **Missing** or **Needs update**, and **Permissions** (*Asks before tools* or *Approves automatically*, *Custom definition* for a definition BoosterAI did not write), and a last row: **Install** (a secondary button running the same install as the agent page) when the agent is missing, otherwise the link *Local model: get advice →* for Aider, Open Interpreter and OpenHands. The version, the alias name (*No alias*, *Auto Approve*, custom function) and *Not verified* are shown on the agent's own page, not on the card. Select a card or a sidebar entry to open an agent. If its executable is missing, the page shows its identity and **Install** button; Aider, Open Interpreter and OpenHands also show local model advice before installation. Installed agents provide **Overview**, **Permission alias** and **Context**; their installation details and context calculations are collapsible, and the actual detected alias and selected preset preview stay visible. Each page scrolls independently; switching agents or sections keeps the same editors and unsaved selections. The same icons identify agents in the main window selectors. Choosing an alias asks for confirmation at once; the compaction **Save for model** action stays separate. Versions are program versions, not model versions. Detection runs in the background in the tab's login environment. Each executable's `--version` and `--help` probe is bounded to two seconds (plus 0.2 seconds to force termination), with bounded output; the overall check remains limited to 30 seconds. A failed version probe leaves an installed CLI marked installed with **Unknown** version. Help failure hides unverified presets. No model or account is contacted intentionally by BoosterAI.
 
 An alias is a shell shortcut that expands a CLI name into a command with extra flags.
 The permission page separates **Currently detected** (the actual shell alias or
@@ -221,10 +221,10 @@ external CLI configuration and organization policy still apply.
 Custom aliases and shell functions have explicit labels rather than a generic
 "Custom" permission level. Their definitions are shown as selectable text. Function
 inspection uses `declare -f`, capped at 8 KiB, without executing the function; long
-results carry a truncation notice. Choose a supported preset and press **Apply alias**
+results carry a truncation notice. Choose a supported preset in the list
 to replace a custom definition. One confirmation shows the detected definition and
-the selected result, with the YOLO warning included when applicable. Cancel, Escape
-and closing the confirmation leave the file unchanged; no manual shell commands are
+the selected result, with the YOLO warning, the preview and its effect included when applicable. Cancel, Escape
+and closing the confirmation leave the file unchanged and put the list back on the mode in effect; no manual shell commands are
 required. Original definition lines and unrelated agents are preserved. A dedicated
 per-agent override at the end of `.bashrc` clears the selected shell alias/function
 and applies only the exact reviewed preset. No source filename is guessed.
@@ -233,7 +233,7 @@ and applies only the exact reviewed preset. No source filename is guessed.
 custom replacement it also clears that shell function. It does not reset the agent's
 own configuration or organization policies. **Auto Approve** and **YOLO** are offered
 only when the installed executable advertises the required flags. Selecting a value
-does not write anything: **Apply alias** opens the single confirmation.
+writes nothing by itself: it opens the single confirmation, and only **Apply alias** there writes.
 Approval and sandbox behavior differ by CLI:
 
 | CLI | Auto Approve | YOLO | Official reference |
@@ -257,7 +257,7 @@ as the backup had them (removing a key it did not have) and deletes the backup; 
 backup the file is left alone. Only those two top-level lines change: tables such as
 `[projects."…"]`, `model` and every other line stay byte-identical, and CRLF files keep
 their line endings. The Codex permission page warns when the alias and `config.toml`
-disagree (YOLO alias with a sandboxed config, which *Apply alias* with YOLO selected fixes, or a
+disagree (YOLO alias with a sandboxed config, which the warning's **Fix config.toml** button fixes after the same confirmation, or a
 YOLO config under another mode). `CODEX_HOME`, profiles and project-level Codex config
 are not followed.
 
