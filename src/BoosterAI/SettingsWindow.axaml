@@ -691,7 +691,6 @@
                                       <StackPanel Orientation="Horizontal" Spacing="12">
                                         <TextBox Classes="inline" Text="{Binding Name}" MaxWidth="260" HorizontalAlignment="Left"
                                                  MinWidth="160" AutomationProperties.Name="{local:T account.name}" ToolTip.Tip="{local:T account.rename.tip}" />
-                                        <TextBlock Text="{Binding Identity}" Classes="muted" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" IsVisible="{Binding HasIdentity}" />
                                       </StackPanel>
                                       <Button Grid.Column="1" Classes="secondary" Content="{Binding LoginText}" Click="OnAccountLogin" IsVisible="{Binding CanEdit}"
                                               Margin="12,0,0,0" ToolTip.Tip="{local:T account.login.tip}" AutomationProperties.Name="{Binding LoginName}" />
