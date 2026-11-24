@@ -765,11 +765,12 @@
               <button class="tab-btn" onclick="switchPreview('memory', this)">RAM usage</button>
               <button class="tab-btn" onclick="switchPreview('wsl', this)">WSL &amp; environment</button>
               <button class="tab-btn" onclick="switchPreview('compact', this)">Context</button>
+              <button class="tab-btn" onclick="switchPreview('accounts', this)">Accounts</button>
             </div>
             <div style="width: 20px;"></div>
           </div>
           <div class="showcase-media-container">
-            <img id="previewImg" class="showcase-media" src="screenshot-dark.png?v=20261111-157" alt="BoosterAI with six AI CLIs selected across example project tabs">
+            <img id="previewImg" class="showcase-media" src="screenshot-dark.png?v=20261124-195" alt="BoosterAI with six AI CLIs selected across example project tabs, two Claude tabs showing their account label">
           </div>
         </div>
       </div>
@@ -830,7 +831,7 @@
           <div class="card-icon">🧠</div>
           <h3>Models &amp; Context Budgets</h3>
           <p>
-            Choose a model per tab or keep the CLI default. Apply a model change with an explicit restart; Claude, Codex and Aider can keep the conversation when its directory is unambiguous. Under Memory and context → Context, choose Off, Clear when idle or Summarize. Summarize offers Auto or Manual budgets; Auto uses known model capacity and an explained reserve.
+            Choose a model per tab or keep the CLI default. Apply a model change with an explicit restart; Claude, Codex and Aider can keep the conversation when its directory is unambiguous. Under Memory and context → Context, choose Off, Clear when idle or Summarize. Summarize offers Auto or Manual budgets; Auto uses known model capacity and an explained reserve. Choosing a permission alias asks for confirmation at once, and Done asks before discarding unsaved context or WSL memory changes.
           </p>
         </div>
 
@@ -851,7 +852,17 @@
           <div class="card-icon">🎼</div>
           <h3>Orchestra on Demand</h3>
           <p>
-            Full native integration with <a href="https://solwation.github.io/dirigenten-och-orkestern/" style="color:var(--cyan);text-decoration:underline;" target="_blank">Dirigenten och orkestern</a>. For projects with the orchestra installed, send its startup instruction to your selected CLI (the repository skill in Codex when available). Choose Run once for a non-interactive session, or reload an idle interactive Claude orchestra without restarting its tab.
+            Full native integration with <a href="https://solwation.github.io/dirigenten-och-orkestern/" style="color:var(--cyan);text-decoration:underline;" target="_blank">Dirigenten och orkestern</a>. For projects with the orchestra installed, send its startup instruction to your selected CLI (the repository skill in Codex when available). Choose Run once for a non-interactive session, or reload an idle interactive Claude orchestra without restarting its tab. The orchestra status refreshes by itself, so an orchestra added or removed outside BoosterAI shows within a minute.
+          </p>
+        </div>
+
+        <!-- Feature: accounts -->
+        <div class="bento-card card-purple">
+          <div class="card-icon">🔑</div>
+          <h3>Several Accounts per Agent</h3>
+          <p>
+            Keep a private and a work login for Claude Code (<code>CLAUDE_CONFIG_DIR</code>) or Codex (<code>CODEX_HOME</code>). Add accounts under Settings &rarr; AI agents, see whether each one is logged in, log in from Settings and rename the default account (for example <em>Private</em>). Choose agent and account together in one Agent box per tab; a small label shows which account a tab uses.
+            <a href="https://github.com/solwation/booster-ai/blob/main/docs/DETAILS.md#accounts-per-agent" style="color:var(--cyan);text-decoration:underline;" target="_blank" rel="noopener">How accounts work</a>
           </p>
         </div>
 
@@ -994,17 +1005,19 @@
         appearance: 'Appearance settings in BoosterAI',
         memory: 'WSL RAM usage with current memory, 30-minute history and the configured cap',
         wsl: 'WSL environment settings and detected distributions',
-        compact: 'Context settings with Off, Clear when idle and Summarize choices in BoosterAI'
+        compact: 'Context settings with Off, Clear when idle and Summarize choices in BoosterAI',
+        accounts: 'Claude Code accounts in BoosterAI settings with a renamed default account, a Work account and their login status'
       };
       img.alt = descriptions[mode] || 'BoosterAI app screenshot';
       setTimeout(() => {
-        if (mode === 'dark') img.src = 'screenshot-dark.png?v=20261111-157';
-        else if (mode === 'light') img.src = 'screenshot.png?v=20261111-157';
-        else if (mode === 'settings') img.src = 'settings-general.png?v=20261111-157';
-        else if (mode === 'appearance') img.src = 'settings-appearance.png?v=20261111-157';
-        else if (mode === 'memory') img.src = 'settings-ram.png?v=20261111-157';
-        else if (mode === 'wsl') img.src = 'settings-wsl.png?v=20261111-157';
-        else if (mode === 'compact') img.src = 'settings-compact.png?v=20261111-157';
+        if (mode === 'dark') img.src = 'screenshot-dark.png?v=20261124-195';
+        else if (mode === 'light') img.src = 'screenshot.png?v=20261124-195';
+        else if (mode === 'settings') img.src = 'settings-general.png?v=20261124-195';
+        else if (mode === 'appearance') img.src = 'settings-appearance.png?v=20261124-195';
+        else if (mode === 'memory') img.src = 'settings-ram.png?v=20261124-195';
+        else if (mode === 'wsl') img.src = 'settings-wsl.png?v=20261124-195';
+        else if (mode === 'compact') img.src = 'settings-compact.png?v=20261124-195';
+        else if (mode === 'accounts') img.src = 'settings-accounts.png?v=20261124-195';
         img.onload = () => { img.style.opacity = '1'; };
         // Fallback in case image is already cached
         setTimeout(() => { img.style.opacity = '1'; }, 100);
