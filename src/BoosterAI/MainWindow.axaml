@@ -292,8 +292,6 @@
                 <!-- The tab's account (#186): every row whose agent has accounts besides the default one, subtabs included. -->
                 <Grid Classes="project-columns" Loaded="OnProjectGridLoaded" ColumnDefinitions="4,20,46,4*,5*,166,195,168"
                       IsVisible="{Binding AccountVisible}" Margin="0,6,0,0" Opacity="{Binding RowOpacity}">
-                  <TextBlock Grid.Column="3" Grid.ColumnSpan="2" Classes="muted caption" Text="{local:T account.scope.row}"
-                             TextWrapping="Wrap" VerticalAlignment="Center" Margin="20,0,12,0" />
                   <TextBlock Grid.Column="5" Classes="muted caption" Text="{local:T account.label}" VerticalAlignment="Center" />
                   <ComboBox Grid.Column="6" Classes="field" ItemsSource="{Binding AccountChoices}" SelectedItem="{Binding SelectedAccount}"
                             Margin="0,0,12,0" ToolTip.Tip="{local:T account.tip}" AutomationProperties.Name="{local:T account.label}">

@@ -110,7 +110,8 @@ public static class Accounts
     {
         var name = EnvVar(account.Agent) ?? throw new ArgumentException("The agent has no separate accounts.", nameof(account));
         var path = ShellPath(account.Directory);
-        var note = $"BoosterAI: {account.Name} ({name}={account.Directory})";
+        // Windows Terminal splits its command line on every ';', also inside quotes (see Launcher.TabScript).
+        var note = $"BoosterAI: {account.Name} ({name}={account.Directory})".Replace(';', ',');
         return $"export {name}={path} && mkdir -p {path} && cd ~ && printf '%s\\n' {Launcher.Quote(note)} && {LoginCommand(account.Agent)} || true && exec bash";
     }
 

@@ -876,7 +876,6 @@
   "account.missing": "Saknat konto ({0})",
   "account.label": "Konto",
   "account.tip": "Inloggningen agenten använder i den här fliken. Valet sparas för fliken och används nästa gång den startar.",
-  "account.scope.row": "Inloggning för den här fliken",
   "account.explanation": "Varje konto har en egen konfigurationskatalog med egen inloggning, inställningar och konversationer. BoosterAI startar {0} med {1} satt till kontots katalog. Standardkontot är den vanliga katalogen ({2}) och sätter ingen variabel.",
   "account.count.one": "{0} konto",
   "account.count.other": "{0} konton",

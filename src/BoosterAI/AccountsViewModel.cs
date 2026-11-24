@@ -168,7 +168,7 @@ public sealed partial class MainViewModel
         var cfg = new AppConfig
         {
             WslDistro = _cfg.WslDistro, LinuxTerminal = _cfg.LinuxTerminal, ZoomPercent = _cfg.ZoomPercent,
-            Tabs = [new TabConfig { Name = Loc.Format("account.login.tab", account.Name), Directory = "~", Llm = Catalog.ShellOnly, Script = Accounts.LoginScript(account) }],
+            Tabs = [new TabConfig { Name = Loc.Format("account.login.tab", account.Name).Replace(';', ','), Directory = "~", Llm = Catalog.ShellOnly, Script = Accounts.LoginScript(account) }],
         };
         var error = Accounts.IsValidDirectory(account.Directory) ? Launcher.Launch(cfg) : Loc.Format("err.accountDirectory", account.Name, account.Directory);
         ShowLaunchOutcome(error, cfg.Tabs, () => LoginAccount(account), Loc.Format("account.login.started", account.Name, Accounts.LoginCommand(account.Agent)));

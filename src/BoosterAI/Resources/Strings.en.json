@@ -876,7 +876,6 @@
   "account.missing": "Missing account ({0})",
   "account.label": "Account",
   "account.tip": "The login the agent uses in this tab. The choice is saved for the tab and used the next time it starts.",
-  "account.scope.row": "Login for this tab",
   "account.explanation": "Each account has its own configuration directory with its own login, settings and conversations. BoosterAI starts {0} with {1} set to the account's directory. The default account is the usual directory ({2}) and sets no variable.",
   "account.count.one": "{0} account",
   "account.count.other": "{0} accounts",
