@@ -244,6 +244,7 @@ internal static class Screenshot
                     if (vm.Setup.SelectedAgent is { } agent)
                     {
                         agent.Section = agentSection.EndsWith("-accounts") ? 3 : agentSection.EndsWith("-compact") ? 2 : agentSection.EndsWith("-permissions") || agentSection.EndsWith("-config") ? 1 : 0;
+                        if (agentSection.EndsWith("-accounts")) agent.Accounts?.ShowSampleStatus(agent.Cli);
                         var profile = agentSection.EndsWith("-cpu") ? "cpu7b" : agentSection.EndsWith("-gpu") ? "gpu35b" : "none";
                         agent.Advice.Profile = agent.Advice.Profiles.FirstOrDefault(p => p.Id == profile) ?? agent.Advice.Profiles[0];
                     }

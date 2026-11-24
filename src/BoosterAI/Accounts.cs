@@ -51,6 +51,24 @@ public static class Accounts
         _ => throw new ArgumentException("The agent has no separate accounts.", nameof(llm)),
     };
 
+    /// <summary>The default account's name: the user's own (#192) or the localized "Standard".</summary>
+    public static string DefaultName(AppConfig cfg, string llm) =>
+        cfg.DefaultAccountNames.TryGetValue(llm, out var name) && !string.IsNullOrWhiteSpace(name) ? name.Trim() : Loc.Get("account.default");
+
+    /// <summary>True when the user named the default account; the name then also marks it where only a non-default login is called out.</summary>
+    public static bool HasOwnDefaultName(AppConfig cfg, string llm) =>
+        cfg.DefaultAccountNames.TryGetValue(llm, out var name) && !string.IsNullOrWhiteSpace(name);
+
+    /// <summary>Stores the default account's name; blank (or the localized "Standard") clears it. True when something changed.</summary>
+    public static bool SetDefaultName(AppConfig cfg, string llm, string? name)
+    {
+        var trimmed = (name ?? "").Trim();
+        if (trimmed.Length == 0 || trimmed == Loc.Get("account.default")) return cfg.DefaultAccountNames.Remove(llm);
+        if (cfg.DefaultAccountNames.TryGetValue(llm, out var old) && old == trimmed) return false;
+        cfg.DefaultAccountNames[llm] = trimmed;
+        return true;
+    }
+
     public static IReadOnlyList<AgentAccount> For(AppConfig cfg, string llm) =>
         Supports(llm) ? cfg.Accounts.Where(a => a.Agent == llm).ToList() : [];
 
@@ -145,6 +163,6 @@ public static class Accounts
     }
 
     /// <summary>The account's display name for <paramref name="tab"/>'s choice; the localized "Standard" for the default account.</summary>
-    public static string DisplayName(IEnumerable<AgentAccount> accounts, string llm, string? id) =>
-        Find(accounts, llm, id)?.Name ?? Loc.Get("account.default");
+    public static string DisplayName(AppConfig cfg, string llm, string? id) =>
+        Find(cfg.Accounts, llm, id)?.Name ?? DefaultName(cfg, llm);
 }

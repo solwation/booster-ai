@@ -23,7 +23,13 @@ public partial class SettingsWindow : Window
                 _vm.SetupAgentsOpened();
         };
         Opened += (_, _) => { if (ReferenceEquals(TabsControl.SelectedItem, AgentsTab)) _vm.SetupAgentsOpened(); };
-        Activated += (_, _) => { if (ReferenceEquals(TabsControl.SelectedItem, AgentsTab)) _vm.SetupAgentsOpened(); };
+        Activated += (_, _) =>
+        {
+            if (!ReferenceEquals(TabsControl.SelectedItem, AgentsTab)) return;
+            _vm.SetupAgentsOpened();
+            // A login in the tab BoosterAI opened shows when the user comes back (#192).
+            if (_vm.Setup.SelectedAgent is { IsAccounts: true, Accounts: { } accounts }) _ = accounts.RefreshStatusAsync();
+        };
         OptimizationSections.SelectionChanged += (_, _) => ShowOptimizationPage();
         ShowOptimizationPage();
         ConfigureHardwareAdvice();

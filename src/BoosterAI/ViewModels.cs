@@ -207,7 +207,7 @@ public sealed class TabViewModel : Observable
     {
         get
         {
-            var list = new List<AccountChoice> { new("", Loc.Get("account.default"), Accounts.DefaultDirectory(_llm)) };
+            var list = new List<AccountChoice> { new("", _owner.DefaultAccountName(_llm), Accounts.DefaultDirectory(_llm)) };
             list.AddRange(_owner.AccountsFor(_llm).Select(a => new AccountChoice(a.Id, a.Name, a.Directory)));
             if (_account != "" && list.All(c => c.Id != _account)) list.Add(new(_account, Loc.Format("account.missing", _account), ""));
             return list;
@@ -219,7 +219,7 @@ public sealed class TabViewModel : Observable
         set { if (value is not null) Account = value.Id; }
     }
     /// <summary>The chosen account's name; empty for the default account, so only a non-default login is called out.</summary>
-    public string AccountLabel => _account == "" ? "" : SelectedAccount?.Name ?? _account;
+    public string AccountLabel => _account == "" ? (_owner.HasDefaultAccountName(_llm) ? _owner.DefaultAccountName(_llm) : "") : SelectedAccount?.Name ?? _account;
     public bool HasAccount => AccountLabel != "";
     internal void AccountsChanged()
     {
@@ -632,6 +632,9 @@ public sealed partial class MainViewModel : Observable
             : _compactCodexAccountModels.GetValueOrDefault(accountDirectory) ?? new Dictionary<string, int>());
 
     /// <summary>The agent's extra accounts from Settings (#186).</summary>
+    internal string DefaultAccountName(string llm) => Accounts.DefaultName(_cfg, llm);
+    internal bool HasDefaultAccountName(string llm) => Accounts.HasOwnDefaultName(_cfg, llm);
+    internal bool SetDefaultAccountName(string llm, string name) => Accounts.SetDefaultName(_cfg, llm, name);
     internal IReadOnlyList<AgentAccount> AccountsFor(string llm) => Accounts.For(_cfg, llm);
     internal string? AccountDirectory(string llm, string? id) => Accounts.Find(_cfg.Accounts, llm, id)?.Directory;
     private readonly AppConfig _cfg;

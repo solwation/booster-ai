@@ -23,7 +23,7 @@ public sealed class AgentInfo : Observable
     public string Name => Loc.Display("llm", Cli);
     public string DisplayName => Cli switch { "claude" => "Claude Code", "codex" => "Codex", "agy" => "Antigravity", "aider" => "Aider", "interpreter" => "Open Interpreter", "openhands" => "OpenHands", _ => Name };
     private int _section;
-    public int Section { get => _section; set { if (Set(ref _section, value)) { Raise(nameof(IsOverview)); Raise(nameof(IsPermissions)); Raise(nameof(IsContext)); Raise(nameof(IsAccounts)); Raise(nameof(ShowModelAdvice)); } } }
+    public int Section { get => _section; set { if (Set(ref _section, value)) { if (value == 3) _ = Accounts?.RefreshStatusAsync(); Raise(nameof(IsOverview)); Raise(nameof(IsPermissions)); Raise(nameof(IsContext)); Raise(nameof(IsAccounts)); Raise(nameof(ShowModelAdvice)); } } }
     public bool IsOverview => Section == 0;
     public bool ShowModelAdvice => Advice.IsSupported && (!IsInstalled || IsOverview);
     public bool IsPermissions => Section == 1;
@@ -351,6 +351,7 @@ public sealed partial class MainViewModel
     public void StartSetupChecks()
     {
         _setupEnabled = true;
+        AccountStatusEnabled = true;
         SetupRowsChanged();
         CheckSetup();
     }

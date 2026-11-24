@@ -90,6 +90,7 @@ public class ConfigMergeTests
             DismissedWslOptimization = true, ProjectSearchRoot = "/work/projects",
             AutoCompactSettings = [new AutoCompactSetting { Cli = "codex", Model = "example", Mode = "custom", CustomTokens = 64000 }],
             Accounts = [new AgentAccount { Id = "claude-work", Agent = "claude", Name = "Work", Directory = "~/.claude-work" }],
+            DefaultAccountNames = new() { ["claude"] = "Privat" },
         };
         var mine = new AppConfig();
 

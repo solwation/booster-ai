@@ -900,5 +900,12 @@
   "account.removed.tabs": "Account {0} was removed and {2} now use the default account. The directory {1} is kept.",
   "account.scope": "A new account starts without the default account's user settings, such as CLAUDE.md, settings.json or config.toml. Choose the account per tab in the main window.",
   "err.account": "Tab {0} uses a {1} account that no longer exists. Choose another account for the tab.",
-  "err.accountDirectory": "The account for {0} has an invalid directory: {1}"
+  "err.accountDirectory": "The account for {0} has an invalid directory: {1}",
+  "account.status.as": "Logged in as {0}",
+  "account.status.with": "Logged in with {0}",
+  "account.status.in": "Logged in",
+  "account.status.out": "Not logged in",
+  "account.status.unknown": "Unknown status",
+  "account.status.checking": "Checking login…",
+  "account.login.again": "Log in again"
 }

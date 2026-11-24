@@ -13,8 +13,11 @@ public sealed class AccountRow : Observable
     {
         _owner = owner;
         Account = account;
-        _name = account?.Name ?? Loc.Get("account.default");
+        _name = account?.Name ?? owner.DefaultName;
     }
+
+    /// <summary>Key of the account's login status: its directory, empty for the default account.</summary>
+    internal string Key => Account?.Directory ?? "";
 
     public bool IsDefault => Account is null;
     public bool CanEdit => !IsDefault;
@@ -25,9 +28,12 @@ public sealed class AccountRow : Observable
         get => _name;
         set
         {
-            if (Account is null || !Set(ref _name, value ?? "")) return;
+            if (!Set(ref _name, value ?? "")) return;
             var trimmed = _name.Trim();
-            if (trimmed.Length == 0 || trimmed == Account.Name) return;
+            if (trimmed.Length == 0) return;
+            // The default account's name is stored apart from the accounts list (#192); naming it "Standard" gives the name back.
+            if (Account is null) { _owner.RenameDefault(trimmed); return; }
+            if (trimmed == Account.Name) return;
             Account.Name = trimmed;
             _owner.Changed();
         }
@@ -35,8 +41,23 @@ public sealed class AccountRow : Observable
     public string UsageText => Loc.FormatCount("account.usage", _owner.UsedBy(Account));
     public string LoginName => Loc.Format("account.login.name", _name);
     public string RemoveName => Loc.Format("account.remove.name", _name);
+    /// <summary>The last known login status (#192); Unknown until a check has answered.</summary>
+    public AccountLoginStatus Status => _owner.StatusOf(Key);
+    public string StatusText => _owner.IsChecking(Key) && !_owner.HasStatus(Key) ? Loc.Get("account.status.checking") : Status.Text;
+    /// <summary>Who is logged in, shown beside the name; empty when unknown or logged out.</summary>
+    public string Identity => Status.Identity;
+    public bool HasIdentity => Identity.Length > 0;
+    public bool IsLoggedIn => Status.State == LoginState.LoggedIn;
+    public bool IsLoggedOut => Status.State == LoginState.LoggedOut;
+    /// <summary>"Logga in" until the account is logged in, then "Logga in igen".</summary>
+    public string LoginText => Loc.Get(IsLoggedIn ? "account.login.again" : "account.login");
     public void Login() => _owner.Login(this);
     public void Remove() => _owner.Remove(this);
+    internal void RefreshStatus()
+    {
+        foreach (var name in new[] { nameof(Status), nameof(StatusText), nameof(Identity), nameof(HasIdentity), nameof(IsLoggedIn), nameof(IsLoggedOut), nameof(LoginText) }) Raise(name);
+    }
+
     internal void Refresh()
     {
         Raise(nameof(UsageText));
@@ -64,6 +85,49 @@ public sealed class AgentAccountsViewModel : Observable
 
     public ObservableCollection<AccountRow> Rows { get; } = [];
     public string EnvVar => Accounts.EnvVar(Cli) ?? "";
+    internal string DefaultName => _owner.DefaultAccountName(Cli);
+    internal void RenameDefault(string name) { if (_owner.SetDefaultAccountName(Cli, name)) _owner.AccountsEdited(Cli); }
+
+    private readonly Dictionary<string, AccountLoginStatus> _status = [];
+    private readonly HashSet<string> _checking = [];
+    internal AccountLoginStatus StatusOf(string key) => _status.GetValueOrDefault(key) ?? AccountLoginStatus.Unknown;
+    internal bool HasStatus(string key) => _status.ContainsKey(key);
+    internal bool IsChecking(string key) => _checking.Contains(key);
+
+    /// <summary>
+    /// Checks every account's login in the background (#192): shown with the Accounts page and again when the window is activated.
+    /// An account that is already being checked is skipped, so a trigger during a check never starts a second one. The returned
+    /// task completes when the started checks have answered; the UI never waits for it.
+    /// </summary>
+    internal Task RefreshStatusAsync()
+    {
+        if (!_owner.AccountStatusEnabled) return Task.CompletedTask;
+        var started = new List<Task>();
+        foreach (var row in Rows.ToList())
+            if (_checking.Add(row.Key)) started.Add(CheckAsync(row.Account, row.Key));
+        if (started.Count > 0) foreach (var row in Rows) row.RefreshStatus();
+        return Task.WhenAll(started);
+    }
+
+    /// <summary>Screenshots: invented statuses, in row order (logged in, logged out, unknown, then again); never runs an agent.</summary>
+    internal void ShowSampleStatus(string cli)
+    {
+        var sample = cli == "codex" ? new AccountLoginStatus(LoginState.LoggedIn, null, "ChatGPT") : new AccountLoginStatus(LoginState.LoggedIn, "namn@example.com · Example AB");
+        AccountLoginStatus[] cycle = [sample, AccountLoginStatus.LoggedOut, AccountLoginStatus.Unknown];
+        for (var i = 0; i < Rows.Count; i++) _status[Rows[i].Key] = cycle[i % cycle.Length];
+        foreach (var row in Rows) row.RefreshStatus();
+    }
+
+    private async Task CheckAsync(AgentAccount? account, string key)
+    {
+        AccountLoginStatus result;
+        try { result = await _owner.CheckAccountLoginAsync(Cli, account?.Directory); }
+        catch (Exception e) when (e is not OutOfMemoryException) { result = AccountLoginStatus.Unknown; }
+        _checking.Remove(key);
+        // An account removed meanwhile keeps no status.
+        if (key == "" || Rows.Any(r => r.Key == key)) _status[key] = result;
+        foreach (var row in Rows) row.RefreshStatus();
+    }
     public string Explanation => Loc.Format("account.explanation", Loc.Display("llm", Cli), EnvVar, Accounts.DefaultDirectory(Cli));
     /// <summary>The overview card's line: how many accounts the agent has, the default one included.</summary>
     public string Summary => Loc.FormatCount("account.count", Rows.Count);
@@ -102,6 +166,7 @@ public sealed class AgentAccountsViewModel : Observable
         if (row.Account is not { } account) return;
         _owner.RemoveAccount(account);
         Rows.Remove(row);
+        _status.Remove(row.Key);
         Raise(nameof(Summary));
         RefreshUsage();
     }
@@ -130,6 +195,13 @@ public sealed partial class MainViewModel
         if (!_accountEditors.TryGetValue(cli, out var editor)) _accountEditors[cli] = editor = new AgentAccountsViewModel(this, cli);
         return editor;
     }
+
+    /// <summary>Off until the real app starts its background checks; tests and screenshots never run an agent.</summary>
+    internal bool AccountStatusEnabled { get; set; }
+    internal Func<string, string, string?, Task<AccountLoginStatus>> CheckAccountLogin { get; set; } =
+        (distro, llm, directory) => Task.Run(() => AccountStatusProbe.Check(distro, llm, directory));
+    internal Task<AccountLoginStatus> CheckAccountLoginAsync(string llm, string? directory) =>
+        directory is not null && !Accounts.IsValidDirectory(directory) ? Task.FromResult(AccountLoginStatus.Unknown) : CheckAccountLogin(_cfg.WslDistro, llm, directory);
 
     internal int TabsUsingAccount(string cli, string id) => Tabs.Count(t => t.Llm == cli && t.Account == id);
 

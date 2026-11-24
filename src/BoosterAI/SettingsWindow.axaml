@@ -687,11 +687,13 @@
                               <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="local:AccountRow">
                                   <Border Classes="agent-group" Margin="0,0,0,8">
-                                    <Grid ColumnDefinitions="*,Auto,Auto" RowDefinitions="Auto,Auto">
-                                      <TextBlock Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center" IsVisible="{Binding IsDefault}" />
-                                      <TextBox Classes="inline" Text="{Binding Name}" IsVisible="{Binding CanEdit}" MaxWidth="260" HorizontalAlignment="Left"
-                                               MinWidth="160" AutomationProperties.Name="{local:T account.name}" ToolTip.Tip="{local:T account.rename.tip}" />
-                                      <Button Grid.Column="1" Classes="secondary" Content="{local:T account.login}" Click="OnAccountLogin" IsVisible="{Binding CanEdit}"
+                                    <Grid ColumnDefinitions="*,Auto,Auto" RowDefinitions="Auto,Auto,Auto">
+                                      <StackPanel Orientation="Horizontal" Spacing="12">
+                                        <TextBox Classes="inline" Text="{Binding Name}" MaxWidth="260" HorizontalAlignment="Left"
+                                                 MinWidth="160" AutomationProperties.Name="{local:T account.name}" ToolTip.Tip="{local:T account.rename.tip}" />
+                                        <TextBlock Text="{Binding Identity}" Classes="muted" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" IsVisible="{Binding HasIdentity}" />
+                                      </StackPanel>
+                                      <Button Grid.Column="1" Classes="secondary" Content="{Binding LoginText}" Click="OnAccountLogin" IsVisible="{Binding CanEdit}"
                                               Margin="12,0,0,0" ToolTip.Tip="{local:T account.login.tip}" AutomationProperties.Name="{Binding LoginName}" />
                                       <Button Grid.Column="2" Classes="icon" Click="OnAccountRemove" IsVisible="{Binding CanEdit}" Margin="8,0,0,0"
                                               ToolTip.Tip="{local:T account.remove.tip}" AutomationProperties.Name="{Binding RemoveName}">
@@ -701,6 +703,8 @@
                                         <SelectableTextBlock Text="{Binding Directory}" Classes="path caption" Margin="0,0,12,0" />
                                         <TextBlock Text="{Binding UsageText}" Classes="muted caption" />
                                       </WrapPanel>
+                                      <TextBlock Grid.Row="2" Grid.ColumnSpan="3" Margin="0,4,0,0" Text="{Binding StatusText}" Classes="caption" TextWrapping="Wrap"
+                                                 Classes.success="{Binding IsLoggedIn}" />
                                     </Grid>
                                   </Border>
                                 </DataTemplate>

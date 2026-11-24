@@ -39,7 +39,7 @@ internal static class Program
             // Each chosen account (#186): the variable the tab exports, or why the launch would refuse the tab.
             foreach (var tab in tabs.Where(t => Accounts.Supports(t.Llm)))
                 Console.WriteLine($"account {tab.Name}: " + (Accounts.IsMissing(tab) ? $"missing account id {tab.Account} (Start refuses the tab)"
-                    : tab.AccountDirectory is { } accountDir ? $"{Accounts.DisplayName(cfg.Accounts, tab.Llm, tab.Account)}, {Accounts.EnvVar(tab.Llm)}={accountDir}"
+                    : tab.AccountDirectory is { } accountDir ? $"{Accounts.DisplayName(cfg, tab.Llm, tab.Account)}, {Accounts.EnvVar(tab.Llm)}={accountDir}"
                     : $"default ({Accounts.DefaultDirectory(tab.Llm)}, no variable)"));
             foreach (var account in cfg.Accounts.Where(a => Accounts.Supports(a.Agent)))
                 Console.WriteLine($"account login {account.Agent} {account.Name} (Settings, visible tab): bash -lic {Accounts.LoginScript(account)}");

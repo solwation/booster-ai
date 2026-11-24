@@ -52,6 +52,8 @@ public sealed class AppConfig
     public List<TabConfig> Tabs { get; set; } = new();
     /// <summary>Extra accounts per agent (#186); the default account of every agent is implicit and never listed.</summary>
     public List<AgentAccount> Accounts { get; set; } = [];
+    /// <summary>Own display names for the default accounts (#192), by agent; an agent without an entry shows the localized "Standard".</summary>
+    public Dictionary<string, string> DefaultAccountNames { get; set; } = [];
     /// <summary>Windows only: the WSL distribution the tabs run in.</summary>
     public string WslDistro { get; set; } = "Ubuntu";
     /// <summary>Linux only: terminal to use, or "auto".</summary>
@@ -197,6 +199,8 @@ public static class ConfigMerge
         S(c => JsonSerializer.Serialize(c.AutoCompactSettings), (c, v) => c.AutoCompactSettings = JsonSerializer.Deserialize<List<AutoCompactSetting>>(v) ?? []),
         S(c => JsonSerializer.Serialize(c.Accounts, ConfigJsonContext.Default.ListAgentAccount),
             (c, v) => c.Accounts = JsonSerializer.Deserialize(v, ConfigJsonContext.Default.ListAgentAccount) ?? []),
+        S(c => JsonSerializer.Serialize(c.DefaultAccountNames.OrderBy(p => p.Key, StringComparer.Ordinal).ToDictionary(p => p.Key, p => p.Value)),
+            (c, v) => c.DefaultAccountNames = JsonSerializer.Deserialize<Dictionary<string, string>>(v) ?? []),
         S(c => c.WslDistro, (c, v) => c.WslDistro = v),
         S(c => c.LinuxTerminal, (c, v) => c.LinuxTerminal = v),
         S(c => c.ColorTheme, (c, v) => c.ColorTheme = v),

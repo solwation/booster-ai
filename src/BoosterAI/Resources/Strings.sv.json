@@ -900,5 +900,12 @@
   "account.removed.tabs": "Kontot {0} är borttaget och {2} använder nu standardkontot. Katalogen {1} ligger kvar.",
   "account.scope": "Ett nytt konto börjar utan standardkontots användarinställningar, till exempel CLAUDE.md, settings.json eller config.toml. Välj konto per flik i huvudfönstret.",
   "err.account": "Fliken {0} använder ett {1}-konto som inte finns längre. Välj ett annat konto för fliken.",
-  "err.accountDirectory": "Kontot för {0} har en ogiltig katalog: {1}"
+  "err.accountDirectory": "Kontot för {0} har en ogiltig katalog: {1}",
+  "account.status.as": "Inloggad som {0}",
+  "account.status.with": "Inloggad med {0}",
+  "account.status.in": "Inloggad",
+  "account.status.out": "Inte inloggad",
+  "account.status.unknown": "Okänd status",
+  "account.status.checking": "Kontrollerar inloggning…",
+  "account.login.again": "Logga in igen"
 }
