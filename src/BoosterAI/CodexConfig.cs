@@ -12,7 +12,8 @@ public sealed record CodexConfigState(string? SandboxMode, string? ApprovalPolic
 /// Line-based edits of the two top-level permission keys in Codex's <c>config.toml</c> (#182). The YOLO alias only
 /// applies in interactive shells; Codex started from a script, <c>exec</c> or tmux reads this file instead. Only
 /// top-level keys (lines before the first table header, outside multi-line strings) are read or changed; keys inside
-/// tables, comments and every other line stay byte-identical. <c>CODEX_HOME</c> and profiles are not followed.
+/// tables, comments and every other line stay byte-identical. Profiles are not followed; the CODEX_HOME of each BoosterAI
+/// account (#186) is handled like the default one.
 /// </summary>
 public static partial class CodexConfig
 {
@@ -42,6 +43,13 @@ public static partial class CodexConfig
         @"^(?<lead>[ \t]*(?:" + key + "|\"" + key + "\"|'" + key + @"')[ \t]*=[ \t]*)(?<rest>.*)$");
 
     public static bool IsYolo(string? text) => State(text, false).IsYolo;
+
+    /// <summary>
+    /// The state to show for several CODEX_HOMEs (#186), the default first: one that disagrees with the alias (not YOLO while
+    /// it is, YOLO while it is not) so the warning appears, otherwise the default's. Null when none could be read.
+    /// </summary>
+    public static CodexConfigState? Pick(IReadOnlyList<CodexConfigState> states, bool aliasYolo) =>
+        states.FirstOrDefault(s => s.IsYolo != aliasYolo) ?? states.FirstOrDefault();
 
     public static CodexConfigState State(string? text, bool hasBackup)
     {

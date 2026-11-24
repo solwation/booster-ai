@@ -179,6 +179,8 @@ public sealed partial class MainViewModel
 {
     private readonly Dictionary<string, AutoCompactViewModel> _compactEditors = [];
     private IReadOnlyDictionary<string, int> _compactCodexModels = new Dictionary<string, int>();
+    /// <summary>The same metadata from each Codex account's CODEX_HOME (#186), by account directory.</summary>
+    private IReadOnlyDictionary<string, IReadOnlyDictionary<string, int>> _compactCodexAccountModels = new Dictionary<string, IReadOnlyDictionary<string, int>>();
 
     private AutoCompactViewModel CompactEditor(CliStatus status)
     {
@@ -231,17 +233,22 @@ public sealed partial class MainViewModel
 
     private int _compactMetadataGeneration;
 
-    internal async Task LoadCompactMetadataAsync(string distro, Func<string, Task<IReadOnlyDictionary<string, int>>>? read = null)
+    internal async Task LoadCompactMetadataAsync(string distro, Func<string, Task<IReadOnlyDictionary<string, int>>>? read = null,
+        Func<string, string, Task<IReadOnlyDictionary<string, int>>>? readAccount = null)
     {
         var generation = ++_compactMetadataGeneration;
-        var models = await (read ?? AutoCompactModels.ReadCodexAsync)(distro);
+        var models = await (read ?? (d => AutoCompactModels.ReadCodexAsync(d)))(distro);
+        var accounts = new Dictionary<string, IReadOnlyDictionary<string, int>>();
+        foreach (var dir in AccountsFor("codex").Select(a => a.Directory).Where(Accounts.IsValidDirectory).Distinct())
+            accounts[dir] = await (readAccount ?? AutoCompactModels.ReadCodexAsync)(distro, dir);
         if (_cfg.WslDistro != distro || generation != _compactMetadataGeneration) return;
-        ApplyCompactMetadata(models);
+        ApplyCompactMetadata(models, accounts);
     }
 
-    internal void ApplyCompactMetadata(IReadOnlyDictionary<string, int> models)
+    internal void ApplyCompactMetadata(IReadOnlyDictionary<string, int> models, IReadOnlyDictionary<string, IReadOnlyDictionary<string, int>>? accounts = null)
     {
         _compactCodexModels = models;
+        _compactCodexAccountModels = accounts ?? new Dictionary<string, IReadOnlyDictionary<string, int>>();
         foreach (var editor in _compactEditors.Values) editor.UpdateMetadata(models);
         foreach (var tab in Tabs) tab.RaiseRestartTip();
         Raise(nameof(CompactMetadataStatus));

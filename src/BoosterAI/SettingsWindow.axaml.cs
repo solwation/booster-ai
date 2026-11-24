@@ -108,8 +108,21 @@ public partial class SettingsWindow : Window
     }
     private void OnAgentSection(object? sender, RoutedEventArgs e)
     {
-        if (sender is Button { DataContext: AgentInfo agent, Tag: string section } && int.TryParse(section, out var index)) agent.Section = Math.Clamp(index, 0, 2);
+        if (sender is Button { DataContext: AgentInfo agent, Tag: string section } && int.TryParse(section, out var index)) agent.Section = Math.Clamp(index, 0, 3);
     }
+
+    private void OnAccountAdd(object? sender, RoutedEventArgs e) => ((sender as Control)?.DataContext as AgentInfo)?.Accounts?.Add();
+
+    private void OnAccountNameKeyDown(object? sender, Avalonia.Input.KeyEventArgs e)
+    {
+        if (e.Key != Avalonia.Input.Key.Enter || (sender as Control)?.DataContext is not AgentInfo { Accounts: { } accounts }) return;
+        // Enter adds the account instead of pressing the window's default button (Klar).
+        e.Handled = accounts.Add() || true;
+    }
+
+    private void OnAccountLogin(object? sender, RoutedEventArgs e) => ((sender as Control)?.DataContext as AccountRow)?.Login();
+
+    private void OnAccountRemove(object? sender, RoutedEventArgs e) => ((sender as Control)?.DataContext as AccountRow)?.Remove();
     private void OnAgentCompactSettings(object? sender, RoutedEventArgs e) { SelectedTabIndex = 2; SelectedOptimizationSectionIndex = 3; }
 
     private void OnShowCompactAgents(object? sender, RoutedEventArgs e) => SelectedTabIndex = 4;

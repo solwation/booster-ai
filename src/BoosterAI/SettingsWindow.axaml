@@ -631,6 +631,7 @@
                           <Button Classes="agent-nav" Classes.chosen="{Binding IsOverview}" Content="{local:T agents.section.overview}" Tag="0" Click="OnAgentSection" Margin="0,0,6,0" />
                             <Button Classes="agent-nav" Classes.chosen="{Binding IsPermissions}" Content="{local:T agents.section.permissions}" Tag="1" Click="OnAgentSection" Margin="0,0,6,0" />
                             <Button Classes="agent-nav" Classes.chosen="{Binding IsContext}" Content="{local:T agents.section.context}" Tag="2" Click="OnAgentSection" />
+                            <Button Classes="agent-nav" Classes.chosen="{Binding IsAccounts}" Content="{local:T account.section}" Tag="3" Click="OnAgentSection" IsVisible="{Binding SupportsAccounts}" Margin="6,0,0,0" />
                           </WrapPanel>
                         <Panel IsVisible="{Binding ShowModelAdvice}"><local:SettingsModelAdviceView DataContext="{Binding Advice}" /></Panel>
 
@@ -642,6 +643,10 @@
                             </Button>
                             <Button Classes="agent-card" Click="OnAgentSection" Tag="2" HorizontalAlignment="Stretch">
                               <Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="5"><TextBlock Text="{local:T agents.section.context}" FontWeight="SemiBold" /><TextBlock Text="{Binding $parent[Window].((local:MainViewModel)DataContext).SelectedCompactMode.Label}" Classes="muted" /></StackPanel><TextBlock Grid.Column="1" Text="›" FontSize="20" VerticalAlignment="Center" /></Grid>
+                            </Button>
+                            <!-- Accounts (#186): only agents with a configuration directory variable. -->
+                            <Button Classes="agent-card" Click="OnAgentSection" Tag="3" HorizontalAlignment="Stretch" IsVisible="{Binding SupportsAccounts}">
+                              <Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="5"><TextBlock Text="{local:T account.section}" FontWeight="SemiBold" /><TextBlock Text="{Binding Accounts.Summary}" Classes="muted" /></StackPanel><TextBlock Grid.Column="1" Text="›" FontSize="20" VerticalAlignment="Center" /></Grid>
                             </Button>
                             <Button Content="{Binding InstallButtonText}" Click="OnInstallAgent" ToolTip.Tip="{Binding InstallTip}" HorizontalAlignment="Left" />
                             <Expander Header="{local:T agents.details.installation}" HorizontalAlignment="Stretch">
@@ -674,6 +679,42 @@
                           <StackPanel Spacing="12" IsVisible="{Binding IsContext}">
                             <WrapPanel><TextBlock Text="{Binding $parent[Window].((local:MainViewModel)DataContext).SelectedCompactMode.Label}" FontWeight="SemiBold" Margin="0,6,12,6" /><Button Classes="link" Content="{local:T agents.context.global}" Click="OnAgentCompactSettings" /></WrapPanel>
                             <local:AutoCompactView DataContext="{Binding Compact}" />
+                          </StackPanel>
+                          <!-- Accounts (#186): the default account first (fixed), then the agent's own accounts. -->
+                          <StackPanel Spacing="12" IsVisible="{Binding IsAccounts}">
+                            <TextBlock Text="{Binding Accounts.Explanation}" Classes="muted caption" TextWrapping="Wrap" />
+                            <ItemsControl ItemsSource="{Binding Accounts.Rows}">
+                              <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="local:AccountRow">
+                                  <Border Classes="agent-group" Margin="0,0,0,8">
+                                    <Grid ColumnDefinitions="*,Auto,Auto" RowDefinitions="Auto,Auto">
+                                      <TextBlock Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center" IsVisible="{Binding IsDefault}" />
+                                      <TextBox Classes="inline" Text="{Binding Name}" IsVisible="{Binding CanEdit}" MaxWidth="260" HorizontalAlignment="Left"
+                                               MinWidth="160" AutomationProperties.Name="{local:T account.name}" ToolTip.Tip="{local:T account.rename.tip}" />
+                                      <Button Grid.Column="1" Classes="secondary" Content="{local:T account.login}" Click="OnAccountLogin" IsVisible="{Binding CanEdit}"
+                                              Margin="12,0,0,0" ToolTip.Tip="{local:T account.login.tip}" AutomationProperties.Name="{Binding LoginName}" />
+                                      <Button Grid.Column="2" Classes="icon" Click="OnAccountRemove" IsVisible="{Binding CanEdit}" Margin="8,0,0,0"
+                                              ToolTip.Tip="{local:T account.remove.tip}" AutomationProperties.Name="{Binding RemoveName}">
+                                        <Path Data="{StaticResource CloseIcon}" />
+                                      </Button>
+                                      <WrapPanel Grid.Row="1" Grid.ColumnSpan="3" Margin="0,6,0,0">
+                                        <SelectableTextBlock Text="{Binding Directory}" Classes="path caption" Margin="0,0,12,0" />
+                                        <TextBlock Text="{Binding UsageText}" Classes="muted caption" />
+                                      </WrapPanel>
+                                    </Grid>
+                                  </Border>
+                                </DataTemplate>
+                              </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <StackPanel Spacing="6">
+                              <TextBlock Text="{local:T account.add.label}" FontWeight="SemiBold" />
+                              <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBox Text="{Binding Accounts.NewName}" Watermark="{local:T account.add.watermark}" Width="220"
+                                         AutomationProperties.Name="{local:T account.add.label}" KeyDown="OnAccountNameKeyDown" />
+                                <Button Classes="secondary" Content="{local:T account.add}" Click="OnAccountAdd" IsEnabled="{Binding Accounts.CanAdd}" />
+                              </StackPanel>
+                            </StackPanel>
+                            <TextBlock Text="{local:T account.scope}" Classes="muted caption" TextWrapping="Wrap" />
                           </StackPanel>
                         </StackPanel>
                       </StackPanel>

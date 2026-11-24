@@ -29,7 +29,20 @@ internal static class Program
             // Dry-run stays read-only and reports the same known-capacity policy as a new launch.
             var compactModels = cfg.AutoCompactMode == AutoCompactPolicy.Auto && tabs.Any(t => t.Llm == "codex")
                 ? AutoCompactModels.ReadCodexAsync(cfg.WslDistro).GetAwaiter().GetResult() : null;
-            foreach (var tab in tabs) tab.CompactTokens = AutoCompactPolicy.Resolve(cfg, tab.Llm, tab.Model, tab.Orkester, compactModels);
+            Accounts.Resolve(cfg, tabs);
+            foreach (var tab in tabs)
+            {
+                var models = compactModels is not null && tab.Llm == "codex" && tab.AccountDirectory is { } home
+                    ? AutoCompactModels.ReadCodexAsync(cfg.WslDistro, home).GetAwaiter().GetResult() : compactModels;
+                tab.CompactTokens = AutoCompactPolicy.Resolve(cfg, tab.Llm, tab.Model, tab.Orkester, models);
+            }
+            // Each chosen account (#186): the variable the tab exports, or why the launch would refuse the tab.
+            foreach (var tab in tabs.Where(t => Accounts.Supports(t.Llm)))
+                Console.WriteLine($"account {tab.Name}: " + (Accounts.IsMissing(tab) ? $"missing account id {tab.Account} (Start refuses the tab)"
+                    : tab.AccountDirectory is { } accountDir ? $"{Accounts.DisplayName(cfg.Accounts, tab.Llm, tab.Account)}, {Accounts.EnvVar(tab.Llm)}={accountDir}"
+                    : $"default ({Accounts.DefaultDirectory(tab.Llm)}, no variable)"));
+            foreach (var account in cfg.Accounts.Where(a => Accounts.Supports(a.Agent)))
+                Console.WriteLine($"account login {account.Agent} {account.Name} (Settings, visible tab): bash -lic {Accounts.LoginScript(account)}");
             // Each Start gets a session directory with a status log per tab; shown here with a placeholder.
             var root = OperatingSystem.IsWindows() ? PathMapping.ToWslPath(TabSession.DefaultRoot) : TabSession.DefaultRoot;
             var dir = root.Replace('\\', '/') + "/<session>";

@@ -89,6 +89,7 @@ public class ConfigMergeTests
             SkippedVersion = "9.9.9", LastUpdateCheck = new DateTime(2026, 10, 29, 9, 18, 39, DateTimeKind.Utc),
             DismissedWslOptimization = true, ProjectSearchRoot = "/work/projects",
             AutoCompactSettings = [new AutoCompactSetting { Cli = "codex", Model = "example", Mode = "custom", CustomTokens = 64000 }],
+            Accounts = [new AgentAccount { Id = "claude-work", Agent = "claude", Name = "Work", Directory = "~/.claude-work" }],
         };
         var mine = new AppConfig();
 

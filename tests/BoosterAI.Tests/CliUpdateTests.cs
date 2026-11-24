@@ -16,7 +16,9 @@ public class CliUpdateTests
         var tab = new TabConfig { Llm = llm, Directory = "~/proj" };
         foreach (var script in new[] { Launcher.TabScript(tab, null, Track), Launcher.RestartScript(tab, Track, resume: false) })
         {
-            Assert.Contains($"~/'proj' && (bs_reset 2>/dev/null || true) && (bs_update {llm} 2>/dev/null || true) && (bs_cli 2>/dev/null || true) && ", script.Replace(@"'\''", "'"));
+            // An in-place restart also takes back an earlier run's account variable just before the CLI starts (#186).
+            Assert.Contains($"~/'proj' && (bs_reset 2>/dev/null || true) && (bs_update {llm} 2>/dev/null || true) && (bs_cli 2>/dev/null || true) && ",
+                script.Replace(@"'\''", "'").Replace(Accounts.ResetCommand + " && ", ""));
             Assert.DoesNotContain(';', script);
         }
     }

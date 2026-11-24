@@ -127,7 +127,7 @@ public static class AutoCompactModels
     }
 
     // Run in the same login shell/WSL distro as tabs. Emit a bounded projection, never the personal cache itself.
-    internal const string Probe = "python3 - <<'PY'\nimport json,os\ntry:\n p=os.path.join(os.environ.get('CODEX_HOME') or os.path.expanduser('~/.codex'),'models_cache.json')\n with open(p,'rb') as f: raw=f.read(2000001)\n if len(raw)>2000000: raise ValueError('size')\n data=json.loads(raw)\n models=data.get('models',[])\n print('BOOSTER_COMPACT_METADATA='+json.dumps({'models':[{k:m.get(k) for k in ('slug','context_window','effective_context_window_percent')} for m in models[:500] if isinstance(m,dict)]}))\nexcept Exception: print('BOOSTER_COMPACT_METADATA={}')\nPY";
+    internal const string Probe = "python3 - <<'PY'\nimport json,os,sys\ntry:\n p=os.path.join(sys.argv[1] if len(sys.argv)>1 else os.environ.get('CODEX_HOME') or os.path.expanduser('~/.codex'),'models_cache.json')\n with open(p,'rb') as f: raw=f.read(2000001)\n if len(raw)>2000000: raise ValueError('size')\n data=json.loads(raw)\n models=data.get('models',[])\n print('BOOSTER_COMPACT_METADATA='+json.dumps({'models':[{k:m.get(k) for k in ('slug','context_window','effective_context_window_percent')} for m in models[:500] if isinstance(m,dict)]}))\nexcept Exception: print('BOOSTER_COMPACT_METADATA={}')\nPY";
 
     internal static IReadOnlyDictionary<string, int> ParseProbeOutput(string output)
     {
@@ -135,11 +135,16 @@ public static class AutoCompactModels
         return ParseCodex(line?["BOOSTER_COMPACT_METADATA=".Length..] ?? "{}");
     }
 
-    public static async Task<IReadOnlyDictionary<string, int>> ReadCodexAsync(string distro)
+    /// <summary>The probe for an account's CODEX_HOME (#186): the directory is passed to python as its first argument.</summary>
+    internal static string ProbeFor(string? home) => home is null ? Probe : Probe.Replace("python3 - <<", "python3 - " + Accounts.ShellPath(home) + " <<");
+
+    /// <summary>Model capacities from the default CODEX_HOME, or from <paramref name="home"/> (an account's directory).</summary>
+    public static async Task<IReadOnlyDictionary<string, int>> ReadCodexAsync(string distro, string? home = null)
     {
+        var probe = ProbeFor(home);
         using var process = new Process { StartInfo = new ProcessStartInfo(OperatingSystem.IsWindows() ? "wsl.exe" : "bash")
         { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false, CreateNoWindow = true } };
-        foreach (var arg in OperatingSystem.IsWindows() ? new[] { "-d", distro, "--exec", "bash", "-lic", Probe } : new[] { "-lic", Probe })
+        foreach (var arg in OperatingSystem.IsWindows() ? new[] { "-d", distro, "--exec", "bash", "-lic", probe } : new[] { "-lic", probe })
             process.StartInfo.ArgumentList.Add(arg);
         try
         {

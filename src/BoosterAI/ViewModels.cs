@@ -54,6 +54,7 @@ public sealed class TabViewModel : Observable
     private string _name, _directory, _llm, _model;
     private int _colorIndex;
     private string _advisor = AdvisorPolicy.Disabled;
+    private string _account = "";
     private bool _enabled, _orkester, _nonInteractive;
     private bool? _hasOrkester;
 
@@ -71,9 +72,10 @@ public sealed class TabViewModel : Observable
         _advisorPinned = _advisor != AdvisorPolicy.Disabled;
         _orkester = c.Orkester;
         _nonInteractive = c.NonInteractive;
+        _account = c.Account ?? "";
         PropertyChanged += (_, e) =>
         {
-            if (e.PropertyName is nameof(Name) or nameof(Llm) or nameof(StatusText)) Raise(nameof(PeekHeader));
+            if (e.PropertyName is nameof(Name) or nameof(Llm) or nameof(StatusText) or nameof(Account)) Raise(nameof(PeekHeader));
             if (e.PropertyName is nameof(StatusText) or nameof(StatusTip)) { Raise(nameof(PeekDetail)); Raise(nameof(HasPeekDetail)); }
         };
     }
@@ -180,6 +182,50 @@ public sealed class TabViewModel : Observable
     public bool HasAdvisorWarning => AdvisorWarning is not null;
     internal void RaiseAdvisorWarning() { Raise(nameof(AdvisorWarning)); Raise(nameof(HasAdvisorWarning)); }
     public string Model { get => _model; set { if (Set(ref _model, value?.Trim() ?? "")) { AdvisorInputsChanged(); ChoiceChanged(); } } }
+
+    /// <summary>
+    /// The tab's account (#186): an <see cref="AgentAccount.Id"/> of this agent, or "" for its default account. Saved per tab, so
+    /// a project and each of its subtabs keep their own choice. An id that is no longer configured stays saved (the launch then
+    /// refuses the tab) instead of quietly switching to another login.
+    /// </summary>
+    public string Account
+    {
+        get => _account;
+        set
+        {
+            if (!Set(ref _account, value ?? "")) return;
+            Raise(nameof(SelectedAccount));
+            Raise(nameof(AccountLabel));
+            Raise(nameof(HasAccount));
+            ChoiceChanged();
+        }
+    }
+    /// <summary>The account row shows for an agent with accounts besides the default one, or when a choice is saved.</summary>
+    public bool AccountVisible => Accounts.Supports(_llm) && (_owner.AccountsFor(_llm).Count > 0 || _account != "");
+    /// <summary>The choices: the default account first, then the agent's accounts in Settings order.</summary>
+    public IReadOnlyList<AccountChoice> AccountChoices
+    {
+        get
+        {
+            var list = new List<AccountChoice> { new("", Loc.Get("account.default"), Accounts.DefaultDirectory(_llm)) };
+            list.AddRange(_owner.AccountsFor(_llm).Select(a => new AccountChoice(a.Id, a.Name, a.Directory)));
+            if (_account != "" && list.All(c => c.Id != _account)) list.Add(new(_account, Loc.Format("account.missing", _account), ""));
+            return list;
+        }
+    }
+    public AccountChoice? SelectedAccount
+    {
+        get => AccountChoices.FirstOrDefault(c => c.Id == _account);
+        set { if (value is not null) Account = value.Id; }
+    }
+    /// <summary>The chosen account's name; empty for the default account, so only a non-default login is called out.</summary>
+    public string AccountLabel => _account == "" ? "" : SelectedAccount?.Name ?? _account;
+    public bool HasAccount => AccountLabel != "";
+    internal void AccountsChanged()
+    {
+        foreach (var n in new[] { nameof(AccountVisible), nameof(AccountChoices), nameof(SelectedAccount), nameof(AccountLabel), nameof(HasAccount), nameof(PeekHeader) }) Raise(n);
+        ChoiceChanged();
+    }
 
     public string Directory
     {
@@ -291,8 +337,10 @@ public sealed class TabViewModel : Observable
             Raise(nameof(CanInstallOrkester));
             _owner.OrchestraColumnChanged();
             _owner.SetupRowsChanged();
-            // Another CLI's model id rarely fits; fall back to its default.
+            // Another CLI's model id rarely fits; fall back to its default. An account belongs to one agent (#186).
             if (!Catalog.ModelsFor(value).Contains(Model)) Model = Catalog.StandardModel;
+            if (_account != "" && _owner.AccountsFor(value).All(a => a.Id != _account)) Account = "";
+            AccountsChanged();
             ChoiceChanged();
         }
     }
@@ -353,7 +401,10 @@ public sealed class TabViewModel : Observable
         && (l.Llm != Llm || l.Model != (string.IsNullOrWhiteSpace(Model) ? Catalog.StandardModel : Model)
             // A pre-upgrade Standard launch may still inherit an advisor until it is restarted.
             || (Llm == "claude" && l.Advisor != Advisor)
-            || l.CompactTokens != _owner.CompactTokens(Llm, Model, Orkester && CanOrkester));
+            || l.AccountDirectory != AccountDirectory
+            || l.CompactTokens != _owner.CompactTokens(Llm, Model, Orkester && CanOrkester, AccountDirectory));
+    /// <summary>The chosen account's directory as a launch passes it; null for the default account.</summary>
+    private string? AccountDirectory => _owner.AccountDirectory(_llm, _account);
     private static string NormalAdvisor(string? a) => AdvisorPolicy.Normalize(a);
 
     /// <summary>"Starta om när den är ledig" is waiting for the CLI's next idle.</summary>
@@ -447,7 +498,7 @@ public sealed class TabViewModel : Observable
         Raise(nameof(StatusTip));
     }
     /// <summary>The status popup's header: "Atlas · claude · Running" (tab, agent, status).</summary>
-    public string PeekHeader => $"{Name} · {Loc.Display("llm", Llm)} · {StatusText}";
+    public string PeekHeader => $"{Name} · {Loc.Display("llm", Llm)}{(HasAccount ? " (" + AccountLabel + ")" : "")} · {StatusText}";
     /// <summary>The longer explanation under the header, when the tooltip says more than the status itself.</summary>
     public string PeekDetail => StatusTip;
     public bool HasPeekDetail => StatusTip != StatusText;
@@ -567,14 +618,22 @@ public sealed class TabViewModel : Observable
         Llm = Llm, Model = string.IsNullOrWhiteSpace(Model) ? Catalog.StandardModel : Model, Advisor = NormalAdvisor(Advisor),
         Orkester = forLaunch ? Orkester && CanOrkester : Orkester,
         NonInteractive = NonInteractive,
-        CompactTokens = forLaunch ? _owner.CompactTokens(Llm, Model, Orkester && CanOrkester) : null,
+        Account = Accounts.Supports(Llm) ? _account : "",
+        AccountDirectory = forLaunch ? AccountDirectory : null,
+        CompactTokens = forLaunch ? _owner.CompactTokens(Llm, Model, Orkester && CanOrkester, AccountDirectory) : null,
     };
 }
 
 public sealed partial class MainViewModel : Observable
 {
-    internal int? CompactTokens(string cli, string model, bool orchestra = false) =>
-        AutoCompactPolicy.Resolve(_cfg, cli, model, orchestra, _compactCodexModels);
+    /// <summary>Codex reads its model capacities from the tab's account (#186): <paramref name="accountDirectory"/>, null for the default.</summary>
+    internal int? CompactTokens(string cli, string model, bool orchestra = false, string? accountDirectory = null) =>
+        AutoCompactPolicy.Resolve(_cfg, cli, model, orchestra, accountDirectory is null ? _compactCodexModels
+            : _compactCodexAccountModels.GetValueOrDefault(accountDirectory) ?? new Dictionary<string, int>());
+
+    /// <summary>The agent's extra accounts from Settings (#186).</summary>
+    internal IReadOnlyList<AgentAccount> AccountsFor(string llm) => Accounts.For(_cfg, llm);
+    internal string? AccountDirectory(string llm, string? id) => Accounts.Find(_cfg.Accounts, llm, id)?.Directory;
     private readonly AppConfig _cfg;
     /// <summary>The config as this instance last loaded or saved it; see ConfigMerge.</summary>
     private AppConfig _saved;
@@ -619,6 +678,7 @@ public sealed partial class MainViewModel : Observable
             foreach (var t in Tabs) t.RaiseLlms();
         };
         Setup.ConfigureCompact(CompactEditor);
+        Setup.ConfigureAccounts(AccountsEditor);
         WatchBanners();
         _ = InitAsync();
     }
@@ -1483,9 +1543,9 @@ public sealed partial class MainViewModel : Observable
 
     private TabConfig WithCurrentCompact(TabConfig tab)
     {
-        if (tab.CompactTokens == CompactTokens(tab.Llm, tab.Model, tab.Orkester)) return tab;
+        if (tab.CompactTokens == CompactTokens(tab.Llm, tab.Model, tab.Orkester, tab.AccountDirectory)) return tab;
         var copy = ConfigStore.Copy(new AppConfig { Tabs = [tab] }).Tabs[0];
-        copy.CompactTokens = CompactTokens(tab.Llm, tab.Model, tab.Orkester);
+        copy.CompactTokens = CompactTokens(tab.Llm, tab.Model, tab.Orkester, tab.AccountDirectory);
         return copy;
     }
 
@@ -2173,4 +2233,10 @@ public sealed class ImportViewModel : Observable, IProjectList
         Raise(nameof(HasItems));
         SelectionChanged();
     }
+}
+
+/// <summary>One entry of a tab's account choice (#186); <paramref name="Id"/> "" is the agent's default account.</summary>
+public sealed record AccountChoice(string Id, string Name, string Directory)
+{
+    public override string ToString() => Name;
 }

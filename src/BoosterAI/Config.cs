@@ -30,6 +30,15 @@ public sealed class TabConfig
     /// <summary>A one-off tab's own bash command instead of a CLI (the setup installs, #74); never saved.</summary>
     [JsonIgnore]
     public string? Script { get; set; }
+    /// <summary>The tab's account (<see cref="AgentAccount.Id"/>, #186); empty for the agent's default account.</summary>
+    public string Account { get; set; } = "";
+    /// <summary>
+    /// The account's configuration directory, resolved per launch like <see cref="CompactTokens"/>; null for the default
+    /// account. Never written to config.json (the project's copy is null), only into a launched tab's session metadata,
+    /// so a recovered tab restarts with the directory it ran with.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? AccountDirectory { get; set; }
     /// <summary>Resolved per-launch auto-compaction value; never changes CLI config.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? CompactTokens { get; set; }
@@ -41,6 +50,8 @@ public sealed class AppConfig
     /// <summary>Off uses CLI defaults, Auto uses known capacity, Manual uses saved per-model values.</summary>
     public string AutoCompactMode { get; set; } = AutoCompactPolicy.Off;
     public List<TabConfig> Tabs { get; set; } = new();
+    /// <summary>Extra accounts per agent (#186); the default account of every agent is implicit and never listed.</summary>
+    public List<AgentAccount> Accounts { get; set; } = [];
     /// <summary>Windows only: the WSL distribution the tabs run in.</summary>
     public string WslDistro { get; set; } = "Ubuntu";
     /// <summary>Linux only: terminal to use, or "auto".</summary>
@@ -86,6 +97,7 @@ public sealed class AppConfig
 [JsonSourceGenerationOptions(WriteIndented = true)]
 [JsonSerializable(typeof(AppConfig))]
 [JsonSerializable(typeof(TabConfig))]
+[JsonSerializable(typeof(List<AgentAccount>))]
 internal partial class ConfigJsonContext : JsonSerializerContext;
 
 public static class ConfigStore
@@ -183,6 +195,8 @@ public static class ConfigMerge
     [
         S(c => c.AutoCompactMode, (c, v) => c.AutoCompactMode = v),
         S(c => JsonSerializer.Serialize(c.AutoCompactSettings), (c, v) => c.AutoCompactSettings = JsonSerializer.Deserialize<List<AutoCompactSetting>>(v) ?? []),
+        S(c => JsonSerializer.Serialize(c.Accounts, ConfigJsonContext.Default.ListAgentAccount),
+            (c, v) => c.Accounts = JsonSerializer.Deserialize(v, ConfigJsonContext.Default.ListAgentAccount) ?? []),
         S(c => c.WslDistro, (c, v) => c.WslDistro = v),
         S(c => c.LinuxTerminal, (c, v) => c.LinuxTerminal = v),
         S(c => c.ColorTheme, (c, v) => c.ColorTheme = v),

@@ -12,6 +12,10 @@ public sealed class AgentInfo : Observable
     private bool _isSelected;
     public bool IsSelected { get => _isSelected; internal set => Set(ref _isSelected, value); }
     public AutoCompactViewModel? Compact { get; internal set; }
+    /// <summary>The agent's accounts (#186); null for an agent that only has its default account.</summary>
+    public AgentAccountsViewModel? Accounts { get; internal set; }
+    public bool SupportsAccounts => Accounts is not null;
+    public bool IsAccounts => Section == 3;
     public SettingsModelAdviceViewModel Advice { get; }
     public CliStatus Detected { get; private set; }
     private bool _statusKnown = true;
@@ -19,7 +23,7 @@ public sealed class AgentInfo : Observable
     public string Name => Loc.Display("llm", Cli);
     public string DisplayName => Cli switch { "claude" => "Claude Code", "codex" => "Codex", "agy" => "Antigravity", "aider" => "Aider", "interpreter" => "Open Interpreter", "openhands" => "OpenHands", _ => Name };
     private int _section;
-    public int Section { get => _section; set { if (Set(ref _section, value)) { Raise(nameof(IsOverview)); Raise(nameof(IsPermissions)); Raise(nameof(IsContext)); Raise(nameof(ShowModelAdvice)); } } }
+    public int Section { get => _section; set { if (Set(ref _section, value)) { Raise(nameof(IsOverview)); Raise(nameof(IsPermissions)); Raise(nameof(IsContext)); Raise(nameof(IsAccounts)); Raise(nameof(ShowModelAdvice)); } } }
     public bool IsOverview => Section == 0;
     public bool ShowModelAdvice => Advice.IsSupported && (!IsInstalled || IsOverview);
     public bool IsPermissions => Section == 1;
@@ -78,8 +82,12 @@ public sealed class AgentInfo : Observable
     public bool CanSelectMode => IsInstalled;
     public bool CanApply => CanSelectMode && SelectedMode.Mode != AgentMode.Custom && (SelectedMode.Mode != CurrentMode || CanRepairConfig);
 
-    /// <summary>Codex's config.toml as the last check read it (#182); null for other agents or when it could not be read.</summary>
-    public CodexConfigState? CodexConfig { get; private set; }
+    private IReadOnlyList<CodexConfigState> _codexConfigs = [];
+    /// <summary>
+    /// Codex's config.toml as the last check read it (#182); null for other agents or when it could not be read. With several
+    /// accounts (#186) it is the one that disagrees with the alias, if any, so the warning covers every CODEX_HOME.
+    /// </summary>
+    public CodexConfigState? CodexConfig => global::BoosterAI.CodexConfig.Pick(_codexConfigs, CurrentMode == AgentMode.Yolo);
     /// <summary>The alias says YOLO, but Codex started without an interactive shell still uses config.toml's sandbox.</summary>
     public bool ConfigNeedsYolo => Cli == "codex" && IsInstalled && CurrentMode == AgentMode.Yolo && CodexConfig is { IsYolo: false };
     /// <summary>config.toml disables sandbox and approvals although the alias is not YOLO.</summary>
@@ -92,10 +100,13 @@ public sealed class AgentInfo : Observable
         : ConfigUnexpectedYolo ? Loc.Format(CodexConfig!.HasBackup ? "agents.codexConfig.unexpectedYolo.backup" : "agents.codexConfig.unexpectedYolo", CurrentModeText) : "";
     private static string ConfigSetting(string key, string? value) => value is null ? Loc.Format("agents.codexConfig.unset", key) : $"{key} = \"{value}\"";
 
-    internal void SetCodexConfig(CodexConfigState? state)
+    internal void SetCodexConfig(CodexConfigState? state) => SetCodexConfigs(state is null ? [] : [state]);
+
+    /// <summary>The config.toml of the default account first, then of each Codex account (#186).</summary>
+    internal void SetCodexConfigs(IReadOnlyList<CodexConfigState> states)
     {
-        if (Cli != "codex" || CodexConfig == state) return;
-        CodexConfig = state;
+        if (Cli != "codex" || _codexConfigs.SequenceEqual(states)) return;
+        _codexConfigs = states;
         foreach (var name in new[] { nameof(CodexConfig), nameof(ConfigNeedsYolo), nameof(ConfigUnexpectedYolo), nameof(HasConfigWarning), nameof(CanRepairConfig), nameof(ConfigWarningText), nameof(CanApply) })
             Raise(name);
     }
@@ -192,6 +203,8 @@ public sealed class SetupViewModel : Observable
     public bool IsAgentOverview => SelectedAgent is null;
     private Func<CliStatus, AutoCompactViewModel>? _compactFactory;
     public void ConfigureCompact(Func<CliStatus, AutoCompactViewModel> factory) { _compactFactory = factory; Refresh(); }
+    private Func<string, AgentAccountsViewModel?>? _accountsFactory;
+    public void ConfigureAccounts(Func<string, AgentAccountsViewModel?> factory) { _accountsFactory = factory; Refresh(); }
 
     public SetupViewModel()
     {
@@ -285,12 +298,15 @@ public sealed class SetupViewModel : Observable
 
     public void DismissMissing() { _missingDismissed = true; Refresh(); }
 
-    private CodexConfigState? _codexConfig;
+    private IReadOnlyList<CodexConfigState> _codexConfigs = [];
     /// <summary>Codex's config.toml as last read (#182), shown against its detected alias.</summary>
-    public void SetCodexConfig(CodexConfigState? state)
+    public void SetCodexConfig(CodexConfigState? state) => SetCodexConfigs(state is null ? [] : [state]);
+
+    /// <summary>The config.toml of every Codex account (#186), the default account first.</summary>
+    public void SetCodexConfigs(IReadOnlyList<CodexConfigState> states)
     {
-        _codexConfig = state;
-        foreach (var agent in Agents) agent.SetCodexConfig(state);
+        _codexConfigs = states;
+        foreach (var agent in Agents) agent.SetCodexConfigs(states);
     }
 
     private void Refresh()
@@ -306,8 +322,9 @@ public sealed class SetupViewModel : Observable
         {
             var status = _status.Cli(agent.Cli) ?? new CliStatus(agent.Cli, "none", null);
             agent.RefreshDetection(status, _status.Checked);
-            agent.SetCodexConfig(_codexConfig);
+            agent.SetCodexConfigs(_codexConfigs);
             if (_compactFactory is not null) agent.Compact = _compactFactory(status);
+            if (_accountsFactory is not null) agent.Accounts = _accountsFactory(agent.Cli);
         }
         foreach (var name in new[] { nameof(Status), nameof(WslVisible), nameof(CanInstallWsl), nameof(WslText), nameof(Missing), nameof(MissingVisible),
                      nameof(MissingText), nameof(Summary), nameof(CheckNotice), nameof(WslInstallationStatus), nameof(CheckedWslDistro), nameof(InstalledWslDistros) })
@@ -381,9 +398,9 @@ public sealed partial class MainViewModel
         try
         {
             var result = await DetectSetupAsync(distro);
-            var codexConfig = await Task.Run(ReadCodexConfig);
+            var codexConfigs = await Task.Run(ReadCodexConfigs);
             if (_cfg.WslDistro != distro) return;
-            Setup.SetCodexConfig(codexConfig);
+            Setup.SetCodexConfigs(codexConfigs);
             Setup.Apply(result, distro);
             if (result.Cli("codex")?.Installed == true) _ = LoadCompactMetadataAsync(distro);
             SetupRowsChanged();
@@ -455,10 +472,29 @@ public sealed partial class MainViewModel
     internal string? CodexHomePath { get; set; }
     private string? CodexHome => CodexHomePath ?? PathMapping.ToLocalPath(CodexConfig.Home, _cfg.WslDistro, _wslHome);
 
-    /// <summary>What config.toml says now (#182); null when the path is unknown or the file cannot be read.</summary>
-    internal CodexConfigState? ReadCodexConfig()
+    /// <summary>Maps an account's Linux directory to a path this process can read; tests replace it.</summary>
+    internal Func<string, string?>? AccountHomePath { get; set; }
+
+    /// <summary>The CODEX_HOME of the default account and of every Codex account (#186) that this process can reach.</summary>
+    private List<string> CodexHomes()
     {
-        if (CodexHome is not { } home) return null;
+        var homes = new List<string>();
+        if (CodexHome is { } home) homes.Add(home);
+        foreach (var account in Accounts.For(_cfg, "codex").Where(a => Accounts.IsValidDirectory(a.Directory)))
+            if ((AccountHomePath ?? (d => PathMapping.ToLocalPath(d, _cfg.WslDistro, _wslHome)))(account.Directory) is { } local && !homes.Contains(local))
+                homes.Add(local);
+        return homes;
+    }
+
+    /// <summary>What every account's config.toml says now; unreadable ones are left out.</summary>
+    internal IReadOnlyList<CodexConfigState> ReadCodexConfigs() =>
+        CodexHomes().Select(ReadCodexConfig).OfType<CodexConfigState>().ToList();
+
+    /// <summary>What config.toml says now (#182); null when the path is unknown or the file cannot be read.</summary>
+    internal CodexConfigState? ReadCodexConfig() => CodexHome is { } home ? ReadCodexConfig(home) : null;
+
+    private static CodexConfigState? ReadCodexConfig(string home)
+    {
         try
         {
             var path = Path.Combine(home, CodexConfig.FileName);
@@ -514,11 +550,11 @@ public sealed partial class MainViewModel
             catch (Exception e) when (e is IOException or UnauthorizedAccessException)
             {
                 ShowError(ErrorKind.AgentConfig, Loc.Format("agents.codexConfig.failed", e.Message));
-                Setup.SetCodexConfig(ReadCodexConfig());
+                Setup.SetCodexConfigs(ReadCodexConfigs());
                 CheckSetup();
                 return false;
             }
-            Setup.SetCodexConfig(ReadCodexConfig());
+            Setup.SetCodexConfigs(ReadCodexConfigs());
         }
         ShowStatus(applied);
         CheckSetup();
@@ -527,11 +563,19 @@ public sealed partial class MainViewModel
 
     /// <summary>
     /// Makes Codex's config.toml follow the alias (#182): YOLO backs the file up once and sets both keys; Standard and
-    /// Auto Approve restore the backed-up values and remove the backup. Returns the status key of what changed.
+    /// Auto Approve restore the backed-up values and remove the backup. Every account's CODEX_HOME follows (#186), since the alias
+    /// applies to all of them. Returns the status key of what changed.
     /// </summary>
     private string? ApplyCodexConfig(AgentMode mode)
     {
-        if (CodexHome is not { } home) throw new IOException(Loc.Get("status.wslHomeMissing"));
+        if (CodexHome is null) throw new IOException(Loc.Get("status.wslHomeMissing"));
+        string? changed = null;
+        foreach (var home in CodexHomes()) changed = ApplyCodexConfig(home, mode) ?? changed;
+        return changed;
+    }
+
+    private static string? ApplyCodexConfig(string home, AgentMode mode)
+    {
         var path = Path.Combine(home, CodexConfig.FileName);
         var backup = Path.Combine(home, CodexConfig.BackupName);
         var current = File.Exists(path) ? File.ReadAllText(path) : null;

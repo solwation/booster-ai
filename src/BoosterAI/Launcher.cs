@@ -21,15 +21,17 @@ public static class Launcher
     {
         if (tab.Script is { } script) return script;
         var cd = Cd(tab);
+        // A chosen account (#186) is exported before everything else, so the update, the CLI and the shell left after it use it.
+        var account = Accounts.ExportCommand(tab);
         if (track is null)
         {
             if (tab.Llm == Catalog.ShellOnly) return $"{cd} || true && exec bash";
-            return $"{cd} && {LaunchCommand(tab, prompt, null, resume && CanContinue(tab))} || true && exec bash";
+            return $"{account}{cd} && {LaunchCommand(tab, prompt, null, resume && CanContinue(tab))} || true && exec bash";
         }
         var cli = LaunchCommand(tab, prompt, track, resume && CanContinue(tab));
         var tracked = tab.Llm == Catalog.ShellOnly
             ? $"{cd} || true && {Hook("bs_reset")} && {Hook("bs_cli")} && bs_run {Quote("bash")}"
-            : $"{cd} && {Hook("bs_reset")} && {UpdateHook(tab, track)}{Hook("bs_cli")} && {cli} && {Hook("bs_done 0")} || {Hook("bs_done $?")} && {Next} && (type bs_shell >/dev/null 2>&1) && bs_shell || bash";
+            : $"{account}{cd} && {Hook("bs_reset")} && {UpdateHook(tab, track)}{Hook("bs_cli")} && {cli} && {Hook("bs_done 0")} || {Hook("bs_done $?")} && {Next} && (type bs_shell >/dev/null 2>&1) && bs_shell || bash";
         // Select before executing: an unsuccessful CLI or a shell's exit code must never run the fallback a second
         // time. if/then/else runs the chosen body in the tab's own shell (the tracked PID) and, unlike the earlier
         // eval "$bs_command", needs no double quotes, which Windows Terminal drops from the command (#124, see Quote).
@@ -51,11 +53,12 @@ public static class Launcher
     /// <summary>
     /// What tab-lib.sh's bs_next runs in a tab whose CLI BoosterAI stopped for an in-place restart: the CLI
     /// with the new choices, logged like the first one, after a terminal reset (bs_reset, #67). <paramref name="resume"/> keeps the conversation
-    /// (claude --continue, codex resume --last) for a model change.
+    /// (claude --continue, codex resume --last) for a model change. It runs in the tab's shell, so it first takes back an account
+    /// variable an earlier run exported there and then exports the new choice (#186).
     /// </summary>
     public static string RestartScript(TabConfig tab, TabTrack track, bool resume) =>
-        tab.Llm == Catalog.ShellOnly ? $"{Cd(InWsl(tab))} || true && {Hook("bs_reset")}"
-            : $"{Cd(InWsl(tab))} && {Hook("bs_reset")} && {UpdateHook(tab, track)}{Hook("bs_cli")} && {LaunchCommand(tab, null, track, resume)} && {Hook("bs_done 0")} || {Hook("bs_done $?")}";
+        tab.Llm == Catalog.ShellOnly ? $"{Cd(InWsl(tab))} || true && {Hook("bs_reset")} && {Accounts.ResetCommand}"
+            : $"{Cd(InWsl(tab))} && {Hook("bs_reset")} && {UpdateHook(tab, track)}{Accounts.ResetCommand} && {Accounts.ExportCommand(InWsl(tab))}{Hook("bs_cli")} && {LaunchCommand(tab, null, track, resume)} && {Hook("bs_done 0")} || {Hook("bs_done $?")}";
 
     /// <summary>
     /// The step that updates the tab's AI CLI before it starts (tab-lib.sh's bs_update, #60), or "" when the setting is off
@@ -74,8 +77,10 @@ public static class Launcher
     ];
 
     /// <summary>A model change on claude, codex or aider restarts with the same conversation; anything else starts fresh.</summary>
+    /// <remarks>Conversations live in the account's directory, so another account always starts fresh (#186).</remarks>
     public static bool CanResume(TabConfig from, TabConfig to) =>
-        from.Llm == to.Llm && to.Llm is "claude" or "codex" or "aider" && !(to.NonInteractive && to.Orkester);
+        from.Llm == to.Llm && to.Llm is "claude" or "codex" or "aider" && !(to.NonInteractive && to.Orkester)
+        && from.AccountDirectory == to.AccountDirectory;
 
     /// <summary>Explicit continuation is interactive; Run once always starts a new orchestra pass.</summary>
     public static bool CanContinue(TabConfig tab) =>
@@ -380,6 +385,8 @@ fi
             if (!Catalog.IsSafeModel(t.Model)) return Loc.Format("err.model", t.Name, t.Model);
             if (t.Directory.IndexOfAny([';', '\n', '\r']) >= 0) return Loc.Format("err.directory", t.Name);
             if (t.Name.Contains(';')) return Loc.Format("err.name", t.Name);
+            if (Accounts.IsMissing(t)) return Loc.Format("err.account", t.Name, Loc.Display("llm", t.Llm));
+            if (t.AccountDirectory is { } dir && !Accounts.IsValidDirectory(dir)) return Loc.Format("err.accountDirectory", t.Name, dir);
         }
         return "";
     }
@@ -592,7 +599,7 @@ fi
     private static TabConfig InWsl(TabConfig t) => new()
     {
         Name = t.Name, Color = t.Color, ColorIndex = t.ColorIndex, Enabled = t.Enabled,
-        CompactTokens = t.CompactTokens, Id = t.Id, Llm = t.Llm, Model = t.Model, Advisor = t.Advisor, Orkester = t.Orkester, NonInteractive = t.NonInteractive, Directory = PathMapping.ToWslPath(t.Directory), Script = t.Script,
+        CompactTokens = t.CompactTokens, Account = t.Account, AccountDirectory = t.AccountDirectory, Id = t.Id, Llm = t.Llm, Model = t.Model, Advisor = t.Advisor, Orkester = t.Orkester, NonInteractive = t.NonInteractive, Directory = PathMapping.ToWslPath(t.Directory), Script = t.Script,
     };
 
     private static void LaunchWindowsTerminal(IReadOnlyList<TabConfig> tabs, string distro, string? prompt,
