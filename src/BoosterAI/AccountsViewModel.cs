@@ -90,9 +90,11 @@ public sealed class AgentAccountsViewModel : Observable
 
     private readonly Dictionary<string, AccountLoginStatus> _status = [];
     private readonly HashSet<string> _checking = [];
-    internal AccountLoginStatus StatusOf(string key) => _status.GetValueOrDefault(key) ?? AccountLoginStatus.Unknown;
-    internal bool HasStatus(string key) => _status.ContainsKey(key);
-    internal bool IsChecking(string key) => _checking.Contains(key);
+    // The app updates these on the UI thread; a check's continuation may run on another thread (tests), so access is locked.
+    private readonly object _statusLock = new();
+    internal AccountLoginStatus StatusOf(string key) { lock (_statusLock) return _status.GetValueOrDefault(key) ?? AccountLoginStatus.Unknown; }
+    internal bool HasStatus(string key) { lock (_statusLock) return _status.ContainsKey(key); }
+    internal bool IsChecking(string key) { lock (_statusLock) return _checking.Contains(key); }
 
     /// <summary>
     /// Checks every account's login in the background (#192): shown with the Accounts page and again when the window is activated.
@@ -104,7 +106,11 @@ public sealed class AgentAccountsViewModel : Observable
         if (!_owner.AccountStatusEnabled) return Task.CompletedTask;
         var started = new List<Task>();
         foreach (var row in Rows.ToList())
-            if (_checking.Add(row.Key)) started.Add(CheckAsync(row.Account, row.Key));
+        {
+            bool start;
+            lock (_statusLock) start = _checking.Add(row.Key);
+            if (start) started.Add(CheckAsync(row.Account, row.Key));
+        }
         if (started.Count > 0) foreach (var row in Rows) row.RefreshStatus();
         return Task.WhenAll(started);
     }
@@ -114,7 +120,7 @@ public sealed class AgentAccountsViewModel : Observable
     {
         var sample = cli == "codex" ? new AccountLoginStatus(LoginState.LoggedIn, null, "ChatGPT") : new AccountLoginStatus(LoginState.LoggedIn, "namn@example.com · Example AB");
         AccountLoginStatus[] cycle = [sample, AccountLoginStatus.LoggedOut, AccountLoginStatus.Unknown];
-        for (var i = 0; i < Rows.Count; i++) _status[Rows[i].Key] = cycle[i % cycle.Length];
+        lock (_statusLock) for (var i = 0; i < Rows.Count; i++) _status[Rows[i].Key] = cycle[i % cycle.Length];
         foreach (var row in Rows) row.RefreshStatus();
     }
 
@@ -123,9 +129,13 @@ public sealed class AgentAccountsViewModel : Observable
         AccountLoginStatus result;
         try { result = await _owner.CheckAccountLoginAsync(Cli, account?.Directory); }
         catch (Exception e) when (e is not OutOfMemoryException) { result = AccountLoginStatus.Unknown; }
-        _checking.Remove(key);
         // An account removed meanwhile keeps no status.
-        if (key == "" || Rows.Any(r => r.Key == key)) _status[key] = result;
+        var keep = key == "" || Rows.Any(r => r.Key == key);
+        lock (_statusLock)
+        {
+            _checking.Remove(key);
+            if (keep) _status[key] = result;
+        }
         foreach (var row in Rows) row.RefreshStatus();
     }
     public string Explanation => Loc.Format("account.explanation", Loc.Display("llm", Cli), EnvVar, Accounts.DefaultDirectory(Cli));
@@ -166,7 +176,7 @@ public sealed class AgentAccountsViewModel : Observable
         if (row.Account is not { } account) return;
         _owner.RemoveAccount(account);
         Rows.Remove(row);
-        _status.Remove(row.Key);
+        lock (_statusLock) _status.Remove(row.Key);
         Raise(nameof(Summary));
         RefreshUsage();
     }
