@@ -1076,10 +1076,23 @@ public sealed partial class MainViewModel : Observable
         CheckSetup();
     }
 
+    private readonly HashSet<string> _orkesterInFlight = [];
+
+    /// <summary>Number of directory checks currently running (UI thread only).</summary>
+    public int OrkesterChecksInFlight => _orkesterInFlight.Count;
+
+    /// <summary>Re-checks every tab, so an orchestra installed or removed outside the app shows up (#189). Directories already being checked are skipped.</summary>
+    public void RefreshOrkester()
+    {
+        foreach (var t in Tabs.ToArray()) CheckOrkester(t);
+    }
+
     public void CheckOrkester(TabViewModel tab)
     {
         var local = PathMapping.ToLocalPath(tab.Directory, _cfg.WslDistro, _wslHome);
         if (local is null) { tab.HasOrkester = null; return; }
+        // One check per directory at a time: tabs sharing a directory pick up the result of the first request.
+        if (!_orkesterInFlight.Add(local)) return;
         Task.Run(() =>
         {
             bool? has;
@@ -1087,8 +1100,10 @@ public sealed partial class MainViewModel : Observable
             catch (Exception) { has = null; }
             Dispatcher.UIThread.Post(() =>
             {
+                _orkesterInFlight.Remove(local);
                 // Ignore a result for a directory the user has typed away from.
-                if (PathMapping.ToLocalPath(tab.Directory, _cfg.WslDistro, _wslHome) == local) tab.HasOrkester = has;
+                foreach (var t in Tabs.ToArray())
+                    if (PathMapping.ToLocalPath(t.Directory, _cfg.WslDistro, _wslHome) == local) t.HasOrkester = has;
             });
         });
     }
