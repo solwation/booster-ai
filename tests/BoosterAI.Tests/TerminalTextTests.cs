@@ -178,6 +178,28 @@ public class TabOutputTests
         finally { TestShell.StopLeftovers(dir); Directory.Delete(dir, recursive: true); }
     }
 
+    /// <summary>A wall clock that stepped back (SECONDS below the start mark) gives a duration of 0 s, never a negative one.</summary>
+    [Fact]
+    public void RunDurationIsNeverNegativeWhenTheClockStepsBack()
+    {
+        if (!OperatingSystem.IsLinux()) return;
+        var dir = Directory.CreateTempSubdirectory("bs-dur").FullName;
+        try
+        {
+            File.WriteAllText(Path.Combine(dir, "tab-lib.sh"), TabSession.Lib);
+            var psi = new System.Diagnostics.ProcessStartInfo("bash") { RedirectStandardOutput = true, WorkingDirectory = dir };
+            TestShell.Configure(psi, dir);
+            psi.ArgumentList.Add("-c");
+            // t0 is far ahead of SECONDS, as after a backwards step; 3 s ahead of now in the other direction is a normal run.
+            psi.ArgumentList.Add(". ./tab-lib.sh . t && echo \"$(bs_dur $((SECONDS + 500))) $(bs_dur $((SECONDS - 3))) $(bs_dur $SECONDS)\"");
+            using var p = System.Diagnostics.Process.Start(psi)!;
+            var shown = p.StandardOutput.ReadToEnd().Trim();
+            p.WaitForExit();
+            Assert.Equal("0 3 0", shown);
+        }
+        finally { TestShell.StopLeftovers(dir); Directory.Delete(dir, recursive: true); }
+    }
+
     /// <summary>
     /// The real tab-lib.sh: a redrawing TUI under bs_run (inside a terminal from script -qec, as a tab) is captured,
     /// kept near bs_cap_max per part, replayed as its last frame, and removed when the tab's shell exits.

@@ -336,12 +336,38 @@ public class UpdateTests
         foreach (var a in new[] { "-NoProfile", "-WindowStyle", "Hidden", "-Command", "Start-Sleep -Milliseconds 1500" }) wait.ArgumentList.Add(a);
         using var app = Process.Start(wait)!;
         UpdateClient.LaunchHelper(windows: true, app.Id, target, staged, dir, log, relaunch: false);
-        for (var i = 0; i < 400 && !(File.Exists(log) && File.ReadAllText(log).Contains("no relaunch")); i++) Thread.Sleep(50);
-        Assert.Contains("updated", File.ReadAllText(log));
+        // PowerShell start-up under a loaded full suite can take many seconds, and the helper holds the log
+        // open while it appends (a plain ReadAllText then throws a sharing violation): read shared, wait for state.
+        Assert.True(WaitFor(() => ReadLog(log).Contains("no relaunch"), 90), "helper did not finish: " + ReadLog(log));
+        Assert.Contains("updated", ReadLog(log));
         Assert.Equal("new", File.ReadAllText(target));
         Assert.False(File.Exists(staged));
-        for (var i = 0; i < 100 && File.Exists(target + ".old"); i++) Thread.Sleep(50);
-        Assert.False(File.Exists(target + ".old"));
+        // The helper removes the .old file after its own 3 s pause.
+        Assert.True(WaitFor(() => !File.Exists(target + ".old"), 60), "the .old file was not removed");
+    }
+
+    private static bool WaitFor(Func<bool> done, int seconds)
+    {
+        var end = DateTime.UtcNow.AddSeconds(seconds);
+        while (DateTime.UtcNow < end)
+        {
+            if (done()) return true;
+            Thread.Sleep(50);
+        }
+        return done();
+    }
+
+    /// <summary>The log's text, read without locking the writer out; empty while it is missing or momentarily busy.</summary>
+    private static string ReadLog(string path)
+    {
+        try
+        {
+            using var f = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            using var r = new StreamReader(f);
+            return r.ReadToEnd();
+        }
+        catch (IOException) { return ""; }
+        catch (UnauthorizedAccessException) { return ""; }
     }
 
     /// <summary>

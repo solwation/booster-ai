@@ -622,12 +622,14 @@ bs_update() (
 # progress, and return the CLI's own exit code (not the formatter's). The CLI is an argument
 # here, so bash does not expand the user's alias for it (agy='agy --dangerously-skip-permissions'):
 # apply it explicitly, as a typed command would.
+# bs_dur <t0>: whole seconds since $SECONDS was t0, never negative (bash's SECONDS follows the wall clock, which can step back).
+bs_dur() { local d=$((SECONDS - $1)); [ "$d" -lt 0 ] && d=0; echo "$d"; }
 bs_stream() {
   bs_refresh_aliases "$1"
   if [ -n "${BASH_ALIASES[$1]+x}" ]; then eval "set -- ${BASH_ALIASES[$1]}"' "${@:2}"'; fi
   local t0=$SECONDS rc
   # The group runs in this shell (rc stays set); its output also goes to the capture. bs_fg: see there.
-  { bs_fg bs_pipe "$@"; rc=$?; echo "== exit $rc, total $((SECONDS - t0)) s"; } > >(bs_cap tee)
+  { bs_fg bs_pipe "$@"; rc=$?; echo "== exit $rc, total $(bs_dur "$t0") s"; } > >(bs_cap tee)
   # Let the capture print its last line before the shell goes on (bash 5.1+ waits for a process substitution).
   wait "$!" 2>/dev/null
   return "$rc"; }
