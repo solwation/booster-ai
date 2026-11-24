@@ -187,7 +187,9 @@ public class CliUpdateTests
     }
 
     [Theory]
-    [InlineData(0, false)]
+    // A minute, not zero: a stamp the wall clock has since been stepped back past counts as due (clock reset), and this
+    // WSL steps its clock back by seconds now and then (#190).
+    [InlineData(60, false)]
     [InlineData(5 * 3600, false)]
     [InlineData(7 * 3600, true)]
     public void ChecksAtMostOncePerInterval(int ageSeconds, bool checks)

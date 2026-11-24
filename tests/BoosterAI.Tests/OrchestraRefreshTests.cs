@@ -7,7 +7,9 @@ public class OrchestraRefreshTests
 {
     private static void Settle(MainViewModel vm)
     {
-        for (var i = 0; i < 200 && vm.OrkesterChecksInFlight > 0; i++)
+        // A generous deadline: under the full suite's load a pooled directory check can take seconds to start (#190).
+        var deadline = Environment.TickCount64 + 30000;
+        while (vm.OrkesterChecksInFlight > 0 && Environment.TickCount64 < deadline)
         {
             Dispatcher.UIThread.RunJobs();
             Thread.Sleep(10);
