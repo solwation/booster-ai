@@ -659,23 +659,17 @@
                                 <TextBlock Classes="caption" Text="{Binding CurrentAliasExplanation}" TextWrapping="Wrap" />
                               </StackPanel>
                             </Border>
-                            <Border Background="{DynamicResource WarningSurfaceBrush}" CornerRadius="{StaticResource RadiusMedium}" Padding="10" IsVisible="{Binding HasConfigWarning}"><TextBlock Text="{Binding ConfigWarningText}" TextWrapping="Wrap" /></Border>
+                            <Border Background="{DynamicResource WarningSurfaceBrush}" CornerRadius="{StaticResource RadiusMedium}" Padding="10" IsVisible="{Binding HasConfigWarning}">
+                              <StackPanel Spacing="8"><TextBlock Text="{Binding ConfigWarningText}" TextWrapping="Wrap" /><Button Classes="secondary" Content="{local:T agents.codexConfig.repair}" Click="OnRepairAgentConfig" IsVisible="{Binding CanRepairConfig}" HorizontalAlignment="Left" /></StackPanel>
+                            </Border>
                             <StackPanel Spacing="6">
                               <TextBlock Text="{local:T agents.alias.choose}" FontWeight="SemiBold" />
-                              <ComboBox ItemsSource="{Binding ModeChoices}" SelectedItem="{Binding SelectedMode}" IsEnabled="{Binding CanSelectMode}" HorizontalAlignment="Stretch" AutomationProperties.Name="{local:T agents.alias.choose}">
+                              <ComboBox ItemsSource="{Binding ModeChoices}" SelectedItem="{Binding SelectedMode}" SelectionChanged="OnAgentModeSelected" IsEnabled="{Binding CanSelectMode}" HorizontalAlignment="Stretch" AutomationProperties.Name="{local:T agents.alias.choose}">
                                 <ComboBox.ItemTemplate><DataTemplate x:DataType="local:AgentModeChoice"><TextBlock Text="{Binding Label}" /></DataTemplate></ComboBox.ItemTemplate>
                               </ComboBox>
                               <TextBlock Text="{Binding AliasRecommendation}" Classes="muted caption" TextWrapping="Wrap" />
                             </StackPanel>
-                            <Border Background="{DynamicResource WarningSurfaceBrush}" CornerRadius="{StaticResource RadiusMedium}" Padding="10" IsVisible="{Binding IsYolo}"><TextBlock Text="{local:T agents.permissions.warning}" TextWrapping="Wrap" FontWeight="SemiBold" /></Border>
                             <TextBlock Classes="caption" Text="{Binding ModeExplanation}" TextWrapping="Wrap" />
-                            <StackPanel Spacing="5" IsVisible="{Binding HasPresetPreview}">
-                              <TextBlock Classes="caption" Text="{local:T agents.alias.preview}" FontWeight="SemiBold" />
-                              <SelectableTextBlock Text="{Binding ModePreview}" Classes="path caption" TextWrapping="Wrap" />
-                              <TextBlock Text="{Binding ModePreviewEffect}" Classes="muted caption" TextWrapping="Wrap" />
-                            </StackPanel>
-                            <Button Classes="secondary" Content="{local:T agents.mode.apply}" Click="OnApplyAgentMode" IsEnabled="{Binding CanApply}" HorizontalAlignment="Left" />
-                            <TextBlock Text="{local:T agents.alias.scope}" Classes="muted caption" TextWrapping="Wrap" />
                           </StackPanel>
                           <StackPanel Spacing="12" IsVisible="{Binding IsContext}">
                             <WrapPanel><TextBlock Text="{Binding $parent[Window].((local:MainViewModel)DataContext).SelectedCompactMode.Label}" FontWeight="SemiBold" Margin="0,6,12,6" /><Button Classes="link" Content="{local:T agents.context.global}" Click="OnAgentCompactSettings" /></WrapPanel>

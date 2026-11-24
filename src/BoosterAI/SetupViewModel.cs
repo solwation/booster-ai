@@ -107,6 +107,10 @@ public sealed class AgentInfo : Observable
     public string ModePreviewEffect => Loc.Get(HasExternalDefinition || Detected.HasPermissionOverride
         ? SelectedMode.Mode == AgentMode.Standard ? "agents.alias.override.none" : "agents.alias.preview.external"
         : SelectedMode.Mode == AgentMode.Standard ? "agents.alias.remove" : "agents.alias.write");
+    /// <summary>True while the change confirmation is open (#187); selection changes made meanwhile or by the revert are ignored.</summary>
+    internal bool ModeChangePending { get; set; }
+    /// <summary>Puts the selection back on the mode that actually applies; used when a change was cancelled or failed.</summary>
+    internal void RevertSelection() => SelectedMode = ModeChoices.FirstOrDefault(c => c.Mode == CurrentMode) ?? ModeChoices[0];
     private AgentModeChoice _selectedMode;
     public AgentModeChoice SelectedMode
     {
@@ -463,7 +467,27 @@ public sealed partial class MainViewModel
         catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return null; }
     }
 
-    /// <summary>Called only by the Apply action after its required confirmation; never changes a running CLI.</summary>
+    /// <summary>
+    /// The flow behind choosing a mode in the list (#187): ask <paramref name="confirm"/> first, write only on yes, and put the
+    /// list back on the effective mode on cancel or failure. Ignores a selection equal to the current mode (what a refresh or the
+    /// revert sets) and any change while a confirmation is open, so nothing re-opens the dialog. <paramref name="repair"/> asks
+    /// for the current mode again (fixing Codex's config.toml). Returns true when something was written.
+    /// </summary>
+    public async Task<bool> ChooseAgentModeAsync(AgentInfo agent, Func<AgentInfo, Task<bool>> confirm, bool repair = false)
+    {
+        if (agent.ModeChangePending || !agent.CanApply || (!repair && agent.SelectedMode.Mode == agent.CurrentMode)) return false;
+        agent.ModeChangePending = true;
+        var applied = false;
+        try { applied = await confirm(agent) && ApplyAgentMode(agent, yoloConfirmed: true, replaceCustomConfirmed: true); }
+        finally
+        {
+            if (!applied) agent.RevertSelection();
+            agent.ModeChangePending = false;
+        }
+        return applied;
+    }
+
+    /// <summary>Called only after the mode confirmation; never changes a running CLI.</summary>
     public bool ApplyAgentMode(AgentInfo agent, bool yoloConfirmed, bool replaceCustomConfirmed = false)
     {
         if (!agent.CanApply || (agent.SelectedMode.Mode == AgentMode.Yolo && !yoloConfirmed)

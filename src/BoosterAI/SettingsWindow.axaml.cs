@@ -105,11 +105,17 @@ public partial class SettingsWindow : Window
             _vm.InstallCli(agent.Cli);
     }
 
-    private async void OnApplyAgentMode(object? sender, RoutedEventArgs e)
+    /// <summary>A mode picked in the list (#187): confirm, then write; cancel puts the list back.</summary>
+    private async void OnAgentModeSelected(object? sender, SelectionChangedEventArgs e)
     {
-        if ((sender as Control)?.DataContext is not AgentInfo agent || !agent.CanApply) return;
-        if (await ConfirmSetupWindow.AgentMode(agent).ShowDialog<bool>(this))
-            _vm.ApplyAgentMode(agent, yoloConfirmed: true, replaceCustomConfirmed: true);
+        if ((sender as Control)?.DataContext is AgentInfo agent && e.AddedItems.Count > 0)
+            await _vm.ChooseAgentModeAsync(agent, a => ConfirmSetupWindow.AgentMode(a).ShowDialog<bool>(this));
+    }
+
+    private async void OnRepairAgentConfig(object? sender, RoutedEventArgs e)
+    {
+        if ((sender as Control)?.DataContext is AgentInfo agent)
+            await _vm.ChooseAgentModeAsync(agent, a => ConfirmSetupWindow.AgentMode(a).ShowDialog<bool>(this), repair: true);
     }
 
     private void OnAddTab(object? sender, RoutedEventArgs e) => _vm.AddTab();
