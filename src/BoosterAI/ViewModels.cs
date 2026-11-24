@@ -194,36 +194,77 @@ public sealed class TabViewModel : Observable
         set
         {
             if (!Set(ref _account, value ?? "")) return;
-            Raise(nameof(SelectedAccount));
+            Raise(nameof(SelectedAgentChoice));
             Raise(nameof(AccountLabel));
             Raise(nameof(HasAccount));
+            // Only a missing account's own entry depends on the choice; refresh the list after the selection commits.
+            Dispatcher.UIThread.Post(RaiseLlms);
             ChoiceChanged();
         }
     }
-    /// <summary>The account row shows for an agent with accounts besides the default one, or when a choice is saved.</summary>
-    public bool AccountVisible => Accounts.Supports(_llm) && (_owner.AccountsFor(_llm).Count > 0 || _account != "");
-    /// <summary>The choices: the default account first, then the agent's accounts in Settings order.</summary>
-    public IReadOnlyList<AccountChoice> AccountChoices
+
+    /// <summary>
+    /// The Agent box (#194): one entry per agent and account, grouped per agent in <see cref="Llms"/> order. An agent with
+    /// accounts besides its default one lists the default account first (with its name, #192), then its accounts in Settings
+    /// order, all with the account shown; any other agent has one entry without it. A saved account that no longer exists
+    /// keeps an entry of its own, so the choice stays visible instead of quietly switching login.
+    /// </summary>
+    public IReadOnlyList<AgentChoice> AgentChoices
     {
         get
         {
-            var list = new List<AccountChoice> { new("", _owner.DefaultAccountName(_llm), Accounts.DefaultDirectory(_llm)) };
-            list.AddRange(_owner.AccountsFor(_llm).Select(a => new AccountChoice(a.Id, a.Name, a.Directory)));
-            if (_account != "" && list.All(c => c.Id != _account)) list.Add(new(_account, Loc.Format("account.missing", _account), ""));
+            var list = new List<AgentChoice>();
+            foreach (var llm in Llms)
+            {
+                var accounts = _owner.AccountsFor(llm);
+                var missing = llm == _llm && _account != "" && accounts.All(a => a.Id != _account);
+                if (accounts.Count == 0 && !missing)
+                {
+                    list.Add(new(llm, "", "", false, null));
+                    continue;
+                }
+                list.Add(new(llm, "", _owner.DefaultAccountName(llm), true, AccountTip(llm, _owner.DefaultAccountName(llm), Accounts.DefaultDirectory(llm), "")));
+                list.AddRange(accounts.Select(a => new AgentChoice(llm, a.Id, a.Name, true, AccountTip(llm, a.Name, a.Directory, a.Directory))));
+                if (missing) list.Add(new(llm, _account, Loc.Format("account.missing", _account), true, Loc.Format("account.missing", _account)));
+            }
             return list;
         }
     }
-    public AccountChoice? SelectedAccount
+
+    /// <summary>The account's name, directory and, when a check in Settings has answered, its login status.</summary>
+    private string AccountTip(string llm, string name, string directory, string statusKey)
     {
-        get => AccountChoices.FirstOrDefault(c => c.Id == _account);
-        set { if (value is not null) Account = value.Id; }
+        var tip = Loc.Format("agent.account.tip", name, directory);
+        return _owner.KnownLoginStatus(llm, statusKey) is { } status ? tip + "\n" + status.Text : tip;
     }
+
+    /// <summary>The entry for the tab's agent and account; choosing one sets <see cref="Llm"/> and then <see cref="Account"/>.</summary>
+    public AgentChoice? SelectedAgentChoice
+    {
+        get
+        {
+            var choices = AgentChoices;
+            return choices.FirstOrDefault(c => c.Llm == _llm && c.AccountId == _account) ?? choices.FirstOrDefault(c => c.Llm == _llm);
+        }
+        set
+        {
+            if (value is null) return;
+            // An agent change resets the account to the default one (see Llm); the entry then names the account to use.
+            Llm = value.Llm;
+            Account = value.AccountId;
+            Raise(nameof(SelectedAgentChoice));
+        }
+    }
+
     /// <summary>The chosen account's name; empty for the default account, so only a non-default login is called out.</summary>
-    public string AccountLabel => _account == "" ? (_owner.HasDefaultAccountName(_llm) ? _owner.DefaultAccountName(_llm) : "") : SelectedAccount?.Name ?? _account;
+    public string AccountLabel => _account == "" ? (_owner.HasDefaultAccountName(_llm) ? _owner.DefaultAccountName(_llm) : "")
+        : Accounts.Find(_owner.AccountsFor(_llm), _llm, _account)?.Name ?? _account;
     public bool HasAccount => AccountLabel != "";
     internal void AccountsChanged()
     {
-        foreach (var n in new[] { nameof(AccountVisible), nameof(AccountChoices), nameof(SelectedAccount), nameof(AccountLabel), nameof(HasAccount), nameof(PeekHeader) }) Raise(n);
+        foreach (var n in new[] { nameof(SelectedAgentChoice), nameof(AccountLabel), nameof(HasAccount), nameof(PeekHeader) }) Raise(n);
+        // Replacing the Agent box's items while it commits a selection re-enters it; refresh them afterwards (see Llm).
+        Dispatcher.UIThread.Post(RaiseLlms);
         ChoiceChanged();
     }
 
@@ -313,7 +354,12 @@ public sealed class TabViewModel : Observable
             return list;
         }
     }
-    public void RaiseLlms() => Raise(nameof(Llms));
+    public void RaiseLlms()
+    {
+        Raise(nameof(Llms));
+        Raise(nameof(AgentChoices));
+        Raise(nameof(SelectedAgentChoice));
+    }
     public IReadOnlyList<string> Models => Catalog.ModelsFor(_llm);
     public bool IsAi => _llm != Catalog.ShellOnly;
 
@@ -2241,8 +2287,14 @@ public sealed class ImportViewModel : Observable, IProjectList
     }
 }
 
-/// <summary>One entry of a tab's account choice (#186); <paramref name="Id"/> "" is the agent's default account.</summary>
-public sealed record AccountChoice(string Id, string Name, string Directory)
+/// <summary>
+/// One entry of a tab's Agent box (#194): an agent and one of its accounts (<paramref name="AccountId"/> "" is the default
+/// account). <paramref name="ShowAccount"/> is true for every entry of an agent with accounts besides its default one, which then
+/// shows <paramref name="AccountName"/> as a label after the agent; <paramref name="Tip"/> describes that account.
+/// </summary>
+public sealed record AgentChoice(string Llm, string AccountId, string AccountName, bool ShowAccount, string? Tip)
 {
+    /// <summary>What a screen reader reads: "claude, konto Work", or only the agent.</summary>
+    public string Name => ShowAccount ? Loc.Format("agent.account.name", Loc.Display("llm", Llm), AccountName) : Loc.Display("llm", Llm);
     public override string ToString() => Name;
 }

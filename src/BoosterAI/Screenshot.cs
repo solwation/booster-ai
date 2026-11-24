@@ -8,14 +8,14 @@ using Avalonia.Threading;
 namespace BoosterAI;
 
 /// <summary>
-/// <c>--screenshot file.png [--window main|local-model|local-models|close|settings|install|import|restart|remove-project|alias|wsl-shutdown|memory-reclaim|agent-yolo|wsl|unsaved|setup|uninstall] [--theme light|dark] [--config file.json] [--fake-update [manual:]0.3.0] [--fake-status [error:]text] [--fake-denied] [--fake-changed] [--fake-restartable N] [--fake-output [N]] [--fake-setup [cli|wsl|alias]] [--fake-long-status] [--check-clipping] [--fake-memory-reclaim gradual|dropcache|disabled|other|old|unknown]</c>:
+/// <c>--screenshot file.png [--window main|local-model|local-models|close|settings|install|import|restart|remove-project|alias|wsl-shutdown|memory-reclaim|agent-yolo|wsl|unsaved|setup|uninstall] [--theme light|dark] [--config file.json] [--fake-update [manual:]0.3.0] [--fake-status [error:]text] [--fake-denied] [--fake-changed] [--fake-restartable N] [--fake-output [N]] [--fake-setup [cli|wsl|alias]] [--fake-long-status] [--check-clipping] [--fake-agent-list [N]] [--fake-memory-reclaim gradual|dropcache|disabled|other|old|unknown]</c>:
 /// renders a window with Avalonia's headless Skia platform. Nothing is shown on the desktop and no
 /// focus changes. The window frame (title bar) is not drawn; only the client area.
 /// </summary>
 internal sealed record ScreenshotOptions(string File, string Window, string? FakeUpdate, string? FakeStatus, bool FakeDenied, bool FakeChanged,
     int? FakeOutput = null, int FakeRestartable = 0, string? FakeSetup = null, string? Tab = null, bool FakeOptimization = false, int? FakeMemoryCap = null,
     string? Section = null, string? FakeMemoryState = null, int? Width = null, int? Height = null, bool FakeOrchestraIdle = false, int? FakeMemorySaved = null,
-    bool FakeLongStatus = false, bool CheckClipping = false, string? FakeMemoryReclaim = null);
+    bool FakeLongStatus = false, bool CheckClipping = false, string? FakeMemoryReclaim = null, int? FakeAgentList = null);
 
 internal static class Screenshot
 {
@@ -37,7 +37,8 @@ internal static class Screenshot
             int.TryParse(Value(args, "--width"), out var width) ? width : null,
             int.TryParse(Value(args, "--height"), out var height) ? height : null, args.Contains("--fake-orchestra-idle"),
             int.TryParse(Value(args, "--fake-memory-saved"), out var saved) ? saved : null,
-            args.Contains("--fake-long-status"), args.Contains("--check-clipping"), Value(args, "--fake-memory-reclaim"));
+            args.Contains("--fake-long-status"), args.Contains("--check-clipping"), Value(args, "--fake-memory-reclaim"),
+            !args.Contains("--fake-agent-list") ? null : int.TryParse(Value(args, "--fake-agent-list"), out var list) ? list : 0);
     }
 
     /// <summary>--fake-output [N]: the popup of the Nth running sample tab (0: the first, interactive; 1: Watching).</summary>
@@ -280,6 +281,8 @@ internal static class Screenshot
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(o.File))!);
         // --fake-output [N]: a running tab's status popup open over the window, with sample output.
         if (o.FakeOutput is { } n && vm.ShowSampleOutput(n) is { } tab) WithStatusPopup(window, frame, tab).Save(o.File);
+        // --fake-agent-list [N]: the Nth row's Agent box open, with its agent and account entries (#194).
+        else if (o.FakeAgentList is { } row) WithAgentList(window, frame, row).Save(o.File);
         else frame.Save(o.File);
         // --check-clipping: every text that ends in "…" because it did not fit is printed, and the exit code is 3 (#152).
         if (o.CheckClipping)
@@ -292,6 +295,36 @@ internal static class Screenshot
             if (clipped.Count > 0) return 3;
         }
         return 0;
+    }
+
+    /// <summary>Opens the Agent box of row <paramref name="row"/> and draws its list onto the window frame below the box.</summary>
+    private static Bitmap WithAgentList(Window window, Bitmap frame, int row)
+    {
+        var box = window.GetVisualDescendants().OfType<ComboBox>().Where(c => c.ItemsSource is IReadOnlyList<AgentChoice>).ElementAt(row);
+        box.IsDropDownOpen = true;
+        for (var i = 0; i < 3; i++)
+        {
+            Thread.Sleep(30);
+            Dispatcher.UIThread.RunJobs();
+            AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+        }
+        var list = box.GetVisualDescendants().OfType<Avalonia.Controls.Primitives.Popup>().FirstOrDefault()?.Child
+            ?? throw new InvalidOperationException("The agent list did not open");
+        list.UpdateLayout();
+        var size = list.Bounds.Size;
+        if (size.Width <= 0) throw new InvalidOperationException("The agent list did not open");
+        var listFrame = new RenderTargetBitmap(new PixelSize((int)Math.Ceiling(size.Width), (int)Math.Ceiling(size.Height)), frame.Dpi);
+        listFrame.Render(list);
+        var cell = box.TranslatePoint(new Point(0, box.Bounds.Height), window) ?? default;
+        var x = Math.Max(8, Math.Min(cell.X, window.ClientSize.Width - size.Width - 8));
+        var y = Math.Max(8, Math.Min(cell.Y + 2, window.ClientSize.Height - size.Height - 8));
+        var result = new RenderTargetBitmap(frame.PixelSize, frame.Dpi);
+        using (var ctx = result.CreateDrawingContext())
+        {
+            ctx.DrawImage(frame, new Rect(frame.Size));
+            ctx.DrawImage(listFrame, new Rect(new Point(x, y), size));
+        }
+        return result;
     }
 
     /// <summary>

@@ -30,7 +30,7 @@ public partial class MainWindow : Window
     internal static string ProjectColumns(double width, bool orchestra)
     {
         var compact = width is > 0 and < 1050;
-        var fixedColumns = compact ? "150,140" : "166,195";
+        var fixedColumns = compact ? "150,140" : "200,195";
         return $"4,20,46,4*,5*,{fixedColumns},{(orchestra ? 168 : 0)}";
     }
 

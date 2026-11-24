@@ -147,7 +147,7 @@
     </StackPanel>
 
     <!-- Column widths are set in MainWindow.axaml.cs (ProjectColumns): compact or wide, orchestra shown or 0 (#152). -->
-    <Grid Grid.Row="2" Classes="project-columns" Loaded="OnProjectGridLoaded" ColumnDefinitions="4,20,46,4*,5*,166,195,168" Margin="0,0,0,6" IsVisible="{Binding HasTabs}">
+    <Grid Grid.Row="2" Classes="project-columns" Loaded="OnProjectGridLoaded" ColumnDefinitions="4,20,46,4*,5*,200,195,168" Margin="0,0,0,6" IsVisible="{Binding HasTabs}">
       <TextBlock Grid.Column="2" Classes="colhead" Text="{local:T col.with}" />
       <TextBlock Grid.Column="3" Classes="colhead" Text="{local:T col.project}" />
       <TextBlock Grid.Column="4" Classes="colhead" Text="{local:T col.status}" />
@@ -176,7 +176,7 @@
                   </ContextMenu>
                 </Border.ContextMenu>
                 <StackPanel>
-                <Grid Classes="project-columns" Loaded="OnProjectGridLoaded" ColumnDefinitions="4,20,46,4*,5*,166,195,168">
+                <Grid Classes="project-columns" Loaded="OnProjectGridLoaded" ColumnDefinitions="4,20,46,4*,5*,200,195,168">
                   <!-- A project's colour stripe; a subtab instead continues it as a 1 px guide (#156). -->
                   <Border Grid.Column="0" Background="{Binding ColorBrush}" CornerRadius="{StaticResource RadiusSmall}" IsVisible="{Binding IsProject}" />
                   <Border Grid.Column="0" Classes="subtab-guide" IsVisible="{Binding IsSubTab}" Margin="1,-12,0,-10" />
@@ -246,17 +246,26 @@
                     </StackPanel>
                   </Grid>
 
-                  <ComboBox Grid.Column="5" Classes="field" ItemsSource="{Binding Llms}" SelectedItem="{Binding Llm}"
-                            Margin="0,0,12,0" Opacity="{Binding RowOpacity}">
+                  <!-- Agent and account in one choice (#194): an agent with accounts besides its default one lists one entry per
+                       account, each with the account as a small label after the agent; the others show only the agent. -->
+                  <ComboBox Grid.Column="5" Classes="field" ItemsSource="{Binding AgentChoices}" SelectedItem="{Binding SelectedAgentChoice}"
+                            Margin="0,0,12,0" Opacity="{Binding RowOpacity}" AutomationProperties.Name="{Binding SelectedAgentChoice.Name}">
                     <ComboBox.ItemTemplate>
-                      <DataTemplate x:DataType="x:String">
+                      <DataTemplate x:DataType="local:AgentChoice">
                         <!-- A CLI missing where the tabs run gets a warning marker after its name, not a text suffix (#152). -->
-                        <StackPanel Orientation="Horizontal" Spacing="6"><local:AgentIcon Cli="{Binding}" Width="16" Height="16" /><TextBlock Text="{Binding, Converter={x:Static local:Converters.LlmName}}" VerticalAlignment="Center" />
-                          <Border Background="Transparent" VerticalAlignment="Center" IsVisible="{Binding, Converter={x:Static local:Converters.LlmMissing}}"
-                                  ToolTip.Tip="{Binding, Converter={x:Static local:Converters.LlmMissingName}}"
-                                  AutomationProperties.Name="{Binding, Converter={x:Static local:Converters.LlmMissingName}}">
+                        <Grid ColumnDefinitions="Auto,Auto,Auto,*" AutomationProperties.Name="{Binding Name}">
+                          <local:AgentIcon Grid.Column="0" Cli="{Binding Llm}" Width="16" Height="16" />
+                          <TextBlock Grid.Column="1" Text="{Binding Llm, Converter={x:Static local:Converters.LlmName}}" VerticalAlignment="Center" Margin="6,0,0,0" />
+                          <Border Grid.Column="2" Background="Transparent" VerticalAlignment="Center" Margin="6,0,0,0"
+                                  IsVisible="{Binding Llm, Converter={x:Static local:Converters.LlmMissing}}"
+                                  ToolTip.Tip="{Binding Llm, Converter={x:Static local:Converters.LlmMissingName}}"
+                                  AutomationProperties.Name="{Binding Llm, Converter={x:Static local:Converters.LlmMissingName}}">
                             <Path Classes="missing" Data="{StaticResource WarningIcon}" />
-                          </Border></StackPanel>
+                          </Border>
+                          <Border Grid.Column="3" Classes="account-pill" Margin="6,0,0,0" IsVisible="{Binding ShowAccount}" ToolTip.Tip="{Binding Tip}">
+                            <TextBlock Classes="caption" Text="{Binding AccountName}" />
+                          </Border>
+                        </Grid>
                       </DataTemplate>
                     </ComboBox.ItemTemplate>
                   </ComboBox>
@@ -278,7 +287,7 @@
                 </Grid>
                 <!-- Advisor belongs to the project choices, independently of the subtab expander (#173). -->
                 <Panel IsVisible="{Binding IsProject}">
-                  <Grid Classes="project-columns" Loaded="OnProjectGridLoaded" ColumnDefinitions="4,20,46,4*,5*,166,195,168"
+                  <Grid Classes="project-columns" Loaded="OnProjectGridLoaded" ColumnDefinitions="4,20,46,4*,5*,200,195,168"
                         RowDefinitions="Auto,Auto" IsVisible="{Binding AdvisorVisible}" Margin="0,6,0,0">
                     <TextBlock Grid.Column="3" Grid.ColumnSpan="2" Classes="muted caption" Text="{local:T advisor.scope}"
                                TextWrapping="Wrap" VerticalAlignment="Center" Margin="20,0,12,0" />
@@ -289,19 +298,6 @@
                                Text="{Binding AdvisorWarning}" IsVisible="{Binding HasAdvisorWarning}" TextWrapping="Wrap" Margin="20,4,12,0" />
                   </Grid>
                 </Panel>
-                <!-- The tab's account (#186): every row whose agent has accounts besides the default one, subtabs included. -->
-                <Grid Classes="project-columns" Loaded="OnProjectGridLoaded" ColumnDefinitions="4,20,46,4*,5*,166,195,168"
-                      IsVisible="{Binding AccountVisible}" Margin="0,6,0,0" Opacity="{Binding RowOpacity}">
-                  <TextBlock Grid.Column="5" Classes="muted caption" Text="{local:T account.label}" VerticalAlignment="Center" />
-                  <ComboBox Grid.Column="6" Classes="field" ItemsSource="{Binding AccountChoices}" SelectedItem="{Binding SelectedAccount}"
-                            Margin="0,0,12,0" ToolTip.Tip="{local:T account.tip}" AutomationProperties.Name="{local:T account.label}">
-                    <ComboBox.ItemTemplate>
-                      <DataTemplate x:DataType="local:AccountChoice">
-                        <TextBlock Text="{Binding Name}" ToolTip.Tip="{Binding Directory}" TextTrimming="CharacterEllipsis" />
-                      </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                  </ComboBox>
-                </Grid>
                 <!-- Only an expanded project carries a line under it, so collapsed rows keep one rhythm (#152). -->
                 <Panel IsVisible="{Binding IsProject}">
                   <Panel IsVisible="{Binding Expanded}">

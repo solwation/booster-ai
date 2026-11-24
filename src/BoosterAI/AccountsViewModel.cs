@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using Avalonia.Threading;
 
 namespace BoosterAI;
 
@@ -137,6 +138,7 @@ public sealed class AgentAccountsViewModel : Observable
             if (keep) _status[key] = result;
         }
         foreach (var row in Rows) row.RefreshStatus();
+        _owner.AccountStatusChanged(Cli);
     }
     public string Explanation => Loc.Format("account.explanation", Loc.Display("llm", Cli), EnvVar, Accounts.DefaultDirectory(Cli));
     /// <summary>The overview card's line: how many accounts the agent has, the default one included.</summary>
@@ -213,6 +215,17 @@ public sealed partial class MainViewModel
         (distro, llm, directory) => Task.Run(() => AccountStatusProbe.Check(distro, llm, directory));
     internal Task<AccountLoginStatus> CheckAccountLoginAsync(string llm, string? directory) =>
         directory is not null && !Accounts.IsValidDirectory(directory) ? Task.FromResult(AccountLoginStatus.Unknown) : CheckAccountLogin(_cfg.WslDistro, llm, directory);
+
+    /// <summary>An account's login status once a check in Settings has answered (#194); null while unknown to BoosterAI.</summary>
+    internal AccountLoginStatus? KnownLoginStatus(string cli, string key) =>
+        _accountEditors.TryGetValue(cli, out var editor) && editor.HasStatus(key) ? editor.StatusOf(key) : null;
+
+    /// <summary>A check answered (possibly off the UI thread): the Agent boxes' account tooltips follow on the UI thread.</summary>
+    internal void AccountStatusChanged(string cli) => Dispatcher.UIThread.Post(() =>
+    {
+        if (AccountsFor(cli).Count == 0) return; // no Agent box shows this agent's accounts
+        foreach (var tab in Tabs) tab.RaiseLlms();
+    });
 
     internal int TabsUsingAccount(string cli, string id) => Tabs.Count(t => t.Llm == cli && t.Account == id);
 

@@ -213,13 +213,11 @@ public sealed class AccountTests : IDisposable
             Tabs = [new() { Name = "Atlas", Llm = "claude" }, new() { Name = "Borg", Llm = "agy" }, new() { Name = "Ceres", Llm = "codex" }],
         });
         var (atlas, borg, ceres) = (vm.Tabs[0], vm.Tabs[1], vm.Tabs[2]);
-        Assert.True(atlas.AccountVisible);
-        Assert.False(borg.AccountVisible);
-        Assert.False(ceres.AccountVisible);
-        Assert.Equal(["", "claude-work"], atlas.AccountChoices.Select(c => c.Id));
+        Assert.Equal(["", "claude-work"], atlas.AgentChoices.Where(c => c.Llm == "claude").Select(c => c.AccountId));
+        Assert.All(atlas.AgentChoices.Where(c => c.Llm != "claude"), c => Assert.False(c.ShowAccount));
         Assert.False(atlas.HasAccount);
 
-        atlas.SelectedAccount = atlas.AccountChoices[1];
+        atlas.SelectedAgentChoice = atlas.AgentChoices.Single(c => c.AccountId == "claude-work");
         Assert.Equal("claude-work", atlas.Account);
         Assert.Equal("Work", atlas.AccountLabel);
         Assert.Contains("(Work)", atlas.PeekHeader);
@@ -244,6 +242,94 @@ public sealed class AccountTests : IDisposable
     }
 
     [Fact]
+    public void TheAgentBoxListsOneEntryPerAgentAndAccountGroupedPerAgent()
+    {
+        var previous = Loc.Language;
+        Loc.Use("sv");
+        try
+        {
+            var lab = new AgentAccount { Id = "claude-lab", Agent = "claude", Name = "Lab", Directory = "~/.claude-lab" };
+            var cfg = new AppConfig { Accounts = [Work, CodexWork, lab], Tabs = [new() { Name = "Atlas", Llm = "codex" }] };
+            var atlas = new MainViewModel(cfg).Tabs.Single();
+            var choices = atlas.AgentChoices;
+            // Catalog order of the agents, each agent's default account first, then its accounts in Settings order.
+            Assert.Equal(
+                ["claude:", "claude:claude-work", "claude:claude-lab", "codex:", "codex:codex-work"],
+                choices.Where(c => c.ShowAccount).Select(c => c.Llm + ":" + c.AccountId));
+            Assert.Equal(atlas.Llms, choices.Select(c => c.Llm).Distinct());
+            Assert.Equal(["Standard", "Work", "Lab"], choices.Where(c => c.Llm == "claude").Select(c => c.AccountName));
+            // An agent with only its default account has one entry and no account label.
+            var agy = Assert.Single(choices, c => c.Llm == "agy");
+            Assert.False(agy.ShowAccount);
+            Assert.Equal("agy", agy.Name);
+            Assert.Null(agy.Tip);
+            // The screen reader reads the agent with its account, the tooltip names the account and its directory.
+            var work = choices.Single(c => c.AccountId == "claude-work");
+            Assert.Equal("claude, konto Work", work.Name);
+            Assert.Equal("claude, konto Work", work.ToString());
+            Assert.Equal("Konto: Work\nKatalog: ~/.claude-work", work.Tip);
+            Assert.Equal("Konto: Standard\nKatalog: ~/.claude", choices.First(c => c.Llm == "claude").Tip);
+
+            // The default account shows its own name (#192) once it has one.
+            Assert.True(Accounts.SetDefaultName(cfg, "claude", "Privat"));
+            atlas.AccountsChanged();
+            Assert.Equal("claude, konto Privat", atlas.AgentChoices.First().Name);
+        }
+        finally { Loc.Use(previous); }
+    }
+
+    [Fact]
+    public void ChoosingAnEntrySetsTheAgentAndTheAccount()
+    {
+        var vm = new MainViewModel(new AppConfig { Accounts = [Work, CodexWork], Tabs = [new() { Name = "Atlas", Llm = "agy" }] });
+        var atlas = vm.Tabs.Single();
+        Assert.Equal(new AgentChoice("agy", "", "", false, null), atlas.SelectedAgentChoice);
+
+        atlas.SelectedAgentChoice = atlas.AgentChoices.Single(c => c.AccountId == "claude-work");
+        Assert.Equal(("claude", "claude-work"), (atlas.Llm, atlas.Account));
+        Assert.Equal("claude-work", atlas.SelectedAgentChoice!.AccountId);
+
+        // Another agent's account: the agent changes and the account is that agent's.
+        atlas.SelectedAgentChoice = atlas.AgentChoices.Single(c => c.AccountId == "codex-work");
+        Assert.Equal(("codex", "codex-work"), (atlas.Llm, atlas.Account));
+        // The same agent's default account.
+        atlas.SelectedAgentChoice = atlas.AgentChoices.Single(c => c.Llm == "codex" && c.AccountId == "");
+        Assert.Equal(("codex", ""), (atlas.Llm, atlas.Account));
+        // An agent without accounts.
+        atlas.Account = "codex-work";
+        atlas.SelectedAgentChoice = atlas.AgentChoices.Single(c => c.Llm == "agy");
+        Assert.Equal(("agy", ""), (atlas.Llm, atlas.Account));
+        // A cleared selection (the box replacing its items) changes nothing.
+        atlas.SelectedAgentChoice = null;
+        Assert.Equal("agy", atlas.Llm);
+        // Changing the agent directly keeps working and selects that agent's default entry.
+        atlas.Llm = "claude";
+        Assert.Equal(("claude", "", true), (atlas.SelectedAgentChoice!.Llm, atlas.SelectedAgentChoice.AccountId, atlas.SelectedAgentChoice.ShowAccount));
+    }
+
+    [Fact]
+    public void AMissingAccountKeepsAnEntryOfItsOwn()
+    {
+        var atlas = new MainViewModel(new AppConfig { Tabs = [new() { Name = "Atlas", Llm = "claude", Account = "claude-gone" }] }).Tabs.Single();
+        Assert.Equal(["", "claude-gone"], atlas.AgentChoices.Where(c => c.Llm == "claude").Select(c => c.AccountId));
+        Assert.Equal("claude-gone", atlas.SelectedAgentChoice!.AccountId);
+        Assert.Equal(Loc.Format("account.missing", "claude-gone"), atlas.SelectedAgentChoice.AccountName);
+        Assert.DoesNotContain(atlas.AgentChoices, c => c.Llm == "codex" && c.ShowAccount);
+    }
+
+    [Fact]
+    public void AKnownLoginStatusJoinsTheAccountTooltip()
+    {
+        var vm = new MainViewModel(new AppConfig { Accounts = [Work], Tabs = [new() { Name = "Atlas", Llm = "claude" }] });
+        var atlas = vm.Tabs.Single();
+        Assert.DoesNotContain(Loc.Get("account.status.out"), atlas.AgentChoices.Single(c => c.AccountId == "claude-work").Tip);
+        vm.AccountsEditor("claude")!.ShowSampleStatus("claude"); // default: logged in, Work: logged out
+        var tip = atlas.AgentChoices.Single(c => c.AccountId == "claude-work").Tip!;
+        Assert.EndsWith("\n" + Loc.Get("account.status.out"), tip);
+        Assert.Contains("namn@example.com", atlas.AgentChoices.First(c => c.Llm == "claude").Tip);
+    }
+
+    [Fact]
     public void SettingsAddRenameRemoveAndLogIn()
     {
         var vm = new MainViewModel(new AppConfig { Tabs = [new() { Name = "Atlas", Llm = "claude" }] });
@@ -261,7 +347,7 @@ public sealed class AccountTests : IDisposable
         Assert.True(accounts.Add());
         var work = accounts.Rows[1];
         Assert.Equal("~/.claude-work", work.Directory);
-        Assert.True(vm.Tabs[0].AccountVisible);
+        Assert.Contains(vm.Tabs[0].AgentChoices, c => c.AccountId == "claude-work");
         vm.Tabs[0].Account = "claude-work";
         Assert.Equal(Loc.FormatCount("account.usage", 1), work.UsageText);
 
@@ -279,7 +365,7 @@ public sealed class AccountTests : IDisposable
         Assert.Single(accounts.Rows);
         Assert.Empty(ConfigStore.Load().Accounts);
         Assert.Equal("", vm.Tabs[0].Account);
-        Assert.False(vm.Tabs[0].AccountVisible);
+        Assert.DoesNotContain(vm.Tabs[0].AgentChoices, c => c.ShowAccount);
     }
 
     [Fact]

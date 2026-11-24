@@ -185,12 +185,13 @@ public sealed class AccountStatusTests
             var accounts = vm.AccountsEditor("claude")!;
             var atlas = vm.Tabs.Single();
             Assert.Equal("Standard", accounts.Rows[0].Name);
-            Assert.Equal("Standard", atlas.AccountChoices[0].Name);
+            // Only the default account: the Agent box shows no account label (#194).
+            Assert.False(atlas.AgentChoices[0].ShowAccount);
             Assert.Equal("", atlas.AccountLabel);
 
             accounts.Rows[0].Name = "Privat";
             Assert.Equal("Privat", cfg.DefaultAccountNames["claude"]);
-            Assert.Equal("Privat", atlas.AccountChoices[0].Name);
+            Assert.False(atlas.AgentChoices[0].ShowAccount);
             Assert.Equal("Privat", atlas.AccountLabel);
             Assert.Contains("(Privat)", atlas.PeekHeader);
             Assert.Equal("Privat", Accounts.DisplayName(cfg, "claude", ""));

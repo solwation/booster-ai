@@ -84,8 +84,8 @@ public sealed class MainListTests : IDisposable
     [Fact]
     public void ProjectColumnsHideTheOrchestraAndKeepTheFixedWidths()
     {
-        Assert.Equal("4,20,46,4*,5*,166,195,168", MainWindow.ProjectColumns(1100, orchestra: true));
-        Assert.Equal("4,20,46,4*,5*,166,195,0", MainWindow.ProjectColumns(1100, orchestra: false));
+        Assert.Equal("4,20,46,4*,5*,200,195,168", MainWindow.ProjectColumns(1100, orchestra: true));
+        Assert.Equal("4,20,46,4*,5*,200,195,0", MainWindow.ProjectColumns(1100, orchestra: false));
         Assert.EndsWith(",168", MainWindow.ProjectColumns(900, orchestra: true));
     }
 
@@ -130,7 +130,7 @@ public sealed class MainListTests : IDisposable
 
     /// <summary>
     /// The longest fixed status texts, rendered headless at the default width with the orchestra column shown (the
-    /// narrowest status column), end in no "…" (#152). Runs the app's own --screenshot mode in a child process,
+    /// narrowest status column), and the Agent box with an account label of about 8 characters (#194), end in no "…" (#152). Runs the app's own --screenshot mode in a child process,
     /// which owns its Avalonia UI thread; nothing is shown and the process exits by itself.
     /// </summary>
     [Theory]
@@ -145,7 +145,17 @@ public sealed class MainListTests : IDisposable
         {
             Language = language,
             ProjectSearchRoot = "/home/me/Projects",
-            Tabs = names.Zip(llms, (n, l) => new { Name = n, Directory = "/srv/" + n.ToLowerInvariant(), Llm = l }),
+            // Accounts with names of about 8 characters show as labels in the Agent box, which must fit them too (#194).
+            Accounts = new[]
+            {
+                new { Id = "claude-kundjobb", Agent = "claude", Name = "Kundjobb", Directory = "~/.claude-kundjobb" },
+                new { Id = "codex-kund", Agent = "codex", Name = "Kund", Directory = "~/.codex-kund" },
+            },
+            Tabs = names.Zip(llms, (n, l) => new
+            {
+                Name = n, Directory = "/srv/" + n.ToLowerInvariant(), Llm = l,
+                Account = n is "Atlas" ? "claude-kundjobb" : n is "Boreal" ? "codex-kund" : "",
+            }),
         }));
         var app = typeof(Screenshot).Assembly.Location;
         var psi = new ProcessStartInfo(Environment.GetEnvironmentVariable("DOTNET_HOST_PATH") ?? "dotnet")
