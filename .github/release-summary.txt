@@ -1,3 +1,3 @@
 version: 0.42.0
-sv: Konton visar nu om de är inloggade och som vem, standardkontot kan döpas om och få Logga in-knapp.
-en: Accounts now show whether and as whom they are logged in; the default account can be renamed and logged in.
+sv: Agent och konto väljs i en ruta, konton visar om de är inloggade, och standardkontot kan döpas om och logga in.
+en: Agent and account are chosen in one box, accounts show their login, and the default account can be renamed and log in.
