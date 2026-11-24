@@ -196,24 +196,37 @@ public class OrchestraReloadPtyTests
             {
                 process.StandardInput.Write("draft");
                 process.StandardInput.Flush();
-                Assert.True(SpinWait.SpinUntil(() => session.ReadLog(track.Id)!.InputTypedAt > idle - 1, 5000));
+                Assert.True(SpinWait.SpinUntil(() => session.ReadLog(track.Id)!.InputTypedAt > idle - 1, 30000));
             }
             if (mode == "valid")
             {
+                var timing = Path.Combine(session.Directory, track.Id + ".timing");
+                var before = OutputBytes(timing);
                 Assert.True(session.TryRequestInput(track.Id, idle - 1, AutoClear.Command, expected, "clear"));
-                Assert.True(SpinWait.SpinUntil(() => Lines() == "/clear\n", 10000));
-                Assert.True(SpinWait.SpinUntil(() => session.ReadLog(track.Id)!.InputKind == "clear", 5000));
-                await Task.Delay(2100); // Reload requires two quiet seconds after the clear redraw.
+                Assert.True(SpinWait.SpinUntil(() => Lines() == "/clear\n", 30000));
+                Assert.True(SpinWait.SpinUntil(() => session.ReadLog(track.Id)!.InputKind == "clear", 30000));
+                // Reload requires two quiet seconds after the clear redraw. Wait until the terminal's output record holds the
+                // whole echoed "/clear" line (under load it can be written after the CLI already read the line), then date
+                // that output back like the setup above, instead of sleeping a fixed time: the tab compares the record's
+                // age with the wall clock, which this WSL steps back by seconds now and then (#190).
+                Assert.True(SpinWait.SpinUntil(() => OutputBytes(timing) >= before + "/clear\r\n".Length, 30000));
+                File.SetLastWriteTimeUtc(timing, DateTime.UtcNow.AddMinutes(-1));
             }
             Assert.True(session.TryRequestInput(track.Id, idle - 1, OrchestraReload.Command, expected, "orkester"));
-            Assert.True(SpinWait.SpinUntil(() => File.ReadAllText(logPath).Contains(mode == "valid" ? "input-sent kind=orkester" : "input-skipped"), 10000));
+            Assert.True(SpinWait.SpinUntil(() =>
+            {
+                // Output keeps arriving until the tab has answered, so a late check under load still sees a busy terminal.
+                if (mode == "output") File.SetLastWriteTimeUtc(Path.Combine(session.Directory, track.Id + ".timing"), DateTime.UtcNow);
+                return File.ReadAllText(logPath).Contains(mode == "valid" ? "input-sent kind=orkester" : "input-skipped");
+            }, 30000),
+                File.ReadAllText(logPath));
             if (mode == "valid")
             {
-                Assert.True(SpinWait.SpinUntil(() => Lines() == "/clear\n/orkester\n", 5000));
+                Assert.True(SpinWait.SpinUntil(() => Lines() == "/clear\n/orkester\n", 30000));
                 Assert.Null(AutoClear.ClearedAt(session.ReadLog(track.Id)));
                 // Another UI instance or auto-clear cannot send a second command for the same idle period.
                 Assert.True(session.TryRequestInput(track.Id, idle - 1, OrchestraReload.Command, expected, "orkester"));
-                Assert.True(SpinWait.SpinUntil(() => File.ReadAllText(logPath).Contains("input-skipped reason=stale"), 5000));
+                Assert.True(SpinWait.SpinUntil(() => File.ReadAllText(logPath).Contains("input-skipped reason=stale"), 30000));
                 Assert.Equal("/clear\n/orkester\n", Lines());
             }
             else Assert.Equal("", Lines());
@@ -243,6 +256,10 @@ public class OrchestraReloadPtyTests
             Directory.Delete(root, true);
         }
     }
+
+    /// <summary>Bytes of terminal output that script's timing log has recorded (the last field of each line).</summary>
+    private static long OutputBytes(string timing) => File.Exists(timing)
+        ? File.ReadAllLines(timing).Select(l => l.Split(' ')).Sum(f => long.TryParse(f[^1], out var n) ? n : 0) : 0;
 
     private static int[] InDirectory(string dir) => Directory.GetDirectories("/proc")
         .Select(d => (Pid: int.TryParse(Path.GetFileName(d), out var n) ? n : 0, Dir: d)).Where(x => x.Pid > 0)

@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Avalonia;
 using Avalonia.Headless;
 using BoosterAI;
@@ -21,4 +22,12 @@ internal static class UiSession
     public static T Run<T>(Func<T> work) => Session.Value.Dispatch(work, CancellationToken.None).GetAwaiter().GetResult();
 
     public static void Run(Action work) => Session.Value.Dispatch(work, CancellationToken.None).GetAwaiter().GetResult();
+
+    /// <summary>
+    /// The catalog's shared colour brushes are Avalonia objects, created by its type initializer on whichever thread first
+    /// uses it. If a UI test has already started the session, a view-model test thread may not create them, the type
+    /// initializer fails and every later use of the catalog fails with it (#190). Create them before any test runs.
+    /// </summary>
+    [ModuleInitializer]
+    internal static void CreateSharedBrushes() => RuntimeHelpers.RunClassConstructor(typeof(Catalog).TypeHandle);
 }

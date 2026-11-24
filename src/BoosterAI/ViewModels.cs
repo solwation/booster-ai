@@ -680,7 +680,7 @@ public sealed partial class MainViewModel : Observable
         Setup.ConfigureCompact(CompactEditor);
         Setup.ConfigureAccounts(AccountsEditor);
         WatchBanners();
-        _ = InitAsync();
+        InitTask = InitAsync();
     }
 
     public ObservableCollection<TabViewModel> Tabs { get; }
@@ -768,7 +768,7 @@ public sealed partial class MainViewModel : Observable
     public string WslDistro
     {
         get => _cfg.WslDistro;
-        set { if (_cfg.WslDistro == value.Trim()) return; _cfg.WslDistro = value.Trim(); InvalidateCompactMetadata(); Raise(); _ = InitAsync(); }
+        set { if (_cfg.WslDistro == value.Trim()) return; _cfg.WslDistro = value.Trim(); InvalidateCompactMetadata(); Raise(); InitTask = InitAsync(); }
     }
 
     /// <summary>Folder "Find projects" searches; empty = the default (Documents, else home).</summary>
@@ -1127,6 +1127,9 @@ public sealed partial class MainViewModel : Observable
         }
         if (projects.Count > 0) ShowStatus(Loc.FormatCount("status.imported", projects.Count));
     }
+
+    /// <summary>The latest <see cref="InitAsync"/>; tests wait for it so its lifecycle check cannot land in theirs.</summary>
+    internal Task InitTask { get; private set; } = Task.CompletedTask;
 
     /// <summary>Resolves the WSL home (for ~ paths on Windows), then checks every tab.</summary>
     private async Task InitAsync()

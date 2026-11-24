@@ -103,14 +103,16 @@ public class WslMemoryUsageTests
         {
             Interlocked.Increment(ref reads);
             entered.Set();
-            finish.Wait(TimeSpan.FromSeconds(5));
+            // Held until the test has disposed the monitor; the deadline only keeps a broken test from hanging (#190).
+            finish.Wait(TimeSpan.FromMinutes(2));
             return new(WslMemoryState.Available, Gb);
         });
         monitor.Updated += _ => Interlocked.Increment(ref updates);
-        var pending = Task.Run(monitor.Sample);
+        // A dedicated thread starts the slow read at once: a busy thread pool in the full suite can delay a pooled one (#190).
+        var pending = Task.Factory.StartNew(monitor.Sample, TaskCreationOptions.LongRunning);
         try
         {
-            Assert.True(entered.Wait(TimeSpan.FromSeconds(5)));
+            Assert.True(entered.Wait(TimeSpan.FromSeconds(60)));
             monitor.Sample();
             Assert.Equal(1, reads);
             monitor.Dispose();

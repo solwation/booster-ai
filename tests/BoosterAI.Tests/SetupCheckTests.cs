@@ -6,6 +6,14 @@ public class SetupCheckTests
     private static SetupStatus Installed(string version = "1.0") => new(WslState.Ok, [],
         [new("claude", "file", "/sample/bin/claude") { Version = version }], true, false);
 
+    // On Windows a new view model first queries the WSL home and then runs its own explicit lifecycle check. Under load
+    // that late check could land while a test's check runs and queue one more (#190), so start only after it finished.
+    private static async Task StartChecks(MainViewModel vm)
+    {
+        await vm.InitTask.WaitAsync(TimeSpan.FromSeconds(60));
+        vm.StartSetupChecks();
+    }
+
     [Fact]
     public void ConstructorsAndPageOpeningDoNotEnableDetection()
     {
@@ -34,7 +42,7 @@ public class SetupCheckTests
             SetupUtcNow = () => now,
             DetectSetupAsync = _ => { calls++; return pending.Task; },
         };
-        vm.StartSetupChecks();
+        await StartChecks(vm);
         Assert.True(vm.Setup.IsChecking);
         Assert.Equal(Loc.Get("agents.status.checking"), vm.Setup.CheckNotice);
         now = now.AddMinutes(1);
@@ -73,7 +81,7 @@ public class SetupCheckTests
             SetupUtcNow = () => now,
             DetectSetupAsync = d => { distros.Add(d); return distros.Count == 1 ? gate.Task : Task.FromResult(Installed("2.0")); },
         };
-        vm.StartSetupChecks();
+        await StartChecks(vm);
         vm.CheckSetup();
         vm.CheckSetup();
         vm.SetupWindowActive(); // throttled calls are not queued
@@ -94,7 +102,7 @@ public class SetupCheckTests
         {
             DetectSetupAsync = _ => { calls++; return gate.Task; },
         };
-        vm.StartSetupChecks();
+        await StartChecks(vm);
         vm.SetupAgentsOpened();
         gate.SetResult(Installed());
         await vm.SetupCheckTask;
@@ -113,7 +121,7 @@ public class SetupCheckTests
             SetupUtcNow = () => now,
             DetectSetupAsync = _ => Task.FromResult(Installed()),
         };
-        vm.StartSetupChecks();
+        await StartChecks(vm);
         await vm.SetupCheckTask;
         var status = vm.Setup.Status;
         var agent = vm.Setup.Agents.Single(a => a.Cli == "claude");
@@ -160,14 +168,15 @@ public class SetupCheckTests
         {
             DetectSetupAsync = distro => { distros.Add(distro); return distro == "Sample-A" ? first.Task : second.Task; },
         };
-        vm.StartSetupChecks();
+        await StartChecks(vm);
         var initial = vm.SetupCheckTask;
         // Change the shared config directly to avoid querying a real WSL home in this scheduler test.
         config.WslDistro = "Sample-B";
         vm.SetupAgentsOpened();
         first.SetResult(Installed("old"));
         // The task covers the follow-up check too, so hold it open to observe the discarded first result.
-        for (var waited = 0; distros.Count < 2 && waited < 2000; waited++) await Task.Delay(5);
+        var deadline = DateTime.UtcNow.AddSeconds(30);
+        while (distros.Count < 2 && DateTime.UtcNow < deadline) await Task.Delay(5);
         Assert.Equal(2, distros.Count);
         Assert.Equal(new[] { "Sample-A", "Sample-B" }, distros);
         Assert.False(vm.Setup.Status.Checked);
@@ -185,7 +194,7 @@ public class SetupCheckTests
         {
             DetectSetupAsync = _ => { calls++; return Task.FromResult(Installed()); },
         };
-        vm.StartSetupChecks();
+        await StartChecks(vm);
         await vm.SetupCheckTask;
         vm.SetupAgentsOpened();
         Assert.Equal(1, calls);
@@ -201,7 +210,7 @@ public class SetupCheckTests
         {
             DetectSetupAsync = _ => Task.FromException<SetupStatus>(new IOException("sample failure")),
         };
-        vm.StartSetupChecks();
+        await StartChecks(vm);
         await vm.SetupCheckTask;
         Assert.Equal(Loc.Get("agents.status.failed"), vm.Setup.CheckNotice);
         Assert.All(vm.Setup.Agents, a => Assert.Equal(Loc.Get("agents.status.unknown.short"), a.StatusText));
