@@ -134,6 +134,17 @@ public static class Accounts
     }
 
     /// <summary>
+    /// The one-off login tab for the default account (#193): the agent's own directory, so an inherited variable is taken
+    /// away first; otherwise as <see cref="LoginScript(AgentAccount)"/>.
+    /// </summary>
+    public static string DefaultLoginScript(string agent, string name)
+    {
+        var variable = EnvVar(agent) ?? throw new ArgumentException("The agent has no separate accounts.", nameof(agent));
+        var note = $"BoosterAI: {name} ({DefaultDirectory(agent)})".Replace(';', ',');
+        return $"unset {variable} && cd ~ && printf '%s\\n' {Launcher.Quote(note)} && {LoginCommand(agent)} || true && exec bash";
+    }
+
+    /// <summary>
     /// A new account for <paramref name="agent"/>: its id and directory come from the name (<c>~/.claude-work</c>) and stay
     /// the same when it is renamed; a number keeps them apart from existing accounts and the default directory.
     /// </summary>

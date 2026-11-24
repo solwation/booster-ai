@@ -184,6 +184,7 @@ public sealed class AgentAccountsViewModel : Observable
     public void Login(AccountRow row)
     {
         if (row.Account is { } account) _owner.LoginAccount(account);
+        else _owner.LoginDefaultAccount(Cli, row.Name);
     }
 
     internal void Changed() => _owner.AccountsEdited(Cli);
@@ -245,14 +246,23 @@ public sealed partial class MainViewModel
     }
 
     /// <summary>Opens a visible tab that runs the agent's login with the account's variable (#186), like the CLI installs.</summary>
-    public void LoginAccount(AgentAccount account)
+    public void LoginAccount(AgentAccount account) =>
+        OpenLoginTab(account.Agent, account.Name, Accounts.LoginScript(account),
+            Accounts.IsValidDirectory(account.Directory) ? null : Loc.Format("err.accountDirectory", account.Name, account.Directory),
+            () => LoginAccount(account));
+
+    /// <summary>The same for the default account (#193): the agent's own directory, no variable.</summary>
+    public void LoginDefaultAccount(string agent, string name) =>
+        OpenLoginTab(agent, name, Accounts.DefaultLoginScript(agent, name), null, () => LoginDefaultAccount(agent, name));
+
+    private void OpenLoginTab(string agent, string name, string script, string? invalid, Action retry)
     {
         var cfg = new AppConfig
         {
             WslDistro = _cfg.WslDistro, LinuxTerminal = _cfg.LinuxTerminal, ZoomPercent = _cfg.ZoomPercent,
-            Tabs = [new TabConfig { Name = Loc.Format("account.login.tab", account.Name).Replace(';', ','), Directory = "~", Llm = Catalog.ShellOnly, Script = Accounts.LoginScript(account) }],
+            Tabs = [new TabConfig { Name = Loc.Format("account.login.tab", name).Replace(';', ','), Directory = "~", Llm = Catalog.ShellOnly, Script = script }],
         };
-        var error = Accounts.IsValidDirectory(account.Directory) ? Launcher.Launch(cfg) : Loc.Format("err.accountDirectory", account.Name, account.Directory);
-        ShowLaunchOutcome(error, cfg.Tabs, () => LoginAccount(account), Loc.Format("account.login.started", account.Name, Accounts.LoginCommand(account.Agent)));
+        var error = invalid ?? Launcher.Launch(cfg);
+        ShowLaunchOutcome(error, cfg.Tabs, retry, Loc.Format("account.login.started", name, Accounts.LoginCommand(agent)));
     }
 }

@@ -153,6 +153,18 @@ public sealed class AccountTests : IDisposable
     }
 
     [Fact]
+    public void DefaultAccountLoginUsesTheAgentsOwnDirectory()
+    {
+        Assert.Equal("unset CLAUDE_CONFIG_DIR && cd ~ && printf '%s\\n' 'BoosterAI: Privat (~/.claude)' && claude auth login || true && exec bash",
+            Accounts.DefaultLoginScript("claude", "Privat"));
+        Assert.StartsWith("unset CODEX_HOME && ", Accounts.DefaultLoginScript("codex", "Standard"));
+        Assert.Contains(" && codex login || true && exec bash", Accounts.DefaultLoginScript("codex", "Standard"));
+        Assert.DoesNotContain(';', Accounts.DefaultLoginScript("claude", "a;b \"c\""));
+        Assert.DoesNotContain('"', Accounts.DefaultLoginScript("claude", "a;b \"c\""));
+        Assert.Throws<ArgumentException>(() => Accounts.DefaultLoginScript("aider", "x"));
+    }
+
+    [Fact]
     public void LoginRunsTheAgentsLoginWithTheAccountsVariable()
     {
         Assert.Equal("export CLAUDE_CONFIG_DIR=~/'.claude-work' && mkdir -p ~/'.claude-work' && cd ~ && printf '%s\\n' 'BoosterAI: Work (CLAUDE_CONFIG_DIR=~/.claude-work)' && claude auth login || true && exec bash",
