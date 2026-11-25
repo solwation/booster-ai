@@ -329,7 +329,7 @@ public class AutoClearPtyTests
             Assert.True(SpinWait.SpinUntil(() => session.ReadLog(track.Id) is { InputReady: true }, 30000));
             session.RequestInput(track.Id, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - 1000, AutoClear.Command);
             Assert.True(SpinWait.SpinUntil(() => Lines() == "/clear\n", 10000), Lines());
-            Assert.True(session.ReadLog(track.Id)!.InputSent);
+            Assert.True(SpinWait.SpinUntil(() => session.ReadLog(track.Id) is { InputSent: true }, 10000));
 
             process.StandardInput.Write("typed by the user\n");
             process.StandardInput.Flush();
