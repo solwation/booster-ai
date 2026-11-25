@@ -1,3 +1,3 @@
-version: 0.49.0
-sv: Claudes separata Fable-kvot, samma statuspunkt i statusrutan, luft mellan kontoetikett och kvotmätare och versionsnumret öppnar ändringarna.
-en: Claude's separate Fable quota, the same status dot in the status popup, room between account label and quota meters, and the version opens the changes.
+version: 0.49.1
+sv: Veckomätaren följer flikens modellval. Fables kvot hämtas automatiskt när du väljer Fable.
+en: The weekly meter follows the tab’s model. Choosing Fable automatically loads its model quota.
