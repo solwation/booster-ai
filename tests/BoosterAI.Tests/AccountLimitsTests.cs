@@ -485,7 +485,7 @@ public class AccountLimitsTests
             {
                 Accounts = [new() { Id = "claude-work", Agent = "claude", Name = "Work", Directory = "~/.claude-work" }],
                 Tabs = [new() { Name = "A", Directory = "/srv/a", Llm = "claude" }, new() { Name = "B", Directory = "/srv/b", Llm = "claude", Account = "claude-work" },
-                    new() { Name = "C", Directory = "/srv/c", Llm = "agy" }],
+                    new() { Name = "C", Directory = "/srv/c", Llm = "agy" }, new() { Name = "D", Directory = "/srv/d", Llm = "aider" }],
             });
             var now = DateTimeOffset.Now;
             var clock = now;
@@ -494,6 +494,7 @@ public class AccountLimitsTests
             vm.ReadAccountLimits = (_, llm, dir) =>
             {
                 lock (calls) calls.Add(llm + ":" + dir);
+                if (llm == "agy") return Task.FromResult(new AccountLimits(Win(28, now, 300), Win(44, now, 10080), null, now));
                 return Task.FromResult(dir is null ? new AccountLimits(Win(85, now, 300), Win(10, now, 10080), null, now) : AccountLimits.Unknown);
             };
             Assert.All(vm.Tabs, t => Assert.All(t.AgentChoices, c => Assert.False(c.HasLimit)));
@@ -502,36 +503,43 @@ public class AccountLimitsTests
 
             vm.AccountLimitsEnabled = true;
             await vm.RefreshAccountLimitsAsync();
-            // Three tabs, two with claude: one read per account of the agents in use, none for agy.
-            Assert.Equal(["claude:", "claude:~/.claude-work"], calls.OrderBy(c => c));
+            // Four tabs: one read per account of claude and once for agy, none for aider (#206).
+            Assert.Equal(["agy:", "claude:", "claude:~/.claude-work"], calls.OrderBy(c => c));
             var choices = vm.Tabs[0].AgentChoices.Where(c => c.Llm == "claude").ToList();
             Assert.Equal("85 %", choices[0].LimitCaption);
             Assert.True(choices[0].LimitWarn);
             Assert.False(choices[1].HasLimit); // Unknown shows nothing
             Assert.Same(vm.AccountsEditor("claude")!.Rows[0].Limits.Session, vm.AccountsEditor("claude")!.LimitsOf("").Session); // the Accounts page's reading
-            Assert.False(vm.Tabs[2].AgentChoices.Single(c => c.Llm == "agy").HasLimit);
+            var agyChoice = vm.Tabs[2].AgentChoices.Single(c => c.Llm == "agy");
+            Assert.Equal("44 %", agyChoice.LimitCaption);
+            Assert.False(agyChoice.LimitWarn);
+            Assert.False(vm.Tabs[3].AgentChoices.Single(c => c.Llm == "aider").HasLimit);
 
             // Activation within 5 seconds does not read again; after 5 seconds or a forced (timer) refresh does (#205).
             await vm.RefreshAccountLimitsAsync();
-            Assert.Equal(2, calls.Count);
+            Assert.Equal(3, calls.Count);
             clock = now.AddSeconds(6);
             await vm.RefreshAccountLimitsAsync();
-            Assert.Equal(4, calls.Count);
-            await vm.RefreshAccountLimitsAsync(force: true);
             Assert.Equal(6, calls.Count);
+            await vm.RefreshAccountLimitsAsync(force: true);
+            Assert.Equal(9, calls.Count);
 
-            // The closed box's meter follows the tab's selected account (#202), from the same reading.
+            // The closed box's meter follows the tab's selected account/agent (#202, #206), from the same reading.
             Assert.Equal(85, vm.Tabs[0].SelectedAgentChoice!.LimitPercent);
             Assert.True(vm.Tabs[0].SelectedAgentChoice!.LimitWarn);
             Assert.False(vm.Tabs[1].SelectedAgentChoice!.HasLimit);
-            Assert.False(vm.Tabs[2].SelectedAgentChoice!.HasLimit); // agy has no meter
+            Assert.Equal(44, vm.Tabs[2].SelectedAgentChoice!.LimitPercent);
+            Assert.False(vm.Tabs[2].SelectedAgentChoice!.LimitWarn);
+            Assert.False(vm.Tabs[3].SelectedAgentChoice!.HasLimit); // aider has no meter
 
-            // The status popup's line for the tab's account, Unknown for a window nothing is known about.
+            // The status popup's line for the tab's account/agent, Unknown for a window nothing is known about.
             Assert.True(vm.Tabs[0].HasPeekLimit);
             Assert.True(vm.Tabs[0].PeekLimitWarn);
             Assert.StartsWith("5 h 85 % · Vecka 10 % · per ", vm.Tabs[0].PeekLimitLine);
             Assert.False(vm.Tabs[1].HasPeekLimit); // the work account is Unknown
-            Assert.False(vm.Tabs[2].HasPeekLimit);
+            Assert.True(vm.Tabs[2].HasPeekLimit);
+            Assert.StartsWith("5 h 28 % · Vecka 44 % · per ", vm.Tabs[2].PeekLimitLine);
+            Assert.False(vm.Tabs[3].HasPeekLimit);
 
             // The window resets: the indicator goes away with it.
             clock = now.AddHours(3);
@@ -659,5 +667,117 @@ public class AccountLimitsTests
             Assert.Equal((true, 0.0, false, false), after);
         }
         finally { Loc.Use(previous); }
+    }
+
+    [Fact]
+    public async Task AgyStatusLineSavesQuotaBucketsAndChainsOwnStatusLine()
+    {
+        if (OperatingSystem.IsWindows()) return;
+        var root = Temp("agy-statusline");
+        try
+        {
+            var script = Path.Combine(root, AgyStatusLine.ScriptFile);
+            File.WriteAllText(script, AgyStatusLine.Script + "\n");
+            var agyHome = Path.Combine(root, ".gemini", "antigravity-cli");
+            Directory.CreateDirectory(agyHome);
+            var env = new Dictionary<string, string> { ["BOOSTERAI_AGY_HOME"] = agyHome };
+            var command = AgyStatusLine.Command(root);
+            var weekReset = DateTimeOffset.FromUnixTimeSeconds(Now + 400000).ToString("yyyy-MM-ddTHH:mm:ssZ");
+            var shortReset = DateTimeOffset.FromUnixTimeSeconds(Now + 7200).ToString("yyyy-MM-ddTHH:mm:ssZ");
+            var input = JsonSerializer.Serialize(new Dictionary<string, object?>
+            {
+                ["session_id"] = "SECRET_AGY_SESSION",
+                ["email"] = "SECRET@example.com",
+                ["transcript_path"] = "/SECRET/transcript.jsonl",
+                ["product"] = "antigravity",
+                ["quota"] = new Dictionary<string, object?>
+                {
+                    ["gemini-weekly"] = new { remaining_fraction = 0.72, reset_time = weekReset, reset_in_seconds = 400000 },
+                    ["claude-weekly"] = new { remaining_fraction = 0.40, reset_time = weekReset, reset_in_seconds = 400000 },
+                    ["disabled-weekly"] = new { remaining_fraction = 0.0, reset_time = weekReset, reset_in_seconds = 400000, disabled = true },
+                    ["gemini-5h"] = new { remaining_fraction = 0.65, reset_time = shortReset, reset_in_seconds = 7200 },
+                },
+            });
+
+            // No user statusLine: prints nothing (stack_with_default keeps AGY's built-in status line) and saves highest active used %.
+            var (output, errors, code) = await Bash(root, command, input, env);
+            Assert.Equal(0, code);
+            Assert.Equal("", output);
+            Assert.Equal("", errors);
+            var saved = File.ReadAllText(Path.Combine(agyHome, AgyStatusLine.SnapshotFile));
+            Assert.DoesNotContain("SECRET", saved);
+            Assert.Empty(Directory.GetFiles(agyHome, "*.tmp"));
+
+            var read = AccountLimitsProbe.Parse("agy", (await Bash(root, AccountLimitsProbe.Script("agy", null), env: env)).Out);
+            Assert.Equal(35, read.Session!.UsedPercent); // 1 - 0.65
+            Assert.Equal(60, read.Week!.UsedPercent); // highest active weekly (claude-weekly 1 - 0.40, disabled ignored)
+            Assert.Null(read.Credits);
+
+            // User's own statusLine in ~/.gemini/antigravity-cli/settings.json is chained with the same stdin.
+            File.WriteAllText(Path.Combine(agyHome, "settings.json"), JsonSerializer.Serialize(new
+            {
+                statusLine = new { type = "command", command = $"cat > {Launcher.Quote(Path.Combine(root, "got.json"))} && printf 'my agy bar'" },
+            }));
+            (output, errors, code) = await Bash(root, command, input, env);
+            Assert.Equal(("my agy bar", "", 0), (output, errors, code));
+            Assert.Equal(input, File.ReadAllText(Path.Combine(root, "got.json")));
+
+            // Disabled user statusLine is skipped; self-recursion is blocked.
+            File.WriteAllText(Path.Combine(agyHome, "settings.json"), """{"statusLine":{"type":"command","enabled":false,"command":"echo nope"}}""");
+            Assert.Equal("", (await Bash(root, command, input, env)).Out);
+            File.WriteAllText(Path.Combine(agyHome, "settings.json"), JsonSerializer.Serialize(new { statusLine = new { type = "command", command } }));
+            Assert.Equal(("", 0), ((await Bash(root, command, input, env)).Out, (await Bash(root, command, input, env)).Code));
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public async Task AgySettingsCarryStatusLineStackWithDefaultAndFallBackWithoutPython3()
+    {
+        var root = Temp("agy-track");
+        try
+        {
+            var session = TabSession.Open(root);
+            var track = session.NewTrack()!;
+            Assert.Equal(AgyStatusLine.Script.Replace("\r\n", "\n") + "\n", File.ReadAllText(Path.Combine(root, AgyStatusLine.ScriptFile)));
+            var full = JsonDocument.Parse(File.ReadAllText(Path.Combine(root, track.Id + ".agy.json"))).RootElement;
+            Assert.Equal(AgyStatusLine.Command(track.Dir), full.GetProperty("statusLine").GetProperty("command").GetString());
+            Assert.True(full.GetProperty("statusLine").GetProperty("stack_with_default").GetBoolean());
+            var replace = JsonDocument.Parse(File.ReadAllText(Path.Combine(root, track.Id + ".agy-replace.json"))).RootElement;
+            Assert.False(replace.GetProperty("statusLine").TryGetProperty("stack_with_default", out _));
+            var plain = JsonDocument.Parse(File.ReadAllText(Path.Combine(root, track.Id + ".agy-plain.json"))).RootElement;
+            Assert.False(plain.TryGetProperty("statusLine", out _));
+
+            // Interactive agy gets --settings without ';'; one-shot agy -p omits --settings.
+            var interactive = Launcher.TabScript(new TabConfig { Name = "Cirrus", Directory = "~", Llm = "agy" }, null, track);
+            Assert.Contains("--settings ", interactive);
+            Assert.Contains(track.Id + ".agy.json", interactive);
+            Assert.DoesNotContain(';', interactive);
+            var once = Launcher.TabScript(new TabConfig { Name = "Cirrus", Directory = "~", Llm = "agy", Orkester = true, NonInteractive = true }, null, track);
+            Assert.DoesNotContain("--settings", once);
+
+            if (OperatingSystem.IsWindows()) return;
+            // Without python3, tab-lib.sh replaces tabN.agy.json with empty plain settings.
+            var bin = Path.Combine(root, "bin");
+            Directory.CreateDirectory(bin);
+            foreach (var tool in new[] { "cut", "date", "cp", "cat" })
+                File.CreateSymbolicLink(Path.Combine(bin, tool), FindOnPath(tool));
+            var (_, _, code) = await Bash(root, $". {Launcher.Quote(track.Lib)} {Launcher.Quote(track.Dir)} {track.Id} Cirrus && echo ok", bin: bin);
+            Assert.Equal(0, code);
+            Assert.False(JsonDocument.Parse(File.ReadAllText(Path.Combine(root, track.Id + ".agy.json"))).RootElement.TryGetProperty("statusLine", out _));
+
+            // With python3 and a user replacing statusLine in settings.json, tab-lib.sh selects tabN.agy-replace.json (no stack_with_default).
+            var track2 = session.NewTrack()!;
+            var agyHome = Path.Combine(root, "agy-home");
+            Directory.CreateDirectory(agyHome);
+            File.WriteAllText(Path.Combine(agyHome, "settings.json"), """{"statusLine":{"type":"command","command":"echo custom"}}""");
+            (_, _, code) = await Bash(root, $". {Launcher.Quote(track2.Lib)} {Launcher.Quote(track2.Dir)} {track2.Id} Cirrus && echo ok",
+                env: new() { ["BOOSTERAI_AGY_HOME"] = agyHome });
+            Assert.Equal(0, code);
+            var chosen = JsonDocument.Parse(File.ReadAllText(Path.Combine(root, track2.Id + ".agy.json"))).RootElement;
+            Assert.True(chosen.TryGetProperty("statusLine", out var chosenLine));
+            Assert.False(chosenLine.TryGetProperty("stack_with_default", out _));
+        }
+        finally { Directory.Delete(root, true); }
     }
 }

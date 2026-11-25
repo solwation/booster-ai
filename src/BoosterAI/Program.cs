@@ -56,6 +56,13 @@ internal static class Program
             Console.WriteLine($"claude status line ({dir}/{ClaudeStatusLine.ScriptFile}): saves rate_limits five_hour/seven_day (used_percentage, resets_at) and captured_at to "
                 + $"${{CLAUDE_CONFIG_DIR:-~/.claude}}/{ClaudeStatusLine.SnapshotFile}, then runs the user's own statusLine (project .claude/settings.local.json, .claude/settings.json, "
                 + "then the account's settings.json) with the same input and prints its output");
+            // Interactive agy tabs get --settings with BoosterAI's status line (#206).
+            for (var i = 0; i < tabs.Count; i++)
+                if (tabs[i].Llm == "agy" && tracks[i] is { } t)
+                    Console.WriteLine($"agy settings {tabs[i].Name} ({Launcher.AgySettingsFile(t)}; {t.Id}.agy-replace.json when user has a replacing statusLine, {t.Id}.agy-plain.json when python3 is missing): "
+                        + TabSession.AgySettingsJson(AgyStatusLine.Command(t.Dir), stackWithDefault: true));
+            Console.WriteLine($"agy status line ({dir}/{AgyStatusLine.ScriptFile}): saves quota five_hour/seven_day (highest active used_percentage, resets_at) and captured_at to "
+                + $"~/.gemini/antigravity-cli/{AgyStatusLine.SnapshotFile}, keeping AGY's built-in status line (stack_with_default) or chaining the user's own statusLine from settings.json");
             // bs_update in tab-lib.sh, before the CLI and before each in-place restart.
             Console.WriteLine(cfg.AutoUpdateClis
                 ? "cli update (bs_update, at most every 6 h per CLI, state in ~/.local/share/BoosterAI/cli-update of the tab's Linux):"

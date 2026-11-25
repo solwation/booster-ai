@@ -304,17 +304,49 @@ public sealed partial class MainViewModel
     internal Task<AccountLimits> ReadAccountLimitsAsync(string llm, string? directory) =>
         directory is not null && !Accounts.IsValidDirectory(directory) ? Task.FromResult(AccountLimits.Unknown) : ReadAccountLimits(_cfg.WslDistro, llm, directory);
 
+    private readonly Dictionary<string, AccountLimits> _agentLimits = [];
+    private readonly HashSet<string> _readingAgents = [];
+    private readonly object _agentLimitsLock = new();
+
+    private AccountLimits AgentLimitsOf(string cli)
+    {
+        lock (_agentLimitsLock) return _agentLimits.GetValueOrDefault(cli) ?? AccountLimits.Unknown;
+    }
+
+    private async Task RefreshSingleAgentLimitsAsync(string cli)
+    {
+        if (!AccountLimitsEnabled || !AccountLimitsProbe.Supports(cli)) return;
+        lock (_agentLimitsLock) { if (!_readingAgents.Add(cli)) return; }
+        AccountLimits result;
+        try { result = await ReadAccountLimitsAsync(cli, null); }
+        catch (Exception e) when (e is not OutOfMemoryException) { result = AccountLimits.Unknown; }
+        lock (_agentLimitsLock)
+        {
+            _readingAgents.Remove(cli);
+            _agentLimits[cli] = result;
+        }
+        AccountLimitsChanged(cli);
+    }
+
     /// <summary>
-    /// The plan-limit indicator of an account in the Agent boxes (#200), from the same reading the Accounts page shows (one per
-    /// account, never per row); null for an agent without accounts and while unknown.
+    /// The plan-limit indicator of an account or single-account agent in the Agent boxes (#200, #206), from the same reading
+    /// the Accounts page shows (one per account/agent, never per row); null for agents without limits and while unknown.
     /// </summary>
     internal LimitIndicator? LimitIndicatorOf(string cli, string key) =>
-        Accounts.Supports(cli) && AccountsEditor(cli) is { } editor ? LimitIndicator.For(editor.LimitsOf(key), LimitsClock()) : null;
+        Accounts.Supports(cli) && AccountsEditor(cli) is { } editor ? LimitIndicator.For(editor.LimitsOf(key), LimitsClock())
+        : AccountLimitsProbe.Supports(cli) ? LimitIndicator.For(AgentLimitsOf(cli), LimitsClock())
+        : null;
 
-    /// <summary>Screenshots (--fake-limits): invented limits for every agent's accounts, also shown in the main window.</summary>
+    /// <summary>Screenshots (--fake-limits): invented limits for every limit-capable agent, also shown in the main window (#200, #206).</summary>
     internal void ShowSampleLimitsForAll()
     {
         foreach (var cli in Catalog.Llms.Where(Accounts.Supports)) AccountsEditor(cli)!.ShowSampleLimits(cli);
+        var now = LimitsClock();
+        var hour = new DateTimeOffset(now.Year, now.Month, now.Day, now.Hour, 0, 0, now.Offset);
+        lock (_agentLimitsLock)
+            _agentLimits["agy"] = new(new LimitWindow(28, hour.AddHours(2).AddMinutes(45), 300),
+                new LimitWindow(44, hour.AddDays(4).AddHours(1), 10080), null, hour.AddMinutes(-8));
+        AccountLimitsChanged("agy");
     }
 
     private readonly Dictionary<string, string> _limitSignature = [];
@@ -323,9 +355,9 @@ public sealed partial class MainViewModel
     /// <summary>A read answered: every tab's Agent box follows when what it shows changed (a reset window also changes it).</summary>
     internal void AccountLimitsChanged(string cli)
     {
-        if (!Accounts.Supports(cli)) return;
-        var signature = string.Join("|", new[] { "" }.Concat(AccountsFor(cli).Select(a => a.Directory))
-            .Select(k => LimitIndicatorOf(cli, k) is { } i ? i.Caption + i.Warn + i.Tip : "-"));
+        if (!AccountLimitsProbe.Supports(cli)) return;
+        var keys = Accounts.Supports(cli) ? new[] { "" }.Concat(AccountsFor(cli).Select(a => a.Directory)) : new[] { "" };
+        var signature = string.Join("|", keys.Select(k => LimitIndicatorOf(cli, k) is { } i ? i.Caption + i.Warn + i.Tip : "-"));
         lock (_limitSignatureLock)
         {
             if (_limitSignature.TryGetValue(cli, out var old) && old == signature) return;
@@ -337,7 +369,7 @@ public sealed partial class MainViewModel
     private DateTimeOffset _limitsRefreshed = DateTimeOffset.MinValue;
 
     /// <summary>
-    /// Reads the plan limits of the agents the tab list uses, one read per account (#200, #205). The main window asks on activation
+    /// Reads the plan limits of the agents the tab list uses, one read per account/agent (#200, #205, #206). The main window asks on activation
     /// and when monitored tab activity changes (at most every 5 seconds), and every 30 seconds while visible; <paramref name="force"/> skips the wait.
     /// </summary>
     internal Task RefreshAccountLimitsAsync(bool force = false)
@@ -346,7 +378,8 @@ public sealed partial class MainViewModel
         var now = LimitsClock();
         if (!force && now - _limitsRefreshed < TimeSpan.FromSeconds(5)) return Task.CompletedTask;
         _limitsRefreshed = now;
-        var reads = Tabs.Select(t => t.Llm).Distinct().Where(Accounts.Supports).Select(c => AccountsEditor(c)!.RefreshLimitsAsync()).ToList();
+        var reads = Tabs.Select(t => t.Llm).Distinct().Where(AccountLimitsProbe.Supports)
+            .Select(c => Accounts.Supports(c) ? AccountsEditor(c)!.RefreshLimitsAsync() : RefreshSingleAgentLimitsAsync(c)).ToList();
         return Task.WhenAll(reads);
     }
 

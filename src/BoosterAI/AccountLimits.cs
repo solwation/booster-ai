@@ -92,15 +92,19 @@ public static class LimitText
 }
 
 /// <summary>
-/// Reads an account's plan limits in the tab's environment (#199), like <see cref="AccountStatusProbe"/>: <c>bash -lic</c>, through
-/// <c>wsl.exe</c> on Windows. Codex: the last <c>token_count</c> event of the newest rollout under <c>$CODEX_HOME/sessions</c>.
-/// Claude: the snapshot that BoosterAI's status line (<see cref="ClaudeStatusLine"/>) saved in the account's directory. Only
-/// read: no network, no credentials. The script prints one projected JSON line, never file contents; anything else is Unknown.
+/// Reads an account's plan limits in the tab's environment (#199, #206), like <see cref="AccountStatusProbe"/>: <c>bash -lic</c>,
+/// through <c>wsl.exe</c> on Windows. Codex: the last <c>token_count</c> event of the newest rollout under <c>$CODEX_HOME/sessions</c>.
+/// Claude and AGY: the snapshot that BoosterAI's status line (<see cref="ClaudeStatusLine"/>, <see cref="AgyStatusLine"/>) saved in
+/// the account's directory. Only read: no network, no credentials. The script prints one projected JSON line, never file contents;
+/// anything else is Unknown.
 /// </summary>
 public static class AccountLimitsProbe
 {
     internal static readonly TimeSpan Limit = TimeSpan.FromSeconds(12);
     internal const string Marker = "BOOSTER_LIMITS=";
+
+    /// <summary>Agents BoosterAI can read plan or quota limits for (#199, #206): multi-account claude/codex and single-account agy.</summary>
+    public static bool Supports(string llm) => llm is "claude" or "codex" or "agy";
 
     /// <summary>
     /// Python run by <see cref="Script"/>: argv[1] the agent, argv[2] the account's directory (the default account: the agent's
@@ -157,7 +161,7 @@ def codex(home):
         except OSError: continue
         if found: return found
     return {}
-def claude(home):
+def snapshot(home):
     with open(os.path.join(home, 'boosterai-limits.json'), 'rb') as f: raw = f.read(65537)
     if len(raw) > 65536: return {}
     data = json.loads(raw)
@@ -168,7 +172,8 @@ try:
     agent = sys.argv[1]
     home = sys.argv[2] if len(sys.argv) > 2 and sys.argv[2] else None
     if agent == 'codex': out = codex(home or os.environ.get('CODEX_HOME') or os.path.expanduser('~/.codex'))
-    else: out = claude(home or os.environ.get('CLAUDE_CONFIG_DIR') or os.path.expanduser('~/.claude'))
+    elif agent == 'agy': out = snapshot(home or os.environ.get('BOOSTERAI_AGY_HOME') or os.path.expanduser('~/.gemini/antigravity-cli'))
+    else: out = snapshot(home or os.environ.get('CLAUDE_CONFIG_DIR') or os.path.expanduser('~/.claude'))
 except Exception: out = {}
 print('BOOSTER_LIMITS=' + json.dumps(out))
 """;
@@ -176,7 +181,7 @@ print('BOOSTER_LIMITS=' + json.dumps(out))
     /// <summary>The bash that runs <see cref="Reader"/>; the inner timeout keeps a slow disk from outliving the check.</summary>
     public static string Script(string llm, string? directory)
     {
-        if (!Accounts.Supports(llm)) throw new ArgumentException("The agent has no separate accounts.", nameof(llm));
+        if (!Supports(llm)) throw new ArgumentException("The agent has no plan limits.", nameof(llm));
         var dir = directory is null ? "''" : Accounts.ShellPath(directory);
         return $"timeout -k 1 9 python3 - {llm} {dir} <<'PY'\n{Reader}\nPY";
     }
@@ -336,6 +341,108 @@ if command:
     try:
         p = subprocess.Popen(['bash', '-c', command], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, env=env, start_new_session=True)
         try: out = p.communicate(raw, timeout=10)[0]
+        except subprocess.TimeoutExpired:
+            os.killpg(p.pid, 9)
+            out = p.communicate()[0]
+        sys.stdout.buffer.write(out[:65536])
+    except Exception: pass
+""";
+}
+
+/// <summary>
+/// The status line BoosterAI gives its interactive AGY tabs (#206) through their <c>--settings</c> file. AGY passes its
+/// documented status line JSON on stdin, including <c>quota</c> buckets (<c>remaining_fraction</c>, <c>reset_time</c>,
+/// <c>reset_in_seconds</c>, <c>disabled</c>). The script saves only the highest used percentage of active short (≤ 24 h) and
+/// weekly buckets to <c>boosterai-limits.json</c> under <c>~/.gemini/antigravity-cli</c> (no email, transcripts or credentials),
+/// then chains the user's own configured <c>statusLine</c> if any; without one it prints nothing and AGY keeps its built-in
+/// status line through <c>stack_with_default: true</c>.
+/// </summary>
+public static class AgyStatusLine
+{
+    /// <summary>The snapshot's file name in AGY's directory; <see cref="AccountLimitsProbe"/> reads it.</summary>
+    public const string SnapshotFile = "boosterai-limits.json";
+
+    /// <summary>Written beside tab-lib.sh in each session directory (TabSession).</summary>
+    public const string ScriptFile = "agy-statusline.py";
+
+    /// <summary>The <c>statusLine.command</c> for a session directory (a Linux path); the directory is single-quoted for the shell.</summary>
+    public static string Command(string sessionDir) => "python3 '" + sessionDir.Replace("'", "'\\''") + "/" + ScriptFile + "'";
+
+    public const string Script = """
+# BoosterAI AGY status line (#206): saves quota usage from AGY's status line input, then runs the user's own status line if configured.
+import datetime, json, os, subprocess, sys, time
+raw = sys.stdin.buffer.read(1048577)
+try: data = json.loads(raw) if len(raw) <= 1048576 else None
+except Exception: data = None
+if not isinstance(data, dict): data = {}
+home = os.environ.get('BOOSTERAI_AGY_HOME') or os.path.expanduser('~/.gemini/antigravity-cli')
+def num(v):
+    return v if isinstance(v, (int, float)) and not isinstance(v, bool) else None
+def parse_reset(bucket, now):
+    rt = bucket.get('reset_time')
+    if isinstance(rt, str) and rt.strip():
+        try:
+            dt = datetime.datetime.fromisoformat(rt.strip().replace('Z', '+00:00'))
+            if dt.tzinfo is None: dt = dt.replace(tzinfo=datetime.timezone.utc)
+            ts = int(dt.timestamp())
+            if ts > 0: return ts
+        except Exception: pass
+    sec = num(bucket.get('reset_in_seconds'))
+    if sec is not None and sec > 0: return int(now + sec)
+    return None
+def save():
+    quota = data.get('quota')
+    if not isinstance(quota, dict) or not os.path.isdir(home): return
+    now = int(time.time())
+    snap = {}
+    for bid, b in quota.items():
+        if not isinstance(bid, str) or not isinstance(b, dict) or b.get('disabled') is True: continue
+        rem = num(b.get('remaining_fraction'))
+        if rem is None or rem < 0 or rem > 1: continue
+        resets_at = parse_reset(b, now)
+        if resets_at is None: continue
+        used = round(max(0.0, min(100.0, (1.0 - rem) * 100.0)), 2)
+        low = bid.lower()
+        rsec = num(b.get('reset_in_seconds'))
+        is_week = ('week' in low or '7d' in low) or (not any(k in low for k in ('5h', 'hour', 'session')) and ((rsec is not None and rsec > 86400) or (resets_at - now > 86400)))
+        key = 'seven_day' if is_week else 'five_hour'
+        prev = snap.get(key)
+        if prev is None or used > prev['used_percentage'] or (used == prev['used_percentage'] and resets_at < prev['resets_at']):
+            snap[key] = {'used_percentage': used, 'resets_at': resets_at}
+    if not snap: return
+    path = os.path.join(home, 'boosterai-limits.json')
+    try:
+        with open(path, 'rb') as f: old = json.loads(f.read(65536))
+        if {k: v for k, v in old.items() if k != 'captured_at'} == snap and 0 <= now - old.get('captured_at', 0) < 30: return
+    except Exception: pass
+    snap['captured_at'] = now
+    tmp = '%s.%d.tmp' % (path, os.getpid())
+    try:
+        with open(tmp, 'w') as f: json.dump(snap, f)
+        os.replace(tmp, path)
+    finally:
+        if os.path.exists(tmp): os.remove(tmp)
+def own():
+    path = os.path.join(home, 'settings.json')
+    try:
+        with open(path, 'rb') as f: settings = json.loads(f.read(1048576))
+    except Exception: return None
+    if not isinstance(settings, dict) or 'statusLine' not in settings: return None
+    line = settings['statusLine']
+    if isinstance(line, dict) and line.get('enabled', True) is not False and line.get('type', 'command') == 'command' and isinstance(line.get('command'), str) and line['command'].strip():
+        cmd = line['command'].strip()
+        return os.path.expanduser(cmd) if cmd.startswith('~') else cmd
+    return None
+try: save()
+except Exception: pass
+if os.environ.get('BOOSTERAI_STATUSLINE'): sys.exit(0)
+try: command = own()
+except Exception: command = None
+if command:
+    env = dict(os.environ, BOOSTERAI_STATUSLINE='1')
+    try:
+        p = subprocess.Popen(['sh', '-c', command], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, env=env, start_new_session=True)
+        try: out = p.communicate(raw, timeout=4.5)[0]
         except subprocess.TimeoutExpired:
             os.killpg(p.pid, 9)
             out = p.communicate()[0]

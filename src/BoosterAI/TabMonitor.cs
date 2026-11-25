@@ -185,6 +185,12 @@ bs_input="$1/$2.input"
 bs_ev start pid=$$ starttime=$(cut -d' ' -f22 /proc/$$/stat)
 # BoosterAI's claude status line (#199) runs python3; without it claude gets the settings without it, keeping the user's own.
 command -v python3 >/dev/null 2>&1 || { [ -f "$1/$2.claude-plain.json" ] && cp -f "$1/$2.claude-plain.json" "$1/$2.claude.json"; } 2>/dev/null || true
+# BoosterAI's agy status line (#206) runs python3; without it agy gets empty settings, keeping the user's own.
+if ! command -v python3 >/dev/null 2>&1; then
+  [ -f "$1/$2.agy-plain.json" ] && cp -f "$1/$2.agy-plain.json" "$1/$2.agy.json" 2>/dev/null || true
+elif [ -f "$1/$2.agy-replace.json" ] && python3 -c "import json,os,sys; d=json.load(open(os.path.join(os.environ.get('BOOSTERAI_AGY_HOME') or os.path.expanduser('~/.gemini/antigravity-cli'),'settings.json'))); s=d.get('statusLine'); sys.exit(0 if isinstance(s,dict) and s.get('enabled',True) is not False and isinstance(s.get('command'),str) and s['command'].strip() and not s.get('stack_with_default') else 1)" 2>/dev/null; then
+  cp -f "$1/$2.agy-replace.json" "$1/$2.agy.json" 2>/dev/null || true
+fi
 # The captured output only lives as long as the tab (and is replaced when a new CLI starts).
 bs_rm_out() { rm -f "$bs_out" "$bs_out.1" "$bs_size" "$bs_input" 2>/dev/null || true; }
 trap 'bs_rm_out && bs_ev exit' EXIT
@@ -781,6 +787,8 @@ for line in sys.stdin:
         File.WriteAllText(Path.Combine(Directory, "tab-lib.sh"), Lib.Replace("\r\n", "\n"));
         try { File.WriteAllText(Path.Combine(Directory, ClaudeStatusLine.ScriptFile), ClaudeStatusLine.Script.Replace("\r\n", "\n") + "\n"); }
         catch (IOException) { /* no plan limits from this session's claude tabs */ }
+        try { File.WriteAllText(Path.Combine(Directory, AgyStatusLine.ScriptFile), AgyStatusLine.Script.Replace("\r\n", "\n") + "\n"); }
+        catch (IOException) { /* no plan limits from this session's agy tabs */ }
         _next = System.IO.Directory.GetFiles(Directory, "tab*.log")
             .Select(f => int.TryParse(Path.GetFileNameWithoutExtension(f)[3..], CultureInfo.InvariantCulture, out var n) ? n : 0)
             .DefaultIfEmpty(0).Max();
@@ -885,7 +893,25 @@ for line in sys.stdin:
             File.WriteAllText(Path.Combine(Directory, track.Id + ".claude-plain.json"), HooksJson($"{dir}/{track.Id}.log"));
         }
         catch (IOException) { /* no hooks: the tab's activity stays unknown */ }
+        // AGY status line (#206): stack_with_default keeps AGY's built-in status line when the user has none of their own;
+        // tab-lib.sh swaps in the replace copy when the user configured a replacing statusLine, or the empty plain copy without python3.
+        try
+        {
+            File.WriteAllText(Path.Combine(Directory, track.Id + ".agy.json"), AgySettingsJson(AgyStatusLine.Command(dir), stackWithDefault: true));
+            File.WriteAllText(Path.Combine(Directory, track.Id + ".agy-replace.json"), AgySettingsJson(AgyStatusLine.Command(dir), stackWithDefault: false));
+            File.WriteAllText(Path.Combine(Directory, track.Id + ".agy-plain.json"), AgySettingsJson());
+        }
+        catch (IOException) { /* no quota snapshot from this agy tab */ }
         return track;
+    }
+
+    /// <summary>The AGY session settings file (#206): BoosterAI's statusLine command (or empty when plain).</summary>
+    public static string AgySettingsJson(string? statusLine = null, bool stackWithDefault = true)
+    {
+        if (statusLine is null) return "{}";
+        var line = new Dictionary<string, object> { ["type"] = "command", ["command"] = statusLine };
+        if (stackWithDefault) line["stack_with_default"] = true;
+        return JsonSerializer.Serialize(new Dictionary<string, object> { ["statusLine"] = line });
     }
 
     /// <summary>

@@ -89,6 +89,9 @@ public static class Launcher
     /// <summary>The settings file whose hooks log busy/idle for an interactive claude tab (written by TabSession.NewTrack).</summary>
     public static string HooksFile(TabTrack track) => $"{track.Dir}/{track.Id}.claude.json";
 
+    /// <summary>The settings file whose status line records quota limits for an interactive agy tab (#206).</summary>
+    public static string AgySettingsFile(TabTrack track) => $"{track.Dir}/{track.Id}.agy.json";
+
     private static string Cd(TabConfig tab) => tab.Directory.Trim() switch
     {
         "" or "~" => "cd ~",
@@ -165,6 +168,8 @@ public static class Launcher
             });
         // An interactive claude reports busy/idle through hooks; a one-shot run is busy until it exits.
         if (track is not null && tab.Llm == "claude" && !once) args.Add("--settings " + Quote(HooksFile(track)));
+        // An interactive agy records quota usage through its statusLine (#206).
+        if (track is not null && tab.Llm == "agy" && !once) args.Add("--settings " + Quote(AgySettingsFile(track)));
         var cli = string.Join(' ', new[] { tab.Llm }.Concat(args));
         if (once && tab.Llm == "codex") cli = "codex exec" + cli["codex".Length..];
         if (resume && tab.Llm == "codex") cli = "codex resume --last" + cli["codex".Length..];
