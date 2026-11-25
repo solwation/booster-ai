@@ -175,6 +175,7 @@ public sealed class AgentAccountsViewModel : Observable
             if (keep) _limits[key] = result;
         }
         foreach (var row in Rows) row.RefreshLimits();
+        _owner.AccountLimitsChanged(Cli);
     }
 
     /// <summary>Screenshots (--fake-limits): invented limits in row order (both windows, then Unknown, then only the week); never reads a file.</summary>
@@ -188,9 +189,11 @@ public sealed class AgentAccountsViewModel : Observable
                 cli == "codex" ? new LimitCredits(true, false, "120") : null, hour.AddMinutes(-15)),
             AccountLimits.Unknown,
             new(null, new LimitWindow(8, hour.AddDays(5), 10080), cli == "codex" ? new LimitCredits(false, false, null) : null, hour.AddDays(-1).AddHours(2)),
+            new(new LimitWindow(91, hour.AddHours(1).AddMinutes(40), 300), new LimitWindow(64, hour.AddDays(2), 10080), null, hour.AddMinutes(-4)),
         ];
         lock (_statusLock) for (var i = 0; i < Rows.Count; i++) _limits[Rows[i].Key] = cycle[i % cycle.Length];
         foreach (var row in Rows) row.RefreshLimits();
+        _owner.AccountLimitsChanged(Cli);
     }
 
     /// <summary>Screenshots: invented statuses, in row order (logged in, logged out, unknown, then again); never runs an agent.</summary>
@@ -300,6 +303,48 @@ public sealed partial class MainViewModel
         (distro, llm, directory) => Task.Run(() => AccountLimitsProbe.Read(distro, llm, directory));
     internal Task<AccountLimits> ReadAccountLimitsAsync(string llm, string? directory) =>
         directory is not null && !Accounts.IsValidDirectory(directory) ? Task.FromResult(AccountLimits.Unknown) : ReadAccountLimits(_cfg.WslDistro, llm, directory);
+
+    /// <summary>
+    /// The plan-limit indicator of an account in the Agent boxes (#200), from the same reading the Accounts page shows (one per
+    /// account, never per row); null for an agent without accounts and while unknown.
+    /// </summary>
+    internal LimitIndicator? LimitIndicatorOf(string cli, string key) =>
+        Accounts.Supports(cli) && AccountsEditor(cli) is { } editor ? LimitIndicator.For(editor.LimitsOf(key), LimitsClock()) : null;
+
+    /// <summary>Screenshots (--fake-limits): invented limits for every agent's accounts, also shown in the main window.</summary>
+    internal void ShowSampleLimitsForAll()
+    {
+        foreach (var cli in Catalog.Llms.Where(Accounts.Supports)) AccountsEditor(cli)!.ShowSampleLimits(cli);
+    }
+
+    private readonly Dictionary<string, string> _limitSignature = [];
+
+    /// <summary>A read answered: the Agent boxes follow when what they show changed (a reset window also changes it).</summary>
+    internal void AccountLimitsChanged(string cli)
+    {
+        if (!Accounts.Supports(cli)) return;
+        var signature = string.Join("|", new[] { "" }.Concat(AccountsFor(cli).Select(a => a.Directory))
+            .Select(k => LimitIndicatorOf(cli, k) is { } i ? i.Caption + i.Warn + i.Tip : "-"));
+        if (_limitSignature.TryGetValue(cli, out var old) && old == signature) return;
+        _limitSignature[cli] = signature;
+        Dispatcher.UIThread.Post(() => { foreach (var tab in Tabs.Where(t => t.Llm == cli)) tab.RaiseLlms(); });
+    }
+
+    private DateTimeOffset _limitsRefreshed = DateTimeOffset.MinValue;
+
+    /// <summary>
+    /// Reads the plan limits of the agents the tab list uses, one read per account (#200). The main window asks on activation
+    /// (at most every 30 seconds) and every few minutes while visible; <paramref name="force"/> skips the wait.
+    /// </summary>
+    internal Task RefreshAccountLimitsAsync(bool force = false)
+    {
+        if (!AccountLimitsEnabled) return Task.CompletedTask;
+        var now = LimitsClock();
+        if (!force && now - _limitsRefreshed < TimeSpan.FromSeconds(30)) return Task.CompletedTask;
+        _limitsRefreshed = now;
+        var reads = Tabs.Select(t => t.Llm).Distinct().Where(Accounts.Supports).Select(c => AccountsEditor(c)!.RefreshLimitsAsync()).ToList();
+        return Task.WhenAll(reads);
+    }
 
     /// <summary>An account's login status once a check in Settings has answered (#194); null while unknown to BoosterAI.</summary>
     internal AccountLoginStatus? KnownLoginStatus(string cli, string key) =>

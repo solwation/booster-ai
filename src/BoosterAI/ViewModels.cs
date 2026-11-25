@@ -245,11 +245,11 @@ public sealed class TabViewModel : Observable
                 var missing = llm == _llm && _account != "" && accounts.All(a => a.Id != _account);
                 if (accounts.Count == 0 && !missing)
                 {
-                    list.Add(new(llm, "", "", false, null));
+                    list.Add(new(llm, "", "", false, null, _owner.LimitIndicatorOf(llm, "")));
                     continue;
                 }
-                list.Add(new(llm, "", _owner.DefaultAccountName(llm), true, AccountTip(llm, _owner.DefaultAccountName(llm), Accounts.DefaultDirectory(llm), "")));
-                list.AddRange(accounts.Select(a => new AgentChoice(llm, a.Id, a.Name, true, AccountTip(llm, a.Name, a.Directory, a.Directory))));
+                list.Add(new(llm, "", _owner.DefaultAccountName(llm), true, AccountTip(llm, _owner.DefaultAccountName(llm), Accounts.DefaultDirectory(llm), ""), _owner.LimitIndicatorOf(llm, "")));
+                list.AddRange(accounts.Select(a => new AgentChoice(llm, a.Id, a.Name, true, AccountTip(llm, a.Name, a.Directory, a.Directory), _owner.LimitIndicatorOf(llm, a.Directory))));
                 if (missing) list.Add(new(llm, _account, Loc.Format("account.missing", _account), true, Loc.Format("account.missing", _account)));
             }
             return list;
@@ -2368,9 +2368,16 @@ public sealed class ImportViewModel : Observable, IProjectList
 /// One entry of a tab's Agent box (#194): an agent and one of its accounts (<paramref name="AccountId"/> "" is the default
 /// account). <paramref name="ShowAccount"/> is true for every entry of an agent with accounts besides its default one, which then
 /// shows <paramref name="AccountName"/> as a label after the agent; <paramref name="Tip"/> describes that account.
+/// <paramref name="Limit"/> is the account's plan-limit indicator (#200), null when unknown.
 /// </summary>
-public sealed record AgentChoice(string Llm, string AccountId, string AccountName, bool ShowAccount, string? Tip)
+public sealed record AgentChoice(string Llm, string AccountId, string AccountName, bool ShowAccount, string? Tip, LimitIndicator? Limit = null)
 {
+    public bool HasLimit => Limit is not null;
+    public bool LimitWarn => Limit?.Warn == true;
+    public bool LimitCalm => Limit is { Warn: false };
+    public string LimitCaption => Limit?.Caption ?? "";
+    public string? LimitTip => Limit?.Tip;
+    public string LimitName => Limit?.Name ?? "";
     /// <summary>What a screen reader reads: "claude, konto Work", or only the agent.</summary>
     public string Name => ShowAccount ? Loc.Format("agent.account.name", Loc.Display("llm", Llm), AccountName) : Loc.Display("llm", Llm);
     public override string ToString() => Name;

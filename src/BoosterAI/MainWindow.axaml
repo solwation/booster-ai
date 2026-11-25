@@ -265,7 +265,7 @@
                     <ComboBox.ItemTemplate>
                       <DataTemplate x:DataType="local:AgentChoice">
                         <!-- A CLI missing where the tabs run gets a warning marker after its name, not a text suffix (#152). -->
-                        <Grid ColumnDefinitions="Auto,Auto,Auto,*" AutomationProperties.Name="{Binding Name}">
+                        <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto" AutomationProperties.Name="{Binding Name}">
                           <local:AgentIcon Grid.Column="0" Cli="{Binding Llm}" Width="16" Height="16" />
                           <TextBlock Grid.Column="1" Text="{Binding Llm, Converter={x:Static local:Converters.LlmName}}" VerticalAlignment="Center" Margin="6,0,0,0" />
                           <Border Grid.Column="2" Background="Transparent" VerticalAlignment="Center" Margin="6,0,0,0"
@@ -274,9 +274,16 @@
                                   AutomationProperties.Name="{Binding Llm, Converter={x:Static local:Converters.LlmMissingName}}">
                             <Path Classes="missing" Data="{StaticResource WarningIcon}" />
                           </Border>
-                          <Border Grid.Column="3" Classes="account-pill" Margin="6,0,0,0" IsVisible="{Binding ShowAccount}" ToolTip.Tip="{Binding Tip}">
+                          <Border Grid.Column="3" Classes="account-pill" Margin="4,0,0,0" IsVisible="{Binding ShowAccount}" ToolTip.Tip="{Binding Tip}">
                             <TextBlock Classes="caption" Text="{Binding AccountName}" />
                           </Border>
+                          <!-- Plan limit (#200): the higher of the 5 h and weekly use, only when known; from 80 % with a warning icon too. -->
+                          <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="2" Margin="4,0,0,0" VerticalAlignment="Center"
+                                      IsVisible="{Binding HasLimit}" Background="Transparent" ToolTip.Tip="{Binding LimitTip}"
+                                      AutomationProperties.Name="{Binding LimitName}">
+                            <Path Classes="missing" Width="11" Height="11" Data="{StaticResource WarningIcon}" IsVisible="{Binding LimitWarn}" />
+                            <TextBlock Classes="caption" Text="{Binding LimitCaption}" VerticalAlignment="Center" />
+                          </StackPanel>
                         </Grid>
                       </DataTemplate>
                     </ComboBox.ItemTemplate>

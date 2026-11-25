@@ -353,6 +353,7 @@ public sealed partial class MainViewModel
         _setupEnabled = true;
         AccountStatusEnabled = true;
         AccountLimitsEnabled = true;
+        _ = RefreshAccountLimitsAsync(force: true);
         SetupRowsChanged();
         CheckSetup();
     }

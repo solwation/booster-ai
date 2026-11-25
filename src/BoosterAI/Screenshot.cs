@@ -189,6 +189,8 @@ internal static class Screenshot
         // Sample tab statuses, as before (the real window shows the real ones).
         var vm = new MainViewModel(app.Config);
         vm.ShowSampleStatus();
+        // --fake-limits: invented plan limits (#199, #200) in the main window's Agent boxes and on the Accounts page; no file is read.
+        if (o.FakeLimits) vm.ShowSampleLimitsForAll();
         // --fake-update 0.3.0 shows the update prompt as an installed copy would see it, manual:0.3.0 as a copy
         // that cannot update itself (no network, screenshots only).
         if (o.FakeUpdate is { } fake) vm.Update.ShowFake(fake);

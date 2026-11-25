@@ -394,4 +394,93 @@ public class AccountLimitsTests
         }
         finally { Loc.Use(previous); }
     }
+
+    private static LimitWindow Win(double used, DateTimeOffset now, int? minutes = null) => new(used, now.AddHours(2), minutes);
+
+    [Fact]
+    public void IndicatorShowsTheHigherWindowWarnsFromEightyAndHidesUnknown()
+    {
+        var previous = Loc.Language;
+        Loc.Use("sv");
+        try
+        {
+            var now = DateTimeOffset.Now;
+            Assert.Null(LimitIndicator.For(AccountLimits.Unknown, now));
+            // A window that has reset is unknown, so it never shows an old percentage.
+            Assert.Null(LimitIndicator.For(new(new LimitWindow(90, now.AddMinutes(-1)), null, null, now), now));
+
+            var calm = LimitIndicator.For(new(Win(37, now, 300), Win(62, now, 10080), null, now.AddMinutes(-3)), now)!;
+            Assert.Equal("62 %", calm.Caption);
+            Assert.False(calm.Warn);
+            Assert.Contains("5 h: 37 % använt", calm.Tip);
+            Assert.Contains("Vecka: 62 % använt", calm.Tip);
+            Assert.Contains("per ", calm.Tip);
+            Assert.DoesNotContain("nära", calm.Name);
+
+            var weekOnly = LimitIndicator.For(new(null, Win(8, now), null, null), now)!;
+            Assert.Equal("8 %", weekOnly.Caption);
+            Assert.Contains("5 h: Okänd", weekOnly.Tip);
+
+            Assert.False(LimitIndicator.For(new(Win(79.4, now), null, null, null), now)!.Warn);
+            var warn = LimitIndicator.For(new(Win(79.5, now), Win(20, now), null, null), now)!;
+            Assert.True(warn.Warn);
+            Assert.Equal("80 %", warn.Caption);
+            Assert.Contains("nära gränsen", warn.Name); // text cue, not colour only
+            Assert.Equal("140 %", LimitIndicator.For(new(null, Win(140, now), null, null), now)!.Caption);
+        }
+        finally { Loc.Use(previous); }
+    }
+
+    [Fact]
+    public async Task AgentBoxesShareTheAccountsReadingAndReadOncePerAccount()
+    {
+        var previous = Loc.Language;
+        Loc.Use("sv");
+        try
+        {
+            var vm = new MainViewModel(new AppConfig
+            {
+                Accounts = [new() { Id = "claude-work", Agent = "claude", Name = "Work", Directory = "~/.claude-work" }],
+                Tabs = [new() { Name = "A", Directory = "/srv/a", Llm = "claude" }, new() { Name = "B", Directory = "/srv/b", Llm = "claude", Account = "claude-work" },
+                    new() { Name = "C", Directory = "/srv/c", Llm = "agy" }],
+            });
+            var now = DateTimeOffset.Now;
+            var clock = now;
+            vm.LimitsClock = () => clock;
+            var calls = new List<string?>();
+            vm.ReadAccountLimits = (_, llm, dir) =>
+            {
+                lock (calls) calls.Add(llm + ":" + dir);
+                return Task.FromResult(dir is null ? new AccountLimits(Win(85, now, 300), Win(10, now, 10080), null, now) : AccountLimits.Unknown);
+            };
+            Assert.All(vm.Tabs, t => Assert.All(t.AgentChoices, c => Assert.False(c.HasLimit)));
+            await vm.RefreshAccountLimitsAsync(); // disabled: tests never read a file
+            Assert.Empty(calls);
+
+            vm.AccountLimitsEnabled = true;
+            await vm.RefreshAccountLimitsAsync();
+            // Three tabs, two with claude: one read per account of the agents in use, none for agy.
+            Assert.Equal(["claude:", "claude:~/.claude-work"], calls.OrderBy(c => c));
+            var choices = vm.Tabs[0].AgentChoices.Where(c => c.Llm == "claude").ToList();
+            Assert.Equal("85 %", choices[0].LimitCaption);
+            Assert.True(choices[0].LimitWarn);
+            Assert.False(choices[1].HasLimit); // Unknown shows nothing
+            Assert.Same(vm.AccountsEditor("claude")!.Rows[0].Limits.Session, vm.AccountsEditor("claude")!.LimitsOf("").Session); // the Accounts page's reading
+            Assert.False(vm.Tabs[2].AgentChoices.Single(c => c.Llm == "agy").HasLimit);
+
+            // Activation within 30 seconds does not read again; a forced (timer) refresh does.
+            await vm.RefreshAccountLimitsAsync();
+            Assert.Equal(2, calls.Count);
+            clock = now.AddSeconds(31);
+            await vm.RefreshAccountLimitsAsync();
+            Assert.Equal(4, calls.Count);
+            await vm.RefreshAccountLimitsAsync(force: true);
+            Assert.Equal(6, calls.Count);
+
+            // The window resets: the indicator goes away with it.
+            clock = now.AddHours(3);
+            Assert.False(vm.Tabs[0].AgentChoices.First(c => c.Llm == "claude").HasLimit);
+        }
+        finally { Loc.Use(previous); }
+    }
 }

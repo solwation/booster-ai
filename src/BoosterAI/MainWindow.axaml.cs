@@ -116,12 +116,17 @@ public partial class MainWindow : Window
             if (e.Property == WindowStateProperty && WindowState == WindowState.Minimized
                 && TrayPolicy.HideOnMinimize(_vm.MinimizeToTray, TrayAvailable())) Hide();
         };
-        Activated += (_, _) => { _vm.Update.WindowActive(true); _vm.SetupWindowActive(); _vm.RefreshOrkester(); };
+        Activated += (_, _) => { _vm.Update.WindowActive(true); _vm.SetupWindowActive(); _vm.RefreshOrkester(); _ = _vm.RefreshAccountLimitsAsync(); };
         // Pick up an orchestra installed or removed outside the app (#189); idle while hidden or minimized.
         var orchestraTimer = new Avalonia.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(45) };
         orchestraTimer.Tick += (_, _) => { if (IsVisible && WindowState != WindowState.Minimized) _vm.RefreshOrkester(); };
         orchestraTimer.Start();
         Closed += (_, _) => orchestraTimer.Stop();
+        // Plan limits of the Agent boxes (#200): read again every few minutes while the window is visible.
+        var limitsTimer = new Avalonia.Threading.DispatcherTimer { Interval = TimeSpan.FromMinutes(3) };
+        limitsTimer.Tick += (_, _) => { if (IsVisible && WindowState != WindowState.Minimized) _ = _vm.RefreshAccountLimitsAsync(force: true); };
+        limitsTimer.Start();
+        Closed += (_, _) => limitsTimer.Stop();
         Deactivated += (_, _) => _vm.Update.WindowActive(false);
     }
 

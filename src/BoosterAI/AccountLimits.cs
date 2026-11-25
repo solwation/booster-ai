@@ -25,6 +25,35 @@ public sealed record AccountLimits(LimitWindow? Session, LimitWindow? Week, Limi
     };
 }
 
+/// <summary>
+/// The small plan-limit indicator beside an agent in the main window's Agent box (#200): the higher of the 5-hour and weekly use
+/// as "62 %", a warning cue from <see cref="WarnAt"/> percent, and a tooltip with both windows. Null when no window is known.
+/// </summary>
+public sealed record LimitIndicator(string Caption, bool Warn, string Tip, string Name)
+{
+    public const double WarnAt = 80;
+
+    public static LimitIndicator? For(AccountLimits limits, DateTimeOffset now)
+    {
+        limits = limits.AsOf(now);
+        var known = new[] { limits.Session, limits.Week }.OfType<LimitWindow>().ToList();
+        if (known.Count == 0) return null;
+        var percent = Math.Round(known.Max(w => w.UsedPercent), MidpointRounding.AwayFromZero);
+        var warn = percent >= WarnAt;
+        var number = Loc.Number(percent, "0");
+        var session = Loc.Format("account.limit.hours", Loc.Number((limits.Session?.Minutes ?? 300) / 60.0, "0.#"));
+        var lines = new List<string>
+        {
+            Loc.Get("account.limit.title"),
+            session + ": " + LimitText.Used(limits.Session, now),
+            Loc.Get("account.limit.week") + ": " + LimitText.Used(limits.Week, now),
+        };
+        if (limits.At is { } at) lines.Add(Loc.Format("account.limit.as", LimitText.When(at, now)));
+        var name = Loc.Format("account.limit.chip.name", number) + (warn ? ", " + Loc.Get("account.limit.near") : "");
+        return new LimitIndicator(Loc.Format("account.limit.chip", number), warn, string.Join("\n", lines), name);
+    }
+}
+
 /// <summary>The texts of the Accounts page's limit lines (#199): "37 % använt · återställs 14:20", "Okänd", credits and times.</summary>
 public static class LimitText
 {
