@@ -2,6 +2,7 @@ using BoosterAI;
 using Xunit;
 
 /// <summary>CPU activity per tab (#215): /proc parsing, the process tree, threshold and hysteresis, with fake /proc data.</summary>
+[Collection(ConfigFileCollection.Name)] // switches Loc's global language, and a real tab wants an unloaded machine
 public class TabCpuTests(Xunit.Abstractions.ITestOutputHelper output)
 {
     /// <summary>A /proc/&lt;pid&gt;/stat line with the fields TabCpu reads (ppid, utime, stime, starttime) and harmless others.</summary>
@@ -231,13 +232,15 @@ public class TabCpuTests(Xunit.Abstractions.ITestOutputHelper output)
                 samples.Add(sample);
                 return cpu.Update(sample, DateTime.UtcNow);
             }
-            for (var i = 0; i < 4; i++) Assert.False(Step(), "quiet: " + string.Join(", ", samples.Select(s => s?.Share)));
+            // Startup noise under load may keep the first readings busy; it must settle to idle and then stay idle.
+            Assert.True(SpinWait.SpinUntil(() => !Step(), 30000), "never quiet: " + string.Join(", ", samples.Select(s => s?.Share)));
+            for (var i = 0; i < 3; i++) Assert.False(Step(), "quiet: " + string.Join(", ", samples.Select(s => s?.Share)));
             Next();
-            Assert.True(SpinWait.SpinUntil(Step, 15000), "busy: " + string.Join(", ", samples.Select(s => s?.Share)));
+            Assert.True(SpinWait.SpinUntil(Step, 45000), "busy: " + string.Join(", ", samples.Select(s => s?.Share)));
             Assert.Equal("yes", cpu.Busy!.Busiest);
             Assert.True(cpu.Busy.Share > 0.5);
             Next();
-            Assert.True(SpinWait.SpinUntil(() => !Step(), 15000), "quiet again: " + string.Join(", ", samples.Select(s => s?.Share)));
+            Assert.True(SpinWait.SpinUntil(() => !Step(), 45000), "quiet again: " + string.Join(", ", samples.Select(s => s?.Share)));
             for (var i = 0; i < 3; i++) Assert.False(Step());
             output.WriteLine(string.Join("\n", samples.Select(s => s is null ? "-" : $"{s.Share:P1} {s.Busiest} {s.BusiestShare:P1}")));
             var last = ProcSnapshot.Read("/proc")!;

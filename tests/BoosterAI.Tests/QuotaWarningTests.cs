@@ -7,8 +7,15 @@ namespace BoosterAI.Tests;
 
 /// <summary>#211: the low-quota warning fires once per window and account, re-arms on reset or rise, and is a setting.</summary>
 [Collection(ConfigFileCollection.Name)]
-public class QuotaWarningTests
+public class QuotaWarningTests : IDisposable
 {
+    // The notice texts are Swedish unless a test says otherwise; Loc is global, so pin it and restore it.
+    private readonly string _language = Loc.Language;
+
+    public QuotaWarningTests() => Loc.Use("sv");
+
+    public void Dispose() => Loc.Use(_language);
+
     private static readonly DateTimeOffset Now = new(2026, 11, 25, 10, 0, 0, TimeSpan.Zero);
 
     private static AccountLimits Limits(double? session, double? week, DateTimeOffset? sessionReset = null, DateTimeOffset? weekReset = null) =>

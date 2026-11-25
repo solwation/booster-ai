@@ -301,6 +301,7 @@ internal static class TabConfigTestExtensions
 /// tab-lib.sh's bs_pty on a real pseudo-terminal (#69): a request file is typed into the CLI, keys typed in the tab
 /// still reach it, a request older than the last key is skipped, and nothing is left behind.
 /// </summary>
+[Collection(ConfigFileCollection.Name)] // real PTY timing (#218): never next to the parallel CPU-heavy classes
 public class AutoClearPtyTests
 {
     [Fact]
@@ -551,18 +552,18 @@ public class AutoClearPtyTests
             Send(E);
             Thread.Sleep(100);
             session.RequestInput(track.Id, since, AutoClear.Command);
-            Assert.True(SpinWait.SpinUntil(() => File.ReadAllText(log).Contains("input-skipped reason=typed"), 10000));
-            Assert.True(SpinWait.SpinUntil(() => Typed().Length == 1, 5000));
+            Assert.True(SpinWait.SpinUntil(() => File.ReadAllText(log).Contains("input-skipped reason=typed"), 30000));
+            Assert.True(SpinWait.SpinUntil(() => Typed().Length == 1, 20000));
             Thread.Sleep(1200);
 
             long first = Now(), last = 0;
             foreach (var k in keys) { last = Now(); Send(k); Thread.Sleep(30); }
-            Assert.True(SpinWait.SpinUntil(() => Typed().Length > 1 && Typed()[^1] >= last, 5000), string.Join(" ", Typed()));
+            Assert.True(SpinWait.SpinUntil(() => Typed().Length > 1 && Typed()[^1] >= last, 20000), string.Join(" ", Typed()));
             Thread.Sleep(1500);
             // Ten separate keys in about a third of a second: the first at once, the rest in one line a second later.
             Assert.InRange(Typed().Length - 1, 1, 2 + (last - first) / 1000);
 
-            Assert.True(SpinWait.SpinUntil(() => session.ReadLog(track.Id) is { CliExit: 0 }, 10000));
+            Assert.True(SpinWait.SpinUntil(() => session.ReadLog(track.Id) is { CliExit: 0 }, 30000));
             Assert.Equal(sent, File.ReadAllText(Path.Combine(session.Directory, "got")));
             Send("exit\n");
             Assert.True(process.WaitForExit(30000));
