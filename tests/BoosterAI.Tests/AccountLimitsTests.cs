@@ -539,4 +539,65 @@ public class AccountLimitsTests
         }
         finally { Loc.Use(previous); }
     }
+
+    [Fact]
+    public void LimitUpdatesNotifyAllTabsAgentDropdownsAndDeduplicateSafely()
+    {
+        var previous = Loc.Language;
+        Loc.Use("sv");
+        try
+        {
+            var (notified, repeatNotified, codexEntry, agyEntry) = BoosterAI.Tests.UiSession.Run(() =>
+            {
+                Loc.Use("sv");
+                var vm = new MainViewModel(new AppConfig
+                {
+                    Tabs =
+                    [
+                        new() { Name = "A", Directory = "/srv/a", Llm = "claude" },
+                        new() { Name = "B", Directory = "/srv/b", Llm = "codex" },
+                        new() { Name = "C", Directory = "/srv/c", Llm = "agy" },
+                    ],
+                });
+                var now = DateTimeOffset.Now;
+                vm.LimitsClock = () => now;
+                var percent = 85.0;
+                vm.AccountLimitsEnabled = true;
+                vm.ReadAccountLimits = (_, llm, _) => Task.FromResult(
+                    llm == "claude" ? new AccountLimits(Win(percent, now, 300), Win(10, now, 10080), null, now) : AccountLimits.Unknown);
+
+                var raised = new List<string>();
+                foreach (var tab in vm.Tabs)
+                    tab.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(TabViewModel.AgentChoices)) raised.Add(tab.Name); };
+
+                var firstRead = vm.AccountsEditor("claude")!.RefreshLimitsAsync();
+                Assert.True(firstRead.IsCompletedSuccessfully);
+                Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+                var first = raised.ToList();
+                raised.Clear();
+
+                // Same reading again: no redundant AgentChoices notifications.
+                var secondRead = vm.AccountsEditor("claude")!.RefreshLimitsAsync();
+                Assert.True(secondRead.IsCompletedSuccessfully);
+                Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+                var repeat = raised.ToList();
+
+                // Concurrent signature updates across agents never race on _limitSignature.
+                Parallel.For(0, 20, i => vm.AccountLimitsChanged(i % 2 == 0 ? "claude" : "codex"));
+                Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+
+                return (first, repeat,
+                    vm.Tabs[1].AgentChoices.Single(c => c.Llm == "claude"),
+                    vm.Tabs[2].AgentChoices.Single(c => c.Llm == "claude"));
+            });
+
+            Assert.Equal(["A", "B", "C"], notified.OrderBy(n => n));
+            Assert.Empty(repeatNotified);
+            Assert.Equal("85 %", codexEntry.LimitCaption);
+            Assert.True(codexEntry.LimitWarn);
+            Assert.Equal("85 %", agyEntry.LimitCaption);
+            Assert.True(agyEntry.LimitWarn);
+        }
+        finally { Loc.Use(previous); }
+    }
 }

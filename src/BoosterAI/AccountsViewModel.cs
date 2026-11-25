@@ -318,16 +318,20 @@ public sealed partial class MainViewModel
     }
 
     private readonly Dictionary<string, string> _limitSignature = [];
+    private readonly object _limitSignatureLock = new();
 
-    /// <summary>A read answered: the Agent boxes follow when what they show changed (a reset window also changes it).</summary>
+    /// <summary>A read answered: every tab's Agent box follows when what it shows changed (a reset window also changes it).</summary>
     internal void AccountLimitsChanged(string cli)
     {
         if (!Accounts.Supports(cli)) return;
         var signature = string.Join("|", new[] { "" }.Concat(AccountsFor(cli).Select(a => a.Directory))
             .Select(k => LimitIndicatorOf(cli, k) is { } i ? i.Caption + i.Warn + i.Tip : "-"));
-        if (_limitSignature.TryGetValue(cli, out var old) && old == signature) return;
-        _limitSignature[cli] = signature;
-        Dispatcher.UIThread.Post(() => { foreach (var tab in Tabs.Where(t => t.Llm == cli)) tab.RaiseLlms(); });
+        lock (_limitSignatureLock)
+        {
+            if (_limitSignature.TryGetValue(cli, out var old) && old == signature) return;
+            _limitSignature[cli] = signature;
+        }
+        Dispatcher.UIThread.Post(() => { foreach (var tab in Tabs) tab.RaiseLlms(); });
     }
 
     private DateTimeOffset _limitsRefreshed = DateTimeOffset.MinValue;
