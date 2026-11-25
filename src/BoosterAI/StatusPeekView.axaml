@@ -10,11 +10,45 @@
         <TextBlock Classes="peek-header" Text="{Binding PeekHeader}" TextTrimming="CharacterEllipsis" />
       </StackPanel>
       <TextBlock Classes="muted caption" Text="{Binding PeekDetail}" IsVisible="{Binding HasPeekDetail}" TextWrapping="Wrap" />
-      <!-- Plan limits of the tab's account (#200): both windows in one line; from 80 % with a warning icon as well as the text. -->
-      <StackPanel Orientation="Horizontal" Spacing="5" IsVisible="{Binding HasPeekLimit}" AutomationProperties.Name="{Binding PeekLimitName}">
-        <Path Classes="missing" Width="11" Height="11" Data="{StaticResource WarningIcon}" IsVisible="{Binding PeekLimitWarn}" VerticalAlignment="Center" />
-        <TextBlock Classes="muted caption" Text="{Binding PeekLimitLine}" TextWrapping="Wrap" />
-      </StackPanel>
+      <!-- Plan limits of the tab's account (#200, #210): a small table, one row per window, so remaining and used read unambiguously:
+           label, a meter of the remaining share, "62 % kvar", muted "38 % använt" and the reset time. From 80 % used the row's meter
+           and percentage take the warning colour and a warning icon (not colour only). -->
+      <Border Classes="peek-limits" IsVisible="{Binding HasPeekLimit}" AutomationProperties.Name="{Binding PeekLimitName}">
+        <StackPanel Spacing="6" Grid.IsSharedSizeScope="True">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Classes="caption limit-title" Text="{local:T account.limit.title}" />
+            <TextBlock Grid.Column="1" Classes="muted caption" Text="{Binding PeekLimitAge}" IsVisible="{Binding HasPeekLimitAge}" />
+          </Grid>
+          <ItemsControl ItemsSource="{Binding PeekLimitRows}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate><StackPanel Spacing="5" /></ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="local:LimitRow">
+                <Grid AutomationProperties.Name="{Binding Name}">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" SharedSizeGroup="LimitLabel" />
+                    <ColumnDefinition Width="140" />
+                    <ColumnDefinition Width="Auto" SharedSizeGroup="LimitLeft" />
+                    <ColumnDefinition Width="Auto" SharedSizeGroup="LimitUsed" />
+                    <ColumnDefinition Width="*" />
+                  </Grid.ColumnDefinitions>
+                  <TextBlock Grid.Column="0" Classes="caption" Text="{Binding Label}" VerticalAlignment="Center" Margin="0,0,12,0" />
+                  <ProgressBar Grid.Column="1" Classes="limit-meter peek" Classes.warn="{Binding Warn}" IsVisible="{Binding Known}"
+                               Value="{Binding Remaining}" Minimum="0" Maximum="100" VerticalAlignment="Center" IsHitTestVisible="False" />
+                  <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" Margin="10,0,0,0">
+                    <Path Classes="missing" Width="11" Height="11" Data="{StaticResource WarningIcon}" IsVisible="{Binding Warn}" VerticalAlignment="Center" />
+                    <TextBlock Classes="caption limit-left" Classes.warn="{Binding Warn}" Classes.muted="{Binding !Known}" Text="{Binding RemainingText}" />
+                  </StackPanel>
+                  <TextBlock Grid.Column="3" Classes="muted caption" Text="{Binding UsedText}" VerticalAlignment="Center" Margin="12,0,0,0" />
+                  <TextBlock Grid.Column="4" Classes="muted caption" Text="{Binding ResetText}" VerticalAlignment="Center" Margin="12,0,0,0"
+                             TextTrimming="CharacterEllipsis" />
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </Border>
       <local:TabOutputView IsVisible="{Binding HasOutput}" />
       <TextBlock Classes="muted caption" Text="{Binding OutputNote}" IsVisible="{Binding HasOutputNote}" TextWrapping="Wrap" />
       <!-- After an exit with an error, ↻ is the popup's primary action (#153); only where it can be clicked. -->

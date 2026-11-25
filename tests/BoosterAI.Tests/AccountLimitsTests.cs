@@ -431,6 +431,44 @@ public class AccountLimitsTests
     }
 
     [Fact]
+    public void PopupRowsSayRemainingAndUsedWithResetAndWarnFromEighty()
+    {
+        var previous = Loc.Language;
+        try
+        {
+            var now = DateTimeOffset.Now;
+            Loc.Use("sv");
+            var rows = LimitIndicator.For(new(Win(37.6, now, 300), null, null, now), now)!.Rows;
+            Assert.Equal(2, rows.Count);
+            var session = rows[0];
+            Assert.True(session.Known);
+            Assert.Equal(62, session.Remaining);
+            Assert.Equal("62 % kvar", session.RemainingText);
+            Assert.Equal("38 % använt", session.UsedText);
+            Assert.StartsWith("återställs om 2 h", session.ResetText);
+            Assert.False(session.Warn);
+            Assert.StartsWith("5 h: 62 % kvar, 38 % använt, återställs ", session.Name);
+            var week = rows[1];
+            Assert.False(week.Known);
+            Assert.Equal("Okänd", week.RemainingText);
+            Assert.Equal("Vecka: Okänd", week.Name);
+
+            var warn = LimitIndicator.For(new(null, Win(85, now), null, null), now)!.Rows[1];
+            Assert.True(warn.Warn);
+            Assert.Equal("15 % kvar", warn.RemainingText);
+            Assert.EndsWith(", nära gränsen", warn.Name);
+            Assert.Equal(0, LimitIndicator.For(new(null, Win(140, now), null, null), now)!.Rows[1].Remaining);
+
+            Loc.Use("en");
+            var en = LimitIndicator.For(new(Win(37.6, now, 300), null, null, now), now)!.Rows[0];
+            Assert.Equal("62% left", en.RemainingText);
+            Assert.Equal("38% used", en.UsedText);
+            Assert.StartsWith("resets in 2h", en.ResetText);
+        }
+        finally { Loc.Use(previous); }
+    }
+
+    [Fact]
     public void MeterFillsToTheHigherWindowChangesColourFromEightyAndIsEmptyWhileUnknown()
     {
         var previous = Loc.Language;
@@ -534,10 +572,12 @@ public class AccountLimitsTests
             // The status popup's line for the tab's account/agent, Unknown for a window nothing is known about.
             Assert.True(vm.Tabs[0].HasPeekLimit);
             Assert.True(vm.Tabs[0].PeekLimitWarn);
-            Assert.StartsWith("5 h 85 % · Vecka 10 % · avläst ", vm.Tabs[0].PeekLimitLine);
+            Assert.Equal(["5 h", "Vecka"], vm.Tabs[0].PeekLimitRows.Select(r => r.Label));
+            Assert.Equal(["15 % kvar", "90 % kvar"], vm.Tabs[0].PeekLimitRows.Select(r => r.RemainingText));
+            Assert.StartsWith("avläst ", vm.Tabs[0].PeekLimitAge);
             Assert.False(vm.Tabs[1].HasPeekLimit); // the work account is Unknown
             Assert.True(vm.Tabs[2].HasPeekLimit);
-            Assert.StartsWith("5 h 28 % · Vecka 44 % · avläst ", vm.Tabs[2].PeekLimitLine);
+            Assert.Equal(["72 % kvar", "56 % kvar"], vm.Tabs[2].PeekLimitRows.Select(r => r.RemainingText));
             Assert.False(vm.Tabs[3].HasPeekLimit);
 
             // The window resets: the indicator goes away with it.

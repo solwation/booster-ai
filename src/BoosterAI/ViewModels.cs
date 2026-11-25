@@ -388,7 +388,7 @@ public sealed class TabViewModel : Observable
         Raise(nameof(Llms));
         Raise(nameof(AgentChoices));
         Raise(nameof(SelectedAgentChoice));
-        foreach (var n in new[] { nameof(HasPeekLimit), nameof(PeekLimitWarn), nameof(PeekLimitLine), nameof(PeekLimitName), nameof(StatusDisplay) }) Raise(n);
+        foreach (var n in new[] { nameof(HasPeekLimit), nameof(PeekLimitWarn), nameof(PeekLimitRows), nameof(PeekLimitAge), nameof(HasPeekLimitAge), nameof(PeekLimitName), nameof(StatusDisplay) }) Raise(n);
     }
     public IReadOnlyList<string> Models => Catalog.ModelsFor(_llm);
     public bool IsAi => _llm != Catalog.ShellOnly;
@@ -605,7 +605,10 @@ public sealed class TabViewModel : Observable
         _account == "" ? "" : Accounts.Find(_owner.AccountsFor(_llm), _llm, _account)?.Directory ?? "\0");
     public bool HasPeekLimit => PeekLimit is not null;
     public bool PeekLimitWarn => PeekLimit?.Warn == true;
-    public string PeekLimitLine => PeekLimit?.Line ?? "";
+    /// <summary>The popup's limit table (#210): one row per window with remaining/used share and reset time.</summary>
+    public IReadOnlyList<LimitRow> PeekLimitRows => PeekLimit?.Rows ?? [];
+    public string PeekLimitAge => PeekLimit?.Age ?? "";
+    public bool HasPeekLimitAge => PeekLimitAge.Length > 0;
     public string PeekLimitName => PeekLimit?.Name ?? "";
     public string StatusActionName => Loc.Format("output.action", Name, StatusTip);
 

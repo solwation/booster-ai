@@ -387,6 +387,21 @@
     <Setter Property="Background" Value="{DynamicResource BorderBrush}" />
   </Style>
   <Style Selector="ProgressBar.limit-meter.warn"><Setter Property="Foreground" Value="{DynamicResource WarningBrush}" /></Style>
+  <!-- The status popup's limit table (#210): a taller meter of the remaining share, the remaining percentage emphasized. -->
+  <Style Selector="ProgressBar.limit-meter.peek">
+    <Setter Property="Height" Value="6" />
+    <Setter Property="MinHeight" Value="6" />
+    <Setter Property="MinWidth" Value="0" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusSmall}" />
+  </Style>
+  <Style Selector="Border.peek-limits">
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+    <Setter Property="BorderThickness" Value="0,1,0,1" />
+    <Setter Property="Padding" Value="0,8" />
+  </Style>
+  <Style Selector="TextBlock.limit-title"><Setter Property="FontWeight" Value="SemiBold" /></Style>
+  <Style Selector="TextBlock.limit-left"><Setter Property="FontWeight" Value="SemiBold" /></Style>
+  <Style Selector="TextBlock.limit-left.warn"><Setter Property="Foreground" Value="{DynamicResource WarningBrush}" /></Style>
   <Style Selector="Border.account-pill > TextBlock">
     <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
     <Setter Property="Foreground" Value="{DynamicResource MutedBrush}" />
