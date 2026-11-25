@@ -434,7 +434,11 @@
            The status line is for neutral acknowledgements only; errors use the banner at the top (#153). -->
       <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,20,0" Spacing="4">
         <TextBlock Classes="muted" Text="{Binding Status}" TextWrapping="Wrap" IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-        <TextBlock Classes="muted caption" Text="{Binding VersionText}" ToolTip.Tip="{local:T version.tip}" />
+        <!-- #226: the version opens the same page as the update banner's "Show more" (the changes since this version, or the latest release). -->
+        <Button Classes="link version" HorizontalAlignment="Left" Padding="0" Click="OnUpdateMore"
+                ToolTip.Tip="{local:T version.tip}" AutomationProperties.Name="{Binding VersionName}">
+          <TextBlock Classes="muted caption" Text="{Binding VersionText}" />
+        </Button>
       </StackPanel>
       <Button Grid.Column="1" Classes="main-action secondary" Height="{Binding #LaunchButton.Bounds.Height}" Content="{Binding RestartAllLabel}" Click="OnRestartAll"
               IsVisible="{Binding CanRestartAll}" ToolTip.Tip="{local:T restartAll.tip}" AutomationProperties.Name="{local:T restartAll.name}" Margin="0,0,12,0" Padding="16,8" />

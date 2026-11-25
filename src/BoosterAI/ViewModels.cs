@@ -863,6 +863,8 @@ public sealed partial class MainViewModel : Observable
     /// <summary>The window title and the bottom-left label name the running build, so any report says which version it was.</summary>
     public string AppTitle => "BoosterAI " + UpdateLogic.Current;
     public string VersionText => "v" + UpdateLogic.Current;
+    /// <summary>The version link's accessible name (#226): "Visa ändringar i BoosterAI v0.48.0".</summary>
+    public string VersionName => Loc.Format("version.name", VersionText);
     /// <summary>The status line at the bottom: neutral acknowledgements only; errors go to the banner (#153).</summary>
     public string Status { get => _status; private set => Set(ref _status, value); }
     /// <summary>The newest outcome is an error, shown in the error banner.</summary>

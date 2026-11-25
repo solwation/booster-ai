@@ -611,6 +611,10 @@
     <Setter Property="Foreground" Value="{DynamicResource LinkHoverBrush}" />
     <Setter Property="TextDecorations" Value="Underline" />
   </Style>
+  <!-- #226: the version link keeps the muted footer look and only underlines on hover. -->
+  <Style Selector="Button.link.version TextBlock, Button.link.version:pointerover TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource MutedBrush}" />
+  </Style>
   <Style Selector="Button.link:pointerover /template/ ContentPresenter, Button.link:pressed /template/ ContentPresenter">
     <Setter Property="Background" Value="Transparent" />
   </Style>
