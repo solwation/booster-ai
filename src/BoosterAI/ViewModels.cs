@@ -110,6 +110,7 @@ public sealed class TabViewModel : Observable
             Raise(nameof(StatusActionName));
             Raise(nameof(OpenTip));
             Raise(nameof(ContinueName));
+            Raise(nameof(StartName));
             Raise(nameof(ReorderName));
             Raise(nameof(MoreName));
             Raise(nameof(RemoveSubTabName));
@@ -456,6 +457,15 @@ public sealed class TabViewModel : Observable
     internal int? ShellPid { get; set; }
     internal void RaiseRestartTip() => RaiseRestart();
 
+    /// <summary>Screenshots only: back to never opened (no status, no launch).</summary>
+    internal void ResetSampleState()
+    {
+        LaunchedAs = null;
+        _state = null;
+        foreach (var n in new[] { nameof(HasStatus), nameof(IsRunning), nameof(IsAlive), nameof(OpenTip), nameof(WillStart), nameof(StatusText), nameof(StatusBrush) }) Raise(n);
+        RaiseRestart();
+    }
+
     public bool HasStatus => _state is not null;
     internal bool HasOpenTerminal => Track is not null && _state is not null and not (TabState.Closed or TabState.Lost);
     public bool IsRunning => _state is TabState.Running;
@@ -526,6 +536,15 @@ public sealed class TabViewModel : Observable
         && !_owner.SharesConversationDirectory(this, launched.Llm);
     public string ContinueTip => Loc.Get("restart.continue.tip");
     /// <summary>
+    /// The row's Start icon (#198): a tab this run has never opened, such as a subtab created while the others run, starts on its own,
+    /// ticked or not. Once opened it has ↻ and Continue instead, so the two never show together.
+    /// </summary>
+    public bool CanStart => LaunchedAs is null && !IsAlive;
+    /// <summary>The status column holds the status, or the Start icon for a tab that has none yet.</summary>
+    public bool ShowStatusColumn => HasStatus || CanStart;
+    /// <summary>The accessible name of the row's Start icon (#198): which tab it starts.</summary>
+    public string StartName => Loc.Format("tab.start.name", Name);
+    /// <summary>
     /// Tooltip and accessible name of the folder icon, the same in the main window and Settings → Projects (#156):
     /// it always opens the folder, in Explorer on Windows and the file manager elsewhere.
     /// </summary>
@@ -556,7 +575,7 @@ public sealed class TabViewModel : Observable
 
     private void RaiseRestart()
     {
-        foreach (var n in new[] { nameof(IsChanged), nameof(CanRestart), nameof(RestartTip), nameof(PendingRestart), nameof(StatusActionName), nameof(CanContinueClosed), nameof(CanReloadOrchestra), nameof(ShowReload), nameof(ReloadName) }) Raise(n);
+        foreach (var n in new[] { nameof(IsChanged), nameof(CanRestart), nameof(RestartTip), nameof(PendingRestart), nameof(StatusActionName), nameof(CanContinueClosed), nameof(CanReloadOrchestra), nameof(ShowReload), nameof(ReloadName), nameof(CanStart), nameof(ShowStatusColumn) }) Raise(n);
         _owner.RestartableChanged();
     }
     /// <summary>The programs of the commands agy denied (state Denied).</summary>
@@ -1349,6 +1368,18 @@ public sealed partial class MainViewModel : Observable
         }
     }
 
+    /// <summary>
+    /// For --screenshot --fake-new-subtab (#198): the last subtab of the first group as if just created while the others
+    /// run, never opened, so its row shows the Start icon; returns it. Nothing is saved or started.
+    /// </summary>
+    public TabViewModel? ShowSampleNewSubTab()
+    {
+        var group = Tabs.FirstOrDefault(t => t.IsSubTab)?.Parent;
+        if (Tabs.LastOrDefault(t => t.Parent is not null && t.Parent == group) is not { } tab) return null;
+        tab.ResetSampleState();
+        return tab;
+    }
+
     /// <summary>Neutral explicit idle/input state for headless reload screenshots, with no live session or process.</summary>
     public void ShowSampleOrchestraIdle()
     {
@@ -1561,6 +1592,22 @@ public sealed partial class MainViewModel : Observable
         if (IsClosingAll || tab.LaunchedAs is not { } launched || (resume && !tab.CanContinueClosed)) return;
         if (RestartExited(tab, launched, resume)) return;
         RestartClosed([(tab, launched)], resume);
+    }
+
+    /// <summary>
+    /// Start on one row (#198): opens only this tab, through the same path as a reopened closed tab, so it joins the
+    /// session's terminal window when one exists; before any session it opens a new window, like Start with only this
+    /// tab ticked. Its tick is left as it is and no other tab is started.
+    /// </summary>
+    public void StartTab(TabViewModel tab)
+    {
+        if (IsClosingAll || !tab.CanStart) return;
+        var config = tab.ToConfig(forLaunch: true);
+        config.Enabled = true;
+        var cfg = new AppConfig { WslDistro = _cfg.WslDistro, LinuxTerminal = _cfg.LinuxTerminal, ZoomPercent = _cfg.ZoomPercent, Tabs = [config] };
+        var error = Start(cfg, [(tab, config)], _session?.WindowName);
+        Save();
+        ShowLaunchOutcome(error, cfg.Tabs, () => StartTab(tab));
     }
 
     internal static bool CanRestartExited(TabLog? log, Func<int, long?>? live) =>

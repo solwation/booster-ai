@@ -355,4 +355,74 @@ public sealed class SubTabTests : IDisposable
         Assert.Single(Assert.Single(ConfigStore.Load().Tabs).SubTabs);
         Assert.False(vm.RemoveSubTab(vm.Tabs[0]));
     }
+
+    [Fact]
+    public void OnlyTabsNeverOpenedOfferStartAndRowsWithRestartDoNot()
+    {
+        var vm = new MainViewModel(new AppConfig { Notifications = false, Tabs = [new() { Name = "A" }, new() { Name = "B", Enabled = false }] });
+        var (a, b) = (vm.Tabs[0], vm.Tabs[1]);
+        // Before any start every row can start alone, ticked or not, and the status column shows only ▷.
+        Assert.All(vm.Tabs, t => Assert.True(t.CanStart && t.ShowStatusColumn && !t.HasStatus));
+        Assert.Equal(Loc.Format("tab.start.name", "A"), a.StartName);
+        a.LaunchedAs = a.ToConfig(forLaunch: true);
+        foreach (var state in new[] { TabState.Starting, TabState.Running, TabState.Closed, TabState.CliExited, TabState.NotStarted, TabState.Lost })
+        {
+            a.SetState(state, null);
+            Assert.False(a.CanStart); // Opened once: ↻ (or nothing while it runs), never ▷ as well.
+            Assert.True(a.ShowStatusColumn);
+        }
+        Assert.True(a.CanRestart);
+        Assert.True(b.CanStart);
+    }
+
+    [Fact]
+    public void StartTabOpensOnlyThatNewSubtabInTheRunningSessionsWindow()
+    {
+        var name = "start-one-" + Guid.NewGuid().ToString("N");
+        var vm = new MainViewModel(new AppConfig { Notifications = false, Tabs = [new() { Name = name, Directory = "~/alpha" }, new() { Name = "idle-" + name, Enabled = false }] });
+        var project = vm.Tabs[0];
+        var idle = vm.Tabs[1];
+        Assert.True(vm.Launch());
+        var first = Assert.Single(TestTerminal.For(name));
+        Assert.False(project.CanStart);
+        var child = vm.AddSubTab(project);
+        child.Name = "child-" + name;
+        child.Llm = "codex";
+        Assert.True(child.Enabled); // A new subtab inherits the project's tick: Start would also open it.
+        Assert.True(child.CanStart && child.ShowStatusColumn);
+        child.Enabled = false; // ▷ ignores the tick.
+
+        vm.StartTab(child);
+        var request = Assert.Single(TestTerminal.For(child.Name));
+        Assert.Equal([child.Name], request.Tabs.Select(t => t.Name));
+        Assert.Equal("~/alpha", request.Tabs[0].Directory);
+        Assert.Equal("codex", request.Tabs[0].Llm);
+        Assert.Equal(first.Window, request.Window); // Joins the open terminal window.
+        Assert.NotEqual("new", request.Window);
+        Assert.Single(request.Tracks);
+        Assert.Single(TestTerminal.For(name)); // The running project is not opened again.
+        Assert.Empty(TestTerminal.For(idle.Name)); // Nor is the other unticked tab.
+        Assert.False(child.Enabled);
+        Assert.True(child.IsAlive);
+        Assert.False(child.CanStart);
+        Assert.True(idle.CanStart);
+
+        vm.StartTab(child); // A second click while it starts opens nothing more.
+        Assert.Single(TestTerminal.For(child.Name));
+    }
+
+    [Fact]
+    public void StartTabBeforeAnySessionOpensOnlyThatTabInANewWindow()
+    {
+        var name = "start-first-" + Guid.NewGuid().ToString("N");
+        var vm = new MainViewModel(new AppConfig { Notifications = false, Tabs = [new() { Name = "other-" + name }, new() { Name = name, Enabled = false }] });
+        vm.StartTab(vm.Tabs[1]);
+        var request = Assert.Single(TestTerminal.For(name));
+        Assert.Equal([name], request.Tabs.Select(t => t.Name));
+        Assert.Empty(TestTerminal.For("other-" + name));
+        Assert.True(vm.Tabs[0].CanStart);
+        Assert.Equal(1, vm.ToStartCount); // Start still opens the ticked tab, now joining the same window.
+        Assert.True(vm.Launch());
+        Assert.Equal(request.Window, Assert.Single(TestTerminal.For("other-" + name)).Window);
+    }
 }

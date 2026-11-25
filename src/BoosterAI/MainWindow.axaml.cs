@@ -382,6 +382,11 @@ public partial class MainWindow : Window
         if (await ConfirmSetupWindow.Wsl().ShowDialog<bool>(this)) _vm.InstallWsl();
     }
 
+    private void OnStartTab(object? sender, RoutedEventArgs e)
+    {
+        if (!_vm.IsClosingAll && (sender as Control)?.DataContext is TabViewModel tab) _vm.StartTab(tab);
+    }
+
     private void OnContinue(object? sender, RoutedEventArgs e)
     {
         if (!_vm.IsClosingAll && (sender as Control)?.DataContext is TabViewModel tab) _vm.Restart(tab, resume: true);

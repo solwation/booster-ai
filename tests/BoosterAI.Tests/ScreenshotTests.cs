@@ -15,6 +15,18 @@ public class ScreenshotTests
     }
 
     [Fact]
+    public void ParseReadsNewSubtabAndRowMenu()
+    {
+        var plain = Screenshot.Parse(["--screenshot", "out.png"])!;
+        Assert.False(plain.FakeNewSubTab);
+        Assert.Null(plain.FakeRowMenu);
+        var shot = Screenshot.Parse(["--screenshot", "out.png", "--fake-new-subtab", "--fake-row-menu"])!;
+        Assert.True(shot.FakeNewSubTab);
+        Assert.Equal(-1, shot.FakeRowMenu); // The new subtab's row, or the first row.
+        Assert.Equal(2, Screenshot.Parse(["--screenshot", "out.png", "--fake-row-menu", "2"])!.FakeRowMenu);
+    }
+
+    [Fact]
     public void ParseDefaultsTabToNull()
     {
         var shot = Screenshot.Parse(["--screenshot", "out.png", "--window", "settings"]);

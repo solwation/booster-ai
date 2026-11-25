@@ -8,14 +8,15 @@ using Avalonia.Threading;
 namespace BoosterAI;
 
 /// <summary>
-/// <c>--screenshot file.png [--window main|local-model|local-models|close|settings|install|import|restart|remove-project|alias|wsl-shutdown|memory-reclaim|agent-yolo|wsl|unsaved|setup|uninstall] [--theme light|dark] [--config file.json] [--fake-update [manual:]0.3.0] [--fake-status [error:]text] [--fake-denied] [--fake-changed] [--fake-restartable N] [--fake-output [N]] [--fake-setup [cli|wsl|alias]] [--fake-long-status] [--check-clipping] [--fake-agent-list [N]] [--fake-memory-reclaim gradual|dropcache|disabled|other|old|unknown]</c>:
+/// <c>--screenshot file.png [--window main|local-model|local-models|close|settings|install|import|restart|remove-project|alias|wsl-shutdown|memory-reclaim|agent-yolo|wsl|unsaved|setup|uninstall] [--theme light|dark] [--config file.json] [--fake-update [manual:]0.3.0] [--fake-status [error:]text] [--fake-denied] [--fake-changed] [--fake-restartable N] [--fake-output [N]] [--fake-setup [cli|wsl|alias]] [--fake-long-status] [--check-clipping] [--fake-agent-list [N]] [--fake-new-subtab] [--fake-row-menu [N]] [--fake-memory-reclaim gradual|dropcache|disabled|other|old|unknown]</c>:
 /// renders a window with Avalonia's headless Skia platform. Nothing is shown on the desktop and no
 /// focus changes. The window frame (title bar) is not drawn; only the client area.
 /// </summary>
 internal sealed record ScreenshotOptions(string File, string Window, string? FakeUpdate, string? FakeStatus, bool FakeDenied, bool FakeChanged,
     int? FakeOutput = null, int FakeRestartable = 0, string? FakeSetup = null, string? Tab = null, bool FakeOptimization = false, int? FakeMemoryCap = null,
     string? Section = null, string? FakeMemoryState = null, int? Width = null, int? Height = null, bool FakeOrchestraIdle = false, int? FakeMemorySaved = null,
-    bool FakeLongStatus = false, bool CheckClipping = false, string? FakeMemoryReclaim = null, int? FakeAgentList = null);
+    bool FakeLongStatus = false, bool CheckClipping = false, string? FakeMemoryReclaim = null, int? FakeAgentList = null,
+    bool FakeNewSubTab = false, int? FakeRowMenu = null);
 
 internal static class Screenshot
 {
@@ -38,7 +39,9 @@ internal static class Screenshot
             int.TryParse(Value(args, "--height"), out var height) ? height : null, args.Contains("--fake-orchestra-idle"),
             int.TryParse(Value(args, "--fake-memory-saved"), out var saved) ? saved : null,
             args.Contains("--fake-long-status"), args.Contains("--check-clipping"), Value(args, "--fake-memory-reclaim"),
-            !args.Contains("--fake-agent-list") ? null : int.TryParse(Value(args, "--fake-agent-list"), out var list) ? list : 0);
+            !args.Contains("--fake-agent-list") ? null : int.TryParse(Value(args, "--fake-agent-list"), out var list) ? list : 0,
+            args.Contains("--fake-new-subtab"),
+            !args.Contains("--fake-row-menu") ? null : int.TryParse(Value(args, "--fake-row-menu"), out var menu) ? menu : -1);
     }
 
     /// <summary>--fake-output [N]: the popup of the Nth running sample tab (0: the first, interactive; 1: Watching).</summary>
@@ -269,6 +272,8 @@ internal static class Screenshot
         if (o.FakeOrchestraIdle) vm.ShowSampleOrchestraIdle();
         // --fake-long-status: the longest fixed status texts, with the orchestra column shown (#152).
         if (o.FakeLongStatus) vm.ShowSampleLongStatus();
+        // --fake-new-subtab: the first group's last subtab never opened, as if created while the others run (#198).
+        var newSubTab = o.FakeNewSubTab ? vm.ShowSampleNewSubTab() : null;
         Dispatcher.UIThread.RunJobs();
         for (var i = 0; i < 3; i++)
         {
@@ -283,6 +288,9 @@ internal static class Screenshot
         if (o.FakeOutput is { } n && vm.ShowSampleOutput(n) is { } tab) WithStatusPopup(window, frame, tab).Save(o.File);
         // --fake-agent-list [N]: the Nth row's Agent box open, with its agent and account entries (#194).
         else if (o.FakeAgentList is { } row) WithAgentList(window, frame, row).Save(o.File);
+        // --fake-row-menu [N]: the Nth visible row's ⋯ menu open (default: the --fake-new-subtab row, else the first).
+        else if (o.FakeRowMenu is { } menuRow)
+            WithRowMenu(window, frame, menuRow >= 0 ? menuRow : newSubTab is not null ? vm.VisibleTabs.ToList().IndexOf(newSubTab) : 0).Save(o.File);
         else frame.Save(o.File);
         // --check-clipping: every text that ends in "…" because it did not fit is printed, and the exit code is 3 (#152).
         if (o.CheckClipping)
@@ -295,6 +303,38 @@ internal static class Screenshot
             if (clipped.Count > 0) return 3;
         }
         return 0;
+    }
+
+    /// <summary>Opens row <paramref name="row"/>'s menu as its ⋯ does and draws it onto the window frame below the button.</summary>
+    private static Bitmap WithRowMenu(Window window, Bitmap frame, int row)
+    {
+        var border = window.GetVisualDescendants().OfType<Border>().Where(b => b.Classes.Contains("row")).ElementAt(row);
+        var more = border.GetVisualDescendants().OfType<Button>().Last(b => b.Classes.Contains("icon") && b.IsEffectivelyVisible);
+        var menu = border.ContextMenu ?? throw new InvalidOperationException("The row has no menu");
+        menu.PlacementTarget = more;
+        menu.Open(border);
+        for (var i = 0; i < 3; i++)
+        {
+            Thread.Sleep(30);
+            Dispatcher.UIThread.RunJobs();
+            AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+        }
+        menu.UpdateLayout();
+        var size = menu.Bounds.Size;
+        if (size.Width <= 0) throw new InvalidOperationException("The row menu did not open");
+        var menuFrame = new RenderTargetBitmap(new PixelSize((int)Math.Ceiling(size.Width), (int)Math.Ceiling(size.Height)), frame.Dpi);
+        menuFrame.Render(menu);
+        var corner = more.TranslatePoint(new Point(more.Bounds.Width, more.Bounds.Height), window) ?? default;
+        var x = Math.Max(8, Math.Min(corner.X - size.Width, window.ClientSize.Width - size.Width - 8));
+        var y = Math.Max(8, Math.Min(corner.Y + 2, window.ClientSize.Height - size.Height - 8));
+        var result = new RenderTargetBitmap(frame.PixelSize, frame.Dpi);
+        using (var ctx = result.CreateDrawingContext())
+        {
+            ctx.DrawImage(frame, new Rect(frame.Size));
+            ctx.DrawImage(menuFrame, new Rect(new Point(x, y), size));
+        }
+        menu.Close();
+        return result;
     }
 
     /// <summary>Opens the Agent box of row <paramref name="row"/> and draws its list onto the window frame below the box.</summary>

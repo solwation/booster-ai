@@ -281,11 +281,51 @@ public sealed class RowControlsTests : IDisposable
             }
             finally { window.Close(); }
         });
-        Assert.Equal(["Skapa underflik", "Flytta upp", "Flytta ned", "Starta om", "Fortsätt samtal", TabViewModel.OpenFolderName], headers);
-        // The first row cannot move up; a never-started tab has nothing to restart or continue.
-        Assert.Equal([true, false, true, false, false, true], enabled);
+        Assert.Equal(["Skapa underflik", "Flytta upp", "Flytta ned", "Starta", "Starta om", "Fortsätt samtal", TabViewModel.OpenFolderName], headers);
+        // The first row cannot move up; a never-started tab can start alone (#198) but has nothing to restart or continue.
+        Assert.Equal([true, false, true, true, false, false, true], enabled);
         Assert.Equal("Flytta Atlas", gripName);
         Assert.True(gripFocusable);
+    }
+
+    private static Button? StartButton(Window window, TabViewModel tab) =>
+        Row(window, tab).GetVisualDescendants().OfType<Button>().SingleOrDefault(b => b.IsEffectivelyVisible
+            && b.Content is Avalonia.Controls.Shapes.Path p && ReferenceEquals(p.Data, window.FindResource("StartIcon")));
+
+    /// <summary>
+    /// #198: a never-opened tab has a drawn Start icon where ↻ sits, named for its tab with a tooltip, and loses it once
+    /// opened; ↻ and the Start icon never show together.
+    /// </summary>
+    [Fact]
+    public void NeverOpenedTabsHaveANamedStartIconThatGivesWayToRestart()
+    {
+        var (before, after, restartAfter) = UiSession.Run(() =>
+        {
+            Loc.Use("sv");
+            var vm = Build("Atlas", "Boreal");
+            var window = new MainWindow(vm);
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            try
+            {
+                var atlas = vm.Tabs[0];
+                var start = StartButton(window, atlas);
+                var b = (start is not null, start is null ? null : AutomationProperties.GetName(start), start is null ? null : ToolTip.GetTip(start) as string);
+                atlas.LaunchedAs = atlas.ToConfig(forLaunch: true);
+                atlas.SetState(TabState.Closed, null);
+                Dispatcher.UIThread.RunJobs();
+                var restart = Row(window, atlas).GetVisualDescendants().OfType<Button>().Any(x => x.IsEffectivelyVisible
+                    && x.Content is Avalonia.Controls.Shapes.Path p && ReferenceEquals(p.Data, window.FindResource("RestartIcon")));
+                return (b, StartButton(window, atlas) is not null, restart);
+            }
+            finally { window.Close(); }
+        });
+        Assert.Equal((true, "Starta Atlas", Loc.Table("sv")["tab.start.tip"]), before);
+        Assert.False(after);
+        Assert.True(restartAfter);
+        Assert.Equal("Start {0}", Loc.Table("en")["tab.start.name"]);
+        Assert.Equal("Starta", Loc.Table("sv")["row.menu.start"]);
+        Assert.Equal("Start", Loc.Table("en")["row.menu.start"]);
     }
 
     private static Button More(Window window, TabViewModel tab) =>

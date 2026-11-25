@@ -180,6 +180,7 @@
                     <MenuItem Header="{local:T row.menu.up}" Click="OnRowMoveUp" IsEnabled="{Binding CanMoveUp}" />
                     <MenuItem Header="{local:T row.menu.down}" Click="OnRowMoveDown" IsEnabled="{Binding CanMoveDown}" />
                     <Separator />
+                    <MenuItem Header="{local:T row.menu.start}" Click="OnStartTab" IsEnabled="{Binding CanStart}" />
                     <MenuItem Header="{local:T row.menu.restart}" Click="OnRestart" IsEnabled="{Binding CanRestart}" />
                     <MenuItem Header="{local:T row.menu.continue}" Click="OnContinue" IsEnabled="{Binding CanContinueClosed}" />
                     <Separator />
@@ -222,10 +223,10 @@
                   </Grid>
 
                   <Grid Grid.Column="4" ColumnDefinitions="*,Auto" VerticalAlignment="Center"
-                        Margin="0,0,12,0" IsVisible="{Binding HasStatus}" ClipToBounds="True">
+                        Margin="0,0,12,0" IsVisible="{Binding ShowStatusColumn}" ClipToBounds="True">
                     <!-- Hover previews; keyboard or click opens the same details until dismissed. It fills its column (#156):
                          left-aligned, it could keep a stale narrow arrange after ↻/Continue hid and truncate the status. -->
-                    <local:StatusPeekButton Grid.Column="0" Classes="status-peek" HorizontalAlignment="Stretch"
+                    <local:StatusPeekButton Grid.Column="0" Classes="status-peek" HorizontalAlignment="Stretch" IsVisible="{Binding HasStatus}"
                           Click="OnStatusPeek" KeyDown="OnStatusPeekKeyDown"
                           AutomationProperties.Name="{Binding StatusActionName}"
                           ToolTip.ToolTipOpening="OnStatusTipOpening" PropertyChanged="OnStatusTipIsOpenChanged">
@@ -238,8 +239,13 @@
                                    TextTrimming="CharacterEllipsis" />
                       </Grid>
                     </local:StatusPeekButton>
-                    <!-- Restart is ↻; Continue is a word, shown only when the conversation can be continued (#156). -->
+                    <!-- Restart is ↻; Continue is a word, shown only when the conversation can be continued (#156). A tab never
+                         opened has the Start icon in their place (#198): it starts only that tab, in the open terminal window if any. -->
                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                      <Button Classes="icon" Click="OnStartTab" IsVisible="{Binding CanStart}" Margin="0,-6,0,-6"
+                              ToolTip.Tip="{local:T tab.start.tip}" AutomationProperties.Name="{Binding StartName}">
+                        <Path Data="{StaticResource StartIcon}" />
+                      </Button>
                       <Button Classes="icon" Click="OnRestart" IsVisible="{Binding ShowReload}" Margin="7,-6,0,-6"
                               ToolTip.Tip="{Binding RestartTip}" AutomationProperties.Name="{Binding ReloadName}">
                         <Path Data="{StaticResource RestartIcon}" />
