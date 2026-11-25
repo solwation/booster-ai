@@ -432,6 +432,49 @@ public class AccountLimitsTests
     }
 
     [Fact]
+    public void MeterFillsToTheHigherWindowChangesColourFromEightyAndIsEmptyWhileUnknown()
+    {
+        var previous = Loc.Language;
+        Loc.Use("sv");
+        try
+        {
+            var now = DateTimeOffset.Now;
+            // The closed Agent box's meter (#202) fills to the higher of the two windows, also well below 80 %.
+            var calm = new AgentChoice("claude", "", "Privat", true, null, LimitIndicator.For(new(Win(37, now, 300), Win(62, now, 10080), null, now), now));
+            Assert.True(calm.HasLimit);
+            Assert.Equal(62, calm.LimitPercent);
+            Assert.False(calm.LimitWarn);
+            Assert.Equal(8, new AgentChoice("codex", "", "", false, null, LimitIndicator.For(new(null, Win(8, now), null, null), now)).LimitPercent);
+            Assert.Equal(3, new AgentChoice("codex", "", "", false, null, LimitIndicator.For(new(Win(2.6, now), Win(1, now), null, null), now)).LimitPercent);
+
+            // From 80 % (after rounding) it takes the warning colour, with the warning icon and "nära gränsen" beside it.
+            var below = new AgentChoice("claude", "", "", false, null, LimitIndicator.For(new(Win(79.4, now), Win(20, now), null, null), now));
+            Assert.Equal(79, below.LimitPercent);
+            Assert.False(below.LimitWarn);
+            var warn = new AgentChoice("claude", "", "", false, null, LimitIndicator.For(new(Win(91, now, 300), Win(64, now, 10080), null, now), now));
+            Assert.Equal(91, warn.LimitPercent);
+            Assert.True(warn.LimitWarn);
+            Assert.Contains("nära gränsen", warn.LimitName);
+            // Its tooltip lists both windows with when they reset, and when the agent reported them.
+            Assert.Contains("5 h: 91 % använt · återställs ", warn.LimitTip);
+            Assert.Contains("Vecka: 64 % använt · återställs ", warn.LimitTip);
+            Assert.Contains("per ", warn.LimitTip);
+            // Over the plan (Codex can report it) the meter is simply full.
+            Assert.Equal(100, new AgentChoice("codex", "", "", false, null, LimitIndicator.For(new(null, Win(140, now), null, null), now)).LimitPercent);
+
+            // Unknown, or a window that has reset, shows no filled meter: hidden, never a guessed 0 %.
+            foreach (var unknown in new[] { AccountLimits.Unknown, new AccountLimits(new LimitWindow(90, now.AddMinutes(-1)), null, null, now) })
+            {
+                var choice = new AgentChoice("claude", "", "", false, null, LimitIndicator.For(unknown, now));
+                Assert.False(choice.HasLimit);
+                Assert.Equal(0, choice.LimitPercent);
+                Assert.False(choice.LimitWarn);
+            }
+        }
+        finally { Loc.Use(previous); }
+    }
+
+    [Fact]
     public async Task AgentBoxesShareTheAccountsReadingAndReadOncePerAccount()
     {
         var previous = Loc.Language;
@@ -476,6 +519,12 @@ public class AccountLimitsTests
             Assert.Equal(4, calls.Count);
             await vm.RefreshAccountLimitsAsync(force: true);
             Assert.Equal(6, calls.Count);
+
+            // The closed box's meter follows the tab's selected account (#202), from the same reading.
+            Assert.Equal(85, vm.Tabs[0].SelectedAgentChoice!.LimitPercent);
+            Assert.True(vm.Tabs[0].SelectedAgentChoice!.LimitWarn);
+            Assert.False(vm.Tabs[1].SelectedAgentChoice!.HasLimit);
+            Assert.False(vm.Tabs[2].SelectedAgentChoice!.HasLimit); // agy has no meter
 
             // The status popup's line for the tab's account, Unknown for a window nothing is known about.
             Assert.True(vm.Tabs[0].HasPeekLimit);

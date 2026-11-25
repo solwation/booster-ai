@@ -392,6 +392,18 @@ public partial class MainWindow : Window
         if (!_vm.IsClosingAll && (sender as Control)?.DataContext is TabViewModel tab) _vm.StartTab(tab);
     }
 
+    /// <summary>The usage meter lies over the Agent box's bottom edge (#202); a press on it opens the box, as one beside it would.</summary>
+    private void OnLimitMeterPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if ((sender as Control)?.Parent is Panel panel && panel.Children.OfType<ComboBox>().FirstOrDefault() is { IsEnabled: true } box
+            && e.GetCurrentPoint(box).Properties.IsLeftButtonPressed)
+        {
+            box.Focus();
+            box.IsDropDownOpen = true;
+            e.Handled = true;
+        }
+    }
+
     private void OnContinue(object? sender, RoutedEventArgs e)
     {
         if (!_vm.IsClosingAll && (sender as Control)?.DataContext is TabViewModel tab) _vm.Restart(tab, resume: true);

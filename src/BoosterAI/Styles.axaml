@@ -382,6 +382,11 @@
   <Style Selector="StackPanel.limit-entry"><Setter Property="IsVisible" Value="False" /></Style>
   <Style Selector="ComboBoxItem StackPanel.limit-entry"><Setter Property="IsVisible" Value="True" /></Style>
   <Style Selector="ComboBoxItem Panel.limit-closed"><Setter Property="IsVisible" Value="False" /></Style>
+  <!-- The closed Agent box's usage meter (#202): a decorative track, the accent fill, the warning colour from 80 %. -->
+  <Style Selector="ProgressBar.limit-meter">
+    <Setter Property="Background" Value="{DynamicResource BorderBrush}" />
+  </Style>
+  <Style Selector="ProgressBar.limit-meter.warn"><Setter Property="Foreground" Value="{DynamicResource WarningBrush}" /></Style>
   <Style Selector="Border.account-pill > TextBlock">
     <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
     <Setter Property="Foreground" Value="{DynamicResource MutedBrush}" />

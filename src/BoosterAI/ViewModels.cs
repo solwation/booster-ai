@@ -2377,7 +2377,7 @@ public sealed class ImportViewModel : Observable, IProjectList
 /// One entry of a tab's Agent box (#194): an agent and one of its accounts (<paramref name="AccountId"/> "" is the default
 /// account). <paramref name="ShowAccount"/> is true for every entry of an agent with accounts besides its default one, which then
 /// shows <paramref name="AccountName"/> as a label after the agent; <paramref name="Tip"/> describes that account.
-/// <paramref name="Limit"/> is the account's plan-limit indicator (#200), null when unknown.
+/// <paramref name="Limit"/> is the account's plan-limit indicator (#200), null when unknown; the closed box shows it as a meter (#202).
 /// </summary>
 public sealed record AgentChoice(string Llm, string AccountId, string AccountName, bool ShowAccount, string? Tip, LimitIndicator? Limit = null)
 {
@@ -2385,6 +2385,8 @@ public sealed record AgentChoice(string Llm, string AccountId, string AccountNam
     public bool LimitWarn => Limit?.Warn == true;
     public bool LimitCalm => Limit is { Warn: false };
     public string LimitCaption => Limit?.Caption ?? "";
+    /// <summary>The closed box's meter (#202): how full it is (the higher of the two windows), 0 and hidden while unknown.</summary>
+    public double LimitPercent => Limit?.Percent ?? 0;
     public string? LimitTip => Limit?.Tip;
     public string LimitName => Limit?.Name ?? "";
     /// <summary>What a screen reader reads: "claude, konto Work", or only the agent.</summary>

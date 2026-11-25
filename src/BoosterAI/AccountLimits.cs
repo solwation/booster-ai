@@ -28,8 +28,9 @@ public sealed record AccountLimits(LimitWindow? Session, LimitWindow? Week, Limi
 /// <summary>
 /// The small plan-limit indicator beside an agent in the main window's Agent box (#200): the higher of the 5-hour and weekly use
 /// as "62 %", a warning cue from <see cref="WarnAt"/> percent, and a tooltip with both windows. Null when no window is known.
+/// <paramref name="Percent"/> is that higher use, rounded and kept within 0–100, for the closed box's meter (#202).
 /// </summary>
-public sealed record LimitIndicator(string Caption, bool Warn, string Tip, string Name, string Line = "")
+public sealed record LimitIndicator(string Caption, bool Warn, string Tip, string Name, string Line = "", double Percent = 0)
 {
     public const double WarnAt = 80;
 
@@ -54,7 +55,7 @@ public sealed record LimitIndicator(string Caption, bool Warn, string Tip, strin
         string Part(string label, LimitWindow? w) => label + " " + (w is null ? Loc.Get("account.limit.unknown") : Loc.Format("account.limit.chip", Loc.Number(w.UsedPercent, "0")));
         var line = Part(session, limits.Session) + " · " + Part(Loc.Get("account.limit.week"), limits.Week)
             + (limits.At is { } when ? " · " + Loc.Format("account.limit.as", LimitText.When(when, now)) : "");
-        return new LimitIndicator(Loc.Format("account.limit.chip", number), warn, string.Join("\n", lines), name, line);
+        return new LimitIndicator(Loc.Format("account.limit.chip", number), warn, string.Join("\n", lines), name, line, Math.Clamp(percent, 0, 100));
     }
 }
 

@@ -260,41 +260,54 @@
 
                   <!-- Agent and account in one choice (#194): an agent with accounts besides its default one lists one entry per
                        account, each with the account as a small label after the agent; the others show only the agent. -->
-                  <ComboBox Grid.Column="5" Classes="field" ItemsSource="{Binding AgentChoices}" SelectedItem="{Binding SelectedAgentChoice}"
-                            Margin="0,0,12,0" Opacity="{Binding RowOpacity}" AutomationProperties.Name="{Binding SelectedAgentChoice.Name}">
-                    <ComboBox.ItemTemplate>
-                      <DataTemplate x:DataType="local:AgentChoice">
-                        <!-- A CLI missing where the tabs run gets a warning marker after its name, not a text suffix (#152). -->
-                        <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto" AutomationProperties.Name="{Binding Name}">
-                          <local:AgentIcon Grid.Column="0" Cli="{Binding Llm}" Width="16" Height="16" />
-                          <TextBlock Grid.Column="1" Text="{Binding Llm, Converter={x:Static local:Converters.LlmName}}" VerticalAlignment="Center" Margin="6,0,0,0" />
-                          <Border Grid.Column="2" Background="Transparent" VerticalAlignment="Center" Margin="6,0,0,0"
-                                  IsVisible="{Binding Llm, Converter={x:Static local:Converters.LlmMissing}}"
-                                  ToolTip.Tip="{Binding Llm, Converter={x:Static local:Converters.LlmMissingName}}"
-                                  AutomationProperties.Name="{Binding Llm, Converter={x:Static local:Converters.LlmMissingName}}">
-                            <Path Classes="missing" Data="{StaticResource WarningIcon}" />
-                          </Border>
-                          <Border Grid.Column="3" Classes="account-pill" Margin="4,0,0,0" IsVisible="{Binding ShowAccount}" ToolTip.Tip="{Binding Tip}">
-                            <TextBlock Classes="caption" Text="{Binding AccountName}" />
-                          </Border>
-                          <!-- Plan limit (#200): the dropdown entries show the higher of the 5 h and weekly use ("62 %", with a warning icon from
-                               80 %); the closed box only a small warning marker from 80 %, so the row stays calm. Unknown shows nothing. -->
-                          <StackPanel Grid.Column="4" Classes="limit-entry" Orientation="Horizontal" Spacing="2" Margin="4,0,0,0" VerticalAlignment="Center">
-                            <StackPanel Orientation="Horizontal" Spacing="2" IsVisible="{Binding HasLimit}" Background="Transparent"
-                                        ToolTip.Tip="{Binding LimitTip}" AutomationProperties.Name="{Binding LimitName}">
-                              <Path Classes="missing" Width="11" Height="11" Data="{StaticResource WarningIcon}" IsVisible="{Binding LimitWarn}" />
-                              <TextBlock Classes="caption" Text="{Binding LimitCaption}" VerticalAlignment="Center" />
-                            </StackPanel>
-                          </StackPanel>
-                          <Panel Grid.Column="4" Classes="limit-closed" Margin="4,0,0,0" VerticalAlignment="Center">
-                            <Border Background="Transparent" IsVisible="{Binding LimitWarn}" ToolTip.Tip="{Binding LimitTip}" AutomationProperties.Name="{Binding LimitName}">
-                              <Path Classes="missing" Width="11" Height="11" Data="{StaticResource WarningIcon}" />
+                  <Panel Grid.Column="5" Margin="0,0,12,0" VerticalAlignment="Center" Opacity="{Binding RowOpacity}">
+                    <ComboBox Classes="field" ItemsSource="{Binding AgentChoices}" SelectedItem="{Binding SelectedAgentChoice}"
+                              AutomationProperties.Name="{Binding SelectedAgentChoice.Name}">
+                      <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="local:AgentChoice">
+                          <!-- A CLI missing where the tabs run gets a warning marker after its name, not a text suffix (#152). -->
+                          <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto" AutomationProperties.Name="{Binding Name}">
+                            <local:AgentIcon Grid.Column="0" Cli="{Binding Llm}" Width="16" Height="16" />
+                            <TextBlock Grid.Column="1" Text="{Binding Llm, Converter={x:Static local:Converters.LlmName}}" VerticalAlignment="Center" Margin="6,0,0,0" />
+                            <Border Grid.Column="2" Background="Transparent" VerticalAlignment="Center" Margin="6,0,0,0"
+                                    IsVisible="{Binding Llm, Converter={x:Static local:Converters.LlmMissing}}"
+                                    ToolTip.Tip="{Binding Llm, Converter={x:Static local:Converters.LlmMissingName}}"
+                                    AutomationProperties.Name="{Binding Llm, Converter={x:Static local:Converters.LlmMissingName}}">
+                              <Path Classes="missing" Data="{StaticResource WarningIcon}" />
                             </Border>
-                          </Panel>
-                        </Grid>
-                      </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                  </ComboBox>
+                            <Border Grid.Column="3" Classes="account-pill" Margin="4,0,0,0" IsVisible="{Binding ShowAccount}" ToolTip.Tip="{Binding Tip}">
+                              <TextBlock Classes="caption" Text="{Binding AccountName}" />
+                            </Border>
+                            <!-- Plan limit (#200): the dropdown entries show the higher of the 5 h and weekly use ("62 %", with a warning icon from
+                                 80 %); the closed box only a small warning marker from 80 %, so the row stays calm. Unknown shows nothing. -->
+                            <StackPanel Grid.Column="4" Classes="limit-entry" Orientation="Horizontal" Spacing="2" Margin="4,0,0,0" VerticalAlignment="Center">
+                              <StackPanel Orientation="Horizontal" Spacing="2" IsVisible="{Binding HasLimit}" Background="Transparent"
+                                          ToolTip.Tip="{Binding LimitTip}" AutomationProperties.Name="{Binding LimitName}">
+                                <Path Classes="missing" Width="11" Height="11" Data="{StaticResource WarningIcon}" IsVisible="{Binding LimitWarn}" />
+                                <TextBlock Classes="caption" Text="{Binding LimitCaption}" VerticalAlignment="Center" />
+                              </StackPanel>
+                            </StackPanel>
+                            <Panel Grid.Column="4" Classes="limit-closed" Margin="4,0,0,0" VerticalAlignment="Center">
+                              <Border Background="Transparent" IsVisible="{Binding LimitWarn}" ToolTip.Tip="{Binding LimitTip}" AutomationProperties.Name="{Binding LimitName}">
+                                <Path Classes="missing" Width="11" Height="11" Data="{StaticResource WarningIcon}" />
+                              </Border>
+                            </Panel>
+                          </Grid>
+                        </DataTemplate>
+                      </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <!-- Usage meter (#202): a thin bar inside the closed box's bottom edge, always shown for the account's known limit and
+                         filled to the higher of the 5 h and weekly use; from 80 % in the warning colour, beside the warning icon. It lies over
+                         the box's padding at a fixed place, so neither the box nor the row grows and every row's track has the same length;
+                         Unknown hides it. Its tooltip lists both windows; a press opens the box as if it landed on it. -->
+                    <Panel Classes="limit-meter" VerticalAlignment="Bottom" Height="7" Margin="11,0,11,1" Background="Transparent"
+                           IsVisible="{Binding SelectedAgentChoice.HasLimit, FallbackValue=False}" ToolTip.Tip="{Binding SelectedAgentChoice.LimitTip}"
+                           AutomationProperties.Name="{Binding SelectedAgentChoice.LimitName}" PointerPressed="OnLimitMeterPressed">
+                      <ProgressBar Classes="limit-meter" Classes.warn="{Binding SelectedAgentChoice.LimitWarn, FallbackValue=False}"
+                                   Value="{Binding SelectedAgentChoice.LimitPercent, FallbackValue=0}" Minimum="0" Maximum="100"
+                                   Height="3" MinHeight="3" MinWidth="0" VerticalAlignment="Center" IsHitTestVisible="False" />
+                    </Panel>
+                  </Panel>
                   <ComboBox Grid.Column="6" Classes="field" IsEditable="True" ItemsSource="{Binding Models}"
                             Text="{Binding Model}" IsEnabled="{Binding IsAi}" Opacity="{Binding RowOpacity}"
                             Margin="0,0,12,0" ToolTip.Tip="{local:T model.tip}" />

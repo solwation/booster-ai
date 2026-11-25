@@ -131,7 +131,8 @@ public sealed class MainListTests : IDisposable
 
     /// <summary>
     /// The longest fixed status texts, rendered headless at the default width with the orchestra column shown (the
-    /// narrowest status column), and the Agent box with an account label of about 8 characters (#194), end in no "…" (#152). Runs the app's own --screenshot mode in a child process,
+    /// narrowest status column), and the Agent box with an account label of about 8 characters (#194) and sample plan limits with
+    /// their usage meter and warning icon (#202), end in no "…" (#152). Runs the app's own --screenshot mode in a child process,
     /// which owns its Avalonia UI thread; nothing is shown and the process exits by itself.
     /// </summary>
     [Theory]
@@ -168,7 +169,7 @@ public sealed class MainListTests : IDisposable
             UseShellExecute = false,
             CreateNoWindow = true,
         };
-        foreach (var a in new[] { app, "--screenshot", Path.Combine(_root, "long.png"), "--config", config, "--fake-long-status", "--check-clipping", "--height", "760" })
+        foreach (var a in new[] { app, "--screenshot", Path.Combine(_root, "long.png"), "--config", config, "--fake-long-status", "--fake-limits", "--check-clipping", "--height", "760" })
             psi.ArgumentList.Add(a);
         using var process = Process.Start(psi)!;
         var stdout = process.StandardOutput.ReadToEndAsync();
