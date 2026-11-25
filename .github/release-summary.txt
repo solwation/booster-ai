@@ -1,3 +1,3 @@
-version: 0.47.0
-sv: Kompakt statuskolumn, varning vid låg kvot, två kvotmätare, "Arbetar" vid CPU-last och klick för att visa fliken i terminalen.
-en: Compact Status column, low-quota warning, two quota meters, "Working" on CPU load and a click to show the tab in the terminal.
+Version: 0.48.0
+sv: Statuspunkten visar arbetar (pulserande), väntar (ring) och varning (romb), och hovring över agentrutan visar flikens statusruta.
+en: The status dot shows working (pulsing), waiting (ring) and warning (diamond), and hovering the agent box shows the tab's status popup.
