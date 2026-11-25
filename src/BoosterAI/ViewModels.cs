@@ -387,6 +387,7 @@ public sealed class TabViewModel : Observable
         Raise(nameof(Llms));
         Raise(nameof(AgentChoices));
         Raise(nameof(SelectedAgentChoice));
+        foreach (var n in new[] { nameof(HasPeekLimit), nameof(PeekLimitWarn), nameof(PeekLimitLine), nameof(PeekLimitName) }) Raise(n);
     }
     public IReadOnlyList<string> Models => Catalog.ModelsFor(_llm);
     public bool IsAi => _llm != Catalog.ShellOnly;
@@ -597,6 +598,14 @@ public sealed class TabViewModel : Observable
     /// <summary>The longer explanation under the header, when the tooltip says more than the status itself.</summary>
     public string PeekDetail => StatusTip;
     public bool HasPeekDetail => StatusTip != StatusText;
+
+    /// <summary>The tab's account's plan limits for the status popup (#200); null for other agents and while unknown.</summary>
+    private LimitIndicator? PeekLimit => _owner.LimitIndicatorOf(_llm,
+        _account == "" ? "" : Accounts.Find(_owner.AccountsFor(_llm), _llm, _account)?.Directory ?? "\0");
+    public bool HasPeekLimit => PeekLimit is not null;
+    public bool PeekLimitWarn => PeekLimit?.Warn == true;
+    public string PeekLimitLine => PeekLimit?.Line ?? "";
+    public string PeekLimitName => PeekLimit?.Name ?? "";
     public string StatusActionName => Loc.Format("output.action", Name, StatusTip);
     public string StatusText => _closeProgress ?? (_state switch
     {

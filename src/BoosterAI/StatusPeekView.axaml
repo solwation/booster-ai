@@ -10,6 +10,11 @@
         <TextBlock Classes="peek-header" Text="{Binding PeekHeader}" TextTrimming="CharacterEllipsis" />
       </StackPanel>
       <TextBlock Classes="muted caption" Text="{Binding PeekDetail}" IsVisible="{Binding HasPeekDetail}" TextWrapping="Wrap" />
+      <!-- Plan limits of the tab's account (#200): both windows in one line; from 80 % with a warning icon as well as the text. -->
+      <StackPanel Orientation="Horizontal" Spacing="5" IsVisible="{Binding HasPeekLimit}" AutomationProperties.Name="{Binding PeekLimitName}">
+        <Path Classes="missing" Width="11" Height="11" Data="{StaticResource WarningIcon}" IsVisible="{Binding PeekLimitWarn}" VerticalAlignment="Center" />
+        <TextBlock Classes="muted caption" Text="{Binding PeekLimitLine}" TextWrapping="Wrap" />
+      </StackPanel>
       <local:TabOutputView IsVisible="{Binding HasOutput}" />
       <TextBlock Classes="muted caption" Text="{Binding OutputNote}" IsVisible="{Binding HasOutputNote}" TextWrapping="Wrap" />
       <!-- After an exit with an error, ↻ is the popup's primary action (#153); only where it can be clicked. -->

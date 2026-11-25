@@ -477,6 +477,13 @@ public class AccountLimitsTests
             await vm.RefreshAccountLimitsAsync(force: true);
             Assert.Equal(6, calls.Count);
 
+            // The status popup's line for the tab's account, Unknown for a window nothing is known about.
+            Assert.True(vm.Tabs[0].HasPeekLimit);
+            Assert.True(vm.Tabs[0].PeekLimitWarn);
+            Assert.StartsWith("5 h 85 % · Vecka 10 % · per ", vm.Tabs[0].PeekLimitLine);
+            Assert.False(vm.Tabs[1].HasPeekLimit); // the work account is Unknown
+            Assert.False(vm.Tabs[2].HasPeekLimit);
+
             // The window resets: the indicator goes away with it.
             clock = now.AddHours(3);
             Assert.False(vm.Tabs[0].AgentChoices.First(c => c.Llm == "claude").HasLimit);

@@ -378,6 +378,10 @@
     <Setter Property="VerticalAlignment" Value="Center" />
     <Setter Property="HorizontalAlignment" Value="Left" />
   </Style>
+  <!-- Plan limit in the Agent box (#200): the percentage only in the dropdown entries, a warning marker only in the closed box. -->
+  <Style Selector="StackPanel.limit-entry"><Setter Property="IsVisible" Value="False" /></Style>
+  <Style Selector="ComboBoxItem StackPanel.limit-entry"><Setter Property="IsVisible" Value="True" /></Style>
+  <Style Selector="ComboBoxItem Panel.limit-closed"><Setter Property="IsVisible" Value="False" /></Style>
   <Style Selector="Border.account-pill > TextBlock">
     <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
     <Setter Property="Foreground" Value="{DynamicResource MutedBrush}" />
