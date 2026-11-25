@@ -44,6 +44,36 @@ public sealed record AccountLimits(LimitWindow? Session, LimitWindow? Week, Limi
 }
 
 /// <summary>
+/// The one formatter for every plan-limit percentage (#217). A window shows whole numbers, except when less than
+/// <see cref="DecimalBelow"/> % is left: then one decimal ("99,3 % använt" / "0,7 % kvar"), so the last stretch is not shown as 99/100 %.
+/// 100 % used / 0 % left appear only when the reading is 100 or more; anything below is clamped to 99.9 % used / 0.1 % left.
+/// Used and remaining always add up to 100 as displayed. The numbers are in the UI language's decimal separator (<see cref="Loc.Number"/>).
+/// </summary>
+public static class LimitPercent
+{
+    /// <summary>Below this much remaining (percent) one decimal is shown.</summary>
+    public const double DecimalBelow = 3;
+
+    /// <summary>The displayed used share: whole, or one decimal below <see cref="DecimalBelow"/> % left; 100 only for a reading of 100 or more.</summary>
+    public static double Used(double used)
+    {
+        if (double.IsNaN(used) || used <= 0) return 0;
+        if (used >= 100) return Math.Round(used, MidpointRounding.AwayFromZero); // Codex may exceed 100 (#199)
+        if (100 - used < DecimalBelow) return Math.Min(Math.Round(used, 1, MidpointRounding.AwayFromZero), 99.9);
+        return Math.Round(used, MidpointRounding.AwayFromZero);
+    }
+
+    /// <summary>The displayed remaining share (100 minus <see cref="Used"/>), the value QuotaWarnings compares to its threshold.</summary>
+    public static double Remaining(double used) => Math.Max(0, Math.Round(100 - Used(used), 1));
+
+    /// <summary>The number text of an already displayed value: one decimal only when it has one.</summary>
+    public static string Text(double shown) => Loc.Number(shown, Math.Abs(shown - Math.Round(shown)) > 1e-9 ? "0.0" : "0");
+
+    public static string UsedText(double used) => Text(Used(used));
+    public static string RemainingText(double used) => Text(Remaining(used));
+}
+
+/// <summary>
 /// The small plan-limit indicator beside an agent in the main window's Agent box (#200): the higher of the 5-hour and weekly use
 /// as "62 %", a warning cue from <see cref="WarnAt"/> percent, and a tooltip with both windows. Null when no window is known.
 /// <paramref name="Percent"/> is that higher use, rounded and kept within 0–100, for the closed box's meter (#202);
@@ -61,10 +91,10 @@ public sealed record LimitIndicator(string Caption, bool Warn, string Tip, strin
     public override int GetHashCode() => HashCode.Combine(Caption, Warn, Tip, Name, Age, Percent, Rows.Count);
 
     /// <summary>Remaining share of the tightest known window (0–100 %), for the status column (#207).</summary>
-    public double RemainingPercent => Math.Clamp(100 - Percent, 0, 100);
+    public double RemainingPercent => Math.Clamp(Math.Round(100 - Percent, 1), 0, 100);
 
     /// <summary>Localized remaining text for the status column (#207): "38 % kvar" (sv) or "38% left" (en).</summary>
-    public string RemainingCaption => Loc.Format("account.limit.remaining", Loc.Number(RemainingPercent, "0"));
+    public string RemainingCaption => Loc.Format("account.limit.remaining", LimitPercent.Text(RemainingPercent));
 
     /// <summary>The compact status column's remaining share (#209): "38 %" (sv) or "38%" (en).</summary>
     public string RemainingShort => Loc.Format("account.limit.chip", Loc.Number(RemainingPercent, "0"));
@@ -74,9 +104,9 @@ public sealed record LimitIndicator(string Caption, bool Warn, string Tip, strin
         limits = limits.AsOf(now);
         var known = new[] { limits.Session, limits.Week }.OfType<LimitWindow>().ToList();
         if (known.Count == 0) return null;
-        var percent = Math.Round(known.Max(w => w.UsedPercent), MidpointRounding.AwayFromZero);
+        var percent = LimitPercent.Used(known.Max(w => w.UsedPercent));
         var warn = percent >= WarnAt;
-        var number = Loc.Number(percent, "0");
+        var number = LimitPercent.Text(percent);
         var session = Loc.Format("account.limit.hours", Loc.Number((limits.Session?.Minutes ?? 300) / 60.0, "0.#"));
         var lines = new List<string>
         {
@@ -110,7 +140,7 @@ public sealed record LimitIndicator(string Caption, bool Warn, string Tip, strin
         limits = limits.AsOf(now);
         if (!limits.IsReset) return new(Loc.Get("account.limit.unknown"), Loc.Format("account.limit.note.unknown", reason), false);
         var last = new[] { raw.Session, raw.Week }.OfType<LimitWindow>().ToList();
-        var level = last.Count == 0 ? "" : Loc.Format("account.limit.usedShort", Loc.Number(last.Max(w => w.UsedPercent), "0"));
+        var level = last.Count == 0 ? "" : Loc.Format("account.limit.usedShort", LimitPercent.UsedText(last.Max(w => w.UsedPercent)));
         var age = limits.At is { } at ? LimitText.Age(at, now) : Loc.Get("account.limit.never");
         return new(Loc.Get("account.limit.reset"), Loc.Format("account.limit.note.reset", level, age), true);
     }
@@ -135,11 +165,11 @@ public sealed record LimitRow(string Label, bool Known, double Remaining, string
             var unknown = Loc.Get(reset ? "account.limit.reset" : "account.limit.unknown");
             return new(label, false, 0, unknown, "", "", false, label + ": " + unknown);
         }
-        var used = Math.Round(window.UsedPercent, MidpointRounding.AwayFromZero);
-        var remaining = Math.Clamp(100 - used, 0, 100);
+        var used = LimitPercent.Used(window.UsedPercent);
+        var remaining = LimitPercent.Remaining(window.UsedPercent);
         var warn = used >= LimitIndicator.WarnAt;
-        var remainingText = Loc.Format("account.limit.remaining", Loc.Number(remaining, "0"));
-        var usedText = Loc.Format("account.limit.usedShort", Loc.Number(used, "0"));
+        var remainingText = Loc.Format("account.limit.remaining", LimitPercent.Text(remaining));
+        var usedText = Loc.Format("account.limit.usedShort", LimitPercent.Text(used));
         var resetText = Loc.Format("account.limit.resets", LimitText.Resets(window.ResetsAt, now));
         var name = Loc.Format("account.limit.row.name", label, remainingText, usedText, resetText) + (warn ? ", " + Loc.Get("account.limit.near") : "");
         return new(label, true, remaining, remainingText, usedText, resetText, warn, name);
@@ -150,7 +180,7 @@ public sealed record LimitRow(string Label, bool Known, double Remaining, string
 public static class LimitText
 {
     public static string Used(LimitWindow? window, DateTimeOffset now, bool reset = false) => window is null ? Loc.Get(reset ? "account.limit.reset" : "account.limit.unknown")
-        : Loc.Format("account.limit.used", Loc.Number(window.UsedPercent, "0"), Resets(window.ResetsAt, now));
+        : Loc.Format("account.limit.used", LimitPercent.UsedText(window.UsedPercent), Resets(window.ResetsAt, now));
 
     /// <summary>Codex's credits: unlimited, a balance, or none; empty when the agent reported nothing (Claude never does).</summary>
     public static string Credits(LimitCredits? credits) => credits switch

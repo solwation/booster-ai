@@ -12,7 +12,7 @@ public sealed record QuotaWarning(string Agent, string? Account, string Window, 
     public string Text(DateTimeOffset now)
     {
         var who = Account is { Length: > 0 } ? Loc.Format("quota.warn.who", Agent, Account) : Agent;
-        return Loc.Format("quota.warn.text", who, Window, Loc.Format("account.limit.remaining", Loc.Number(RemainingPercent, "0")),
+        return Loc.Format("quota.warn.text", who, Window, Loc.Format("account.limit.remaining", LimitPercent.Text(RemainingPercent)),
             LimitText.Resets(ResetsAt, now));
     }
 }
@@ -38,7 +38,7 @@ public sealed class QuotaWarnings
 
     /// <summary>
     /// A reading for one agent/account: the warnings that are new now, 5 h window first. <paramref name="account"/> is the account's name when
-    /// the agent has several, else null. Remaining share is rounded like the "N % kvar" shown, so the text never contradicts the threshold.
+    /// the agent has several, else null. Remaining share is the displayed one (<see cref="LimitPercent"/>, one decimal below 3 %), so the text never contradicts the threshold.
     /// </summary>
     public IReadOnlyList<QuotaWarning> Update(string agent, string accountKey, string? account, AccountLimits limits, DateTimeOffset now, int thresholdPercent)
     {
@@ -55,7 +55,7 @@ public sealed class QuotaWarnings
     {
         if (window is null) return;
         var key = agent + "\0" + accountKey + "\0" + (label == Loc.Get("account.limit.week") ? "week" : "session");
-        var remaining = Math.Round(Math.Clamp(100 - window.UsedPercent, 0, 100), MidpointRounding.AwayFromZero);
+        var remaining = LimitPercent.Remaining(window.UsedPercent);
         lock (_lock)
         {
             if (remaining >= threshold) { _warned.Remove(key); return; }
