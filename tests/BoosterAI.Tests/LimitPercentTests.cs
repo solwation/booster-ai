@@ -48,6 +48,7 @@ public class LimitPercentTests
             var chip = LimitIndicator.For(new AccountLimits(new LimitWindow(99.96, Now.AddHours(1), 300), null, null, Now), Now)!;
             Assert.Equal("99.9% used".Replace(" used", ""), chip.Caption.Split(' ')[0]); // caption starts with the level
             Assert.Equal("0.1% left", chip.RemainingCaption);
+            Assert.Equal("0.1%", chip.RemainingShort); // compact status column (#209)
             Assert.Equal("3% left", LimitIndicator.For(new AccountLimits(new LimitWindow(97, Now.AddHours(1), 300), null, null, Now), Now)!.RemainingCaption);
             Assert.Contains("99.3% used", LimitText.Used(new LimitWindow(99.3, Now.AddHours(1), 300), Now));
             Assert.Contains("100% used", LimitText.Used(new LimitWindow(100, Now.AddHours(1), 300), Now));
