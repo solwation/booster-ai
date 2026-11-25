@@ -103,4 +103,16 @@ public sealed class StatusDotTests : IDisposable
         Assert.True(samples.Select(s => s.Scale).Distinct().Count() > 1, string.Join(", ", samples));
         Assert.All(samples, s => Assert.InRange(s.Scale, 1, 1.45));
     }
+
+    /// <summary>#227: the status column and the status popup draw the dot from the one shared control, so they never drift apart.</summary>
+    [Theory]
+    [InlineData("MainWindow.axaml")]
+    [InlineData("StatusPeekView.axaml")]
+    public void TheColumnAndThePopupShareTheDot(string file)
+    {
+        var src = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "BoosterAI");
+        var xaml = File.ReadAllText(Path.Combine(src, file));
+        Assert.Contains("<local:StatusDotView", xaml);
+        Assert.DoesNotContain("{Binding StatusBrush}", xaml);
+    }
 }

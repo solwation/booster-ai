@@ -1,0 +1,18 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="using:BoosterAI"
+             x:Class="BoosterAI.StatusDotView" x:DataType="local:TabViewModel"
+             VerticalAlignment="Center" IsHitTestVisible="False">
+  <!-- The tab's status dot (#222, #227), shared by the status column and the status popup so both speak the same shapes:
+       working is filled with a pulsing halo, waiting a ring, a warning or error a diamond, anything else a plain dot.
+       11 px wide keeps the column's footprint; the 13 px halo overflows by 1 px each side. -->
+  <Panel Classes="status-dot" Width="11" Height="13">
+    <Ellipse Classes="status-pulse" Width="9" Height="9" Fill="{Binding StatusBrush}" IsVisible="{Binding StatusPulse}">
+      <Ellipse.RenderTransform><ScaleTransform /></Ellipse.RenderTransform>
+    </Ellipse>
+    <Ellipse Width="13" Height="13" Margin="-1,0" Fill="{Binding StatusBrush}" Opacity="0.3" IsVisible="{Binding StatusHalo}" />
+    <Ellipse Width="9" Height="9" Fill="{Binding StatusBrush}" IsVisible="{Binding StatusDotFilled}" />
+    <Ellipse Width="9" Height="9" Stroke="{Binding StatusBrush}" StrokeThickness="2" IsVisible="{Binding StatusDotRing}" />
+    <Path Width="10" Height="10" Stretch="Fill" Data="M5,0 L10,5 L5,10 L0,5 Z" Fill="{Binding StatusBrush}" IsVisible="{Binding StatusDotDiamond}" />
+  </Panel>
+</UserControl>
