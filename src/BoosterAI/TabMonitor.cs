@@ -533,11 +533,14 @@ bs_up_every=21600
 bs_up_net=20
 bs_up_limit=300
 bs_up_ver() { "$@" --version </dev/null 2>/dev/null | grep -oE '[0-9]+(\.[0-9]+)+([-+][0-9A-Za-z.]+)?' | head -n 1; }
+# A stamp more than bs_up_skew seconds ahead of the clock means the clock was reset, so a check is due; a smaller lead is
+# WSL stepping its clock back a few seconds (#190, #229) and keeps the stamp fresh.
+bs_up_skew=300
 bs_up_due() {
   local t n
   t=$(stat -c %Y "$1" 2>/dev/null) || return 0
   n=$(date +%s)
-  [ $((n - t)) -ge "$bs_up_every" ] || [ "$t" -gt "$n" ]
+  [ $((n - t)) -ge "$bs_up_every" ] || [ "$t" -gt $((n + bs_up_skew)) ]
 }
 # The reason a command failed: timeout's 124, or the last line it logged.
 bs_up_why() {

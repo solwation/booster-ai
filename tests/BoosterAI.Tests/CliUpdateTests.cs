@@ -192,6 +192,9 @@ public class CliUpdateTests
     [InlineData(60, false)]
     [InlineData(5 * 3600, false)]
     [InlineData(7 * 3600, true)]
+    // A stamp slightly ahead of the clock (WSL stepped it back, #229) is fresh; one far ahead means a clock reset.
+    [InlineData(-30, false)]
+    [InlineData(-2 * 3600, true)]
     public void ChecksAtMostOncePerInterval(int ageSeconds, bool checks)
     {
         if (!CanRunBash) return;
@@ -213,8 +216,12 @@ public class CliUpdateTests
         using var f = new Fakes();
         f.Run("bs_update codex");
         File.Delete(f.Calls);
-        Assert.Equal("started\n", f.Run("bs_update codex && echo started").Output);
-        Assert.Empty(f.ReadCalls());
+        var stamp = Path.Combine(f.StateDir, "codex.checked");
+        var output = f.Run("bs_update codex && echo started").Output;
+        // On a failure, say what ran and how the stamp relates to the clock (#229).
+        var why = $"calls: {string.Join(" | ", f.ReadCalls())}; stamp {File.GetLastWriteTimeUtc(stamp):O}, now {DateTime.UtcNow:O}";
+        Assert.True(output == "started\n", $"output: {output}; {why}");
+        Assert.True(f.ReadCalls().Length == 0, why);
     }
 
     [Theory]
