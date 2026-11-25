@@ -15,9 +15,10 @@ public enum TabState { Starting, Running, CliExited, CliMissing, NotStarted, Clo
 
 /// <summary>
 /// Whether a running CLI is working on a turn; Unknown for CLIs without hooks (codex, agy). Watching: a one-shot
-/// run (bs_stream) finished a turn but its CLI lives on, e.g. claude -p waiting for an orchestra idle watch.
+/// run (bs_stream) finished a turn but its CLI lives on, e.g. claude -p waiting for an orchestra idle watch. Working: hooks
+/// or output say idle (or unknown), but the tab's processes use the CPU (#215, TabCpu); never read from the log itself.
 /// </summary>
-public enum Activity { Unknown, Busy, Idle, Watching }
+public enum Activity { Unknown, Busy, Idle, Watching, Working }
 
 /// <summary>
 /// What a tab's log says. One line per event, written by tab-lib.sh:

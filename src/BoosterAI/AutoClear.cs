@@ -6,7 +6,8 @@ namespace BoosterAI;
 /// period. Idle (#71) means both: claude's Stop hook reported the turn done with no background work left ("idle", not
 /// "waiting": no background agents, background commands, Monitor or scheduled wakeup/loop), and the terminal has had no
 /// output since; the time counts from the later of the two. A running background agent redraws its timer every second,
-/// so this also holds off a claude too old to list its background work. Only claude is supported: its hooks report
+/// so this also holds off a claude too old to list its background work. A tab whose processes use the CPU (#215) is not idle
+/// either. Only claude is supported: its hooks report
 /// when a turn ends, and /clear starts a new session with empty context without starting a turn. codex and agy are skipped: without hooks BoosterAI only knows that their output
 /// has been quiet, which a long tool call also is, so typing into them could land in the middle of a turn.
 /// </summary>
@@ -34,9 +35,11 @@ public static class AutoClear
     /// python3). <paramref name="requestedFor"/> is the idle period BoosterAI already asked for; together with the tab's
     /// own input-sent/input-skipped it makes this once per idle period, until a new turn (busy) starts the next one.
     /// <paramref name="lastOutputUtc"/> is when the tab's terminal last had output (TabSession.LastOutput); unknown: never.
+    /// <paramref name="cpuActiveUtc"/> is when the tab's processes last counted as working (#215, CpuActivity.ActiveAt): while they
+    /// do, <paramref name="activity"/> is Working and nothing is typed, and afterwards the idle time counts from then.
     /// </summary>
     public static Request? Due(bool enabled, int minutes, TabConfig? launchedAs, TabState state, Activity activity, bool pendingRestart,
-        bool closing, TabLog? log, DateTime? lastOutputUtc, long? requestedFor, DateTime nowUtc)
+        bool closing, TabLog? log, DateTime? lastOutputUtc, long? requestedFor, DateTime nowUtc, DateTime? cpuActiveUtc = null)
     {
         if (!enabled || closing || pendingRestart || launchedAs is null || !Supports(launchedAs.Llm)) return null;
         if (launchedAs is { NonInteractive: true, Orkester: true }) return null;
@@ -47,6 +50,7 @@ public static class AutoClear
         if (lastOutputUtc is not { } output) return null;
         var idleSince = DateTimeOffset.FromUnixTimeMilliseconds(idleAt).UtcDateTime;
         if (output > idleSince) idleSince = output;
+        if (cpuActiveUtc > idleSince) idleSince = cpuActiveUtc.Value;
         if (nowUtc - idleSince < TimeSpan.FromMinutes(Minutes(minutes))) return null;
         return new Request(idleAt, log.BusyAt is { } busy && busy <= idleAt ? busy : idleAt);
     }

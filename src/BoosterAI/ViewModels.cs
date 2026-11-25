@@ -596,6 +596,8 @@ public sealed class TabViewModel : Observable
     internal bool IsClosing => _closeProgress is not null;
     /// <summary>The idle period (epoch-ms of its "idle") auto-clear already asked this tab to clear.</summary>
     internal long? AutoClearRequestedFor { get; set; }
+    /// <summary>The tab's CPU activity across polls (#215, TabCpu).</summary>
+    internal CpuActivity Cpu { get; } = new();
     internal void SetCloseProgress(string? text)
     {
         _closeProgress = text;
@@ -651,6 +653,7 @@ public sealed class TabViewModel : Observable
         TabState.Running when PendingRestart => Loc.Get("tabstate.waitingIdle"),
         TabState.Running when IsChanged => Loc.Get("tabstate.changed"),
         TabState.Running when Activity == Activity.Busy => Loc.Get("tabstate.busy"),
+        TabState.Running when Activity == Activity.Working => Loc.Get("tabstate.working"),
         TabState.Running when Activity == Activity.Idle && _clearedAt is { } cleared => Loc.Format("tabstate.idleCleared", LocalTime(cleared)),
         TabState.Running when Activity == Activity.Idle => Loc.Get("tabstate.idle"),
         TabState.Running when Activity == Activity.Watching => Loc.Format("tabstate.watching", HumanTime.Minutes(TabStatus.WatchingMinutes(_watchingSince, DateTime.UtcNow))),
@@ -665,6 +668,8 @@ public sealed class TabViewModel : Observable
         ? Loc.Format("tabstate.watching.tip", DayTime(since))
         : _state is TabState.Running && Activity == Activity.Idle && _clearedAt is { } cleared && _closeProgress is null
         ? Loc.Format("tabstate.idleCleared.tip", DayTime(cleared))
+        : _state is TabState.Running && Activity == Activity.Working && !PendingRestart && !IsChanged && _closeProgress is null
+        ? Loc.Format("tabstate.working.tip", Cpu.Busy?.Busiest ?? "?", Math.Round((Cpu.Busy?.BusiestShare ?? 0) * 100))
         : StatusText;
 
     private static string LocalTime(long epochMs) =>
@@ -736,8 +741,8 @@ public sealed class TabViewModel : Observable
         denied ??= [];
         if (_state == state && _rc == rc && _denied.SequenceEqual(denied) && _activity == activity && _watchingSince == watchingSince && _clearedAt == clearedAt)
         {
-            // The elapsed minutes of Watching move on without a new event.
-            if (activity == Activity.Watching) { Raise(nameof(StatusText)); Raise(nameof(StatusTip)); Raise(nameof(StatusActionName)); }
+            // The elapsed minutes of Watching, and Working's busiest process, move on without a new event.
+            if (activity is Activity.Watching or Activity.Working) { Raise(nameof(StatusText)); Raise(nameof(StatusTip)); Raise(nameof(StatusActionName)); }
             return false;
         }
         var stateChanged = _state != state || _rc != rc || !_denied.SequenceEqual(denied);
@@ -1768,6 +1773,8 @@ public sealed partial class MainViewModel : Observable
     }
     private DispatcherTimer? _poll;
     private bool _polling;
+    /// <summary>The previous poll's /proc scan, the baseline for each tab's CPU share (#215); null: none yet.</summary>
+    private ProcSnapshot? _procs;
 
     /// <summary>Launches with a status log per tab (one session per window) and starts watching.</summary>
     private string Start(AppConfig cfg, IReadOnlyList<(TabViewModel Row, TabConfig Tab)> rows, string? window, bool resume = false)
@@ -1910,6 +1917,7 @@ public sealed partial class MainViewModel : Observable
         _polling = true;
         var distro = _cfg.WslDistro;
         var settingsPath = AgySettingsFile;
+        var previousProcs = _procs;
         Task.Run(() =>
         {
             var live = TabSession.Liveness(distro);
@@ -1931,17 +1939,23 @@ public sealed partial class MainViewModel : Observable
                     pair.First.Log.StartTime!.Value, pair.Second.Name)).ToList(), distro);
             // agy's settings are only read while a tab has a denial to offer rules for.
             var settings = results.Any(r => r.State == TabState.Denied) ? ReadText(settingsPath) : null;
-            return (results, settings);
+            // CPU activity (#215): one /proc scan for all running tabs, compared with the previous poll's.
+            var procs = results.Any(r => r.State == TabState.Running) ? ProcSnapshot.Read(ProcSnapshot.Root(distro)) : null;
+            var cpu = results.Select(r => procs is not null && r is { State: TabState.Running, Log.Pid: { } shell }
+                ? TabCpu.Measure(previousProcs, procs, shell, r.Log.StartTime) : null).ToList();
+            return (results, settings, procs, cpu);
         }).ContinueWith(t =>
         {
             _polling = false;
             if (!t.IsCompletedSuccessfully) return;
-            var (results, settings) = t.Result;
+            var (results, settings, procs, cpu) = t.Result;
+            _procs = procs;
             var anyActivityChanged = false;
-            foreach (var (row, id, state, rc, denied, pid, activity, watchingSince, log, lastOutput) in results)
+            foreach (var ((row, id, state, rc, denied, pid, hookActivity, watchingSince, log, lastOutput), sample) in results.Zip(cpu))
             {
                 // Ignore a result for a tab that has been restarted meanwhile.
                 if (row.TrackId != id) continue;
+                var activity = TabCpu.Combine(hookActivity, row.Cpu.Update(sample, DateTime.UtcNow));
                 var previousActivity = row.Activity;
                 row.ShellPid = pid;
                 if (row.PendingRestart && state == TabState.Running && activity == Activity.Idle) RestartChanged(row);
@@ -1970,7 +1984,7 @@ public sealed partial class MainViewModel : Observable
             var live = TabSession.Liveness(_cfg.WslDistro);
             if (log is null || live is null || !TabSession.IsAlive(log, live)) return false;
             var due = OrchestraReload.Due(row.LaunchedAs, TabStatus.Evaluate(log, DateTime.UtcNow - row.LaunchedAt, live),
-                session.ReadActivity(id, log, DateTime.UtcNow), row.PendingRestart, IsClosingAll || row.IsClosing,
+                TabCpu.Combine(session.ReadActivity(id, log, DateTime.UtcNow), row.Cpu.Active), row.PendingRestart, IsClosingAll || row.IsClosing,
                 log, session.LastOutput(id), row.OrchestraRequestedFor, DateTime.UtcNow);
             if (due is null || !session.TryRequestInput(id, due.Value.Since, OrchestraReload.Command, log, "orkester")) return false;
             row.OrchestraRequestedFor = due.Value.IdleAt;
@@ -1988,7 +2002,7 @@ public sealed partial class MainViewModel : Observable
     {
         if (row.Session is not { } session || row.OrchestraRequestedFor == log?.IdleAt && log?.IdleAt is not null) return;
         if (AutoClear.Due(_cfg.AutoClearIdle, _cfg.AutoClearMinutes, row.LaunchedAs, state, row.Activity, row.PendingRestart,
-                IsClosingAll || row.IsClosing, log, lastOutput, row.AutoClearRequestedFor, DateTime.UtcNow) is not { } due) return;
+                IsClosingAll || row.IsClosing, log, lastOutput, row.AutoClearRequestedFor, DateTime.UtcNow, row.Cpu.ActiveAt) is not { } due) return;
         // Asked once per idle period even when the write fails: a tab that cannot take it is not asked every poll.
         row.AutoClearRequestedFor = due.IdleAt;
         try

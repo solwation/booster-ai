@@ -247,6 +247,8 @@
   "restart.pending.tip": "Väntar på att CLI:n blir ledig – klicka för att ångra",
   "restart.standardModel": "standardmodell",
   "tabstate.busy": "Körs",
+  "tabstate.working": "Arbetar",
+  "tabstate.working.tip": "En process i fliken använder processorn: {0} ({1} % av en kärna), fast agenten själv är ledig eller tyst. Fliken räknas som arbetande: auto-clear och Starta om när den är ledig väntar tills den är klar.",
   "tabstate.idle": "Ledig",
   "tabstate.idleCleared": "Ledig · rensad {0}",
   "tabstate.idleCleared.tip": "Auto-clear skickade /clear {0} eftersom fliken var ledig: nästa prompt börjar med tom kontext. Den tidigare sessionen finns kvar (/resume).",

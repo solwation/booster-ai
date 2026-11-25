@@ -18,7 +18,7 @@ public partial class ConfirmRestartWindow : Window
     {
         var name = tab.Name.Trim();
         // A one-shot run is busy until it exits, so waiting for idle would never restart it.
-        CanWait = tab.Activity == Activity.Busy && tab.LaunchedAs is not { NonInteractive: true, Orkester: true };
+        CanWait = tab.Activity is Activity.Busy or Activity.Working && tab.LaunchedAs is not { NonInteractive: true, Orkester: true };
         Heading = Loc.Format("restartConfirm.heading", name);
         Body = Loc.Get(CanWait ? "restartConfirm.busy" : "restartConfirm.unknown");
         Detail = tab.RestartTip;
@@ -29,7 +29,7 @@ public partial class ConfirmRestartWindow : Window
     /// <summary>One question for several busy changed tabs ("Restart all"); waiting is offered when each can wait.</summary>
     public ConfirmRestartWindow(IReadOnlyList<TabViewModel> tabs)
     {
-        CanWait = tabs.All(t => t.Activity == Activity.Busy && t.LaunchedAs is not { NonInteractive: true, Orkester: true });
+        CanWait = tabs.All(t => t.Activity is Activity.Busy or Activity.Working && t.LaunchedAs is not { NonInteractive: true, Orkester: true });
         Heading = Loc.Format("restartConfirm.headingMany", tabs.Count);
         Body = Loc.Get(CanWait ? "restartConfirm.busyMany" : "restartConfirm.unknownMany");
         Detail = string.Join(", ", tabs.Select(t => t.Name.Trim()));
