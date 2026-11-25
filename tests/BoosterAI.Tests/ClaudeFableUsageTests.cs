@@ -87,12 +87,19 @@ public class ClaudeFableUsageTests
     public async Task TheWeeklyMeterAndPopupFollowTheSelectedModelAndAccount()
     {
         var now = DateTimeOffset.UtcNow;
-        var reads = new System.Collections.Concurrent.ConcurrentQueue<string?>();
-        var vm = BoosterAI.Tests.UiSession.Run(() =>
+        const string distro = "ExampleDistro";
+        const string work = "~/.claude-work";
+        var usage = new ClaudeFableUsage((_, directory) => directory is null ? new LimitWindow(83, now.AddDays(2)) : null);
+        // Give the headless UI deterministic cache hits. The separate cache test covers scheduling.
+        await usage.ReadAsync(distro, null, now);
+        await usage.ReadAsync(distro, work, now);
+
+        BoosterAI.Tests.UiSession.Run(() =>
         {
             var owner = new MainViewModel(new AppConfig
             {
-                Accounts = [new() { Id = "work", Agent = "claude", Name = "Work", Directory = "~/.claude-work" }],
+                WslDistro = distro,
+                Accounts = [new() { Id = "work", Agent = "claude", Name = "Work", Directory = work }],
                 Tabs =
                 [
                     new() { Name = "Atlas", Directory = "/srv/atlas", Llm = "claude", Model = "claude-fable-5-2" },
@@ -103,40 +110,27 @@ public class ClaudeFableUsageTests
             owner.AccountLimitsEnabled = true;
             owner.ReadAccountLimits = (_, _, _) => Task.FromResult(
                 new AccountLimits(new(40, now.AddHours(2)), new(62, now.AddDays(3)), null, now));
-            owner.FableUsage = new((_, directory) =>
-            {
-                reads.Enqueue(directory);
-                return directory is null ? new LimitWindow(83, now.AddDays(2)) : null;
-            });
-            return owner;
-        });
-        await BoosterAI.Tests.UiSession.Run(() => vm.RefreshAccountLimitsAsync(force: true));
+            owner.FableUsage = usage;
+            Assert.True(owner.RefreshAccountLimitsAsync(force: true).IsCompletedSuccessfully);
 
-        BoosterAI.Tests.UiSession.Run(() =>
-        {
-            var fable = vm.Tabs[0];
-            var sonnet = vm.Tabs[1];
+            var fable = owner.Tabs[0];
+            var sonnet = owner.Tabs[1];
             Assert.Equal(83, fable.SelectedAgentChoice!.WeekMeterPercent);
             Assert.Equal(17, fable.SelectedAgentChoice.Limit!.RemainingPercent);
             Assert.Equal(new double[] { 40, 83, 62 }, fable.PeekLimitRows.Select(row => row.Used));
             Assert.Equal(62, sonnet.SelectedAgentChoice!.WeekMeterPercent);
             Assert.Equal(new double[] { 40, 62 }, sonnet.PeekLimitRows.Select(row => row.Used));
-            Assert.Null(Assert.Single(reads));
 
             fable.Model = "claude-sonnet-5-5";
             Assert.Equal(62, fable.SelectedAgentChoice!.WeekMeterPercent);
             fable.Account = "work";
             fable.Model = "fable";
-        });
-        await BoosterAI.Tests.UiSession.Run(() => vm.RefreshAccountLimitsAsync(force: true));
-        BoosterAI.Tests.UiSession.Run(() =>
-        {
-            Assert.Equal(new string?[] { null, "~/.claude-work" }, reads.ToArray());
+            Assert.True(owner.RefreshAccountLimitsAsync(force: true).IsCompletedSuccessfully);
             // The model meter has no value, and the popup still names the separate shared week.
-            Assert.True(vm.Tabs[0].SelectedAgentChoice!.WeekMeterUnknown);
-            Assert.Equal("Fable", vm.Tabs[0].PeekLimitRows[1].Label);
-            Assert.False(vm.Tabs[0].PeekLimitRows[1].Known);
-            Assert.Equal(62, vm.Tabs[0].PeekLimitRows[2].Used);
+            Assert.True(fable.SelectedAgentChoice!.WeekMeterUnknown);
+            Assert.Equal("Fable", fable.PeekLimitRows[1].Label);
+            Assert.False(fable.PeekLimitRows[1].Known);
+            Assert.Equal(62, fable.PeekLimitRows[2].Used);
         });
     }
 
