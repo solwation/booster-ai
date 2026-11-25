@@ -61,6 +61,15 @@ internal static class Program
                 if (tabs[i].Llm == "agy" && tracks[i] is { } t)
                     Console.WriteLine($"agy settings {tabs[i].Name} ({Launcher.AgySettingsFile(t)}; {t.Id}.agy-replace.json when user has a replacing statusLine, {t.Id}.agy-plain.json when python3 is missing): "
                         + TabSession.AgySettingsJson(AgyStatusLine.Command(t.Dir), stackWithDefault: true));
+            // Every interactive agy launch path passes that file (#212); the example stands in when no enabled tab uses agy.
+            var agyTabs = Enumerable.Range(0, tabs.Count).Where(i => tabs[i].Llm == "agy" && tracks[i] is not null)
+                .Select(i => (Tab: tabs[i], Track: tracks[i]!)).ToList();
+            if (agyTabs.Count == 0)
+                agyTabs.Add((new TabConfig { Name = "agy example", Directory = "~", Llm = "agy", Orkester = true },
+                    new TabTrack(dir + "/tab-lib.sh", dir, "tab" + (tabs.Count + 1), cfg.AutoUpdateClis, cfg.AutoClearIdle)));
+            foreach (var (tab, t) in agyTabs)
+                foreach (var (path, script) in Launcher.AgyLaunchPaths(tab, t))
+                    Console.WriteLine($"agy launch {tab.Name}, {path}: {script}");
             Console.WriteLine($"agy status line ({dir}/{AgyStatusLine.ScriptFile}): saves quota five_hour/seven_day (highest active used_percentage, resets_at) and captured_at to "
                 + $"~/.gemini/antigravity-cli/{AgyStatusLine.SnapshotFile}, keeping AGY's built-in status line (stack_with_default) or chaining the user's own statusLine from settings.json");
             // bs_update in tab-lib.sh, before the CLI and before each in-place restart.

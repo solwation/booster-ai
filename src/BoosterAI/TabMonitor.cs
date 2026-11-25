@@ -885,25 +885,43 @@ for line in sys.stdin:
         var dir = OperatingSystem.IsWindows() ? PathMapping.ToWslPath(Directory) : Directory;
         if (dir.IndexOfAny([';', '\n', '\r']) >= 0) return null;
         var track = new TabTrack(dir + "/tab-lib.sh", dir, "tab" + Interlocked.Increment(ref _next), updateClis, autoClear);
+        WriteSettings(track.Id, dir, onlyMissing: false);
+        return track;
+    }
+
+    /// <summary>
+    /// Writes the per-tab settings files that the launch command's --settings names. With <paramref name="onlyMissing"/>, only
+    /// files that do not exist yet: a tab adopted from a session that an older BoosterAI started (before #206) has no
+    /// tabN.agy.json, and agy refuses to start when its --settings file is missing (#212).
+    /// </summary>
+    private void WriteSettings(string id, string dir, bool onlyMissing)
+    {
+        void Write(string name, string content)
+        {
+            var path = Path.Combine(Directory, id + name);
+            if (!onlyMissing || !File.Exists(path)) File.WriteAllText(path, content);
+        }
         // With BoosterAI's status line (#199); tab-lib.sh puts the plain file in its place when the tab's Linux has no python3,
         // so a status line the user configured is never replaced by one that cannot run.
         try
         {
-            File.WriteAllText(Path.Combine(Directory, track.Id + ".claude.json"), HooksJson($"{dir}/{track.Id}.log", ClaudeStatusLine.Command(dir)));
-            File.WriteAllText(Path.Combine(Directory, track.Id + ".claude-plain.json"), HooksJson($"{dir}/{track.Id}.log"));
+            Write(".claude.json", HooksJson($"{dir}/{id}.log", ClaudeStatusLine.Command(dir)));
+            Write(".claude-plain.json", HooksJson($"{dir}/{id}.log"));
         }
-        catch (IOException) { /* no hooks: the tab's activity stays unknown */ }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { /* no hooks: the tab's activity stays unknown */ }
         // AGY status line (#206): stack_with_default keeps AGY's built-in status line when the user has none of their own;
         // tab-lib.sh swaps in the replace copy when the user configured a replacing statusLine, or the empty plain copy without python3.
         try
         {
-            File.WriteAllText(Path.Combine(Directory, track.Id + ".agy.json"), AgySettingsJson(AgyStatusLine.Command(dir), stackWithDefault: true));
-            File.WriteAllText(Path.Combine(Directory, track.Id + ".agy-replace.json"), AgySettingsJson(AgyStatusLine.Command(dir), stackWithDefault: false));
-            File.WriteAllText(Path.Combine(Directory, track.Id + ".agy-plain.json"), AgySettingsJson());
+            Write(".agy.json", AgySettingsJson(AgyStatusLine.Command(dir), stackWithDefault: true));
+            Write(".agy-replace.json", AgySettingsJson(AgyStatusLine.Command(dir), stackWithDefault: false));
+            Write(".agy-plain.json", AgySettingsJson());
         }
-        catch (IOException) { /* no quota snapshot from this agy tab */ }
-        return track;
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { /* no quota snapshot from this agy tab */ }
     }
+
+    /// <summary>Whether tab <paramref name="id"/> has BoosterAI's agy settings, i.e. an agy started in it gets the status line (#212).</summary>
+    public bool HasAgySettings(string id) => File.Exists(Path.Combine(Directory, id + ".agy.json"));
 
     /// <summary>The AGY session settings file (#206): BoosterAI's statusLine command (or empty when plain).</summary>
     public static string AgySettingsJson(string? statusLine = null, bool stackWithDefault = true)
@@ -943,6 +961,8 @@ for line in sys.stdin:
     /// <summary>Queues <paramref name="script"/> for the tab's bs_next (an in-place restart).</summary>
     public void QueueNext(string id, string script)
     {
+        // The restarted CLI's --settings file must exist, also for a tab adopted from an older BoosterAI's session (#212).
+        WriteSettings(id, OperatingSystem.IsWindows() ? PathMapping.ToWslPath(Directory) : Directory, onlyMissing: true);
         var path = Path.Combine(Directory, id + ".next");
         var temporary = path + "." + Guid.NewGuid().ToString("N");
         try

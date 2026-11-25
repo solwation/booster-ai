@@ -49,6 +49,8 @@
           </ItemsControl>
         </StackPanel>
       </Border>
+      <!-- No plan limits for a live agy tab: why, instead of nothing (#212). -->
+      <TextBlock Classes="muted caption" Text="{Binding PeekLimitMissing}" IsVisible="{Binding HasPeekLimitMissing}" TextWrapping="Wrap" />
       <local:TabOutputView IsVisible="{Binding HasOutput}" />
       <TextBlock Classes="muted caption" Text="{Binding OutputNote}" IsVisible="{Binding HasOutputNote}" TextWrapping="Wrap" />
       <!-- After an exit with an error, ↻ is the popup's primary action (#153); only where it can be clicked. -->

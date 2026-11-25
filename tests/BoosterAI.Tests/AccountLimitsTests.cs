@@ -820,6 +820,101 @@ public class AccountLimitsTests
         finally { Directory.Delete(root, true); }
     }
 
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, false)]
+    [InlineData(true, true)]
+    public void EveryInteractiveAgyLaunchPathPassesTheStatusLineSettings(bool orkester, bool runOnce)
+    {
+        var track = new TabTrack("/s/tab-lib.sh", "/s", "tab3");
+        var tab = new TabConfig { Name = "Cirrus", Directory = "~/cirrus", Llm = "agy", Orkester = orkester, NonInteractive = runOnce };
+        var paths = Launcher.AgyLaunchPaths(tab, track).ToList();
+        Assert.Equal(5, paths.Count);
+        foreach (var (path, script) in paths)
+        {
+            // The tracked command (before the plain fallback branch, which runs only without tab-lib.sh) carries --settings.
+            var tracked = script.Split("\nelse ")[0];
+            Assert.True(tracked.Contains("--settings '\\''/s/tab3.agy.json'\\''") || tracked.Contains("--settings '/s/tab3.agy.json'"), path + ": " + script);
+            Assert.DoesNotContain(';', script);
+        }
+        Assert.Contains(paths, p => p.Script.Contains("agy -i "));
+        Assert.Contains(paths, p => p.Script.Contains("agy --continue"));
+        // The launches BoosterAI makes: the orchestra install's initial prompt and a plain start.
+        Assert.Contains("--settings", Launcher.TabScript(new TabConfig { Name = "C", Directory = "~", Llm = "agy" }, Launcher.InstallOrkesterPrompt, track));
+        Assert.Contains("--settings", Launcher.TabScript(new TabConfig { Name = "C", Directory = "~", Llm = "agy", Orkester = true }, null, track));
+    }
+
+    [Fact]
+    public void RestartOfAnAdoptedTabWritesTheMissingAgySettingsWithoutOverwritingOthers()
+    {
+        var root = Temp("agy-adopted");
+        try
+        {
+            // A tab of a session an older BoosterAI started: hooks only, no tabN.agy.json (agy refuses a missing --settings file).
+            File.WriteAllText(Path.Combine(root, "tab3.log"), "1 start pid=1 starttime=1\n");
+            File.WriteAllText(Path.Combine(root, "tab3.claude.json"), "{\"old\":true}");
+            var session = TabSession.Open(root);
+            Assert.False(session.HasAgySettings("tab3"));
+            session.QueueNext("tab3", "true");
+            Assert.True(session.HasAgySettings("tab3"));
+            var agy = JsonDocument.Parse(File.ReadAllText(Path.Combine(root, "tab3.agy.json"))).RootElement;
+            Assert.Equal(AgyStatusLine.Command(session.Track("tab3").Dir), agy.GetProperty("statusLine").GetProperty("command").GetString());
+            Assert.True(File.Exists(Path.Combine(root, "tab3.agy-plain.json")));
+            Assert.Equal("{\"old\":true}", File.ReadAllText(Path.Combine(root, "tab3.claude.json")));
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public void StatusPopupExplainsMissingAgyLimits()
+    {
+        var previous = Loc.Language;
+        var root = Temp("agy-missing");
+        try
+        {
+            var (restart, pending, known, claude, closed) = BoosterAI.Tests.UiSession.Run(() =>
+            {
+                Loc.Use("sv");
+                var now = DateTimeOffset.Now;
+                AccountLimits limits = AccountLimits.Unknown;
+                var vm = new MainViewModel(new AppConfig
+                {
+                    Tabs = [new() { Name = "A", Directory = "/srv/a", Llm = "agy" }, new() { Name = "B", Directory = "/srv/b", Llm = "claude" }],
+                });
+                vm.LimitsClock = () => now;
+                vm.AccountLimitsEnabled = true;
+                vm.ReadAccountLimits = (_, _, _) => Task.FromResult(limits);
+                vm.Tabs[0].SetState(TabState.Running, null, activity: BoosterAI.Activity.Busy);
+                vm.Tabs[1].SetState(TabState.Running, null, activity: BoosterAI.Activity.Busy);
+                Assert.True(vm.RefreshAccountLimitsAsync(force: true).IsCompletedSuccessfully);
+                Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+                // Adopted from an older BoosterAI: no agy settings for the tab.
+                var session = TabSession.Open(root);
+                vm.Tabs[0].Session = session;
+                vm.Tabs[0].Track = session.Track("tab1");
+                var restartText = vm.Tabs[0].PeekLimitMissing;
+                vm.Tabs[0].Track = session.NewTrack();
+                var pendingText = vm.Tabs[0].PeekLimitMissing;
+                var claudeText = vm.Tabs[1].PeekLimitMissing;
+                limits = new AccountLimits(new LimitWindow(20, now.AddHours(2), 300), null, null, now);
+                Assert.True(vm.RefreshAccountLimitsAsync(force: true).IsCompletedSuccessfully);
+                Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+                var knownText = vm.Tabs[0].PeekLimitMissing;
+                limits = AccountLimits.Unknown;
+                Assert.True(vm.RefreshAccountLimitsAsync(force: true).IsCompletedSuccessfully);
+                Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+                vm.Tabs[0].SetState(TabState.Closed, null);
+                return (restartText, pendingText, knownText, claudeText, vm.Tabs[0].PeekLimitMissing);
+            });
+            Assert.StartsWith("Planens gränser: okända – starta om fliken", restart);
+            Assert.StartsWith("Planens gränser: okända än", pending);
+            Assert.Equal("", known);
+            Assert.Equal("", claude);
+            Assert.Equal("", closed);
+        }
+        finally { Loc.Use(previous); Directory.Delete(root, true); }
+    }
+
     [Fact]
     public void StatusColumnShowsRemainingPercentOnLiveTabsAndUpdatesAfterReset()
     {

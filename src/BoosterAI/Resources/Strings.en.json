@@ -970,6 +970,8 @@
   "account.limit.near": "close to the limit",
   "account.limit.tip.claude": "Plan limits from Claude's status line, saved by BoosterAI's Claude tabs with this account. Unknown until such a tab has had a reply, and for accounts without a Pro/Max plan. Claude does not show credits.",
   "account.limit.tip.codex": "Plan limits and credits from the latest event in the account's newest Codex session (sessions in the account's directory). Unknown until Codex has run a turn with the account.",
+  "account.limit.missing.agy.restart": "Plan limits: unknown – restart the tab. It was started without BoosterAI's AGY status line, so the quota is not saved.",
+  "account.limit.missing.agy.pending": "Plan limits: not known yet. BoosterAI's status line saves AGY's quota shortly after it starts (needs python3 in the tab's Linux).",
   "agent.account.name": "{0}, account {1}",
   "agent.account.tip": "Account: {0}\nDirectory: {1}"
 }

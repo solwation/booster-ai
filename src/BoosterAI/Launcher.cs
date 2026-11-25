@@ -92,6 +92,21 @@ public static class Launcher
     /// <summary>The settings file whose status line records quota limits for an interactive agy tab (#206).</summary>
     public static string AgySettingsFile(TabTrack track) => $"{track.Dir}/{track.Id}.agy.json";
 
+    /// <summary>
+    /// Every way BoosterAI starts an interactive agy in a tracked tab, for --dry-run and tests (#212): each one passes
+    /// --settings with <see cref="AgySettingsFile"/>. Run once (agy -p) is not listed: print mode never runs a statusLine.
+    /// </summary>
+    public static IEnumerable<(string Path, string Script)> AgyLaunchPaths(TabConfig tab, TabTrack track)
+    {
+        var interactive = ConfigStore.Copy(new AppConfig { Tabs = [tab] }).Tabs[0];
+        interactive.NonInteractive = false;
+        yield return ("start", TabScript(interactive, null, track));
+        yield return ("initial prompt (orchestra install, -i)", TabScript(interactive, InstallOrkesterPrompt, track));
+        yield return ("continue (--continue)", TabScript(interactive, null, track, resume: true));
+        yield return ("restart in place (bs_next)", RestartScript(interactive, track, resume: false));
+        yield return ("restart in place with conversation (bs_next, --continue)", RestartScript(interactive, track, resume: true));
+    }
+
     private static string Cd(TabConfig tab) => tab.Directory.Trim() switch
     {
         "" or "~" => "cd ~",

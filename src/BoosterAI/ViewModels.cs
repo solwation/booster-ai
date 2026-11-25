@@ -388,7 +388,7 @@ public sealed class TabViewModel : Observable
         Raise(nameof(Llms));
         Raise(nameof(AgentChoices));
         Raise(nameof(SelectedAgentChoice));
-        foreach (var n in new[] { nameof(HasPeekLimit), nameof(PeekLimitWarn), nameof(PeekLimitRows), nameof(PeekLimitAge), nameof(HasPeekLimitAge), nameof(PeekLimitName), nameof(StatusDisplay) }) Raise(n);
+        foreach (var n in new[] { nameof(HasPeekLimit), nameof(PeekLimitWarn), nameof(PeekLimitRows), nameof(PeekLimitAge), nameof(HasPeekLimitAge), nameof(PeekLimitName), nameof(StatusDisplay), nameof(PeekLimitMissing), nameof(HasPeekLimitMissing) }) Raise(n);
     }
     public IReadOnlyList<string> Models => Catalog.ModelsFor(_llm);
     public bool IsAi => _llm != Catalog.ShellOnly;
@@ -610,6 +610,13 @@ public sealed class TabViewModel : Observable
     public string PeekLimitAge => PeekLimit?.Age ?? "";
     public bool HasPeekLimitAge => PeekLimitAge.Length > 0;
     public string PeekLimitName => PeekLimit?.Name ?? "";
+    /// <summary>
+    /// Why the popup shows no plan limits for a live agy tab (#212), "" otherwise: a tab started without BoosterAI's agy settings
+    /// (by a BoosterAI before #206) never saves the quota until it is restarted; one with them saves it shortly after AGY starts.
+    /// </summary>
+    public string PeekLimitMissing => _llm != "agy" || !_owner.AccountLimitsEnabled || PeekLimit is not null || !ShowStatusRemaining ? ""
+        : Loc.Get(Session is { } session && Track is { } track && session.HasAgySettings(track.Id) ? "account.limit.missing.agy.pending" : "account.limit.missing.agy.restart");
+    public bool HasPeekLimitMissing => PeekLimitMissing.Length > 0;
     public string StatusActionName => Loc.Format("output.action", Name, StatusTip);
 
     /// <summary>
@@ -733,7 +740,7 @@ public sealed class TabViewModel : Observable
         _clearedAt = clearedAt;
         if (state != TabState.Running) PendingRestart = false;
         foreach (var n in new[] { nameof(HasStatus), nameof(IsRunning), nameof(IsAlive), nameof(OpenTip), nameof(WillStart), nameof(Activity), nameof(StatusText), nameof(StatusTip), nameof(StatusBrush),
-            nameof(ShowsOutput), nameof(IsExitError), nameof(HasOutput), nameof(OutputNote), nameof(HasOutputNote) }) Raise(n);
+            nameof(ShowsOutput), nameof(IsExitError), nameof(HasOutput), nameof(OutputNote), nameof(HasOutputNote), nameof(PeekLimitMissing), nameof(HasPeekLimitMissing) }) Raise(n);
         RaiseRemoveSubTab();
         RaiseRestart();
         (Parent ?? this).GroupChanged();
@@ -2052,7 +2059,15 @@ public sealed partial class MainViewModel : Observable
         };
         cfg.Tabs[0].Enabled = true;
         cfg.Tabs[0].Name = tab.Name.Trim() + " (" + Loc.Get("tab.installSuffix") + ")";
-        var error = Launcher.Launch(cfg, Launcher.InstallOrkesterPrompt);
+        // Tracked like a started tab (not monitored), so its agent gets the same --settings, e.g. agy's quota status line (#212).
+        TabTrack? track = null;
+        try
+        {
+            _session ??= new TabSession(TabSession.DefaultRoot, DateTime.Now, TabSession.Liveness(_cfg.WslDistro));
+            track = _session.NewTrack(_cfg.AutoUpdateClis);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { /* untracked: the plain command */ }
+        var error = Launcher.Launch(cfg, Launcher.InstallOrkesterPrompt, _ => track);
         // The files appear once the agent has worked; reopening BoosterAI or editing the path rechecks.
         ShowLaunchOutcome(error, cfg.Tabs, () => InstallOrkester(tab), Loc.Format("status.installRunning", tab.Name.Trim()));
         if (error != "" && _cfg.Notifications) Notifier.Show("BoosterAI", error);

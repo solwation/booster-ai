@@ -970,6 +970,8 @@
   "account.limit.near": "nära gränsen",
   "account.limit.tip.claude": "Planens gränser enligt Claudes statusrad, sparade av BoosterAIs Claude-flikar med det här kontot. Okänd tills en sådan flik har fått svar, och för konton utan Pro/Max-plan. Krediter visas inte av Claude.",
   "account.limit.tip.codex": "Planens gränser och krediter från den senaste händelsen i kontots nyaste Codex-session (sessions i kontots katalog). Okänd tills Codex har kört en tur med kontot.",
+  "account.limit.missing.agy.restart": "Planens gränser: okända – starta om fliken. Den startades utan BoosterAIs statusrad för AGY, så kvoten sparas inte.",
+  "account.limit.missing.agy.pending": "Planens gränser: okända än. BoosterAIs statusrad sparar AGY:s kvot strax efter starten (kräver python3 i flikens Linux).",
   "agent.account.name": "{0}, konto {1}",
   "agent.account.tip": "Konto: {0}\nKatalog: {1}"
 }
