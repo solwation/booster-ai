@@ -122,8 +122,8 @@ public partial class MainWindow : Window
         orchestraTimer.Tick += (_, _) => { if (IsVisible && WindowState != WindowState.Minimized) _vm.RefreshOrkester(); };
         orchestraTimer.Start();
         Closed += (_, _) => orchestraTimer.Stop();
-        // Plan limits of the Agent boxes (#200): read again every few minutes while the window is visible.
-        var limitsTimer = new Avalonia.Threading.DispatcherTimer { Interval = TimeSpan.FromMinutes(3) };
+        // Plan limits of the Agent boxes (#200, #205): local file read only, every 30 seconds while visible.
+        var limitsTimer = new Avalonia.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
         limitsTimer.Tick += (_, _) => { if (IsVisible && WindowState != WindowState.Minimized) _ = _vm.RefreshAccountLimitsAsync(force: true); };
         limitsTimer.Start();
         Closed += (_, _) => limitsTimer.Stop();

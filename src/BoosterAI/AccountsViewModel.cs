@@ -337,14 +337,14 @@ public sealed partial class MainViewModel
     private DateTimeOffset _limitsRefreshed = DateTimeOffset.MinValue;
 
     /// <summary>
-    /// Reads the plan limits of the agents the tab list uses, one read per account (#200). The main window asks on activation
-    /// (at most every 30 seconds) and every few minutes while visible; <paramref name="force"/> skips the wait.
+    /// Reads the plan limits of the agents the tab list uses, one read per account (#200, #205). The main window asks on activation
+    /// and when monitored tab activity changes (at most every 5 seconds), and every 30 seconds while visible; <paramref name="force"/> skips the wait.
     /// </summary>
     internal Task RefreshAccountLimitsAsync(bool force = false)
     {
         if (!AccountLimitsEnabled) return Task.CompletedTask;
         var now = LimitsClock();
-        if (!force && now - _limitsRefreshed < TimeSpan.FromSeconds(30)) return Task.CompletedTask;
+        if (!force && now - _limitsRefreshed < TimeSpan.FromSeconds(5)) return Task.CompletedTask;
         _limitsRefreshed = now;
         var reads = Tabs.Select(t => t.Llm).Distinct().Where(Accounts.Supports).Select(c => AccountsEditor(c)!.RefreshLimitsAsync()).ToList();
         return Task.WhenAll(reads);

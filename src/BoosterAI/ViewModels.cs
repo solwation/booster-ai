@@ -1872,19 +1872,23 @@ public sealed partial class MainViewModel : Observable
             _polling = false;
             if (!t.IsCompletedSuccessfully) return;
             var (results, settings) = t.Result;
+            var anyActivityChanged = false;
             foreach (var (row, id, state, rc, denied, pid, activity, watchingSince, log, lastOutput) in results)
             {
                 // Ignore a result for a tab that has been restarted meanwhile.
                 if (row.TrackId != id) continue;
+                var previousActivity = row.Activity;
                 row.ShellPid = pid;
                 if (row.PendingRestart && state == TabState.Running && activity == Activity.Idle) RestartChanged(row);
                 var changed = row.SetState(state, rc, denied, activity, activity == Activity.Watching ? watchingSince : null, AutoClear.ClearedAt(log));
+                if (changed || row.Activity != previousActivity) anyActivityChanged = true;
                 row.RefreshInputState(log, lastOutput);
                 RequestAutoClear(row, id, state, log, lastOutput);
                 if (!changed) continue;
                 if (_cfg.Notifications && TabStatus.IsUnexpected(state, rc))
                     Notifier.Show("BoosterAI", Loc.Format("notify.body", row.Name, row.StatusText));
             }
+            if (anyActivityChanged) _ = RefreshAccountLimitsAsync();
             // A tab that closed can be started again: the Start button counts it.
             TabsChanged();
             OfferRules(settings);

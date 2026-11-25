@@ -511,10 +511,10 @@ public class AccountLimitsTests
             Assert.Same(vm.AccountsEditor("claude")!.Rows[0].Limits.Session, vm.AccountsEditor("claude")!.LimitsOf("").Session); // the Accounts page's reading
             Assert.False(vm.Tabs[2].AgentChoices.Single(c => c.Llm == "agy").HasLimit);
 
-            // Activation within 30 seconds does not read again; a forced (timer) refresh does.
+            // Activation within 5 seconds does not read again; after 5 seconds or a forced (timer) refresh does (#205).
             await vm.RefreshAccountLimitsAsync();
             Assert.Equal(2, calls.Count);
-            clock = now.AddSeconds(31);
+            clock = now.AddSeconds(6);
             await vm.RefreshAccountLimitsAsync();
             Assert.Equal(4, calls.Count);
             await vm.RefreshAccountLimitsAsync(force: true);
@@ -597,6 +597,66 @@ public class AccountLimitsTests
             Assert.True(codexEntry.LimitWarn);
             Assert.Equal("85 %", agyEntry.LimitCaption);
             Assert.True(agyEntry.LimitWarn);
+        }
+        finally { Loc.Use(previous); }
+    }
+
+    [Fact]
+    public void MainWindowMeterUpdatesLiveAfterResetFromFullToZero()
+    {
+        var previous = Loc.Language;
+        Loc.Use("sv");
+        try
+        {
+            var (before, after) = BoosterAI.Tests.UiSession.Run(() =>
+            {
+                Loc.Use("sv");
+                var now = DateTimeOffset.Now;
+                var used = 100.0;
+                var vm = new MainViewModel(new AppConfig
+                {
+                    Tabs = [new() { Name = "Atlas", Directory = "/srv/atlas", Llm = "codex" }],
+                });
+                vm.LimitsClock = () => now;
+                vm.AccountLimitsEnabled = true;
+                vm.ReadAccountLimits = (_, _, _) => Task.FromResult(
+                    new AccountLimits(null, new LimitWindow(used, now.AddDays(5), 10080), null, now));
+
+                var main = new MainWindow(vm);
+                main.Show();
+                Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+                try
+                {
+                    (bool Visible, double Value, bool WarnClass, bool ClosedWarnVisible) ReadMeter()
+                    {
+                        var panel = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(main)
+                            .OfType<Avalonia.Controls.Panel>().Single(p => p.Classes.Contains("limit-meter"));
+                        var bar = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(panel)
+                            .OfType<Avalonia.Controls.ProgressBar>().Single();
+                        var closed = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(main)
+                            .OfType<Avalonia.Controls.Panel>().First(p => p.Classes.Contains("limit-closed"));
+                        var warnIcon = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(closed)
+                            .OfType<Avalonia.Controls.Border>().First();
+                        return (panel.IsVisible, bar.Value, bar.Classes.Contains("warn"), warnIcon.IsVisible);
+                    }
+
+                    Assert.True(vm.RefreshAccountLimitsAsync(force: true).IsCompletedSuccessfully);
+                    Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+                    var first = ReadMeter();
+
+                    // After a Codex reset + next turn, the rollout reports 0 % with a new reset time.
+                    used = 0.0;
+                    now = now.AddSeconds(10);
+                    Assert.True(vm.RefreshAccountLimitsAsync().IsCompletedSuccessfully);
+                    Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+                    var second = ReadMeter();
+                    return (first, second);
+                }
+                finally { main.Close(); }
+            });
+
+            Assert.Equal((true, 100.0, true, true), before);
+            Assert.Equal((true, 0.0, false, false), after);
         }
         finally { Loc.Use(previous); }
     }
