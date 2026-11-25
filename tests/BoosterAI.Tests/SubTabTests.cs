@@ -15,6 +15,20 @@ public sealed class SubTabTests : IDisposable
     public void Dispose() => Directory.Delete(_root, recursive: true);
 
     [Fact]
+    public void OnlyTheProjectRowOffersToInstallTheOrchestra()
+    {
+        var vm = new MainViewModel(new AppConfig { Tabs = [new() { Name = "A", Llm = "claude" }] });
+        var project = vm.Tabs[0];
+        var child = vm.AddSubTab(project);
+        project.HasOrkester = child.HasOrkester = false;
+        Assert.True(project.CanInstallOrkester);
+        Assert.False(child.CanInstallOrkester);
+        project.HasOrkester = child.HasOrkester = true;
+        Assert.True(project.CanOrkester);
+        Assert.True(child.CanOrkester);
+    }
+
+    [Fact]
     public void StatusRefreshKeepsVisibleRowsStableUntilMembershipOrOrderChanges()
     {
         var vm = new MainViewModel(new AppConfig { Tabs = [new() { Name = "A" }, new() { Name = "B" }] });

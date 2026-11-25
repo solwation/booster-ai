@@ -344,7 +344,8 @@ public sealed class TabViewModel : Observable
         Model == Catalog.StandardModel ? Loc.Get("confirm.summary.standardModel") : Loc.Format("confirm.summary.model", Model));
     public string InstallTitle => Loc.Format("confirm.heading", Name);
     public string InstallButton => Loc.Format("confirm.button", Loc.Display("llm", Llm));
-    public bool CanInstallOrkester => _hasOrkester == false && IsAi;
+    /// <summary>The install link shows on the project row only: subtabs share its folder, so one install covers them (#197).</summary>
+    public bool CanInstallOrkester => _hasOrkester == false && IsAi && IsProject;
 
     public string Color => _owner.Theme.ColorAt(_colorIndex);
     internal int ColorIndex => _colorIndex;
