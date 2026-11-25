@@ -83,6 +83,10 @@ internal static class Program
                 : "auto-clear: off (AutoClearIdle false)");
             Console.WriteLine("wt.exe " + string.Join(' ', Launcher.WindowsTerminalArgs(tabs, cfg.WslDistro, null, tracks, "BoosterAI-<session>", cfg.ZoomPercent)
                 .Select(a => a.Contains(' ') ? $"\"{a}\"" : a)));
+            // "Show the tab in the terminal" (#213): the tab's index is its rank among the session's live tabs, here all of them.
+            for (var i = 0; i < tabs.Count; i++)
+                Console.WriteLine($"show tab {tabs[i].Name}: " + (TerminalFocus.Build("BoosterAI-<session>", TerminalFocus.Index(tracks[i]!.Id, tracks.Select(t => t!.Id)), windows: true) is { } show
+                    ? TerminalFocus.Describe(show) : "(unavailable)"));
             if (!OperatingSystem.IsWindows())
                 Console.WriteLine($"linux terminal: {cfg.LinuxTerminal} -> " + (cfg.LinuxTerminal != "auto" ? cfg.LinuxTerminal
                     : Launcher.LinuxTerminals.Skip(1).FirstOrDefault(Launcher.OnPath) ?? "(none found)"));

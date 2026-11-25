@@ -169,7 +169,7 @@
 
     <!-- Column widths are set in MainWindow.axaml.cs (ProjectColumns): compact or wide, orchestra shown or 0 (#152), and
          the rows' ⋯ (#196). The header is inset like the rows inside their segment (#196), so labels sit over their fields. -->
-    <Grid Grid.Row="2" Classes="project-columns" Loaded="OnProjectGridLoaded" ColumnDefinitions="4,20,46,4*,5*,200,195,168,32" Margin="5,0,5,6" IsVisible="{Binding HasTabs}">
+    <Grid Grid.Row="2" Classes="project-columns" Loaded="OnProjectGridLoaded" ColumnDefinitions="4,20,46,2.7*,5*,200,195,168,32" Margin="5,0,5,6" IsVisible="{Binding HasTabs}">
       <TextBlock Grid.Column="2" Classes="colhead" Text="{local:T col.with}" />
       <TextBlock Grid.Column="3" Classes="colhead" Text="{local:T col.project}" />
       <TextBlock Grid.Column="4" Classes="colhead" Text="{local:T col.status}" />
@@ -211,7 +211,7 @@
                   </ContextMenu>
                 </Border.ContextMenu>
                 <StackPanel>
-                <Grid Classes="project-columns" Loaded="OnProjectGridLoaded" ColumnDefinitions="4,20,46,4*,5*,200,195,168,32">
+                <Grid Classes="project-columns" Loaded="OnProjectGridLoaded" ColumnDefinitions="4,20,46,2.7*,5*,200,195,168,32">
                   <!-- A project's colour stripe; in a group the segment draws it instead, joined across the rows (#196). -->
                   <Border Grid.Column="0" Background="{Binding ColorBrush}" CornerRadius="{StaticResource RadiusSmall}" IsVisible="{Binding !InGroup}" />
                   <Border Grid.Column="1" Classes="grip" PointerPressed="OnTabDragStart"
@@ -266,6 +266,11 @@
                       <Button Classes="icon" Click="OnStartTab" IsVisible="{Binding CanStart}" Margin="0,-6,0,-6"
                               ToolTip.Tip="{local:T tab.start.tip}" AutomationProperties.Name="{Binding StartName}">
                         <Path Data="{StaticResource StartIcon}" />
+                      </Button>
+                      <!-- Show the tab in the terminal (#213): a separate icon, so the status keeps opening its popup. -->
+                      <Button Classes="icon" Click="OnShowTerminal" IsVisible="{Binding CanShowTerminal}" Margin="2,-6,0,-6" Width="26" Padding="3" Cursor="Hand"
+                              ToolTip.Tip="{Binding ShowTerminalTip}" AutomationProperties.Name="{Binding ShowTerminalName}">
+                        <Path Data="{StaticResource ShowTerminalIcon}" />
                       </Button>
                       <Button Classes="icon" Click="OnRestart" IsVisible="{Binding ShowReload}" Margin="7,-6,0,-6"
                               ToolTip.Tip="{Binding RestartTip}" AutomationProperties.Name="{Binding ReloadName}">
@@ -353,7 +358,7 @@
                 </Grid>
                 <!-- Advisor belongs to the project choices (#173). -->
                 <Panel IsVisible="{Binding IsProject}">
-                  <Grid Classes="project-columns" Loaded="OnProjectGridLoaded" ColumnDefinitions="4,20,46,4*,5*,200,195,168,32"
+                  <Grid Classes="project-columns" Loaded="OnProjectGridLoaded" ColumnDefinitions="4,20,46,2.7*,5*,200,195,168,32"
                         RowDefinitions="Auto,Auto" IsVisible="{Binding AdvisorVisible}" Margin="0,6,0,0">
                     <TextBlock Grid.Column="3" Grid.ColumnSpan="2" Classes="muted caption" Text="{local:T advisor.scope}"
                                TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,12,0" />

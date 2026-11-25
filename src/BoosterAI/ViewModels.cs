@@ -112,6 +112,7 @@ public sealed class TabViewModel : Observable
             Raise(nameof(OpenTip));
             Raise(nameof(ContinueName));
             Raise(nameof(StartName));
+            Raise(nameof(ShowTerminalName));
             Raise(nameof(ReorderName));
             Raise(nameof(MoreName));
             Raise(nameof(RemoveSubTabName));
@@ -471,6 +472,13 @@ public sealed class TabViewModel : Observable
     public bool HasStatus => _state is not null;
     internal bool HasOpenTerminal => Track is not null && _state is not null and not (TabState.Closed or TabState.Lost);
     public bool IsRunning => _state is TabState.Running;
+    /// <summary>The tab has a terminal tab to switch to (#213): its shell lives, even when the CLI in it has ended.</summary>
+    public bool CanShowTerminal => TerminalFocus.Supported && CanShowTerminalState;
+    internal bool CanShowTerminalState => _state is TabState.Starting or TabState.Running or TabState.CliExited or TabState.CliMissing;
+    public string ShowTerminalName => Loc.Format("tab.show.name", Name);
+    public string ShowTerminalTip => Loc.Get("tab.show.tip");
+    /// <summary>The wt.exe command that switches to this tab's terminal tab, or null when it cannot be built.</summary>
+    internal TerminalFocus.Command? ShowTerminalCommand => _owner.FocusCommand(this);
     /// <summary>Started or running: Start leaves it alone rather than opening a duplicate.</summary>
     public bool IsAlive => _state is TabState.Running or TabState.Starting;
 
@@ -739,7 +747,7 @@ public sealed class TabViewModel : Observable
         _watchingSince = watchingSince;
         _clearedAt = clearedAt;
         if (state != TabState.Running) PendingRestart = false;
-        foreach (var n in new[] { nameof(HasStatus), nameof(IsRunning), nameof(IsAlive), nameof(OpenTip), nameof(WillStart), nameof(Activity), nameof(StatusText), nameof(StatusTip), nameof(StatusBrush),
+        foreach (var n in new[] { nameof(HasStatus), nameof(IsRunning), nameof(CanShowTerminal), nameof(IsAlive), nameof(OpenTip), nameof(WillStart), nameof(Activity), nameof(StatusText), nameof(StatusTip), nameof(StatusBrush),
             nameof(ShowsOutput), nameof(IsExitError), nameof(HasOutput), nameof(OutputNote), nameof(HasOutputNote), nameof(PeekLimitMissing), nameof(HasPeekLimitMissing) }) Raise(n);
         RaiseRemoveSubTab();
         RaiseRestart();
@@ -1741,6 +1749,22 @@ public sealed partial class MainViewModel : Observable
     }
 
     private TabSession? _session;
+
+    /// <summary>The command that shows <paramref name="tab"/>'s terminal tab (#213): its rank among this session's tabs that still have one.</summary>
+    internal TerminalFocus.Command? FocusCommand(TabViewModel tab)
+    {
+        if (tab.Session is not { } session || tab.TrackId is not { } id) return null;
+        var live = Tabs.Where(t => t.CanShowTerminalState && t.Session?.WindowName == session.WindowName && t.TrackId is not null).Select(t => t.TrackId!);
+        return TerminalFocus.Build(session.WindowName, TerminalFocus.Index(id, live), OperatingSystem.IsWindows());
+    }
+
+    /// <summary>Switches to the tab's terminal tab; false when no command could be built.</summary>
+    public bool ShowTerminal(TabViewModel tab)
+    {
+        if (tab.ShowTerminalCommand is not { } command) return false;
+        TerminalFocus.Run(command);
+        return true;
+    }
     private DispatcherTimer? _poll;
     private bool _polling;
 

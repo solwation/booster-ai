@@ -187,6 +187,7 @@ internal static class Screenshot
             .SetupWithoutStarting();
         var app = (App)Application.Current!;
         // Sample tab statuses, as before (the real window shows the real ones).
+        TerminalFocus.Supported = true; // the headless run is on Linux, the real window on Windows shows the action (#213)
         var vm = new MainViewModel(app.Config);
         vm.ShowSampleStatus();
         // --fake-limits: invented plan limits (#199, #200) in the main window's Agent boxes and on the Accounts page; no file is read.

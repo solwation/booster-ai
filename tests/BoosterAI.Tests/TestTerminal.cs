@@ -28,6 +28,7 @@ internal static class TestTerminal
             Requests.Enqueue(r);
         };
         TabTitles.Restore = (_, _) => { };
+        TerminalFocus.Run = _ => { };
         Launcher.RequestZoom = (percent, restore) => ZoomRequests.Enqueue((percent, restore));
         TabSession.DefaultRoot = SessionRoot;
         AppDomain.CurrentDomain.ProcessExit += (_, _) =>

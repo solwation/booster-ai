@@ -24,7 +24,7 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Stripe, handle, Start, project, status, agent, model, orchestra, ⋯. Project and status share the free room, the
+    /// Stripe, handle, Start, project, status, agent, model, orchestra, ⋯. Project and status share the free room (2.7:5 since the show-terminal icon, #213), the
     /// status a little more (its longest texts must fit at the default width); agent, model and orchestra are fixed,
     /// and the orchestra column is 0 while no visible row can use it (#152). The row's ⋯ stays last, at the far right (#196).
     /// </summary>
@@ -32,7 +32,7 @@ public partial class MainWindow : Window
     {
         var compact = width is > 0 and < 1050;
         var fixedColumns = compact ? "150,140" : "200,195";
-        return $"4,20,46,4*,5*,{fixedColumns},{(orchestra ? 168 : 0)},{MoreColumnWidth}";
+        return $"4,20,46,2.7*,5*,{fixedColumns},{(orchestra ? 168 : 0)},{MoreColumnWidth}";
     }
 
     internal const int MoreColumnWidth = 32;
@@ -412,6 +412,11 @@ public partial class MainWindow : Window
     private async void OnCloseAll(object? sender, RoutedEventArgs e)
     {
         if (_vm.CanCloseAll) await new CloseAllWindow(_vm.PrepareCloseAll()).ShowDialog(this);
+    }
+
+    private void OnShowTerminal(object? sender, RoutedEventArgs e)
+    {
+        if (!_vm.IsClosingAll && (sender as Control)?.DataContext is TabViewModel tab) _vm.ShowTerminal(tab);
     }
 
     private async void OnRestart(object? sender, RoutedEventArgs e)

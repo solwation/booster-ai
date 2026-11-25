@@ -167,6 +167,8 @@
   "restart.continue.link": "Fortsätt",
   "restart.continue.tip": "Öppna fliken och fortsätt senaste konversationen i katalogen. Ingen ny orkesterprompt skickas. Flikar i samma katalog delar senaste konversation.",
   "restart.shell.tip": "Öppna skalfliken igen. Ett skal har ingen AI-konversation att fortsätta.",
+  "tab.show.name": "Visa {0} i terminalen",
+  "tab.show.tip": "Visa fliken i terminalen",
   "tab.start.name": "Starta {0}",
   "tab.start.tip": "Starta bara den här fliken. Den öppnas i det redan öppna terminalfönstret om det finns ett, annars i ett nytt. Inga andra flikar startas.",
   "restart.name": "Starta om fliken",
