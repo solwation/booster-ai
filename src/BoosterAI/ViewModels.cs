@@ -662,8 +662,30 @@ public sealed class TabViewModel : Observable
 
     private void RaiseStatusIndicator()
     {
-        foreach (var n in new[] { nameof(StatusIndicatorText), nameof(HasStatusIndicatorText), nameof(IsStatusError), nameof(StatusIndicatorWarn), nameof(StatusActionName) }) Raise(n);
+        foreach (var n in new[] { nameof(StatusIndicatorText), nameof(HasStatusIndicatorText), nameof(IsStatusError), nameof(StatusIndicatorWarn), nameof(StatusActionName),
+            nameof(StatusDot), nameof(StatusDotFilled), nameof(StatusDotRing), nameof(StatusDotDiamond), nameof(StatusPulse), nameof(StatusHalo) }) Raise(n);
     }
+
+    /// <summary>
+    /// The status dot's shape (#222), so the compact column tells the states apart without colour alone: an error, a closed tab
+    /// or a plan limit in the warning range is a diamond; a live tab that works (a turn or CPU activity, #215) is a filled dot
+    /// with a pulsing halo; a tab that waits for input is a ring; anything else (starting, watching, unknown) a plain dot.
+    /// </summary>
+    public StatusDotKind StatusDot =>
+        _state is null ? StatusDotKind.Plain
+        : _closeProgress is not null || (_state is TabState.Running && PendingRestart) ? StatusDotKind.Plain
+        : IsStatusError || _state is TabState.Closed || StatusIndicatorWarn ? StatusDotKind.Warn
+        : _state is TabState.Running && Activity is Activity.Busy or Activity.Working ? StatusDotKind.Working
+        : (_state is TabState.Running && Activity == Activity.Idle) || (_state is TabState.CliExited && _rc == 0) ? StatusDotKind.Idle
+        : StatusDotKind.Plain;
+    public bool StatusDotFilled => StatusDot is StatusDotKind.Plain or StatusDotKind.Working;
+    public bool StatusDotRing => StatusDot == StatusDotKind.Idle;
+    public bool StatusDotDiamond => StatusDot == StatusDotKind.Warn;
+    /// <summary>The working halo pulses, or stays still when the system turned animations off (<see cref="Motion"/>).</summary>
+    public bool StatusPulse => StatusDot == StatusDotKind.Working && PulseAnimates;
+    public bool StatusHalo => StatusDot == StatusDotKind.Working && !PulseAnimates;
+    /// <summary>A still screenshot shows the halo it would otherwise catch at an arbitrary point of the pulse.</summary>
+    private static bool PulseAnimates => Motion.Animate && !Screenshot.Active;
 
     private bool ShowStatusRemaining => _closeProgress is null && _state switch
     {
@@ -1480,6 +1502,26 @@ public sealed partial class MainViewModel : Observable
         foreach (var (tab, sample) in Tabs.Where(t => t.Enabled && t.IsAi).Zip(samples))
         {
             tab.HasOrkester = true;
+            tab.LaunchedAs = tab.ToConfig(forLaunch: true);
+            sample(tab);
+        }
+    }
+
+    /// <summary>For --screenshot --fake-dots (#222): one AI row per status dot shape, in a fixed order.</summary>
+    public void ShowSampleDots()
+    {
+        Action<TabViewModel>[] samples =
+        [
+            t => t.SetState(TabState.Running, null, activity: Activity.Working),
+            t => t.SetState(TabState.Running, null, activity: Activity.Busy),
+            t => t.SetState(TabState.Running, null, activity: Activity.Idle),
+            t => t.SetState(TabState.Running, null, activity: Activity.Watching, watchingSince: DateTimeOffset.UtcNow.AddMinutes(-4).ToUnixTimeMilliseconds()),
+            t => t.SetState(TabState.Starting, null),
+            t => t.SetState(TabState.CliExited, 127),
+            t => t.SetState(TabState.Closed, null),
+        ];
+        foreach (var (tab, sample) in Tabs.Where(t => t.Enabled && t.IsAi).Zip(samples))
+        {
             tab.LaunchedAs = tab.ToConfig(forLaunch: true);
             sample(tab);
         }

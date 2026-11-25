@@ -257,10 +257,20 @@
                         <ToolTip Classes="output"><local:StatusPeekView /></ToolTip>
                       </ToolTip.Tip>
                       <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
-                        <Ellipse Width="9" Height="9" Fill="{Binding StatusBrush}" VerticalAlignment="Center" />
+                        <!-- #222: the dot's shape tells working (filled, pulsing halo), waiting (ring) and warning/error (diamond) apart. -->
+                        <!-- 11 px wide with a 4 px gap keeps the old 9 + 6 px footprint; the 13 px halo overflows the panel by 1 px each side. -->
+                        <Panel Classes="status-dot" Width="11" Height="13" VerticalAlignment="Center">
+                          <Ellipse Classes="status-pulse" Width="9" Height="9" Fill="{Binding StatusBrush}" IsVisible="{Binding StatusPulse}">
+                            <Ellipse.RenderTransform><ScaleTransform /></Ellipse.RenderTransform>
+                          </Ellipse>
+                          <Ellipse Width="13" Height="13" Margin="-1,0" Fill="{Binding StatusBrush}" Opacity="0.3" IsVisible="{Binding StatusHalo}" />
+                          <Ellipse Width="9" Height="9" Fill="{Binding StatusBrush}" IsVisible="{Binding StatusDotFilled}" />
+                          <Ellipse Width="9" Height="9" Stroke="{Binding StatusBrush}" StrokeThickness="2" IsVisible="{Binding StatusDotRing}" />
+                          <Path Width="10" Height="10" Stretch="Fill" Data="M5,0 L10,5 L5,10 L0,5 Z" Fill="{Binding StatusBrush}" IsVisible="{Binding StatusDotDiamond}" />
+                        </Panel>
                         <TextBlock Classes="caption status-indicator" Classes.warn="{Binding StatusIndicatorWarn}" Classes.danger="{Binding IsStatusError}"
                                    Text="{Binding StatusIndicatorText}" IsVisible="{Binding HasStatusIndicatorText}"
-                                   VerticalAlignment="Center" Margin="6,0,0,0" TextTrimming="CharacterEllipsis" />
+                                   VerticalAlignment="Center" Margin="4,0,0,0" TextTrimming="CharacterEllipsis" />
                       </StackPanel>
                     </local:StatusPeekButton>
                     <!-- Restart is ↻; Continue is a word, shown only when the conversation can be continued (#156). A tab never

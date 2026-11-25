@@ -232,6 +232,16 @@
     <Setter Property="FontSize" Value="13" />
   </Style>
 
+  <!-- #222: a working tab's halo grows and fades every 1.6 s; quiet enough to sit beside text, off when the system has animations off. -->
+  <Style Selector="Ellipse.status-pulse">
+    <Setter Property="IsHitTestVisible" Value="False" />
+    <Style.Animations>
+      <Animation Duration="0:0:1.6" IterationCount="INFINITE" Easing="CubicEaseOut">
+        <KeyFrame Cue="0%"><Setter Property="ScaleTransform.ScaleX" Value="1" /><Setter Property="ScaleTransform.ScaleY" Value="1" /><Setter Property="Opacity" Value="0.55" /></KeyFrame>
+        <KeyFrame Cue="100%"><Setter Property="ScaleTransform.ScaleX" Value="1.45" /><Setter Property="ScaleTransform.ScaleY" Value="1.45" /><Setter Property="Opacity" Value="0" /></KeyFrame>
+      </Animation>
+    </Style.Animations>
+  </Style>
   <Style Selector="Button.status-peek">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderBrush" Value="Transparent" />

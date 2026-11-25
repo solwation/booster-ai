@@ -20,6 +20,9 @@ public enum TabState { Starting, Running, CliExited, CliMissing, NotStarted, Clo
 /// </summary>
 public enum Activity { Unknown, Busy, Idle, Watching, Working }
 
+/// <summary>The status dot's shape in the compact status column (#222).</summary>
+public enum StatusDotKind { Plain, Working, Idle, Warn }
+
 /// <summary>
 /// What a tab's log says. One line per event, written by tab-lib.sh:
 /// "&lt;epoch-ms&gt; start pid=N starttime=N", "… cli-start", "… cli-exit rc=N", "… exit", and
