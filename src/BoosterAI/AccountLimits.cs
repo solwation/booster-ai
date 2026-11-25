@@ -28,11 +28,18 @@ public sealed record AccountLimits(LimitWindow? Session, LimitWindow? Week, Limi
 /// <summary>
 /// The small plan-limit indicator beside an agent in the main window's Agent box (#200): the higher of the 5-hour and weekly use
 /// as "62 %", a warning cue from <see cref="WarnAt"/> percent, and a tooltip with both windows. Null when no window is known.
-/// <paramref name="Percent"/> is that higher use, rounded and kept within 0–100, for the closed box's meter (#202).
+/// <paramref name="Percent"/> is that higher use, rounded and kept within 0–100, for the closed box's meter (#202);
+/// <see cref="RemainingPercent"/> and <see cref="RemainingCaption"/> give the remaining share for the status column (#207).
 /// </summary>
 public sealed record LimitIndicator(string Caption, bool Warn, string Tip, string Name, string Line = "", double Percent = 0)
 {
     public const double WarnAt = 80;
+
+    /// <summary>Remaining share of the tightest known window (0–100 %), for the status column (#207).</summary>
+    public double RemainingPercent => Math.Clamp(100 - Percent, 0, 100);
+
+    /// <summary>Localized remaining text for the status column (#207): "38 % kvar" (sv) or "38% left" (en).</summary>
+    public string RemainingCaption => Loc.Format("account.limit.remaining", Loc.Number(RemainingPercent, "0"));
 
     public static LimitIndicator? For(AccountLimits limits, DateTimeOffset now)
     {

@@ -780,4 +780,74 @@ public class AccountLimitsTests
         }
         finally { Directory.Delete(root, true); }
     }
+
+    [Fact]
+    public void StatusColumnShowsRemainingPercentOnLiveTabsAndUpdatesAfterReset()
+    {
+        var previous = Loc.Language;
+        try
+        {
+            var (svBusy, enBusy, svOver, svAfterReset, svClosed, svUnknown, svAider) = BoosterAI.Tests.UiSession.Run(() =>
+            {
+                Loc.Use("sv");
+                var now = DateTimeOffset.Now;
+                var used = 95.0;
+                var vm = new MainViewModel(new AppConfig
+                {
+                    Accounts = [new() { Id = "claude-work", Agent = "claude", Name = "Work", Directory = "~/.claude-work" }],
+                    Tabs =
+                    [
+                        new() { Name = "A", Directory = "/srv/a", Llm = "claude" },
+                        new() { Name = "B", Directory = "/srv/b", Llm = "claude", Account = "claude-work" },
+                        new() { Name = "C", Directory = "/srv/c", Llm = "aider" },
+                    ],
+                });
+                vm.LimitsClock = () => now;
+                vm.AccountLimitsEnabled = true;
+                vm.ReadAccountLimits = (_, _, dir) => Task.FromResult(
+                    dir is null ? new AccountLimits(null, new LimitWindow(used, now.AddDays(3), 10080), null, now) : AccountLimits.Unknown);
+
+                vm.Tabs[0].SetState(TabState.Running, null, activity: BoosterAI.Activity.Busy);
+                vm.Tabs[1].SetState(TabState.Running, null, activity: BoosterAI.Activity.Busy);
+                vm.Tabs[2].SetState(TabState.Running, null, activity: BoosterAI.Activity.Busy);
+
+                Assert.True(vm.RefreshAccountLimitsAsync(force: true).IsCompletedSuccessfully);
+                Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+                var busySv = vm.Tabs[0].StatusDisplay;
+                var unknownSv = vm.Tabs[1].StatusDisplay;
+                var aiderSv = vm.Tabs[2].StatusDisplay;
+
+                Loc.Use("en");
+                var busyEn = vm.Tabs[0].StatusDisplay;
+                Loc.Use("sv");
+
+                // Over 100 % used clamps to 0 % remaining.
+                used = 140.0;
+                Assert.True(vm.RefreshAccountLimitsAsync(force: true).IsCompletedSuccessfully);
+                Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+                var overSv = vm.Tabs[0].StatusDisplay;
+
+                // After reset (0 % used): 100 % remaining.
+                used = 0.0;
+                Assert.True(vm.RefreshAccountLimitsAsync(force: true).IsCompletedSuccessfully);
+                Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+                var resetSv = vm.Tabs[0].StatusDisplay;
+
+                // Closed tabs keep their plain status text beside Restart/Continue.
+                vm.Tabs[0].SetState(TabState.Closed, null);
+                var closedSv = vm.Tabs[0].StatusDisplay;
+
+                return (busySv, busyEn, overSv, resetSv, closedSv, unknownSv, aiderSv);
+            });
+
+            Assert.Equal("Körs · 5 % kvar", svBusy);
+            Assert.Equal("Running · 5% left", enBusy);
+            Assert.Equal("Körs · 0 % kvar", svOver);
+            Assert.Equal("Körs · 100 % kvar", svAfterReset);
+            Assert.Equal("Fliken stängd", svClosed);
+            Assert.Equal("Körs", svUnknown);
+            Assert.Equal("Körs", svAider);
+        }
+        finally { Loc.Use(previous); }
+    }
 }

@@ -932,6 +932,8 @@
   "account.limit.day.6": "lör",
   "account.limit.title": "Planens gränser",
   "account.limit.chip": "{0} %",
+  "account.limit.remaining": "{0} % kvar",
+  "tabstate.withRemaining": "{0} · {1}",
   "account.limit.chip.name": "Plangräns {0} % använd",
   "account.limit.near": "nära gränsen",
   "account.limit.tip.claude": "Planens gränser enligt Claudes statusrad, sparade av BoosterAIs Claude-flikar med det här kontot. Okänd tills en sådan flik har fått svar, och för konton utan Pro/Max-plan. Krediter visas inte av Claude.",

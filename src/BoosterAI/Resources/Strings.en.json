@@ -932,6 +932,8 @@
   "account.limit.day.6": "Sat",
   "account.limit.title": "Plan limits",
   "account.limit.chip": "{0}%",
+  "account.limit.remaining": "{0}% left",
+  "tabstate.withRemaining": "{0} · {1}",
   "account.limit.chip.name": "Plan limit {0}% used",
   "account.limit.near": "close to the limit",
   "account.limit.tip.claude": "Plan limits from Claude's status line, saved by BoosterAI's Claude tabs with this account. Unknown until such a tab has had a reply, and for accounts without a Pro/Max plan. Claude does not show credits.",

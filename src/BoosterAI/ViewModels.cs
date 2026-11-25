@@ -97,6 +97,7 @@ public sealed class TabViewModel : Observable
         PropertyChanged += (_, e) =>
         {
             if (e.PropertyName is nameof(Name) or nameof(Llm) or nameof(StatusText) or nameof(Account)) Raise(nameof(PeekHeader));
+            if (e.PropertyName is nameof(StatusText)) Raise(nameof(StatusDisplay));
             if (e.PropertyName is nameof(StatusText) or nameof(StatusTip)) { Raise(nameof(PeekDetail)); Raise(nameof(HasPeekDetail)); }
         };
     }
@@ -387,7 +388,7 @@ public sealed class TabViewModel : Observable
         Raise(nameof(Llms));
         Raise(nameof(AgentChoices));
         Raise(nameof(SelectedAgentChoice));
-        foreach (var n in new[] { nameof(HasPeekLimit), nameof(PeekLimitWarn), nameof(PeekLimitLine), nameof(PeekLimitName) }) Raise(n);
+        foreach (var n in new[] { nameof(HasPeekLimit), nameof(PeekLimitWarn), nameof(PeekLimitLine), nameof(PeekLimitName), nameof(StatusDisplay) }) Raise(n);
     }
     public IReadOnlyList<string> Models => Catalog.ModelsFor(_llm);
     public bool IsAi => _llm != Catalog.ShellOnly;
@@ -607,6 +608,24 @@ public sealed class TabViewModel : Observable
     public string PeekLimitLine => PeekLimit?.Line ?? "";
     public string PeekLimitName => PeekLimit?.Name ?? "";
     public string StatusActionName => Loc.Format("output.action", Name, StatusTip);
+
+    /// <summary>
+    /// The status column's visible text (#207): on normal live/starting/idle tabs, appends remaining quota percentage
+    /// ("Körs · 38 % kvar" / "Running · 38% left") when the tab's agent/account has a known limit; closed, error,
+    /// changed-choice and auto-cleared rows keep their full status/action text unclipped beside ↻/Continue.
+    /// </summary>
+    public string StatusDisplay => StatusText is { Length: > 0 } text && ShowStatusRemaining && PeekLimit is { } limit
+        ? Loc.Format("tabstate.withRemaining", text, limit.RemainingCaption)
+        : StatusText;
+
+    private bool ShowStatusRemaining => _closeProgress is null && _state switch
+    {
+        TabState.Starting => true,
+        TabState.Running => !PendingRestart && !IsChanged && !(_activity == Activity.Idle && _clearedAt is not null),
+        TabState.CliExited => _rc == 0,
+        _ => false,
+    };
+
     public string StatusText => _closeProgress ?? (_state switch
     {
         null => "",

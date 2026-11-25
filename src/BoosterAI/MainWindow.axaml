@@ -235,7 +235,7 @@
                       </ToolTip.Tip>
                       <Grid ColumnDefinitions="Auto,*">
                         <Ellipse Grid.Column="0" Width="8" Height="8" Fill="{Binding StatusBrush}" VerticalAlignment="Center" Margin="0,0,7,0" />
-                        <TextBlock Classes="caption" Grid.Column="1" Text="{Binding StatusText}" VerticalAlignment="Center"
+                        <TextBlock Classes="caption" Grid.Column="1" Text="{Binding StatusDisplay}" VerticalAlignment="Center"
                                    TextTrimming="CharacterEllipsis" />
                       </Grid>
                     </local:StatusPeekButton>
