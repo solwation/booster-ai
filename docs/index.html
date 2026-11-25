@@ -838,12 +838,12 @@
         <!-- Feature 3 -->
         <div class="bento-card card-emerald">
           <div class="card-icon">👁️</div>
-          <h3>Live Peek & Terminal Pulse</h3>
+          <h3>Status Peek &amp; Terminal Pulse</h3>
           <p>
-            Hover over a running tab's status badge, or focus it and press Enter or Space, to inspect its last 20 output lines. Activity detail depends on the CLI; unknown activity is shown explicitly.
+            The narrow Status column shows each tab as a coloured dot with its remaining plan share, or ! on an error. Hover it, or focus it and press Enter or Space, for a compact popup with the full status, what it means and the plan limits. A tab whose processes use the CPU shows Working instead of Idle, and the terminal icon switches Windows Terminal to that tab.
           </p>
           <div class="card-highlight">
-            Running &middot; Idle &middot; Watching &middot; Exit codes
+            Running &middot; Working &middot; Idle &middot; Watching &middot; Exit codes
           </div>
         </div>
 
@@ -861,7 +861,7 @@
           <div class="card-icon">🔑</div>
           <h3>Several Accounts per Agent</h3>
           <p>
-            Keep a private and a work login for Claude Code (<code>CLAUDE_CONFIG_DIR</code>) or Codex (<code>CODEX_HOME</code>). Add accounts under Settings &rarr; AI agents, see whether each one is logged in and how much of its 5-hour and weekly plan limits it has used, log in from Settings and rename the default account (for example <em>Private</em>). Choose agent and account together in one Agent box per tab, with a thin usage meter in each Claude or Codex row and a small label for the chosen account.
+            Keep a private and a work login for Claude Code (<code>CLAUDE_CONFIG_DIR</code>) or Codex (<code>CODEX_HOME</code>). Add accounts under Settings &rarr; AI agents, see whether each one is logged in and how much of its 5-hour and weekly plan limits it has used, log in from Settings and rename the default account (for example <em>Private</em>). Choose agent and account together in one Agent box per tab, with two thin usage meters (5 hours and the week) in each Claude, Codex or AGY row and in the Agent list, and a small label for the chosen account. A non-modal bar warns when a plan window drops below a chosen share left.
             <a href="https://github.com/solwation/booster-ai/blob/main/docs/DETAILS.md#accounts-per-agent" style="color:var(--cyan);text-decoration:underline;" target="_blank" rel="noopener">How accounts work</a>
           </p>
         </div>
