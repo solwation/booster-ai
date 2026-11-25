@@ -295,7 +295,7 @@
                       <ComboBox.ItemTemplate>
                         <DataTemplate x:DataType="local:AgentChoice">
                           <!-- A CLI missing where the tabs run gets a warning marker after its name, not a text suffix (#152). -->
-                          <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto" AutomationProperties.Name="{Binding Name}">
+                          <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto" RowDefinitions="Auto,Auto" AutomationProperties.Name="{Binding Name}">
                             <local:AgentIcon Grid.Column="0" Cli="{Binding Llm}" Width="16" Height="16" />
                             <TextBlock Grid.Column="1" Text="{Binding Llm, Converter={x:Static local:Converters.LlmName}}" VerticalAlignment="Center" Margin="6,0,0,0" />
                             <Border Grid.Column="2" Background="Transparent" VerticalAlignment="Center" Margin="6,0,0,0"
@@ -325,20 +325,36 @@
                                 <Path Classes="missing" Width="11" Height="11" Data="{StaticResource WarningIcon}" />
                               </Border>
                             </Panel>
+                            <!-- #219: the same two meters under the agent name, only in the dropdown entries (the closed box draws its own). -->
+                            <Panel Grid.Row="1" Grid.ColumnSpan="3" Classes="limit-entry"><StackPanel Spacing="1" Width="64" HorizontalAlignment="Left" Margin="22,2,0,1"
+                                        IsVisible="{Binding HasMeters}" Background="Transparent"
+                                        ToolTip.Tip="{Binding MeterTip}" AutomationProperties.Name="{Binding MeterName}">
+                              <ProgressBar Classes="limit-meter" Classes.warn="{Binding SessionMeterWarn}" Classes.unknown="{Binding SessionMeterUnknown}"
+                                           Value="{Binding SessionMeterPercent}" Minimum="0" Maximum="100" Height="3" MinHeight="3" MinWidth="0" />
+                              <ProgressBar Classes="limit-meter" Classes.warn="{Binding WeekMeterWarn}" Classes.unknown="{Binding WeekMeterUnknown}"
+                                           Value="{Binding WeekMeterPercent}" Minimum="0" Maximum="100" Height="3" MinHeight="3" MinWidth="0" />
+                            </StackPanel></Panel>
                           </Grid>
                         </DataTemplate>
                       </ComboBox.ItemTemplate>
                     </ComboBox>
-                    <!-- Usage meter (#202): a thin bar inside the closed box's bottom edge, always shown for the account's known limit and
-                         filled to the higher of the 5 h and weekly use; from 80 % in the warning colour, beside the warning icon. It lies over
-                         the box's padding at a fixed place, so neither the box nor the row grows and every row's track has the same length;
-                         Unknown hides it. Its tooltip lists both windows; a press opens the box as if it landed on it. -->
+                    <!-- Usage meters (#202, #219): two thin bars inside the closed box's bottom edge, the 5 h window on top and the week below,
+                         each filled to its own use; from 80 % in the warning colour, beside the warning icon. A window without a known level
+                         (Unknown or reset) is an empty, muted track. They lie over the box's padding at a fixed place, so neither the box nor
+                         the row grows and every row's tracks have the same length. The tooltip lists both windows; a press opens the box. -->
                     <Panel Classes="limit-meter" VerticalAlignment="Bottom" Height="7" Margin="11,0,11,1" Background="Transparent"
-                           IsVisible="{Binding SelectedAgentChoice.HasLimit, FallbackValue=False}" ToolTip.Tip="{Binding SelectedAgentChoice.LimitTip}"
-                           AutomationProperties.Name="{Binding SelectedAgentChoice.LimitName}" PointerPressed="OnLimitMeterPressed">
-                      <ProgressBar Classes="limit-meter" Classes.warn="{Binding SelectedAgentChoice.LimitWarn, FallbackValue=False}"
-                                   Value="{Binding SelectedAgentChoice.LimitPercent, FallbackValue=0}" Minimum="0" Maximum="100"
-                                   Height="3" MinHeight="3" MinWidth="0" VerticalAlignment="Center" IsHitTestVisible="False" />
+                           IsVisible="{Binding SelectedAgentChoice.HasMeters, FallbackValue=False}" ToolTip.Tip="{Binding SelectedAgentChoice.MeterTip}"
+                           AutomationProperties.Name="{Binding SelectedAgentChoice.MeterName}" PointerPressed="OnLimitMeterPressed">
+                      <StackPanel Spacing="1" VerticalAlignment="Center" IsHitTestVisible="False">
+                        <ProgressBar Classes="limit-meter" Classes.warn="{Binding SelectedAgentChoice.SessionMeterWarn, FallbackValue=False}"
+                                     Classes.unknown="{Binding SelectedAgentChoice.SessionMeterUnknown, FallbackValue=False}"
+                                     Value="{Binding SelectedAgentChoice.SessionMeterPercent, FallbackValue=0}" Minimum="0" Maximum="100"
+                                     Height="3" MinHeight="3" MinWidth="0" />
+                        <ProgressBar Classes="limit-meter" Classes.warn="{Binding SelectedAgentChoice.WeekMeterWarn, FallbackValue=False}"
+                                     Classes.unknown="{Binding SelectedAgentChoice.WeekMeterUnknown, FallbackValue=False}"
+                                     Value="{Binding SelectedAgentChoice.WeekMeterPercent, FallbackValue=0}" Minimum="0" Maximum="100"
+                                     Height="3" MinHeight="3" MinWidth="0" />
+                      </StackPanel>
                     </Panel>
                   </Panel>
                   <ComboBox Grid.Column="6" Classes="field" IsEditable="True" ItemsSource="{Binding Models}"

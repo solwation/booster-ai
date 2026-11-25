@@ -645,6 +645,57 @@ public class AccountLimitsTests
     }
 
     [Fact]
+    public void TwoMetersShowEachWindowAndAnUnknownOrResetWindowIsEmpty()
+    {
+        var previous = Loc.Language;
+        try
+        {
+            Loc.Use("sv");
+            var now = DateTimeOffset.Now;
+            // Both known (#219): 5 h on top, the week below, each with its own use and warning from 80 %.
+            var both = new AgentChoice("claude", "", "", false, null, LimitIndicator.For(new(Win(91, now, 300), Win(37.4, now, 10080), null, now), now));
+            Assert.True(both.HasMeters);
+            Assert.Equal(("5 h", true, 91d, true), (both.SessionMeter.Label, both.SessionMeter.Known, both.SessionMeter.Percent, both.SessionMeter.Warn));
+            Assert.Equal(("Vecka", true, 37d, false), (both.WeekMeter.Label, both.WeekMeter.Known, both.WeekMeter.Percent, both.WeekMeter.Warn));
+            Assert.False(both.SessionMeterUnknown);
+            Assert.Contains("5 h: 9 % kvar", both.MeterName);
+            Assert.Contains("Vecka: 63 % kvar", both.MeterName);
+            Assert.Contains("återställs", both.MeterName);
+            Assert.Contains("Vecka: 37 % använt", both.MeterTip);
+
+            // One window unknown: its meter is empty and muted, the other keeps its level.
+            var weekOnly = new AgentChoice("agy", "", "", false, null, LimitIndicator.For(new(null, Win(44, now, 10080), null, now), now));
+            Assert.False(weekOnly.SessionMeter.Known);
+            Assert.True(weekOnly.SessionMeterUnknown);
+            Assert.Equal(0, weekOnly.SessionMeterPercent);
+            Assert.Equal(44, weekOnly.WeekMeterPercent);
+            Assert.Contains("5 h: Okänd", weekOnly.MeterName);
+
+            // One window reset since the reading: "Troligen återställd", empty.
+            var reset = new AgentChoice("claude", "", "", false, null, LimitIndicator.For(new(new LimitWindow(90, now.AddMinutes(-1), 300), Win(20, now, 10080), null, now), now));
+            Assert.True(reset.SessionMeterUnknown);
+            Assert.Contains("5 h: Troligen återställd", reset.MeterName);
+            Assert.Equal(20, reset.WeekMeterPercent);
+
+            // No level at all: both empty, with the note's text; an agent without limits has no meters.
+            var note = LimitIndicator.Note(AccountLimits.Unknown, now, "Orsaken.");
+            var none = new AgentChoice("claude", "", "", false, null, null, note);
+            Assert.True(none.HasMeters);
+            Assert.True(none.SessionMeterUnknown && none.WeekMeterUnknown);
+            Assert.Equal("Plangräns: Okänd", none.MeterName);
+            Assert.Equal(note.Tip, none.MeterTip);
+            Assert.False(new AgentChoice("aider", "", "", false, null).HasMeters);
+
+            Loc.Use("en");
+            var en = new AgentChoice("claude", "", "", false, null, LimitIndicator.For(new(Win(91, now, 300), null, null, now), now));
+            Assert.Contains("5 h: 9% left", en.MeterName);
+            Assert.Contains("Week: Unknown", en.MeterName);
+            Assert.Contains("resets", en.MeterName);
+        }
+        finally { Loc.Use(previous); }
+    }
+
+    [Fact]
     public async Task AgentBoxesShareTheAccountsReadingAndReadOncePerAccount()
     {
         var previous = Loc.Language;
@@ -813,12 +864,15 @@ public class AccountLimitsTests
                         var panel = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(main)
                             .OfType<Avalonia.Controls.Panel>().Single(p => p.Classes.Contains("limit-meter"));
                         var bar = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(panel)
-                            .OfType<Avalonia.Controls.ProgressBar>().Single();
+                            .OfType<Avalonia.Controls.ProgressBar>().ToList();
+                        Assert.Equal(2, bar.Count); // 5 h on top, the week below (#219); this reading has only the week
+                        Assert.True(bar[0].Classes.Contains("unknown"));
+                        var week = bar[1];
                         var closed = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(main)
                             .OfType<Avalonia.Controls.Panel>().First(p => p.Classes.Contains("limit-closed"));
                         var warnIcon = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(closed)
                             .OfType<Avalonia.Controls.Border>().First();
-                        return (panel.IsVisible, bar.Value, bar.Classes.Contains("warn"), warnIcon.IsVisible);
+                        return (panel.IsVisible, week.Value, week.Classes.Contains("warn"), warnIcon.IsVisible);
                     }
 
                     Assert.True(vm.RefreshAccountLimitsAsync(force: true).IsCompletedSuccessfully);

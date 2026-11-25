@@ -389,12 +389,16 @@
   <!-- Plan limit in the Agent box (#200): the percentage only in the dropdown entries, a warning marker only in the closed box. -->
   <Style Selector="StackPanel.limit-entry"><Setter Property="IsVisible" Value="False" /></Style>
   <Style Selector="ComboBoxItem StackPanel.limit-entry"><Setter Property="IsVisible" Value="True" /></Style>
+  <Style Selector="Panel.limit-entry"><Setter Property="IsVisible" Value="False" /></Style>
+  <Style Selector="ComboBoxItem Panel.limit-entry"><Setter Property="IsVisible" Value="True" /></Style>
   <Style Selector="ComboBoxItem Panel.limit-closed"><Setter Property="IsVisible" Value="False" /></Style>
   <!-- The closed Agent box's usage meter (#202): a decorative track, the accent fill, the warning colour from 80 %. -->
   <Style Selector="ProgressBar.limit-meter">
     <Setter Property="Background" Value="{DynamicResource BorderBrush}" />
   </Style>
   <Style Selector="ProgressBar.limit-meter.warn"><Setter Property="Foreground" Value="{DynamicResource WarningBrush}" /></Style>
+  <!-- #219: a window without a known level is an empty, muted track. -->
+  <Style Selector="ProgressBar.limit-meter.unknown"><Setter Property="Opacity" Value="0.45" /></Style>
   <!-- The status popup's limit table (#210): a taller meter of the remaining share, the remaining percentage emphasized. -->
   <Style Selector="ProgressBar.limit-meter.peek">
     <Setter Property="Height" Value="6" />

@@ -2396,6 +2396,23 @@ public sealed record AgentChoice(string Llm, string AccountId, string AccountNam
     public double LimitPercent => Limit?.Percent ?? 0;
     public string? LimitTip => Limit?.Tip;
     public string LimitName => Limit?.Name ?? "";
+    /// <summary>
+    /// The two meters under the agent name (#219): the 5 h window on top, the week below, in the closed box and in each list entry.
+    /// Shown for a limit-capable entry; a window without a known level (unknown or reset, #214) is an empty, muted track.
+    /// </summary>
+    public bool HasMeters => Limit is not null || Note is not null;
+    public LimitMeter SessionMeter => Limit is { Rows.Count: > 0 } l ? LimitMeter.From(l.Rows[0]) : LimitMeter.Empty;
+    public LimitMeter WeekMeter => Limit is { Rows.Count: > 1 } l ? LimitMeter.From(l.Rows[1]) : LimitMeter.Empty;
+    public double SessionMeterPercent => SessionMeter.Percent;
+    public double WeekMeterPercent => WeekMeter.Percent;
+    public bool SessionMeterWarn => SessionMeter.Warn;
+    public bool WeekMeterWarn => WeekMeter.Warn;
+    public bool SessionMeterUnknown => !SessionMeter.Known;
+    public bool WeekMeterUnknown => !WeekMeter.Known;
+    /// <summary>The meters' tooltip: both windows with use and reset time, or why the level is unknown.</summary>
+    public string? MeterTip => Limit?.Tip ?? Note?.Tip;
+    /// <summary>What a screen reader reads for the meters: both windows by name with remaining, used and reset time.</summary>
+    public string MeterName => Limit is { } l ? string.Join("; ", l.Rows.Select(r => r.Name)) : Note?.Name ?? "";
     /// <summary>What a screen reader reads: "claude, konto Work", or only the agent.</summary>
     public string Name => ShowAccount ? Loc.Format("agent.account.name", Loc.Display("llm", Llm), AccountName) : Loc.Display("llm", Llm);
     public override string ToString() => Name;

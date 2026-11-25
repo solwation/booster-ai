@@ -146,6 +146,16 @@ public sealed record LimitIndicator(string Caption, bool Warn, string Tip, strin
     }
 }
 
+/// <summary>
+/// One of the two thin meters under an agent's name (#219), "5 h" on top and "Vecka" below: filled to the window's use
+/// (<paramref name="Percent"/>, 0 while <paramref name="Known"/> is false, which shows an empty, muted track). <paramref name="Warn"/> from 80 %.
+/// </summary>
+public sealed record LimitMeter(string Label, bool Known, double Percent, bool Warn)
+{
+    public static readonly LimitMeter Empty = new("", false, 0, false);
+    public static LimitMeter From(LimitRow row) => new(row.Label, row.Known, row.Known ? row.Used : 0, row.Warn);
+}
+
 /// <summary>The Agent list's text for a limit-capable entry without a known level (#214): "Okänd" or "Troligen återställd", and why.</summary>
 public sealed record LimitNote(string Caption, string Tip, bool Reset)
 {
@@ -156,7 +166,7 @@ public sealed record LimitNote(string Caption, string Tip, bool Reset)
 /// One window in the status popup's limit table (#210): "5 h", a meter of the remaining share, "62 % kvar", "38 % använt" and
 /// "återställs om 2 h (15:00)". An unknown window has only its label and "Okänd", or "Troligen återställd" once it has reset (#214). <see cref="Warn"/> from <see cref="LimitIndicator.WarnAt"/> % used.
 /// </summary>
-public sealed record LimitRow(string Label, bool Known, double Remaining, string RemainingText, string UsedText, string ResetText, bool Warn, string Name)
+public sealed record LimitRow(string Label, bool Known, double Remaining, string RemainingText, string UsedText, string ResetText, bool Warn, string Name, double Used = 0)
 {
     public static LimitRow For(string label, LimitWindow? window, DateTimeOffset now, bool reset = false)
     {
@@ -172,7 +182,7 @@ public sealed record LimitRow(string Label, bool Known, double Remaining, string
         var usedText = Loc.Format("account.limit.usedShort", LimitPercent.Text(used));
         var resetText = Loc.Format("account.limit.resets", LimitText.Resets(window.ResetsAt, now));
         var name = Loc.Format("account.limit.row.name", label, remainingText, usedText, resetText) + (warn ? ", " + Loc.Get("account.limit.near") : "");
-        return new(label, true, remaining, remainingText, usedText, resetText, warn, name);
+        return new(label, true, remaining, remainingText, usedText, resetText, warn, name, Math.Clamp(used, 0, 100));
     }
 }
 
