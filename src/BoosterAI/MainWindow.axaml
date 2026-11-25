@@ -289,8 +289,13 @@
 
                   <!-- Agent and account in one choice (#194): an agent with accounts besides its default one lists one entry per
                        account, each with the account as a small label after the agent; the others show only the agent. -->
-                  <Panel Grid.Column="5" Margin="0,0,12,0" VerticalAlignment="Center" Opacity="{Binding RowOpacity}">
-                    <ComboBox Classes="field" ItemsSource="{Binding AgentChoices}" SelectedItem="{Binding SelectedAgentChoice}"
+                  <!-- #221: hovering anywhere over the closed box (meters included) previews the same status popup as the status column. -->
+                  <Panel Grid.Column="5" Margin="0,0,12,0" VerticalAlignment="Center" Opacity="{Binding RowOpacity}"
+                         ToolTip.ToolTipOpening="OnStatusTipOpening">
+                    <ToolTip.Tip>
+                      <ToolTip Classes="output"><local:StatusPeekView /></ToolTip>
+                    </ToolTip.Tip>
+                    <ComboBox Classes="field agent-choice" ItemsSource="{Binding AgentChoices}" SelectedItem="{Binding SelectedAgentChoice}"
                               AutomationProperties.Name="{Binding SelectedAgentChoice.Name}">
                       <ComboBox.ItemTemplate>
                         <DataTemplate x:DataType="local:AgentChoice">
@@ -343,7 +348,7 @@
                          (Unknown or reset) is an empty, muted track. They lie over the box's padding at a fixed place, so neither the box nor
                          the row grows and every row's tracks have the same length. The tooltip lists both windows; a press opens the box. -->
                     <Panel Classes="limit-meter" VerticalAlignment="Bottom" Height="7" Margin="11,0,11,1" Background="Transparent"
-                           IsVisible="{Binding SelectedAgentChoice.HasMeters, FallbackValue=False}" ToolTip.Tip="{Binding SelectedAgentChoice.MeterTip}"
+                           IsVisible="{Binding SelectedAgentChoice.HasMeters, FallbackValue=False}"
                            AutomationProperties.Name="{Binding SelectedAgentChoice.MeterName}" PointerPressed="OnLimitMeterPressed">
                       <StackPanel Spacing="1" VerticalAlignment="Center" IsHitTestVisible="False">
                         <ProgressBar Classes="limit-meter" Classes.warn="{Binding SelectedAgentChoice.SessionMeterWarn, FallbackValue=False}"

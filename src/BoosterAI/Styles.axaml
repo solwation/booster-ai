@@ -392,6 +392,9 @@
   <Style Selector="Panel.limit-entry"><Setter Property="IsVisible" Value="False" /></Style>
   <Style Selector="ComboBoxItem Panel.limit-entry"><Setter Property="IsVisible" Value="True" /></Style>
   <Style Selector="ComboBoxItem Panel.limit-closed"><Setter Property="IsVisible" Value="False" /></Style>
+  <!-- #221: the closed agent box's content takes no pointer, so its small tips (account, warning) do not compete with the row's
+       status popup on the surrounding panel; a press still lands on the box and opens it. -->
+  <Style Selector="ComboBox.agent-choice /template/ ContentControl#ContentPresenter"><Setter Property="IsHitTestVisible" Value="False" /></Style>
   <!-- The closed Agent box's usage meter (#202): a decorative track, the accent fill, the warning colour from 80 %. -->
   <Style Selector="ProgressBar.limit-meter">
     <Setter Property="Background" Value="{DynamicResource BorderBrush}" />

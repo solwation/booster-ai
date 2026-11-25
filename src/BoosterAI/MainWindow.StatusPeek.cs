@@ -16,6 +16,8 @@ public partial class MainWindow
     {
         // A keyboard-opened view remains stable until dismissed; do not open a second preview over it.
         if (_statusPeek?.IsOpen == true) { e.Cancel = true; return; }
+        // The agent box's preview (#221) waits while its list is open: the entries carry their own tips.
+        if (sender is Panel panel && panel.Children.OfType<ComboBox>().Any(box => box.IsDropDownOpen)) { e.Cancel = true; return; }
         if (sender is Control { DataContext: TabViewModel } target)
         {
             if (ToolTip.GetTip(target) is ToolTip { Content: StatusPeekView view })
