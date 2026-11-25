@@ -56,21 +56,21 @@ public sealed record LimitIndicator(string Caption, bool Warn, string Tip, strin
             session + ": " + LimitText.Used(limits.Session, now),
             Loc.Get("account.limit.week") + ": " + LimitText.Used(limits.Week, now),
         };
-        if (limits.At is { } at) lines.Add(Loc.Format("account.limit.as", LimitText.When(at, now)));
+        if (limits.At is { } at) lines.Add(LimitText.Age(at, now));
         var name = Loc.Format("account.limit.chip.name", number) + (warn ? ", " + Loc.Get("account.limit.near") : "");
-        // The status popup's one line: "5 h 37 % · Vecka 62 % · per 09:45"; an unknown window reads "Okänd".
+        // The status popup's one line: "5 h 37 % · Vecka 62 % · avläst för 8 min sedan"; an unknown window reads "Okänd".
         string Part(string label, LimitWindow? w) => label + " " + (w is null ? Loc.Get("account.limit.unknown") : Loc.Format("account.limit.chip", Loc.Number(w.UsedPercent, "0")));
         var line = Part(session, limits.Session) + " · " + Part(Loc.Get("account.limit.week"), limits.Week)
-            + (limits.At is { } when ? " · " + Loc.Format("account.limit.as", LimitText.When(when, now)) : "");
+            + (limits.At is { } when ? " · " + LimitText.Age(when, now) : "");
         return new LimitIndicator(Loc.Format("account.limit.chip", number), warn, string.Join("\n", lines), name, line, Math.Clamp(percent, 0, 100));
     }
 }
 
-/// <summary>The texts of the Accounts page's limit lines (#199): "37 % använt · återställs 14:20", "Okänd", credits and times.</summary>
+/// <summary>The texts of the Accounts page's limit lines (#199): "37 % använt · återställs om 4 h 20 min (14:20)", "Okänd", credits and times.</summary>
 public static class LimitText
 {
     public static string Used(LimitWindow? window, DateTimeOffset now) => window is null ? Loc.Get("account.limit.unknown")
-        : Loc.Format("account.limit.used", Loc.Number(window.UsedPercent, "0"), When(window.ResetsAt, now));
+        : Loc.Format("account.limit.used", Loc.Number(window.UsedPercent, "0"), Resets(window.ResetsAt, now));
 
     /// <summary>Codex's credits: unlimited, a balance, or none; empty when the agent reported nothing (Claude never does).</summary>
     public static string Credits(LimitCredits? credits) => credits switch
@@ -82,20 +82,11 @@ public static class LimitText
         _ => Loc.Format("account.limit.credits", Loc.Get("account.limit.credits.none")),
     };
 
-    /// <summary>A time in local time: "14:20" today, "i morgon 14:20", "i går 14:20", a weekday within a week, else the date.</summary>
-    public static string When(DateTimeOffset time, DateTimeOffset now)
-    {
-        var local = time.ToLocalTime();
-        var clock = local.ToString("HH:mm", CultureInfo.InvariantCulture);
-        return (local.Date - now.ToLocalTime().Date).Days switch
-        {
-            0 => clock,
-            1 => Loc.Format("account.limit.tomorrow", clock),
-            -1 => Loc.Format("account.limit.yesterday", clock),
-            > 1 and < 7 or < -1 and > -7 => Loc.Get("account.limit.day." + (int)local.DayOfWeek) + " " + clock,
-            _ => local.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) + " " + clock,
-        };
-    }
+    /// <summary>A reset time (#208): "om 1 h 10 min (15:30)" within 24 hours, else "i morgon 09:00", "fredag 10:00", "5 dec 10:00".</summary>
+    public static string Resets(DateTimeOffset time, DateTimeOffset now) => HumanTime.Until(time, now);
+
+    /// <summary>When the agent reported the values (#208): "avläst nyss", "avläst för 8 min sedan", "avläst i går 18:10".</summary>
+    public static string Age(DateTimeOffset at, DateTimeOffset now) => Loc.Format("account.limit.as", HumanTime.Since(at, now));
 }
 
 /// <summary>

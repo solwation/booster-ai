@@ -185,13 +185,14 @@ public class AutoClearDecisionTests
         var vm = new MainViewModel(new AppConfig { Tabs = [new TabConfig { Llm = "claude" }] });
         var tab = vm.Tabs[0];
         var at = new DateTimeOffset(2026, 10, 30, 14, 32, 0, TimeSpan.Zero);
-        var local = at.ToLocalTime().ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture);
+        var local = HumanTime.Clock(at);
 
         tab.SetState(TabState.Running, null, activity: Activity.Idle);
         Assert.Equal(Loc.Get("tabstate.idle"), tab.StatusText);
         tab.SetState(TabState.Running, null, activity: Activity.Idle, clearedAt: at.ToUnixTimeMilliseconds());
         Assert.Equal(Loc.Format("tabstate.idleCleared", local), tab.StatusText);
-        Assert.Equal(Loc.Format("tabstate.idleCleared.tip", local), tab.StatusTip);
+        // The tooltip names the day (#208): this clear was long ago.
+        Assert.Equal(Loc.Format("tabstate.idleCleared.tip", HumanTime.Day(at, DateTimeOffset.UtcNow)), tab.StatusTip);
         tab.SetState(TabState.Running, null, activity: Activity.Busy);
         Assert.Equal(Loc.Get("tabstate.busy"), tab.StatusText);
     }

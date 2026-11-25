@@ -1,0 +1,20 @@
+{
+  "Language": "en",
+  "ProjectSearchRoot": "/home/me/Projects",
+  "DefaultAccountNames": { "claude": "Privat" },
+  "Accounts": [
+    { "Id": "claude-work", "Agent": "claude", "Name": "Work", "Directory": "~/.claude-work" },
+    { "Id": "claude-lab", "Agent": "claude", "Name": "Lab", "Directory": "~/.claude-lab" },
+    { "Id": "claude-team", "Agent": "claude", "Name": "Team", "Directory": "~/.claude-team" }
+  ],
+  "Tabs": [
+    { "Name": "Atlas", "Directory": "/srv/atlas", "Llm": "claude", "Model": "sonnet",
+      "SubTabs": [
+        { "Name": "Atlas-api", "Directory": "/srv/atlas/api", "Llm": "codex" },
+        { "Name": "Atlas-tests", "Llm": "claude", "Model": "haiku", "Account": "claude-work" }
+      ] },
+    { "Name": "Boreal", "Directory": "/srv/boreal", "Llm": "claude", "Account": "claude-team" },
+    { "Name": "Cirrus", "Directory": "/srv/cirrus", "Llm": "agy" },
+    { "Name": "Delta", "Directory": "/srv/delta", "Llm": "claude", "Model": "haiku", "Account": "claude-lab" }
+  ]
+}

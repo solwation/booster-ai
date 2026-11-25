@@ -532,6 +532,21 @@ public class InPlaceRestartTests
     }
 
     [Fact]
+    public void WatchingShowsHoursAndItsTooltipTheDay()
+    {
+        // #208: above 59 minutes the status reads "1 h 15 min"; the tooltip names the day of an earlier turn end.
+        var vm = new MainViewModel(new AppConfig { Tabs = [new TabConfig()] });
+        var tab = vm.Tabs[0];
+        var since = DateTimeOffset.UtcNow.AddMinutes(-75).AddSeconds(-10);
+        tab.SetState(TabState.Running, null, activity: Activity.Watching, watchingSince: since.ToUnixTimeMilliseconds());
+        Assert.Equal(Loc.Format("tabstate.watching", HumanTime.Minutes(75)), tab.StatusText);
+        var old = DateTimeOffset.UtcNow.AddDays(-2);
+        tab.SetState(TabState.Running, null, activity: Activity.Watching, watchingSince: old.ToUnixTimeMilliseconds());
+        Assert.Equal(Loc.Format("tabstate.watching.tip", HumanTime.Day(old, DateTimeOffset.UtcNow)), tab.StatusTip);
+        Assert.NotEqual(HumanTime.Clock(old), HumanTime.Day(old, DateTimeOffset.UtcNow));
+    }
+
+    [Fact]
     public void OneShotTabGoesRunningWatchingRunningIdle()
     {
         var vm = new MainViewModel(new AppConfig { Tabs = [new TabConfig()] });
@@ -548,7 +563,7 @@ public class InPlaceRestartTests
         var since = DateTimeOffset.UtcNow.AddMinutes(-12).ToUnixTimeMilliseconds();
         tab.SetState(TabState.Running, null, activity: Activity.Watching, watchingSince: since);
         Assert.Equal(Activity.Watching, tab.Activity);
-        Assert.Equal(Loc.Format("tabstate.watching", 12), tab.StatusText);
+        Assert.Equal(Loc.Format("tabstate.watching", HumanTime.Minutes(12)), tab.StatusText);
         Assert.NotEqual(Loc.Get("tabstate.idle"), tab.StatusText);
         Assert.NotEqual(running, tab.StatusBrushKey);
         Assert.NotEqual(tab.StatusText, tab.StatusTip);

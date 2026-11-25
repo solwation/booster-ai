@@ -68,8 +68,8 @@ public sealed class AccountRow : Observable
     public string WeekText => LimitText.Used(Limits.Week, _owner.Now);
     public string CreditsText => LimitText.Credits(Limits.Credits);
     public bool HasCredits => CreditsText.Length > 0;
-    /// <summary>"per 14:20": when the agent reported the values; "Ingen avläsning än" before any.</summary>
-    public string LimitsAge => Limits.At is { } at ? Loc.Format("account.limit.as", LimitText.When(at, _owner.Now)) : Loc.Get("account.limit.never");
+    /// <summary>"avläst för 8 min sedan": when the agent reported the values; "Ingen avläsning än" before any.</summary>
+    public string LimitsAge => Limits.At is { } at ? LimitText.Age(at, _owner.Now) : Loc.Get("account.limit.never");
     public string LimitsTip => Loc.Get("account.limit.tip." + _owner.Cli);
 
     internal void RefreshLimits()

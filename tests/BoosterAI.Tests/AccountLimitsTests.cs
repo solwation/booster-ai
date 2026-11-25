@@ -318,19 +318,18 @@ public class AccountLimitsTests
         try
         {
             var now = new DateTimeOffset(2026, 11, 25, 10, 0, 0, TimeZoneInfo.Local.GetUtcOffset(new DateTime(2026, 11, 25, 10, 0, 0)));
-            Assert.Equal("14:20", LimitText.When(now.AddHours(4).AddMinutes(20), now));
-            Assert.Equal("i morgon 09:00", LimitText.When(now.AddHours(23), now));
-            Assert.Equal("i går 09:00", LimitText.When(now.AddHours(-25), now));
-            Assert.Equal("fre 10:00", LimitText.When(now.AddDays(2), now)); // 2026-11-27 is a Friday
-            Assert.Equal("2026-12-05 10:00", LimitText.When(now.AddDays(10), now));
+            Assert.Equal("om 4 h 20 min (" + HumanTime.Clock(now.AddHours(4).AddMinutes(20)) + ")", LimitText.Resets(now.AddHours(4).AddMinutes(20), now));
+            Assert.Equal("avläst för 8 min sedan", LimitText.Age(now.AddMinutes(-8), now));
+            Assert.Equal("avläst nyss", LimitText.Age(now, now));
             Assert.Equal("Okänd", LimitText.Used(null, now));
-            Assert.Equal("38 % använt · återställs 14:20", LimitText.Used(new LimitWindow(37.6, now.AddHours(4).AddMinutes(20)), now));
+            Assert.Equal("38 % använt · återställs om 4 h 20 min (" + HumanTime.Clock(now.AddHours(4).AddMinutes(20)) + ")", LimitText.Used(new LimitWindow(37.6, now.AddHours(4).AddMinutes(20)), now));
             Assert.Equal("", LimitText.Credits(null));
             Assert.Equal("Krediter: obegränsade", LimitText.Credits(new LimitCredits(true, true, null)));
             Assert.Equal("Krediter: 17.50", LimitText.Credits(new LimitCredits(true, false, "17.50")));
             Assert.Equal("Krediter: inga", LimitText.Credits(new LimitCredits(false, false, null)));
             Loc.Use("en");
-            Assert.Equal("38% used · resets Fri 10:00", LimitText.Used(new LimitWindow(37.6, now.AddDays(2)), now));
+            Assert.Equal("38% used · resets " + HumanTime.Day(now.AddDays(2), now), LimitText.Used(new LimitWindow(37.6, now.AddDays(2)), now));
+            Assert.Equal("updated 8m ago", LimitText.Age(now.AddMinutes(-8), now));
             Assert.Equal("Unknown", LimitText.Used(null, now));
         }
         finally { Loc.Use(previous); }
@@ -370,7 +369,7 @@ public class AccountLimitsTests
             Assert.False(main.HasWeek); // reset since it was reported
             Assert.Equal("Okänd", main.WeekText);
             Assert.Equal("Krediter: obegränsade", main.CreditsText);
-            Assert.StartsWith("per ", main.LimitsAge);
+            Assert.StartsWith("avläst ", main.LimitsAge);
             var work = accounts.Rows[1];
             Assert.False(work.HasSession);
             Assert.False(work.HasWeek);
@@ -414,7 +413,7 @@ public class AccountLimitsTests
             Assert.False(calm.Warn);
             Assert.Contains("5 h: 37 % använt", calm.Tip);
             Assert.Contains("Vecka: 62 % använt", calm.Tip);
-            Assert.Contains("per ", calm.Tip);
+            Assert.Contains("avläst ", calm.Tip);
             Assert.DoesNotContain("nära", calm.Name);
 
             var weekOnly = LimitIndicator.For(new(null, Win(8, now), null, null), now)!;
@@ -458,7 +457,7 @@ public class AccountLimitsTests
             // Its tooltip lists both windows with when they reset, and when the agent reported them.
             Assert.Contains("5 h: 91 % använt · återställs ", warn.LimitTip);
             Assert.Contains("Vecka: 64 % använt · återställs ", warn.LimitTip);
-            Assert.Contains("per ", warn.LimitTip);
+            Assert.Contains("avläst ", warn.LimitTip);
             // Over the plan (Codex can report it) the meter is simply full.
             Assert.Equal(100, new AgentChoice("codex", "", "", false, null, LimitIndicator.For(new(null, Win(140, now), null, null), now)).LimitPercent);
 
@@ -535,10 +534,10 @@ public class AccountLimitsTests
             // The status popup's line for the tab's account/agent, Unknown for a window nothing is known about.
             Assert.True(vm.Tabs[0].HasPeekLimit);
             Assert.True(vm.Tabs[0].PeekLimitWarn);
-            Assert.StartsWith("5 h 85 % · Vecka 10 % · per ", vm.Tabs[0].PeekLimitLine);
+            Assert.StartsWith("5 h 85 % · Vecka 10 % · avläst ", vm.Tabs[0].PeekLimitLine);
             Assert.False(vm.Tabs[1].HasPeekLimit); // the work account is Unknown
             Assert.True(vm.Tabs[2].HasPeekLimit);
-            Assert.StartsWith("5 h 28 % · Vecka 44 % · per ", vm.Tabs[2].PeekLimitLine);
+            Assert.StartsWith("5 h 28 % · Vecka 44 % · avläst ", vm.Tabs[2].PeekLimitLine);
             Assert.False(vm.Tabs[3].HasPeekLimit);
 
             // The window resets: the indicator goes away with it.

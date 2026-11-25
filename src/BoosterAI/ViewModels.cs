@@ -634,7 +634,7 @@ public sealed class TabViewModel : Observable
         TabState.Running when Activity == Activity.Busy => Loc.Get("tabstate.busy"),
         TabState.Running when Activity == Activity.Idle && _clearedAt is { } cleared => Loc.Format("tabstate.idleCleared", LocalTime(cleared)),
         TabState.Running when Activity == Activity.Idle => Loc.Get("tabstate.idle"),
-        TabState.Running when Activity == Activity.Watching => Loc.Format("tabstate.watching", TabStatus.WatchingMinutes(_watchingSince, DateTime.UtcNow)),
+        TabState.Running when Activity == Activity.Watching => Loc.Format("tabstate.watching", HumanTime.Minutes(TabStatus.WatchingMinutes(_watchingSince, DateTime.UtcNow))),
         TabState.Running => Loc.Get("tabstate.unknownActivity"),
         TabState.CliExited when _rc == 0 => Loc.Get("tabstate.idle"),
         TabState.CliExited => Loc.Format("tabstate.CliExited", _rc ?? -1),
@@ -643,13 +643,15 @@ public sealed class TabViewModel : Observable
     });
     /// <summary>The status tooltip: what Watching means and when the last turn ended; otherwise the status itself.</summary>
     public string StatusTip => _state is TabState.Running && Activity == Activity.Watching && _watchingSince is { } since
-        ? Loc.Format("tabstate.watching.tip", LocalTime(since))
+        ? Loc.Format("tabstate.watching.tip", DayTime(since))
         : _state is TabState.Running && Activity == Activity.Idle && _clearedAt is { } cleared && _closeProgress is null
-        ? Loc.Format("tabstate.idleCleared.tip", LocalTime(cleared))
+        ? Loc.Format("tabstate.idleCleared.tip", DayTime(cleared))
         : StatusText;
 
     private static string LocalTime(long epochMs) =>
-        DateTimeOffset.FromUnixTimeMilliseconds(epochMs).ToLocalTime().ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture);
+        HumanTime.Clock(DateTimeOffset.FromUnixTimeMilliseconds(epochMs));
+    /// <summary>A tooltip's time with its day (#208): "i dag 14:20", "i går 23:40", "fredag 10:00".</summary>
+    private static string DayTime(long epochMs) => HumanTime.Day(DateTimeOffset.FromUnixTimeMilliseconds(epochMs), DateTimeOffset.UtcNow);
     /// <summary>Widest line the output popup shows; longer ones end in "…" so the popup keeps its size.</summary>
     public const int OutputColumns = 100;
 
@@ -1441,7 +1443,7 @@ public sealed partial class MainViewModel : Observable
             {
                 t.LaunchedAs = t.ToConfig(forLaunch: true);
                 t.LaunchedAs.Orkester = t.LaunchedAs.NonInteractive = true;
-                t.SetState(TabState.Running, null, activity: Activity.Watching, watchingSince: Ago(59));
+                t.SetState(TabState.Running, null, activity: Activity.Watching, watchingSince: Ago(23 * 60 + 59)); // "Bevakar · 23 h 59 min" (#208)
             },
             t =>
             {
