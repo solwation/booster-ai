@@ -8,7 +8,7 @@ internal sealed class ClaudeFableUsage(Func<string, string?, LimitWindow?> read)
 {
     internal static readonly TimeSpan Interval = TimeSpan.FromMinutes(5);
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(17);
-    private readonly Dictionary<(string Distro, string? Directory), (DateTimeOffset At, Task<LimitWindow?> Read)> _cache = [];
+    private readonly Dictionary<(string Distro, string? Directory), (DateTimeOffset At, Task<LimitWindow?> Read, LimitWindow? Previous)> _cache = [];
     private readonly object _lock = new();
 
     internal ClaudeFableUsage() : this(Read) { }
@@ -22,9 +22,20 @@ internal sealed class ClaudeFableUsage(Func<string, string?, LimitWindow?> read)
                 (!cached.Read.IsCompleted || now - cached.At < Interval))
                 return cached.Read;
 
+            var previous = cached.Read is { IsCompletedSuccessfully: true } ? cached.Read.Result : null;
             var task = Task.Run(() => read(distro, directory));
-            _cache[key] = (now, task);
+            _cache[key] = (now, task, previous);
             return task;
+        }
+    }
+
+    internal LimitWindow? LastRead(string distro, string? directory)
+    {
+        lock (_lock)
+        {
+            if (!_cache.TryGetValue((distro, directory), out var cached)) return null;
+            if (!cached.Read.IsCompleted) return cached.Previous;
+            return cached.Read.IsCompletedSuccessfully ? cached.Read.Result : null;
         }
     }
 
@@ -71,7 +82,7 @@ internal sealed class ClaudeFableUsage(Func<string, string?, LimitWindow?> read)
                 {
                     if (String(row, "kind") != "weekly_scoped") continue;
                     var model = String(Property(Property(row, "scope"), "model"), "display_name")?.Trim();
-                    if (model is null || !IsFable(model)) continue;
+                    if (model is null || !IsFableModel(model)) continue;
                     var percent = Property(row, "percent");
                     if (percent.ValueKind != JsonValueKind.Number || !percent.TryGetDouble(out var used) ||
                         !double.IsFinite(used) || used is < 0 or > 100) continue;
@@ -89,11 +100,15 @@ internal sealed class ClaudeFableUsage(Func<string, string?, LimitWindow?> read)
         return null;
     }
 
-    private static bool IsFable(string name)
+    internal static bool IsFableModel(string model)
     {
-        const string prefix = "Claude ";
-        if (name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) name = name[prefix.Length..];
-        return name.Equals("Fable", StringComparison.OrdinalIgnoreCase) || name.StartsWith("Fable ", StringComparison.OrdinalIgnoreCase);
+        model = model.Trim();
+        if (model.StartsWith("claude-", StringComparison.OrdinalIgnoreCase) ||
+            model.StartsWith("claude ", StringComparison.OrdinalIgnoreCase))
+            model = model[7..];
+        const string family = "fable";
+        return model.StartsWith(family, StringComparison.OrdinalIgnoreCase)
+            && (model.Length == family.Length || model[family.Length] is '-' or ' ' or '[');
     }
 
     private static JsonElement Property(JsonElement element, string name) =>

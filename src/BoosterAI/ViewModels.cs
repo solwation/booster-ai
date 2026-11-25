@@ -208,7 +208,28 @@ public sealed class TabViewModel : Observable
     }
     public bool HasAdvisorWarning => AdvisorWarning is not null;
     internal void RaiseAdvisorWarning() { Raise(nameof(AdvisorWarning)); Raise(nameof(HasAdvisorWarning)); }
-    public string Model { get => _model; set { if (Set(ref _model, value?.Trim() ?? "")) { AdvisorInputsChanged(); ChoiceChanged(); } } }
+    public string Model
+    {
+        get => _model;
+        set
+        {
+            var usedFableQuota = UsesFableQuota;
+            if (!Set(ref _model, value?.Trim() ?? "")) return;
+            AdvisorInputsChanged();
+            if (usedFableQuota != UsesFableQuota) AccountQuotaChoiceChanged();
+            ChoiceChanged();
+        }
+    }
+
+    internal bool UsesFableQuota => _llm == "claude" && ClaudeFableUsage.IsFableModel(_model);
+    internal string? QuotaAccountKey => _account == "" ? "" : Accounts.Find(_owner.AccountsFor(_llm), _llm, _account)?.Directory;
+
+    private void AccountQuotaChoiceChanged() => Dispatcher.UIThread.Post(() =>
+    {
+        // Apply the final agent, model and account after the ComboBox has finished committing its selection.
+        RaiseLlms();
+        _owner.RefreshFableQuota(this);
+    });
 
     /// <summary>
     /// The tab's account (#186): an <see cref="AgentAccount.Id"/> of this agent, or "" for its default account. Saved per tab, so
@@ -225,7 +246,7 @@ public sealed class TabViewModel : Observable
             Raise(nameof(AccountLabel));
             Raise(nameof(HasAccount));
             // Only a missing account's own entry depends on the choice; refresh the list after the selection commits.
-            Dispatcher.UIThread.Post(RaiseLlms);
+            AccountQuotaChoiceChanged();
             ChoiceChanged();
         }
     }
@@ -244,15 +265,16 @@ public sealed class TabViewModel : Observable
             foreach (var llm in Llms)
             {
                 var accounts = _owner.AccountsFor(llm);
+                var includeFable = llm == "claude" && UsesFableQuota;
                 var missing = llm == _llm && _account != "" && accounts.All(a => a.Id != _account);
                 if (accounts.Count == 0 && !missing)
                 {
-                    list.Add(new(llm, "", "", false, null, _owner.LimitIndicatorOf(llm, ""), _owner.LimitNoteOf(llm, "")));
+                    list.Add(new(llm, "", "", false, null, _owner.LimitIndicatorOf(llm, "", includeFable), _owner.LimitNoteOf(llm, "")));
                     continue;
                 }
-                list.Add(new(llm, "", _owner.DefaultAccountName(llm), true, AccountTip(llm, _owner.DefaultAccountName(llm), Accounts.DefaultDirectory(llm), ""), _owner.LimitIndicatorOf(llm, ""), _owner.LimitNoteOf(llm, "")));
+                list.Add(new(llm, "", _owner.DefaultAccountName(llm), true, AccountTip(llm, _owner.DefaultAccountName(llm), Accounts.DefaultDirectory(llm), ""), _owner.LimitIndicatorOf(llm, "", includeFable), _owner.LimitNoteOf(llm, "")));
                 list.AddRange(accounts.Select(a => new AgentChoice(llm, a.Id, a.Name, true, AccountTip(llm, a.Name, a.Directory, a.Directory),
-                    _owner.LimitIndicatorOf(llm, a.Directory), _owner.LimitNoteOf(llm, a.Directory))));
+                    _owner.LimitIndicatorOf(llm, a.Directory, includeFable), _owner.LimitNoteOf(llm, a.Directory))));
                 if (missing) list.Add(new(llm, _account, Loc.Format("account.missing", _account), true, Loc.Format("account.missing", _account)));
             }
             return list;
@@ -292,7 +314,7 @@ public sealed class TabViewModel : Observable
     {
         foreach (var n in new[] { nameof(SelectedAgentChoice), nameof(AccountLabel), nameof(HasAccount), nameof(PeekHeader) }) Raise(n);
         // Replacing the Agent box's items while it commits a selection re-enters it; refresh them afterwards (see Llm).
-        Dispatcher.UIThread.Post(RaiseLlms);
+        AccountQuotaChoiceChanged();
         ChoiceChanged();
     }
 
@@ -614,8 +636,7 @@ public sealed class TabViewModel : Observable
     public bool HasPeekDetail => StatusTip != StatusText;
 
     /// <summary>The tab's account's plan limits for the status popup (#200); null for other agents and while unknown.</summary>
-    private LimitIndicator? PeekLimit => _owner.LimitIndicatorOf(_llm,
-        _account == "" ? "" : Accounts.Find(_owner.AccountsFor(_llm), _llm, _account)?.Directory ?? "\0", includeFable: true);
+    private LimitIndicator? PeekLimit => _owner.LimitIndicatorOf(_llm, QuotaAccountKey ?? "\0", includeFable: UsesFableQuota);
     public bool HasPeekLimit => PeekLimit is not null;
     public bool PeekLimitWarn => PeekLimit?.Warn == true;
     /// <summary>The popup's limit table (#210): one row per window with remaining/used share and reset time.</summary>
@@ -640,7 +661,7 @@ public sealed class TabViewModel : Observable
     /// </summary>
     public string StatusDisplay => WithRemaining(StatusText);
 
-    private string WithRemaining(string status) => status is { Length: > 0 } && ShowStatusRemaining && PeekLimit is { HasSharedWindows: true } limit
+    private string WithRemaining(string status) => status is { Length: > 0 } && ShowStatusRemaining && PeekLimit is { } limit
         ? Loc.Format("tabstate.withRemaining", status, limit.RemainingCaption)
         : status;
 
@@ -652,7 +673,7 @@ public sealed class TabViewModel : Observable
     public string StatusIndicatorText =>
         _closeProgress is not null || (_state is TabState.Running && PendingRestart) ? "…"
         : IsStatusError ? "!"
-        : ShowStatusRemaining && PeekLimit is { HasSharedWindows: true } limit ? limit.RemainingShort
+        : ShowStatusRemaining && PeekLimit is { } limit ? limit.RemainingShort
         : "";
     public bool HasStatusIndicatorText => StatusIndicatorText.Length > 0;
     /// <summary>A failed row: the CLI exited with an error, is missing, did not start, was denied or the tab was lost (#209).</summary>
@@ -1002,17 +1023,6 @@ public sealed partial class MainViewModel : Observable
     public bool Notifications { get => _cfg.Notifications; set { _cfg.Notifications = value; Raise(); } }
     /// <summary>Settings → General (#211): warn in the main window when a plan window has little quota left.</summary>
     public bool QuotaWarn { get => _cfg.QuotaWarn; set { _cfg.QuotaWarn = value; Raise(); } }
-    public bool ReadClaudeFableQuota
-    {
-        get => _cfg.ReadClaudeFableQuota;
-        set
-        {
-            if (_cfg.ReadClaudeFableQuota == value) return;
-            _cfg.ReadClaudeFableQuota = value;
-            Raise();
-            ClaudeFableQuotaChanged();
-        }
-    }
     public decimal? QuotaWarnPercent
     {
         get => QuotaWarnings.Normalize(_cfg.QuotaWarnPercent);
@@ -1402,9 +1412,8 @@ public sealed partial class MainViewModel : Observable
         if (_saved.WslDistro != _cfg.WslDistro) InvalidateCompactMetadata();
         foreach (var editor in _compactEditors.Values) editor.UpdateSettings(_cfg.AutoCompactSettings);
         RefreshCompactMode();
-        if (_saved.ReadClaudeFableQuota != _cfg.ReadClaudeFableQuota) ClaudeFableQuotaChanged();
         foreach (var name in new[] { nameof(WslDistro), nameof(LinuxTerminal), nameof(ProjectSearchRoot), nameof(CanResetProjectSearchRoot), nameof(Theme), nameof(SelectedTheme), nameof(SelectedLanguage),
-            nameof(SelectedAppearance), nameof(SelectedAfterLaunch), nameof(MinimizeToTray), nameof(Notifications), nameof(QuotaWarn), nameof(QuotaWarnPercent), nameof(ReadClaudeFableQuota), nameof(ShowAdvisor), nameof(SelectedZoom), nameof(AutoUpdateClis), nameof(AutoClearIdle), nameof(AutoClearMinutes), nameof(CheckForUpdates) })
+            nameof(SelectedAppearance), nameof(SelectedAfterLaunch), nameof(MinimizeToTray), nameof(Notifications), nameof(QuotaWarn), nameof(QuotaWarnPercent), nameof(ShowAdvisor), nameof(SelectedZoom), nameof(AutoUpdateClis), nameof(AutoClearIdle), nameof(AutoClearMinutes), nameof(CheckForUpdates) })
             Raise(name);
         foreach (var t in Tabs) t.RaiseColor();
         foreach (var p in Projects) p.RaiseAdvisorVisible();

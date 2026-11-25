@@ -88,7 +88,7 @@ public sealed record LimitIndicator(string Caption, bool Warn, string Tip, strin
     public const double WarnAt = 80;
 
     /// <summary>Value equality including <see cref="Rows"/>: agent choices compare their indicator to keep the selected entry (#202, #210).</summary>
-    public bool Equals(LimitIndicator? other) => other is not null && HasSharedWindows == other.HasSharedWindows && Caption == other.Caption && Warn == other.Warn && Tip == other.Tip
+    public bool Equals(LimitIndicator? other) => other is not null && Caption == other.Caption && Warn == other.Warn && Tip == other.Tip
         && Name == other.Name && Age == other.Age && Stale == other.Stale && Percent.Equals(other.Percent) && Rows.SequenceEqual(other.Rows);
 
     public override int GetHashCode() => HashCode.Combine(Caption, Warn, Tip, Name, Age, Percent, Rows.Count);
@@ -102,15 +102,13 @@ public sealed record LimitIndicator(string Caption, bool Warn, string Tip, strin
     /// <summary>The compact status column's remaining share (#209): "38 %" (sv) or "38%" (en).</summary>
     public string RemainingShort => Loc.Format("account.limit.chip", LimitPercent.Text(RemainingPercent));
 
-    public bool HasSharedWindows { get; init; } = true;
-
     public static LimitIndicator? For(AccountLimits limits, DateTimeOffset now, bool includeFable = false)
     {
         limits = limits.AsOf(now);
-        var known = new[] { limits.Session, limits.Week }.OfType<LimitWindow>().ToList();
         var fable = includeFable ? limits.Fable : null;
-        if (known.Count == 0 && fable is null) return null;
-        var percent = LimitPercent.Used(known.Count > 0 ? known.Max(w => w.UsedPercent) : fable!.UsedPercent);
+        var known = new[] { limits.Session, limits.Week, fable }.OfType<LimitWindow>().ToList();
+        if (known.Count == 0) return null;
+        var percent = LimitPercent.Used(known.Max(w => w.UsedPercent));
         var warn = percent >= WarnAt;
         var number = LimitPercent.Text(percent);
         var session = Loc.Format("account.limit.hours", Loc.Number((limits.Session?.Minutes ?? 300) / 60.0, "0.#"));
@@ -120,7 +118,7 @@ public sealed record LimitIndicator(string Caption, bool Warn, string Tip, strin
             session + ": " + LimitText.Used(limits.Session, now, limits.SessionReset),
             Loc.Get("account.limit.week") + ": " + LimitText.Used(limits.Week, now, limits.WeekReset),
         };
-        if (fable is not null) lines.Add(Loc.Get("account.limit.fable") + ": " + LimitText.Used(fable, now));
+        if (includeFable) lines.Add(Loc.Get("account.limit.fable") + ": " + LimitText.Used(fable, now));
         if (limits.At is { } at) lines.Add(LimitText.Age(at, now));
         var name = Loc.Format("account.limit.chip.name", number)
             + (percent >= 100 ? ", " + Loc.Get("account.limit.full") : warn ? ", " + Loc.Get("account.limit.near") : "");
@@ -129,11 +127,11 @@ public sealed record LimitIndicator(string Caption, bool Warn, string Tip, strin
             LimitRow.For(session, limits.Session, now, limits.SessionReset),
             LimitRow.For(Loc.Get("account.limit.week"), limits.Week, now, limits.WeekReset),
         };
-        if (fable is not null) rows.Add(LimitRow.For(Loc.Get("account.limit.fable"), fable, now));
+        if (includeFable) rows.Insert(1, LimitRow.For(Loc.Get("account.limit.fable"), fable, now));
         var age = limits.At is { } when ? LimitText.Age(when, now) : "";
         var stale = limits.At is { } old && now - old >= StaleAfter ? HumanTime.Since(old, now) : "";
         if (stale.Length > 0) name += ", " + age;
-        return new LimitIndicator(Loc.Format("account.limit.chip", number), warn, string.Join("\n", lines), name, rows, age, Math.Clamp(percent, 0, 100)) { Stale = stale, HasSharedWindows = known.Count > 0 };
+        return new LimitIndicator(Loc.Format("account.limit.chip", number), warn, string.Join("\n", lines), name, rows, age, Math.Clamp(percent, 0, 100)) { Stale = stale };
     }
 
     /// <summary>A reading at least this old shows its time beside the level in the Agent list (#214): "62 % · i går 18:10".</summary>

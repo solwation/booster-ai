@@ -75,8 +75,6 @@ public sealed class AppConfig
     public bool QuotaWarn { get; set; } = true;
     /// <summary>The remaining share (percent) under which <see cref="QuotaWarn"/> warns; clamped to QuotaWarnings.MinPercent..MaxPercent.</summary>
     public int QuotaWarnPercent { get; set; } = QuotaWarnings.DefaultPercent;
-    /// <summary>Read the separate Fable window by asking the signed-in Claude CLI for its usage report (#225).</summary>
-    public bool ReadClaudeFableQuota { get; set; }
     /// <summary>Main window: show the Advisor row under Claude projects (#180). Only display; launches never read it.</summary>
     public bool ShowAdvisor { get; set; }
     /// <summary>Global CLI zoom in percent of the terminal's default font size; 0 = terminal default (nothing is changed).</summary>
@@ -217,7 +215,6 @@ public static class ConfigMerge
         S(c => c.Notifications, (c, v) => c.Notifications = v),
         S(c => c.QuotaWarn, (c, v) => c.QuotaWarn = v),
         S(c => c.QuotaWarnPercent, (c, v) => c.QuotaWarnPercent = v),
-        S(c => c.ReadClaudeFableQuota, (c, v) => c.ReadClaudeFableQuota = v),
         S(c => c.ShowAdvisor, (c, v) => c.ShowAdvisor = v),
         S(c => c.ZoomPercent, (c, v) => c.ZoomPercent = v),
         S(c => c.ProjectSearchRoot, (c, v) => c.ProjectSearchRoot = v),

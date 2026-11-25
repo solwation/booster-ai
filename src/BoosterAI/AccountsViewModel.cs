@@ -66,10 +66,6 @@ public sealed class AccountRow : Observable
     public double WeekPercent => Math.Clamp(Limits.Week?.UsedPercent ?? 0, 0, 100);
     public string SessionText => LimitText.Used(Limits.Session, _owner.Now, Limits.SessionReset);
     public string WeekText => LimitText.Used(Limits.Week, _owner.Now, Limits.WeekReset);
-    public LimitRow? FableLimit => Limits.Fable is { } fable ? LimitRow.For(Loc.Get("account.limit.fable"), fable, _owner.Now) : null;
-    public bool HasFableLimit => FableLimit is not null;
-    public string FableText => FableLimit is { } fable
-        ? string.Join(" · ", new[] { fable.UsedText, fable.RemainingText, fable.ResetText }.Where(text => text.Length > 0)) : "";
     public string CreditsText => LimitText.Credits(Limits.Credits);
     public bool HasCredits => CreditsText.Length > 0;
     /// <summary>"avläst för 8 min sedan": when the agent reported the values; "Ingen avläsning än" before any.</summary>
@@ -79,7 +75,7 @@ public sealed class AccountRow : Observable
     internal void RefreshLimits()
     {
         foreach (var name in new[] { nameof(Limits), nameof(SessionLabel), nameof(HasSession), nameof(HasWeek), nameof(SessionPercent), nameof(WeekPercent),
-            nameof(SessionText), nameof(WeekText), nameof(FableLimit), nameof(HasFableLimit), nameof(FableText), nameof(CreditsText), nameof(HasCredits), nameof(LimitsAge) }) Raise(name);
+            nameof(SessionText), nameof(WeekText), nameof(CreditsText), nameof(HasCredits), nameof(LimitsAge) }) Raise(name);
     }
 
     internal void RefreshStatus()
@@ -147,14 +143,7 @@ public sealed class AgentAccountsViewModel : Observable
 
     private readonly Dictionary<string, AccountLimits> _limits = [];
     private readonly HashSet<string> _reading = [];
-    internal AccountLimits LimitsOf(string key)
-    {
-        lock (_statusLock)
-        {
-            var limits = _limits.GetValueOrDefault(key) ?? AccountLimits.Unknown;
-            return limits.Fable is not null && !_owner.ShowClaudeFableQuota ? limits with { Fable = null } : limits;
-        }
-    }
+    internal AccountLimits LimitsOf(string key) { lock (_statusLock) return _limits.GetValueOrDefault(key) ?? AccountLimits.Unknown; }
     internal bool HasLimits(string key) { lock (_statusLock) return _limits.ContainsKey(key); }
     internal DateTimeOffset Now => _owner.LimitsClock();
 
@@ -321,27 +310,24 @@ public sealed partial class MainViewModel
     internal Func<DateTimeOffset> LimitsClock { get; set; } = () => DateTimeOffset.Now;
     internal Func<string, string, string?, Task<AccountLimits>> ReadAccountLimits { get; set; } =
         (distro, llm, directory) => Task.Run(() => AccountLimitsProbe.Read(distro, llm, directory));
-    private readonly ClaudeFableUsage _claudeFableUsage = new();
-    internal bool ShowClaudeFableQuota => _cfg.ReadClaudeFableQuota || _sampleLimits;
+    internal ClaudeFableUsage FableUsage { get; set; } = new();
 
-    internal void ClaudeFableQuotaChanged()
+    internal Task<AccountLimits> ReadAccountLimitsAsync(string llm, string? directory) =>
+        directory is not null && !Accounts.IsValidDirectory(directory) ? Task.FromResult(AccountLimits.Unknown)
+            : ReadAccountLimits(_cfg.WslDistro, llm, directory);
+
+    internal void RefreshFableQuota(TabViewModel tab)
     {
-        if (_accountEditors.TryGetValue("claude", out var editor))
-            foreach (var row in editor.Rows) row.RefreshLimits();
-        AccountLimitsChanged("claude");
-        if (_cfg.ReadClaudeFableQuota && AccountLimitsEnabled)
-            _ = AccountsEditor("claude")!.RefreshLimitsAsync();
+        if (AccountLimitsEnabled && tab.UsesFableQuota && Tabs.Contains(tab) && tab.QuotaAccountKey is { } key)
+            _ = ReadFableQuotaAsync(key);
     }
 
-    internal async Task<AccountLimits> ReadAccountLimitsAsync(string llm, string? directory)
+    private async Task ReadFableQuotaAsync(string key)
     {
-        if (directory is not null && !Accounts.IsValidDirectory(directory)) return AccountLimits.Unknown;
-        var distro = _cfg.WslDistro;
-        var shared = ReadAccountLimits(distro, llm, directory);
-        if (llm != "claude" || !_cfg.ReadClaudeFableQuota) return await shared;
-        var fable = _claudeFableUsage.ReadAsync(distro, directory, LimitsClock());
-        var limits = await shared;
-        return limits with { Fable = await fable };
+        if (key != "" && !Accounts.IsValidDirectory(key)) return;
+        try { await FableUsage.ReadAsync(_cfg.WslDistro, key == "" ? null : key, LimitsClock()); }
+        catch (Exception e) when (e is not OutOfMemoryException) { /* Keep the shared limit windows available. */ }
+        AccountLimitsChanged("claude");
     }
 
     private readonly Dictionary<string, AccountLimits> _agentLimits = [];
@@ -401,9 +387,17 @@ public sealed partial class MainViewModel
     /// the Accounts page shows (one per account/agent, never per row); null for agents without limits and while unknown.
     /// </summary>
     internal LimitIndicator? LimitIndicatorOf(string cli, string key, bool includeFable = false) =>
-        Accounts.Supports(cli) && AccountsEditor(cli) is { } editor ? LimitIndicator.For(editor.LimitsOf(key), LimitsClock(), includeFable)
+        Accounts.Supports(cli) && AccountsEditor(cli) is { } editor ? LimitIndicator.For(SelectedLimits(editor, cli, key, includeFable), LimitsClock(), includeFable)
         : AccountLimitsProbe.Supports(cli) ? LimitIndicator.For(AgentLimitsOf(cli), LimitsClock())
         : null;
+
+    private AccountLimits SelectedLimits(AgentAccountsViewModel editor, string cli, string key, bool includeFable)
+    {
+        var limits = editor.LimitsOf(key);
+        return cli == "claude" && includeFable
+            ? limits with { Fable = FableUsage.LastRead(_cfg.WslDistro, key == "" ? null : key) ?? limits.Fable }
+            : limits;
+    }
 
     /// <summary>
     /// The Agent list's "Okänd"/"Troligen återställd" with its reason (#214) for a limit-capable agent or account without a known level;
@@ -477,6 +471,8 @@ public sealed partial class MainViewModel
         else idle.Clear();
         var reads = used.Concat(idle)
             .Select(c => Accounts.Supports(c) ? AccountsEditor(c)!.RefreshLimitsAsync() : RefreshSingleAgentLimitsAsync(c)).ToList();
+        reads.AddRange(Tabs.Where(tab => tab.UsesFableQuota).Select(tab => tab.QuotaAccountKey)
+            .OfType<string>().Distinct().Select(ReadFableQuotaAsync));
         // Agents not read now still follow the clock: a window whose reset time passed shows "Troligen återställd".
         foreach (var cli in Catalog.Llms.Where(AccountLimitsProbe.Supports).Except(used).Except(idle)) AccountLimitsChanged(cli);
         return Task.WhenAll(reads);

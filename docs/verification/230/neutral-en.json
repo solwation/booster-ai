@@ -1,0 +1,66 @@
+{
+  "Language": "en",
+  "ProjectSearchRoot": "/home/me/Projects",
+  "DefaultAccountNames": {
+    "claude": "Private"
+  },
+  "Accounts": [
+    {
+      "Id": "claude-work",
+      "Agent": "claude",
+      "Name": "Work",
+      "Directory": "~/.claude-work"
+    },
+    {
+      "Id": "claude-lab",
+      "Agent": "claude",
+      "Name": "Lab",
+      "Directory": "~/.claude-lab"
+    },
+    {
+      "Id": "claude-team",
+      "Agent": "claude",
+      "Name": "Team",
+      "Directory": "~/.claude-team"
+    }
+  ],
+  "Tabs": [
+    {
+      "Name": "Atlas",
+      "Directory": "/srv/atlas",
+      "Llm": "claude",
+      "Model": "claude-fable-5-2"
+    },
+    {
+      "Name": "Boreal",
+      "Directory": "/srv/boreal",
+      "Llm": "codex"
+    },
+    {
+      "Name": "Cirrus",
+      "Directory": "/srv/cirrus",
+      "Llm": "claude",
+      "Model": "claude-sonnet-5-5"
+    },
+    {
+      "Name": "Delta",
+      "Directory": "/srv/delta",
+      "Llm": "claude"
+    },
+    {
+      "Name": "Eko",
+      "Directory": "/srv/eko",
+      "Llm": "agy"
+    },
+    {
+      "Name": "Fjord",
+      "Directory": "/srv/fjord",
+      "Llm": "claude"
+    },
+    {
+      "Name": "Granit",
+      "Directory": "/srv/granit",
+      "Llm": "codex"
+    }
+  ]
+}

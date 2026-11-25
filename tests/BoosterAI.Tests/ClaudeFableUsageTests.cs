@@ -43,7 +43,7 @@ public class ClaudeFableUsageTests
         var limits = AccountLimits.Unknown with { Fable = fable };
         Assert.Null(LimitIndicator.For(limits, now));
         var detail = Assert.IsType<LimitIndicator>(LimitIndicator.For(limits, now, includeFable: true));
-        Assert.False(detail.HasSharedWindows);
+        Assert.Equal(17, detail.RemainingPercent);
         var row = Assert.Single(detail.Rows, r => r.Known);
         Assert.Equal("Fable", row.Label);
         Assert.Empty(row.ResetText);
@@ -69,6 +69,75 @@ public class ClaudeFableUsageTests
         Assert.Null(await usage.ReadAsync("Ubuntu", null, now));
         Assert.Equal(11, (await usage.ReadAsync("Ubuntu", "/accounts/team", now.Add(ClaudeFableUsage.Interval)))?.UsedPercent);
         Assert.Equal(4, calls);
+    }
+
+    [Theory]
+    [InlineData("fable", true)]
+    [InlineData("FABLE[1m]", true)]
+    [InlineData("claude-fable-5-2", true)]
+    [InlineData("Claude Fable 5.2", true)]
+    [InlineData("claude-sonnet-5-5", false)]
+    [InlineData("other-fable", false)]
+    [InlineData("fablelike", false)]
+    [InlineData("standard", false)]
+    public void OnlyFableModelChoicesUseItsScopedWindow(string model, bool expected) =>
+        Assert.Equal(expected, ClaudeFableUsage.IsFableModel(model));
+
+    [Fact]
+    public async Task TheWeeklyMeterAndPopupFollowTheSelectedModelAndAccount()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var reads = new System.Collections.Concurrent.ConcurrentQueue<string?>();
+        var vm = BoosterAI.Tests.UiSession.Run(() =>
+        {
+            var owner = new MainViewModel(new AppConfig
+            {
+                Accounts = [new() { Id = "work", Agent = "claude", Name = "Work", Directory = "~/.claude-work" }],
+                Tabs =
+                [
+                    new() { Name = "Atlas", Directory = "/srv/atlas", Llm = "claude", Model = "claude-fable-5-2" },
+                    new() { Name = "Boreal", Directory = "/srv/boreal", Llm = "claude", Model = "claude-sonnet-5-5" },
+                ],
+            });
+            owner.LimitsClock = () => now;
+            owner.AccountLimitsEnabled = true;
+            owner.ReadAccountLimits = (_, _, _) => Task.FromResult(
+                new AccountLimits(new(40, now.AddHours(2)), new(62, now.AddDays(3)), null, now));
+            owner.FableUsage = new((_, directory) =>
+            {
+                reads.Enqueue(directory);
+                return directory is null ? new LimitWindow(83, now.AddDays(2)) : null;
+            });
+            return owner;
+        });
+        await BoosterAI.Tests.UiSession.Run(() => vm.RefreshAccountLimitsAsync(force: true));
+
+        BoosterAI.Tests.UiSession.Run(() =>
+        {
+            var fable = vm.Tabs[0];
+            var sonnet = vm.Tabs[1];
+            Assert.Equal(83, fable.SelectedAgentChoice!.WeekMeterPercent);
+            Assert.Equal(17, fable.SelectedAgentChoice.Limit!.RemainingPercent);
+            Assert.Equal(new double[] { 40, 83, 62 }, fable.PeekLimitRows.Select(row => row.Used));
+            Assert.Equal(62, sonnet.SelectedAgentChoice!.WeekMeterPercent);
+            Assert.Equal(new double[] { 40, 62 }, sonnet.PeekLimitRows.Select(row => row.Used));
+            Assert.Null(Assert.Single(reads));
+
+            fable.Model = "claude-sonnet-5-5";
+            Assert.Equal(62, fable.SelectedAgentChoice!.WeekMeterPercent);
+            fable.Account = "work";
+            fable.Model = "fable";
+        });
+        await BoosterAI.Tests.UiSession.Run(() => vm.RefreshAccountLimitsAsync(force: true));
+        BoosterAI.Tests.UiSession.Run(() =>
+        {
+            Assert.Equal(new string?[] { null, "~/.claude-work" }, reads.ToArray());
+            // The model meter has no value, and the popup still names the separate shared week.
+            Assert.True(vm.Tabs[0].SelectedAgentChoice!.WeekMeterUnknown);
+            Assert.Equal("Fable", vm.Tabs[0].PeekLimitRows[1].Label);
+            Assert.False(vm.Tabs[0].PeekLimitRows[1].Known);
+            Assert.Equal(62, vm.Tabs[0].PeekLimitRows[2].Used);
+        });
     }
 
     [Fact]
