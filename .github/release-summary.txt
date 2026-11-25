@@ -1,3 +1,3 @@
-version: 0.45.0
-sv: Varje Claude- och Codex-rad visar nu en förbrukningsmätare i Agent-rutan, och alla flikars Agent-listor hålls synkade.
-en: Each Claude and Codex row now shows a usage meter in its Agent box, and all tabs' Agent lists stay in sync.
+version: 0.46.0
+sv: Statuskolumnen visar kvarvarande kvot, AGY får förbrukningsmätare och alla tider visas lättläst, t.ex. "om 1 h 10 min".
+en: The Status column shows remaining quota, AGY gets a usage meter, and all times read naturally, e.g. "in 1h 10m".
