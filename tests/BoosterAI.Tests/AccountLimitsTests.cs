@@ -137,6 +137,139 @@ public class AccountLimitsTests
     }
 
     [Fact]
+    public void ResetWindowsSayProbablyResetInsteadOfUnknown()
+    {
+        var previous = Loc.Language;
+        try
+        {
+            var now = new DateTimeOffset(new DateTime(2026, 11, 25, 14, 0, 0, DateTimeKind.Local));
+            var read = new DateTimeOffset(new DateTime(2026, 11, 24, 18, 10, 0, DateTimeKind.Local));
+            var limits = new AccountLimits(new LimitWindow(100, now.AddMinutes(-30), 300), new LimitWindow(90, now.AddHours(5), 10080), null, read);
+
+            // A still-running window keeps its old level however old the reading; the one that reset is remembered as reset (#214).
+            var current = limits.AsOf(now);
+            Assert.Null(current.Session);
+            Assert.True(current.SessionReset);
+            Assert.False(current.WeekReset);
+            Assert.False(current.IsReset);
+            Assert.True(current.AsOf(now).SessionReset); // AsOf twice keeps the flag
+            Assert.False(AccountLimits.Unknown.AsOf(now).IsReset);
+            Assert.True(limits.AsOf(now.AddHours(6)).IsReset);
+
+            Loc.Use("sv");
+            Assert.Equal("Troligen återställd", LimitText.Used(current.Session, now, current.SessionReset));
+            Assert.Equal("Okänd", LimitText.Used(null, now));
+            var indicator = LimitIndicator.For(limits, now)!;
+            Assert.Equal("90 %", indicator.Caption);
+            Assert.Equal("i går 18:10", indicator.Stale);
+            Assert.Equal(["Troligen återställd", "10 % kvar"], indicator.Rows.Select(r => r.RemainingText));
+            Assert.Contains("5 h: Troligen återställd", indicator.Tip);
+            Assert.Contains("avläst i går 18:10", indicator.Tip);
+            Assert.Equal("", LimitIndicator.For(limits with { At = now.AddMinutes(-20) }, now)!.Stale); // a recent reading shows no time
+
+            // Nothing known: "Okänd" with the reason, or "Troligen återställd" with the last level and its age.
+            var unknown = LimitIndicator.Note(AccountLimits.Unknown, now, "Orsaken.");
+            Assert.Equal(("Okänd", "Planens gränser: okända. Orsaken.", false), (unknown.Caption, unknown.Tip, unknown.Reset));
+            var reset = LimitIndicator.Note(limits, now.AddHours(6), "Orsaken.");
+            Assert.Equal("Troligen återställd", reset.Caption);
+            Assert.True(reset.Reset);
+            Assert.Contains("100 % använt, avläst i går 18:10", reset.Tip);
+            Assert.Equal("Plangräns: Troligen återställd", reset.Name);
+
+            Loc.Use("en");
+            Assert.Equal("Probably reset", LimitIndicator.Note(limits, now.AddHours(6), "").Caption);
+            Assert.Equal("Probably reset", LimitRow.For("5 h", null, now, reset: true).RemainingText);
+            Assert.Equal("Unknown", LimitIndicator.Note(AccountLimits.Unknown, now, "").Caption);
+        }
+        finally { Loc.Use(previous); }
+    }
+
+    [Fact]
+    public async Task TablessAgentsAndAccountsAreReadAndAMaxedOneWarnsUntilItResets()
+    {
+        var previous = Loc.Language;
+        Loc.Use("sv");
+        try
+        {
+            var now = new DateTimeOffset(new DateTime(2026, 11, 25, 14, 0, 0, DateTimeKind.Local));
+            var read = new DateTimeOffset(new DateTime(2026, 11, 24, 18, 10, 0, DateTimeKind.Local));
+            var clock = now;
+            // Only an aider tab: no tab uses claude, codex or agy.
+            var vm = new MainViewModel(new AppConfig
+            {
+                Accounts = [new() { Id = "claude-work", Agent = "claude", Name = "Work", Directory = "~/.claude-work" }],
+                Tabs = [new() { Name = "A", Directory = "/srv/a", Llm = "aider" }],
+            });
+            vm.LimitsClock = () => clock;
+            var calls = new List<string>();
+            // The work account maxed its week yesterday; its 5 h window has reset since. Everything else is unknown.
+            var work = new AccountLimits(new LimitWindow(100, now.AddHours(-1), 300), new LimitWindow(100, now.AddHours(8), 10080), null, read);
+            vm.ReadAccountLimits = (_, llm, dir) =>
+            {
+                lock (calls) calls.Add(llm + ":" + dir);
+                return Task.FromResult(llm == "claude" && dir == "~/.claude-work" ? work : AccountLimits.Unknown);
+            };
+
+            // Not reading at all (tests, plain screenshots): no notes either.
+            Assert.All(vm.Tabs[0].AgentChoices, c => Assert.False(c.HasLimitNote));
+
+            vm.AccountLimitsEnabled = true;
+            await vm.RefreshAccountLimitsAsync(force: true);
+            Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+            Assert.Equal(["agy:", "claude:", "claude:~/.claude-work", "codex:"], calls.OrderBy(c => c));
+
+            var choices = vm.Tabs[0].AgentChoices;
+            var maxed = choices.Single(c => c.Llm == "claude" && c.AccountId == "claude-work");
+            Assert.Equal(("100 %", true, true), (maxed.LimitCaption, maxed.LimitWarn, maxed.HasLimit));
+            Assert.Equal("i går 18:10", maxed.LimitStale);
+            Assert.True(maxed.HasLimitStale);
+            Assert.False(maxed.HasLimitNote);
+            Assert.Contains("gränsen nådd", maxed.LimitName);
+            Assert.Contains("avläst i går 18:10", maxed.LimitName);
+            Assert.Contains("5 h: Troligen återställd", maxed.LimitTip);
+
+            // Every other limit-capable entry says "Okänd" and why; agents without limits say nothing.
+            foreach (var entry in choices.Where(c => c.Llm is "codex" or "agy" || c.Llm == "claude" && c.AccountId == ""))
+            {
+                Assert.False(entry.HasLimit);
+                Assert.True(entry.HasLimitNote);
+                Assert.Equal("Okänd", entry.LimitNoteCaption);
+                Assert.Equal("Planens gränser: okända. " + Loc.Get("account.limit.tip." + entry.Llm), entry.LimitNoteTip);
+            }
+            Assert.All(choices.Where(c => c.Llm is not ("claude" or "codex" or "agy")), c => Assert.False(c.HasLimitNote));
+
+            // The still-running maxed week warns once (#211), the reset 5 h window never.
+            var notice = Assert.Single(vm.Quota.Items);
+            Assert.Contains("Vecka", notice.Text);
+            Assert.Contains("(Work)", notice.Text);
+
+            // Tab-less agents are read again only after the idle interval; the clock alone still updates them.
+            clock = now.AddSeconds(31);
+            await vm.RefreshAccountLimitsAsync(force: true);
+            Assert.Equal(4, calls.Count);
+            clock = now + MainViewModel.IdleLimitsInterval;
+            await vm.RefreshAccountLimitsAsync(force: true);
+            Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+            Assert.Equal(8, calls.Count);
+            Assert.Single(vm.Quota.Items); // same window, no second warning
+
+            // After the week's reset time: "Troligen återställd" instead of a blank, and no warning for the old snapshot.
+            vm.Quota.Close(notice);
+            clock = now.AddHours(8).AddMinutes(1);
+            var after = vm.Tabs[0].AgentChoices.Single(c => c.Llm == "claude" && c.AccountId == "claude-work");
+            Assert.False(after.HasLimit);
+            Assert.Equal("Troligen återställd", after.LimitNoteCaption);
+            Assert.Contains("100 % använt, avläst i går 18:10", after.LimitNoteTip);
+            await vm.RefreshAccountLimitsAsync(force: true);
+            Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+            Assert.Equal(12, calls.Count);
+            Assert.Empty(vm.Quota.Items);
+            Assert.Equal("Troligen återställd", vm.AccountsEditor("claude")!.Rows[1].WeekText); // the Accounts page agrees
+        }
+        finally { Loc.Use(previous); }
+    }
+
+    [Fact]
     public async Task ClaudeReadsOnlyTheSnapshotFieldsFromTheAccountDirectory()
     {
         if (OperatingSystem.IsWindows()) return;
@@ -367,7 +500,7 @@ public class AccountLimitsTests
             Assert.Equal(37, main.SessionPercent);
             Assert.Equal("5 h", main.SessionLabel);
             Assert.False(main.HasWeek); // reset since it was reported
-            Assert.Equal("Okänd", main.WeekText);
+            Assert.Equal("Troligen återställd", main.WeekText); // #214: not a blank "Okänd"
             Assert.Equal("Krediter: obegränsade", main.CreditsText);
             Assert.StartsWith("avläst ", main.LimitsAge);
             var work = accounts.Rows[1];
@@ -540,8 +673,8 @@ public class AccountLimitsTests
 
             vm.AccountLimitsEnabled = true;
             await vm.RefreshAccountLimitsAsync();
-            // Four tabs: one read per account of claude and once for agy, none for aider (#206).
-            Assert.Equal(["agy:", "claude:", "claude:~/.claude-work"], calls.OrderBy(c => c));
+            // Four tabs: one read per account of claude and once for agy, none for aider (#206); codex has no tab but is read too (#214).
+            Assert.Equal(["agy:", "claude:", "claude:~/.claude-work", "codex:"], calls.OrderBy(c => c));
             var choices = vm.Tabs[0].AgentChoices.Where(c => c.Llm == "claude").ToList();
             Assert.Equal("85 %", choices[0].LimitCaption);
             Assert.True(choices[0].LimitWarn);
@@ -553,13 +686,14 @@ public class AccountLimitsTests
             Assert.False(vm.Tabs[3].AgentChoices.Single(c => c.Llm == "aider").HasLimit);
 
             // Activation within 5 seconds does not read again; after 5 seconds or a forced (timer) refresh does (#205).
+            // The tab-less codex waits for its slower interval (#214).
             await vm.RefreshAccountLimitsAsync();
-            Assert.Equal(3, calls.Count);
+            Assert.Equal(4, calls.Count);
             clock = now.AddSeconds(6);
             await vm.RefreshAccountLimitsAsync();
-            Assert.Equal(6, calls.Count);
+            Assert.Equal(7, calls.Count);
             await vm.RefreshAccountLimitsAsync(force: true);
-            Assert.Equal(9, calls.Count);
+            Assert.Equal(10, calls.Count);
 
             // The closed box's meter follows the tab's selected account/agent (#202, #206), from the same reading.
             Assert.Equal(85, vm.Tabs[0].SelectedAgentChoice!.LimitPercent);

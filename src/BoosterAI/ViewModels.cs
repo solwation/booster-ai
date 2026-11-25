@@ -247,11 +247,12 @@ public sealed class TabViewModel : Observable
                 var missing = llm == _llm && _account != "" && accounts.All(a => a.Id != _account);
                 if (accounts.Count == 0 && !missing)
                 {
-                    list.Add(new(llm, "", "", false, null, _owner.LimitIndicatorOf(llm, "")));
+                    list.Add(new(llm, "", "", false, null, _owner.LimitIndicatorOf(llm, ""), _owner.LimitNoteOf(llm, "")));
                     continue;
                 }
-                list.Add(new(llm, "", _owner.DefaultAccountName(llm), true, AccountTip(llm, _owner.DefaultAccountName(llm), Accounts.DefaultDirectory(llm), ""), _owner.LimitIndicatorOf(llm, "")));
-                list.AddRange(accounts.Select(a => new AgentChoice(llm, a.Id, a.Name, true, AccountTip(llm, a.Name, a.Directory, a.Directory), _owner.LimitIndicatorOf(llm, a.Directory))));
+                list.Add(new(llm, "", _owner.DefaultAccountName(llm), true, AccountTip(llm, _owner.DefaultAccountName(llm), Accounts.DefaultDirectory(llm), ""), _owner.LimitIndicatorOf(llm, ""), _owner.LimitNoteOf(llm, "")));
+                list.AddRange(accounts.Select(a => new AgentChoice(llm, a.Id, a.Name, true, AccountTip(llm, a.Name, a.Directory, a.Directory),
+                    _owner.LimitIndicatorOf(llm, a.Directory), _owner.LimitNoteOf(llm, a.Directory))));
                 if (missing) list.Add(new(llm, _account, Loc.Format("account.missing", _account), true, Loc.Format("account.missing", _account)));
             }
             return list;
@@ -2454,10 +2455,18 @@ public sealed class ImportViewModel : Observable, IProjectList
 /// account). <paramref name="ShowAccount"/> is true for every entry of an agent with accounts besides its default one, which then
 /// shows <paramref name="AccountName"/> as a label after the agent; <paramref name="Tip"/> describes that account.
 /// <paramref name="Limit"/> is the account's plan-limit indicator (#200), null when unknown; the closed box shows it as a meter (#202).
+/// <paramref name="Note"/> is the list's "Okänd"/"Troligen återställd" with its reason when a limit-capable entry has no known level (#214).
 /// </summary>
-public sealed record AgentChoice(string Llm, string AccountId, string AccountName, bool ShowAccount, string? Tip, LimitIndicator? Limit = null)
+public sealed record AgentChoice(string Llm, string AccountId, string AccountName, bool ShowAccount, string? Tip, LimitIndicator? Limit = null, LimitNote? Note = null)
 {
     public bool HasLimit => Limit is not null;
+    /// <summary>The reading's time beside an old level in the list (#214), "i går 18:10"; empty for a recent one.</summary>
+    public string LimitStale => Limit?.Stale ?? "";
+    public bool HasLimitStale => LimitStale.Length > 0;
+    public bool HasLimitNote => Limit is null && Note is not null;
+    public string LimitNoteCaption => Note?.Caption ?? "";
+    public string? LimitNoteTip => Note?.Tip;
+    public string LimitNoteName => Note?.Name ?? "";
     public bool LimitWarn => Limit?.Warn == true;
     public bool LimitCalm => Limit is { Warn: false };
     public string LimitCaption => Limit?.Caption ?? "";

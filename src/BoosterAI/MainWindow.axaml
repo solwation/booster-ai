@@ -311,7 +311,11 @@
                                           ToolTip.Tip="{Binding LimitTip}" AutomationProperties.Name="{Binding LimitName}">
                                 <Path Classes="missing" Width="11" Height="11" Data="{StaticResource WarningIcon}" IsVisible="{Binding LimitWarn}" />
                                 <TextBlock Classes="caption" Text="{Binding LimitCaption}" VerticalAlignment="Center" />
+                                <TextBlock Classes="muted caption" Text="{Binding LimitStale, StringFormat='· {0}'}" IsVisible="{Binding HasLimitStale}" VerticalAlignment="Center" Margin="3,0,0,0" />
                               </StackPanel>
+                              <!-- #214: a limit-capable entry without a known level says so ("Okänd", "Troligen återställd"); the tooltip says why. -->
+                              <TextBlock Classes="muted caption" Text="{Binding LimitNoteCaption}" IsVisible="{Binding HasLimitNote}" VerticalAlignment="Center"
+                                         Background="Transparent" ToolTip.Tip="{Binding LimitNoteTip}" AutomationProperties.Name="{Binding LimitNoteName}" />
                             </StackPanel>
                             <Panel Grid.Column="4" Classes="limit-closed" Margin="4,0,0,0" VerticalAlignment="Center">
                               <Border Background="Transparent" IsVisible="{Binding LimitWarn}" ToolTip.Tip="{Binding LimitTip}" AutomationProperties.Name="{Binding LimitName}">

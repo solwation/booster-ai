@@ -17,12 +17,30 @@ public sealed record AccountLimits(LimitWindow? Session, LimitWindow? Week, Limi
 {
     public static readonly AccountLimits Unknown = new(null, null, null, null);
 
-    /// <summary>Drops the windows whose reset time has passed: their old percentage says nothing about the new window.</summary>
+    /// <summary>
+    /// True when a known session window was dropped by <see cref="AsOf"/> because its reset time passed (#214): the account was
+    /// read, but the old level no longer applies, so the UI says "Troligen återställd" instead of "Okänd".
+    /// </summary>
+    public bool SessionReset { get; init; }
+
+    /// <summary>The same for the weekly window (#214).</summary>
+    public bool WeekReset { get; init; }
+
+    /// <summary>
+    /// Drops the windows whose reset time has passed: their old percentage says nothing about the new window. A dropped window is
+    /// remembered as reset (<see cref="SessionReset"/>, <see cref="WeekReset"/>). A window still running keeps its last known level,
+    /// however old the reading (#214): the level can only have risen since, until the window resets.
+    /// </summary>
     public AccountLimits AsOf(DateTimeOffset now) => this with
     {
         Session = Session is { } s && s.ResetsAt > now ? s : null,
         Week = Week is { } w && w.ResetsAt > now ? w : null,
+        SessionReset = SessionReset || Session is { } rs && rs.ResetsAt <= now,
+        WeekReset = WeekReset || Week is { } rw && rw.ResetsAt <= now,
     };
+
+    /// <summary>Nothing known any more, but at least one window was read and has reset since (#214).</summary>
+    public bool IsReset => Session is null && Week is null && (SessionReset || WeekReset);
 }
 
 /// <summary>
@@ -38,7 +56,7 @@ public sealed record LimitIndicator(string Caption, bool Warn, string Tip, strin
 
     /// <summary>Value equality including <see cref="Rows"/>: agent choices compare their indicator to keep the selected entry (#202, #210).</summary>
     public bool Equals(LimitIndicator? other) => other is not null && Caption == other.Caption && Warn == other.Warn && Tip == other.Tip
-        && Name == other.Name && Age == other.Age && Percent.Equals(other.Percent) && Rows.SequenceEqual(other.Rows);
+        && Name == other.Name && Age == other.Age && Stale == other.Stale && Percent.Equals(other.Percent) && Rows.SequenceEqual(other.Rows);
 
     public override int GetHashCode() => HashCode.Combine(Caption, Warn, Tip, Name, Age, Percent, Rows.Count);
 
@@ -60,28 +78,58 @@ public sealed record LimitIndicator(string Caption, bool Warn, string Tip, strin
         var lines = new List<string>
         {
             Loc.Get("account.limit.title"),
-            session + ": " + LimitText.Used(limits.Session, now),
-            Loc.Get("account.limit.week") + ": " + LimitText.Used(limits.Week, now),
+            session + ": " + LimitText.Used(limits.Session, now, limits.SessionReset),
+            Loc.Get("account.limit.week") + ": " + LimitText.Used(limits.Week, now, limits.WeekReset),
         };
         if (limits.At is { } at) lines.Add(LimitText.Age(at, now));
-        var name = Loc.Format("account.limit.chip.name", number) + (warn ? ", " + Loc.Get("account.limit.near") : "");
-        var rows = new[] { LimitRow.For(session, limits.Session, now), LimitRow.For(Loc.Get("account.limit.week"), limits.Week, now) };
+        var name = Loc.Format("account.limit.chip.name", number)
+            + (percent >= 100 ? ", " + Loc.Get("account.limit.full") : warn ? ", " + Loc.Get("account.limit.near") : "");
+        var rows = new[] { LimitRow.For(session, limits.Session, now, limits.SessionReset), LimitRow.For(Loc.Get("account.limit.week"), limits.Week, now, limits.WeekReset) };
         var age = limits.At is { } when ? LimitText.Age(when, now) : "";
-        return new LimitIndicator(Loc.Format("account.limit.chip", number), warn, string.Join("\n", lines), name, rows, age, Math.Clamp(percent, 0, 100));
+        var stale = limits.At is { } old && now - old >= StaleAfter ? HumanTime.Since(old, now) : "";
+        if (stale.Length > 0) name += ", " + age;
+        return new LimitIndicator(Loc.Format("account.limit.chip", number), warn, string.Join("\n", lines), name, rows, age, Math.Clamp(percent, 0, 100)) { Stale = stale };
     }
+
+    /// <summary>A reading at least this old shows its time beside the level in the Agent list (#214): "62 % · i går 18:10".</summary>
+    public static readonly TimeSpan StaleAfter = TimeSpan.FromHours(1);
+
+    /// <summary>When an old reading was taken ("i går 18:10"), empty for a reading younger than <see cref="StaleAfter"/> (#214).</summary>
+    public string Stale { get; init; } = "";
+
+    /// <summary>
+    /// What the Agent list says for a limit-capable agent or account without a known level (#214): "Troligen återställd" when every
+    /// window it read has reset since, else "Okänd"; the tooltip gives the reason. <paramref name="reason"/> is why it is unknown.
+    /// </summary>
+    public static LimitNote Note(AccountLimits limits, DateTimeOffset now, string reason)
+    {
+        var raw = limits;
+        limits = limits.AsOf(now);
+        if (!limits.IsReset) return new(Loc.Get("account.limit.unknown"), Loc.Format("account.limit.note.unknown", reason), false);
+        var last = new[] { raw.Session, raw.Week }.OfType<LimitWindow>().ToList();
+        var level = last.Count == 0 ? "" : Loc.Format("account.limit.usedShort", Loc.Number(last.Max(w => w.UsedPercent), "0"));
+        var age = limits.At is { } at ? LimitText.Age(at, now) : Loc.Get("account.limit.never");
+        return new(Loc.Get("account.limit.reset"), Loc.Format("account.limit.note.reset", level, age), true);
+    }
+}
+
+/// <summary>The Agent list's text for a limit-capable entry without a known level (#214): "Okänd" or "Troligen återställd", and why.</summary>
+public sealed record LimitNote(string Caption, string Tip, bool Reset)
+{
+    public string Name => Loc.Format("account.limit.note.name", Caption);
 }
 
 /// <summary>
 /// One window in the status popup's limit table (#210): "5 h", a meter of the remaining share, "62 % kvar", "38 % använt" and
-/// "återställs om 2 h (15:00)". An unknown window has only its label and "Okänd". <see cref="Warn"/> from <see cref="LimitIndicator.WarnAt"/> % used.
+/// "återställs om 2 h (15:00)". An unknown window has only its label and "Okänd", or "Troligen återställd" once it has reset (#214). <see cref="Warn"/> from <see cref="LimitIndicator.WarnAt"/> % used.
 /// </summary>
 public sealed record LimitRow(string Label, bool Known, double Remaining, string RemainingText, string UsedText, string ResetText, bool Warn, string Name)
 {
-    public static LimitRow For(string label, LimitWindow? window, DateTimeOffset now)
+    public static LimitRow For(string label, LimitWindow? window, DateTimeOffset now, bool reset = false)
     {
         if (window is null)
         {
-            var unknown = Loc.Get("account.limit.unknown");
+            var unknown = Loc.Get(reset ? "account.limit.reset" : "account.limit.unknown");
             return new(label, false, 0, unknown, "", "", false, label + ": " + unknown);
         }
         var used = Math.Round(window.UsedPercent, MidpointRounding.AwayFromZero);
@@ -98,7 +146,7 @@ public sealed record LimitRow(string Label, bool Known, double Remaining, string
 /// <summary>The texts of the Accounts page's limit lines (#199): "37 % använt · återställs om 4 h 20 min (14:20)", "Okänd", credits and times.</summary>
 public static class LimitText
 {
-    public static string Used(LimitWindow? window, DateTimeOffset now) => window is null ? Loc.Get("account.limit.unknown")
+    public static string Used(LimitWindow? window, DateTimeOffset now, bool reset = false) => window is null ? Loc.Get(reset ? "account.limit.reset" : "account.limit.unknown")
         : Loc.Format("account.limit.used", Loc.Number(window.UsedPercent, "0"), Resets(window.ResetsAt, now));
 
     /// <summary>Codex's credits: unlimited, a balance, or none; empty when the agent reported nothing (Claude never does).</summary>

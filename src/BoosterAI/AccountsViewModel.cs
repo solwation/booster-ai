@@ -64,8 +64,8 @@ public sealed class AccountRow : Observable
     /// <summary>The bar's value; a use above 100 % (Codex allows it) fills the bar.</summary>
     public double SessionPercent => Math.Clamp(Limits.Session?.UsedPercent ?? 0, 0, 100);
     public double WeekPercent => Math.Clamp(Limits.Week?.UsedPercent ?? 0, 0, 100);
-    public string SessionText => LimitText.Used(Limits.Session, _owner.Now);
-    public string WeekText => LimitText.Used(Limits.Week, _owner.Now);
+    public string SessionText => LimitText.Used(Limits.Session, _owner.Now, Limits.SessionReset);
+    public string WeekText => LimitText.Used(Limits.Week, _owner.Now, Limits.WeekReset);
     public string CreditsText => LimitText.Credits(Limits.Credits);
     public bool HasCredits => CreditsText.Length > 0;
     /// <summary>"avläst för 8 min sedan": when the agent reported the values; "Ingen avläsning än" before any.</summary>
@@ -144,6 +144,7 @@ public sealed class AgentAccountsViewModel : Observable
     private readonly Dictionary<string, AccountLimits> _limits = [];
     private readonly HashSet<string> _reading = [];
     internal AccountLimits LimitsOf(string key) { lock (_statusLock) return _limits.GetValueOrDefault(key) ?? AccountLimits.Unknown; }
+    internal bool HasLimits(string key) { lock (_statusLock) return _limits.ContainsKey(key); }
     internal DateTimeOffset Now => _owner.LimitsClock();
 
     /// <summary>
@@ -179,7 +180,10 @@ public sealed class AgentAccountsViewModel : Observable
         if (keep) _owner.CheckQuota(Cli, key, Rows.Count > 1 ? account?.Name ?? DefaultName : null, result);
     }
 
-    /// <summary>Screenshots (--fake-limits): invented limits in row order (both windows, then Unknown, then only the week); never reads a file.</summary>
+    /// <summary>
+    /// Screenshots (--fake-limits): invented limits in row order (both windows, Unknown, only the week, near the limit, maxed
+    /// yesterday, reset since); never reads a file.
+    /// </summary>
     internal void ShowSampleLimits(string cli)
     {
         var now = Now;
@@ -191,6 +195,9 @@ public sealed class AgentAccountsViewModel : Observable
             AccountLimits.Unknown,
             new(null, new LimitWindow(8, hour.AddDays(5), 10080), cli == "codex" ? new LimitCredits(false, false, null) : null, hour.AddDays(-1).AddHours(2)),
             new(new LimitWindow(91, hour.AddHours(1).AddMinutes(40), 300), new LimitWindow(64, hour.AddDays(2), 10080), null, hour.AddMinutes(-4)),
+            // #214: an account no tab uses, maxed at its last reading yesterday, and one whose windows have reset since.
+            new(new LimitWindow(100, hour.AddHours(-20), 300), new LimitWindow(100, hour.AddDays(1).AddHours(3), 10080), null, hour.AddDays(-1).AddHours(-2)),
+            new(new LimitWindow(97, hour.AddHours(-2), 300), new LimitWindow(70, hour.AddHours(-1), 10080), null, hour.AddDays(-2)),
         ];
         lock (_statusLock) for (var i = 0; i < Rows.Count; i++) _limits[Rows[i].Key] = cycle[i % cycle.Length];
         foreach (var row in Rows) row.RefreshLimits();
@@ -314,6 +321,8 @@ public sealed partial class MainViewModel
         lock (_agentLimitsLock) return _agentLimits.GetValueOrDefault(cli) ?? AccountLimits.Unknown;
     }
 
+    private bool _sampleLimits;
+
     private async Task RefreshSingleAgentLimitsAsync(string cli)
     {
         if (!AccountLimitsEnabled || !AccountLimitsProbe.Supports(cli)) return;
@@ -364,9 +373,22 @@ public sealed partial class MainViewModel
         : AccountLimitsProbe.Supports(cli) ? LimitIndicator.For(AgentLimitsOf(cli), LimitsClock())
         : null;
 
+    /// <summary>
+    /// The Agent list's "Okänd"/"Troligen återställd" with its reason (#214) for a limit-capable agent or account without a known level;
+    /// null when a level is known, for agents without limits, and while limits are not read at all (tests, plain screenshots).
+    /// </summary>
+    internal LimitNote? LimitNoteOf(string cli, string key)
+    {
+        if (!AccountLimitsProbe.Supports(cli) || !AccountLimitsEnabled && !_sampleLimits) return null;
+        var limits = Accounts.Supports(cli) && AccountsEditor(cli) is { } editor ? editor.LimitsOf(key) : AgentLimitsOf(cli);
+        var now = LimitsClock();
+        return LimitIndicator.For(limits, now) is null ? LimitIndicator.Note(limits, now, Loc.Get("account.limit.tip." + cli)) : null;
+    }
+
     /// <summary>Screenshots (--fake-limits): invented limits for every limit-capable agent, also shown in the main window (#200, #206).</summary>
     internal void ShowSampleLimitsForAll()
     {
+        _sampleLimits = true;
         foreach (var cli in Catalog.Llms.Where(Accounts.Supports)) AccountsEditor(cli)!.ShowSampleLimits(cli);
         var now = LimitsClock();
         var hour = new DateTimeOffset(now.Year, now.Month, now.Day, now.Hour, 0, 0, now.Offset);
@@ -384,7 +406,8 @@ public sealed partial class MainViewModel
     {
         if (!AccountLimitsProbe.Supports(cli)) return;
         var keys = Accounts.Supports(cli) ? new[] { "" }.Concat(AccountsFor(cli).Select(a => a.Directory)) : new[] { "" };
-        var signature = string.Join("|", keys.Select(k => LimitIndicatorOf(cli, k) is { } i ? i.Caption + i.Warn + i.Tip : "-"));
+        var signature = string.Join("|", keys.Select(k => LimitIndicatorOf(cli, k) is { } i ? i.Caption + i.Warn + i.Tip + i.Stale
+            : LimitNoteOf(cli, k) is { } n ? n.Caption + n.Tip : "-"));
         lock (_limitSignatureLock)
         {
             if (_limitSignature.TryGetValue(cli, out var old) && old == signature) return;
@@ -394,10 +417,20 @@ public sealed partial class MainViewModel
     }
 
     private DateTimeOffset _limitsRefreshed = DateTimeOffset.MinValue;
+    private DateTimeOffset _idleLimitsRefreshed = DateTimeOffset.MinValue;
 
     /// <summary>
-    /// Reads the plan limits of the agents the tab list uses, one read per account/agent (#200, #205, #206). The main window asks on activation
-    /// and when monitored tab activity changes (at most every 5 seconds), and every 30 seconds while visible; <paramref name="force"/> skips the wait.
+    /// How often agents that no tab uses are read (#214). Their snapshot only changes when the agent runs elsewhere, so a slower pace
+    /// keeps the extra shells few; the window's own reset is noticed on every refresh without a read.
+    /// </summary>
+    internal static readonly TimeSpan IdleLimitsInterval = TimeSpan.FromMinutes(5);
+
+    /// <summary>
+    /// Reads the plan limits, one read per account/agent (#200, #205, #206): the agents the tab list uses on every refresh, and the
+    /// other installed limit-capable agents with all their accounts every <see cref="IdleLimitsInterval"/> (#214), so the Agent list
+    /// also knows accounts no tab uses. Before the first setup check every limit-capable agent counts as installed (a missing one
+    /// reads as Unknown). The main window asks on activation and when monitored tab activity changes (at most every 5 seconds), and
+    /// every 30 seconds while visible; <paramref name="force"/> skips the 5-second wait, not the idle interval.
     /// </summary>
     internal Task RefreshAccountLimitsAsync(bool force = false)
     {
@@ -405,8 +438,15 @@ public sealed partial class MainViewModel
         var now = LimitsClock();
         if (!force && now - _limitsRefreshed < TimeSpan.FromSeconds(5)) return Task.CompletedTask;
         _limitsRefreshed = now;
-        var reads = Tabs.Select(t => t.Llm).Distinct().Where(AccountLimitsProbe.Supports)
+        var used = Tabs.Select(t => t.Llm).Distinct().Where(AccountLimitsProbe.Supports).ToList();
+        var status = Setup.Status;
+        var idle = Catalog.Llms.Where(c => AccountLimitsProbe.Supports(c) && !used.Contains(c) && (!status.Checked || status.Cli(c)?.Installed == true)).ToList();
+        if (idle.Count > 0 && now - _idleLimitsRefreshed >= IdleLimitsInterval) _idleLimitsRefreshed = now;
+        else idle.Clear();
+        var reads = used.Concat(idle)
             .Select(c => Accounts.Supports(c) ? AccountsEditor(c)!.RefreshLimitsAsync() : RefreshSingleAgentLimitsAsync(c)).ToList();
+        // Agents not read now still follow the clock: a window whose reset time passed shows "Troligen återställd".
+        foreach (var cli in Catalog.Llms.Where(AccountLimitsProbe.Supports).Except(used).Except(idle)) AccountLimitsChanged(cli);
         return Task.WhenAll(reads);
     }
 
