@@ -352,6 +352,7 @@ public sealed partial class MainViewModel
     {
         _setupEnabled = true;
         AccountStatusEnabled = true;
+        AccountLimitsEnabled = true;
         SetupRowsChanged();
         CheckSetup();
     }

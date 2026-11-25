@@ -183,6 +183,8 @@ bs_out="$1/$2.out"
 bs_size="$1/$2.size"
 bs_input="$1/$2.input"
 bs_ev start pid=$$ starttime=$(cut -d' ' -f22 /proc/$$/stat)
+# BoosterAI's claude status line (#199) runs python3; without it claude gets the settings without it, keeping the user's own.
+command -v python3 >/dev/null 2>&1 || { [ -f "$1/$2.claude-plain.json" ] && cp -f "$1/$2.claude-plain.json" "$1/$2.claude.json"; } 2>/dev/null || true
 # The captured output only lives as long as the tab (and is replaced when a new CLI starts).
 bs_rm_out() { rm -f "$bs_out" "$bs_out.1" "$bs_size" "$bs_input" 2>/dev/null || true; }
 trap 'bs_rm_out && bs_ev exit' EXIT
@@ -777,6 +779,8 @@ for line in sys.stdin:
         WindowName = "BoosterAI-" + Path.GetFileName(directory);
         System.IO.Directory.CreateDirectory(Directory);
         File.WriteAllText(Path.Combine(Directory, "tab-lib.sh"), Lib.Replace("\r\n", "\n"));
+        try { File.WriteAllText(Path.Combine(Directory, ClaudeStatusLine.ScriptFile), ClaudeStatusLine.Script.Replace("\r\n", "\n") + "\n"); }
+        catch (IOException) { /* no plan limits from this session's claude tabs */ }
         _next = System.IO.Directory.GetFiles(Directory, "tab*.log")
             .Select(f => int.TryParse(Path.GetFileNameWithoutExtension(f)[3..], CultureInfo.InvariantCulture, out var n) ? n : 0)
             .DefaultIfEmpty(0).Max();
@@ -873,18 +877,28 @@ for line in sys.stdin:
         var dir = OperatingSystem.IsWindows() ? PathMapping.ToWslPath(Directory) : Directory;
         if (dir.IndexOfAny([';', '\n', '\r']) >= 0) return null;
         var track = new TabTrack(dir + "/tab-lib.sh", dir, "tab" + Interlocked.Increment(ref _next), updateClis, autoClear);
-        try { File.WriteAllText(Path.Combine(Directory, track.Id + ".claude.json"), HooksJson($"{dir}/{track.Id}.log")); }
+        // With BoosterAI's status line (#199); tab-lib.sh puts the plain file in its place when the tab's Linux has no python3,
+        // so a status line the user configured is never replaced by one that cannot run.
+        try
+        {
+            File.WriteAllText(Path.Combine(Directory, track.Id + ".claude.json"), HooksJson($"{dir}/{track.Id}.log", ClaudeStatusLine.Command(dir)));
+            File.WriteAllText(Path.Combine(Directory, track.Id + ".claude-plain.json"), HooksJson($"{dir}/{track.Id}.log"));
+        }
         catch (IOException) { /* no hooks: the tab's activity stays unknown */ }
         return track;
     }
 
-    public static string HooksJson(string log)
+    /// <summary>
+    /// The claude settings of a tab: the activity hooks, and with <paramref name="statusLine"/> BoosterAI's status line command
+    /// (<see cref="ClaudeStatusLine"/>), which saves the plan limits and then runs the user's own status line.
+    /// </summary>
+    public static string HooksJson(string log, string? statusLine = null)
     {
         var to = "'" + log.Replace("'", "'\\''") + "'";
         object Hook(string command) => new[] { new { hooks = new[] { new { type = "command", command } } } };
-        return JsonSerializer.Serialize(new
+        var settings = new Dictionary<string, object>
         {
-            hooks = new Dictionary<string, object>
+            ["hooks"] = new Dictionary<string, object>
             {
                 // Not Notification: it also fires for a permission prompt in the middle of a turn. UserPromptSubmit also
                 // fires for the turns that task notifications and wakeups start, without anyone typing.
@@ -895,7 +909,9 @@ for line in sys.stdin:
                 ["Stop"] = Hook("if grep -Eq '\"(background_tasks|session_crons)\" *: *\\[ *[^] ]'; then e=waiting; else e=idle; fi; "
                     + $"printf '%s %s\\n' \"$(date +%s%3N)\" \"$e\" >> {to}"),
             },
-        });
+        };
+        if (statusLine is not null) settings["statusLine"] = new { type = "command", command = statusLine };
+        return JsonSerializer.Serialize(settings);
     }
 
     /// <summary>Queues <paramref name="script"/> for the tab's bs_next (an in-place restart).</summary>

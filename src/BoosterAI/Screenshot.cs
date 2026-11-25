@@ -8,7 +8,7 @@ using Avalonia.Threading;
 namespace BoosterAI;
 
 /// <summary>
-/// <c>--screenshot file.png [--window main|local-model|local-models|close|settings|install|import|restart|remove-project|alias|wsl-shutdown|memory-reclaim|agent-yolo|wsl|unsaved|setup|uninstall] [--theme light|dark] [--config file.json] [--fake-update [manual:]0.3.0] [--fake-status [error:]text] [--fake-denied] [--fake-changed] [--fake-restartable N] [--fake-output [N]] [--fake-setup [cli|wsl|alias]] [--fake-long-status] [--check-clipping] [--fake-agent-list [N]] [--fake-new-subtab] [--fake-row-menu [N]] [--fake-memory-reclaim gradual|dropcache|disabled|other|old|unknown]</c>:
+/// <c>--screenshot file.png [--window main|local-model|local-models|close|settings|install|import|restart|remove-project|alias|wsl-shutdown|memory-reclaim|agent-yolo|wsl|unsaved|setup|uninstall] [--theme light|dark] [--config file.json] [--fake-update [manual:]0.3.0] [--fake-status [error:]text] [--fake-denied] [--fake-changed] [--fake-restartable N] [--fake-output [N]] [--fake-setup [cli|wsl|alias]] [--fake-long-status] [--check-clipping] [--fake-agent-list [N]] [--fake-new-subtab] [--fake-row-menu [N]] [--fake-memory-reclaim gradual|dropcache|disabled|other|old|unknown] [--fake-limits]</c>:
 /// renders a window with Avalonia's headless Skia platform. Nothing is shown on the desktop and no
 /// focus changes. The window frame (title bar) is not drawn; only the client area.
 /// </summary>
@@ -16,7 +16,7 @@ internal sealed record ScreenshotOptions(string File, string Window, string? Fak
     int? FakeOutput = null, int FakeRestartable = 0, string? FakeSetup = null, string? Tab = null, bool FakeOptimization = false, int? FakeMemoryCap = null,
     string? Section = null, string? FakeMemoryState = null, int? Width = null, int? Height = null, bool FakeOrchestraIdle = false, int? FakeMemorySaved = null,
     bool FakeLongStatus = false, bool CheckClipping = false, string? FakeMemoryReclaim = null, int? FakeAgentList = null,
-    bool FakeNewSubTab = false, int? FakeRowMenu = null);
+    bool FakeNewSubTab = false, int? FakeRowMenu = null, bool FakeLimits = false);
 
 internal static class Screenshot
 {
@@ -41,7 +41,8 @@ internal static class Screenshot
             args.Contains("--fake-long-status"), args.Contains("--check-clipping"), Value(args, "--fake-memory-reclaim"),
             !args.Contains("--fake-agent-list") ? null : int.TryParse(Value(args, "--fake-agent-list"), out var list) ? list : 0,
             args.Contains("--fake-new-subtab"),
-            !args.Contains("--fake-row-menu") ? null : int.TryParse(Value(args, "--fake-row-menu"), out var menu) ? menu : -1);
+            !args.Contains("--fake-row-menu") ? null : int.TryParse(Value(args, "--fake-row-menu"), out var menu) ? menu : -1,
+            args.Contains("--fake-limits"));
     }
 
     /// <summary>--fake-output [N]: the popup of the Nth running sample tab (0: the first, interactive; 1: Watching).</summary>
@@ -249,6 +250,8 @@ internal static class Screenshot
                     {
                         agent.Section = agentSection.EndsWith("-accounts") ? 3 : agentSection.EndsWith("-compact") ? 2 : agentSection.EndsWith("-permissions") || agentSection.EndsWith("-config") ? 1 : 0;
                         if (agentSection.EndsWith("-accounts")) agent.Accounts?.ShowSampleStatus(agent.Cli);
+                        // --fake-limits: invented plan limits on the Accounts page (#199); no account file is read.
+                        if (agentSection.EndsWith("-accounts") && o.FakeLimits) agent.Accounts?.ShowSampleLimits(agent.Cli);
                         var profile = agentSection.EndsWith("-cpu") ? "cpu7b" : agentSection.EndsWith("-gpu") ? "gpu35b" : "none";
                         agent.Advice.Profile = agent.Advice.Profiles.FirstOrDefault(p => p.Id == profile) ?? agent.Advice.Profiles[0];
                     }

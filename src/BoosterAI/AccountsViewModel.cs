@@ -54,6 +54,30 @@ public sealed class AccountRow : Observable
     public string LoginText => Loc.Get(IsLoggedIn ? "account.login.again" : "account.login");
     public void Login() => _owner.Login(this);
     public void Remove() => _owner.Remove(this);
+    /// <summary>The account's last read plan limits (#199), with windows that have reset since dropped; Unknown until a read answered.</summary>
+    public AccountLimits Limits => _owner.LimitsOf(Key).AsOf(_owner.Now);
+    /// <summary>"5 h": the short window's length when the agent gave one, otherwise the usual five hours.</summary>
+    public string SessionLabel => Loc.Format("account.limit.hours", Loc.Number((Limits.Session?.Minutes ?? 300) / 60.0, "0.#"));
+    public string WeekLabel => Loc.Get("account.limit.week");
+    public bool HasSession => Limits.Session is not null;
+    public bool HasWeek => Limits.Week is not null;
+    /// <summary>The bar's value; a use above 100 % (Codex allows it) fills the bar.</summary>
+    public double SessionPercent => Math.Clamp(Limits.Session?.UsedPercent ?? 0, 0, 100);
+    public double WeekPercent => Math.Clamp(Limits.Week?.UsedPercent ?? 0, 0, 100);
+    public string SessionText => LimitText.Used(Limits.Session, _owner.Now);
+    public string WeekText => LimitText.Used(Limits.Week, _owner.Now);
+    public string CreditsText => LimitText.Credits(Limits.Credits);
+    public bool HasCredits => CreditsText.Length > 0;
+    /// <summary>"per 14:20": when the agent reported the values; "Ingen avläsning än" before any.</summary>
+    public string LimitsAge => Limits.At is { } at ? Loc.Format("account.limit.as", LimitText.When(at, _owner.Now)) : Loc.Get("account.limit.never");
+    public string LimitsTip => Loc.Get("account.limit.tip." + _owner.Cli);
+
+    internal void RefreshLimits()
+    {
+        foreach (var name in new[] { nameof(Limits), nameof(SessionLabel), nameof(HasSession), nameof(HasWeek), nameof(SessionPercent), nameof(WeekPercent),
+            nameof(SessionText), nameof(WeekText), nameof(CreditsText), nameof(HasCredits), nameof(LimitsAge) }) Raise(name);
+    }
+
     internal void RefreshStatus()
     {
         foreach (var name in new[] { nameof(Status), nameof(StatusText), nameof(Identity), nameof(HasIdentity), nameof(IsLoggedIn), nameof(IsLoggedOut), nameof(LoginText) }) Raise(name);
@@ -104,8 +128,9 @@ public sealed class AgentAccountsViewModel : Observable
     /// </summary>
     internal Task RefreshStatusAsync()
     {
-        if (!_owner.AccountStatusEnabled) return Task.CompletedTask;
-        var started = new List<Task>();
+        var limits = RefreshLimitsAsync();
+        if (!_owner.AccountStatusEnabled) return limits;
+        var started = new List<Task> { limits };
         foreach (var row in Rows.ToList())
         {
             bool start;
@@ -114,6 +139,58 @@ public sealed class AgentAccountsViewModel : Observable
         }
         if (started.Count > 0) foreach (var row in Rows) row.RefreshStatus();
         return Task.WhenAll(started);
+    }
+
+    private readonly Dictionary<string, AccountLimits> _limits = [];
+    private readonly HashSet<string> _reading = [];
+    internal AccountLimits LimitsOf(string key) { lock (_statusLock) return _limits.GetValueOrDefault(key) ?? AccountLimits.Unknown; }
+    internal DateTimeOffset Now => _owner.LimitsClock();
+
+    /// <summary>
+    /// Reads every account's plan limits in the background (#199), with the login checks: when the Accounts page shows and the
+    /// window is activated. Local files only (see <see cref="AccountLimitsProbe"/>); an account already being read is skipped.
+    /// </summary>
+    internal Task RefreshLimitsAsync()
+    {
+        if (!_owner.AccountLimitsEnabled) return Task.CompletedTask;
+        var started = new List<Task>();
+        foreach (var row in Rows.ToList())
+        {
+            bool start;
+            lock (_statusLock) start = _reading.Add(row.Key);
+            if (start) started.Add(ReadLimitsAsync(row.Account, row.Key));
+        }
+        return Task.WhenAll(started);
+    }
+
+    private async Task ReadLimitsAsync(AgentAccount? account, string key)
+    {
+        AccountLimits result;
+        try { result = await _owner.ReadAccountLimitsAsync(Cli, account?.Directory); }
+        catch (Exception e) when (e is not OutOfMemoryException) { result = AccountLimits.Unknown; }
+        var keep = key == "" || Rows.Any(r => r.Key == key);
+        lock (_statusLock)
+        {
+            _reading.Remove(key);
+            if (keep) _limits[key] = result;
+        }
+        foreach (var row in Rows) row.RefreshLimits();
+    }
+
+    /// <summary>Screenshots (--fake-limits): invented limits in row order (both windows, then Unknown, then only the week); never reads a file.</summary>
+    internal void ShowSampleLimits(string cli)
+    {
+        var now = Now;
+        var hour = new DateTimeOffset(now.Year, now.Month, now.Day, now.Hour, 0, 0, now.Offset);
+        AccountLimits[] cycle =
+        [
+            new(new LimitWindow(37, hour.AddHours(3).AddMinutes(20), 300), new LimitWindow(62, hour.AddDays(3).AddHours(2), 10080),
+                cli == "codex" ? new LimitCredits(true, false, "120") : null, hour.AddMinutes(-15)),
+            AccountLimits.Unknown,
+            new(null, new LimitWindow(8, hour.AddDays(5), 10080), cli == "codex" ? new LimitCredits(false, false, null) : null, hour.AddDays(-1).AddHours(2)),
+        ];
+        lock (_statusLock) for (var i = 0; i < Rows.Count; i++) _limits[Rows[i].Key] = cycle[i % cycle.Length];
+        foreach (var row in Rows) row.RefreshLimits();
     }
 
     /// <summary>Screenshots: invented statuses, in row order (logged in, logged out, unknown, then again); never runs an agent.</summary>
@@ -178,7 +255,7 @@ public sealed class AgentAccountsViewModel : Observable
         if (row.Account is not { } account) return;
         _owner.RemoveAccount(account);
         Rows.Remove(row);
-        lock (_statusLock) _status.Remove(row.Key);
+        lock (_statusLock) { _status.Remove(row.Key); _limits.Remove(row.Key); }
         Raise(nameof(Summary));
         RefreshUsage();
     }
@@ -215,6 +292,14 @@ public sealed partial class MainViewModel
         (distro, llm, directory) => Task.Run(() => AccountStatusProbe.Check(distro, llm, directory));
     internal Task<AccountLoginStatus> CheckAccountLoginAsync(string llm, string? directory) =>
         directory is not null && !Accounts.IsValidDirectory(directory) ? Task.FromResult(AccountLoginStatus.Unknown) : CheckAccountLogin(_cfg.WslDistro, llm, directory);
+
+    /// <summary>Off until the real app starts its background checks (#199); tests and screenshots never read an account's files.</summary>
+    internal bool AccountLimitsEnabled { get; set; }
+    internal Func<DateTimeOffset> LimitsClock { get; set; } = () => DateTimeOffset.Now;
+    internal Func<string, string, string?, Task<AccountLimits>> ReadAccountLimits { get; set; } =
+        (distro, llm, directory) => Task.Run(() => AccountLimitsProbe.Read(distro, llm, directory));
+    internal Task<AccountLimits> ReadAccountLimitsAsync(string llm, string? directory) =>
+        directory is not null && !Accounts.IsValidDirectory(directory) ? Task.FromResult(AccountLimits.Unknown) : ReadAccountLimits(_cfg.WslDistro, llm, directory);
 
     /// <summary>An account's login status once a check in Settings has answered (#194); null while unknown to BoosterAI.</summary>
     internal AccountLoginStatus? KnownLoginStatus(string cli, string key) =>

@@ -48,6 +48,14 @@ internal static class Program
             var dir = root.Replace('\\', '/') + "/<session>";
             var tracks = tabs.Select((_, i) => (TabTrack?)new TabTrack(dir + "/tab-lib.sh", dir, "tab" + (i + 1), cfg.AutoUpdateClis, cfg.AutoClearIdle)).ToList();
             for (var i = 0; i < tabs.Count; i++) Console.WriteLine($"{tabs[i].Name}: bash -lic {Launcher.TabScript(tabs[i], null, tracks[i])}");
+            // Interactive claude tabs get --settings with the activity hooks and BoosterAI's status line (#199).
+            for (var i = 0; i < tabs.Count; i++)
+                if (tabs[i].Llm == "claude" && tracks[i] is { } t)
+                    Console.WriteLine($"claude settings {tabs[i].Name} ({Launcher.HooksFile(t)}; {t.Id}.claude-plain.json without statusLine is used when python3 is missing): "
+                        + TabSession.HooksJson($"{t.Dir}/{t.Id}.log", ClaudeStatusLine.Command(t.Dir)));
+            Console.WriteLine($"claude status line ({dir}/{ClaudeStatusLine.ScriptFile}): saves rate_limits five_hour/seven_day (used_percentage, resets_at) and captured_at to "
+                + $"${{CLAUDE_CONFIG_DIR:-~/.claude}}/{ClaudeStatusLine.SnapshotFile}, then runs the user's own statusLine (project .claude/settings.local.json, .claude/settings.json, "
+                + "then the account's settings.json) with the same input and prints its output");
             // bs_update in tab-lib.sh, before the CLI and before each in-place restart.
             Console.WriteLine(cfg.AutoUpdateClis
                 ? "cli update (bs_update, at most every 6 h per CLI, state in ~/.local/share/BoosterAI/cli-update of the tab's Linux):"
