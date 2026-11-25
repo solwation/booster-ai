@@ -132,20 +132,15 @@ public sealed class ErrorBannerTests : IDisposable
     }
 
     [Fact]
-    public void AnExitWithAnErrorKeepsItsLastLinesForThePopup()
+    public void AnExitWithAnErrorOffersRestartInThePopup()
     {
         var vm = new MainViewModel(new AppConfig { Tabs = [new() { Name = "Atlas" }] });
         var tab = vm.Tabs[0];
         tab.SetState(TabState.CliExited, 0);
         Assert.False(tab.IsExitError);
-        Assert.False(tab.ShowsOutput);
         tab.SetState(TabState.CliExited, 1);
         Assert.True(tab.IsExitError);
-        Assert.True(tab.ShowsOutput);
         Assert.True(tab.ShowReload);
-        tab.SetOutput(["Error: Invalid API key"]);
-        Assert.True(tab.HasOutput);
-        Assert.False(tab.HasOutputNote);
     }
 
     [Fact]

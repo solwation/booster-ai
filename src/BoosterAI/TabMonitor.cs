@@ -180,8 +180,6 @@ public sealed class TabSession
 bs_log="$1/$2.log"
 bs_timing="$1/$2.timing"
 bs_ev() { printf '%s %s\n' "$(date +%s%3N)" "$*" >> "$bs_log" 2>/dev/null; }
-bs_out="$1/$2.out"
-bs_size="$1/$2.size"
 bs_input="$1/$2.input"
 bs_ev start pid=$$ starttime=$(cut -d' ' -f22 /proc/$$/stat)
 # BoosterAI's claude status line (#199) runs python3; without it claude gets the settings without it, keeping the user's own.
@@ -192,8 +190,8 @@ if ! command -v python3 >/dev/null 2>&1; then
 elif [ -f "$1/$2.agy-replace.json" ] && python3 -c "import json,os,sys; d=json.load(open(os.path.join(os.environ.get('BOOSTERAI_AGY_HOME') or os.path.expanduser('~/.gemini/antigravity-cli'),'settings.json'))); s=d.get('statusLine'); sys.exit(0 if isinstance(s,dict) and s.get('enabled',True) is not False and isinstance(s.get('command'),str) and s['command'].strip() and not s.get('stack_with_default') else 1)" 2>/dev/null; then
   cp -f "$1/$2.agy-replace.json" "$1/$2.agy.json" 2>/dev/null || true
 fi
-# The captured output only lives as long as the tab (and is replaced when a new CLI starts).
-bs_rm_out() { rm -f "$bs_out" "$bs_out.1" "$bs_size" "$bs_input" 2>/dev/null || true; }
+# A pending input request only lives as long as the tab (and is replaced when a new CLI starts).
+bs_rm_out() { rm -f "$bs_input" 2>/dev/null || true; }
 trap 'bs_rm_out && bs_ev exit' EXIT
 # A requested close returns success to the terminal, even when the foreground CLI had to be stopped.
 trap 'exit 0' HUP USR1
@@ -252,33 +250,8 @@ bs_reset() {
   stty sane 2>/dev/null || true
   printf '\033[?1049l\033[?1000l\033[?1002l\033[?1003l\033[?1006l\033[?2004l\033[?25h\033[!p\033[0m\033[H\033[2J\033[3J'
 }
-# bs_cap [tee]: append stdin to the tab's output capture (tee: also pass it on), which BoosterAI shows while
-# the status is hovered. bs_trim keeps it bounded: past bs_cap_max bytes the file's last bs_cap_max bytes move
-# to .1 and the file is emptied (the writer appends, so it continues at the new start); only these two stay. It also notes
-# the tab's terminal size, which BoosterAI needs to replay the output (rows cols), and stops with bs_cap.
-bs_cap_max=131072
-bs_trim() {
-  local s z=
-  while kill -0 "$1" 2>/dev/null; do
-    # stty may print the size and still fail (EIO from a background process group): check the text.
-    s=$(stty size </dev/tty 2>/dev/null)
-    case $s in
-      [0-9]*' '[0-9]*) if [ "$s" != "$z" ]; then printf '%s\n' "$s" > "$bs_size" && z=$s; fi ;;
-    esac
-    if [ "$(stat -c %s "$bs_out" 2>/dev/null || echo 0)" -gt "$bs_cap_max" ]; then
-      tail -c "$bs_cap_max" "$bs_out" > "$bs_out.1" 2>/dev/null && : > "$bs_out"
-    fi
-    sleep 1
-  done
-}
-bs_cap() {
-  # Take the PID first: on the & line $BASHPID expands in the background child, so the loop would watch itself.
-  local me=$BASHPID
-  bs_trim "$me" </dev/null >/dev/null 2>&1 &
-  if [ "$1" = tee ]; then tee -a "$bs_out" 2>/dev/null || cat; else cat >> "$bs_out" 2>/dev/null || cat >/dev/null; fi
-}
-# Run interactive commands under a nested PTY so util-linux script can record output timing and
-# the output itself (bs_cap). Keep aliases and shell functions from the user's login shell.
+# Run interactive commands under a nested PTY so util-linux script can record output timing (tabN.timing, the
+# activity fallback and auto-clear's output check read it; the output itself is not kept). Keep aliases and shell functions from the user's login shell.
 bs_run() {
   local cmd="$1"
   case "$cmd" in
@@ -299,10 +272,10 @@ bs_run() {
   fi
   if ! command -v script >/dev/null 2>&1; then rm -f "$bs_timing"; bs_fg eval "$cmd"; return $?; fi
   if [ "$2" = input ] && [ -t 0 ] && command -v python3 >/dev/null 2>&1; then
-    BS_COMMAND="$cmd" bs_fg bs_pty script --quiet --flush --return --log-out >(bs_cap) --log-timing "$bs_timing" --command 'eval "$BS_COMMAND"'
+    BS_COMMAND="$cmd" bs_fg bs_pty script --quiet --flush --return --log-timing "$bs_timing" --command 'eval "$BS_COMMAND"'
     return $?
   fi
-  BS_COMMAND="$cmd" bs_fg script --quiet --flush --return --log-out >(bs_cap) --log-timing "$bs_timing" --command 'eval "$BS_COMMAND"'
+  BS_COMMAND="$cmd" bs_fg script --quiet --flush --return --log-timing "$bs_timing" --command 'eval "$BS_COMMAND"'
 }
 # bs_pty <command>: run it on a pseudo-terminal of its own and pass the tab's keyboard and screen through unchanged
 # (raw bytes, so raw mode, bracketed paste and mouse/focus reports reach the CLI as before; window size changes are
@@ -637,10 +610,8 @@ bs_stream() {
   bs_refresh_aliases "$1"
   if [ -n "${BASH_ALIASES[$1]+x}" ]; then eval "set -- ${BASH_ALIASES[$1]}"' "${@:2}"'; fi
   local t0=$SECONDS rc
-  # The group runs in this shell (rc stays set); its output also goes to the capture. bs_fg: see there.
-  { bs_fg bs_pipe "$@"; rc=$?; echo "== exit $rc, total $(bs_dur "$t0") s"; } > >(bs_cap tee)
-  # Let the capture print its last line before the shell goes on (bash 5.1+ waits for a process substitution).
-  wait "$!" 2>/dev/null
+  # The group runs in this shell (rc stays set). bs_fg: see there.
+  { bs_fg bs_pipe "$@"; rc=$?; echo "== exit $rc, total $(bs_dur "$t0") s"; }
   return "$rc"; }
 bs_pipe() { "$@" | bs_fmt; return "${PIPESTATUS[0]}"; }
 bs_fmt() {
@@ -649,7 +620,6 @@ bs_fmt() {
 last = ""
 watching = False
 def cols():
-    # stdout goes to the capture (bs_cap), so ask the terminal through stderr.
     for fd in (1, 2):
         try:
             return os.get_terminal_size(fd).columns
@@ -1045,74 +1015,6 @@ for line in sys.stdin:
         }
         catch (IOException) { return null; }
         catch (UnauthorizedAccessException) { return null; }
-    }
-
-    /// <summary>How many lines of a tab's output the status popup shows.</summary>
-    public const int OutputLines = 20;
-
-    /// <summary>The most a read takes of each capture part (tab-lib.sh keeps each near 128 KiB).</summary>
-    private const int OutputReadLimit = 256 * 1024;
-
-    /// <summary>
-    /// The last lines tab <paramref name="id"/> shows, replayed from its output capture (tabN.out.1 + tabN.out,
-    /// written by tab-lib.sh's bs_cap) at the terminal size it noted (tabN.size, "rows cols"); null when nothing
-    /// was captured, e.g. a tab started by an older BoosterAI.
-    /// </summary>
-    public IReadOnlyList<string>? ReadOutput(string id, int maxLines = OutputLines)
-    {
-        try
-        {
-            var path = Path.Combine(Directory, id + ".out");
-            var older = ReadTail(path + ".1");
-            var current = ReadTail(path);
-            if (older is null && current is null) return null;
-            var bytes = (older?.Bytes ?? []).Concat(current?.Bytes ?? []).ToArray();
-            // Whole from the start only when no part was cut: no rotation and no read limit.
-            var fromStart = older is null && current is { Cut: false };
-            var (rows, cols) = ReadSize(Path.Combine(Directory, id + ".size"));
-            return TerminalText.Render(TerminalText.Decode(bytes, fromStart), rows, cols, maxLines);
-        }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return null; }
-    }
-
-    private static (byte[] Bytes, bool Cut)? ReadTail(string path)
-    {
-        try
-        {
-            // The tab keeps appending (and rotating) while this reads.
-            using var f = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-            var cut = f.Length > OutputReadLimit;
-            if (cut) f.Seek(-OutputReadLimit, SeekOrigin.End);
-            using var m = new MemoryStream();
-            f.CopyTo(m);
-            return (m.ToArray(), cut);
-        }
-        catch (FileNotFoundException) { return null; }
-        catch (DirectoryNotFoundException) { return null; }
-    }
-
-    /// <summary>The tab's terminal size from "rows cols"; 40 × 120 when unknown.</summary>
-    internal static (int Rows, int Cols) ReadSize(string path)
-    {
-        try
-        {
-            var parts = File.Exists(path) ? File.ReadAllText(path).Split(' ', '\n', StringSplitOptions.RemoveEmptyEntries) : [];
-            if (parts.Length >= 2 && int.TryParse(parts[0], CultureInfo.InvariantCulture, out var rows)
-                && int.TryParse(parts[1], CultureInfo.InvariantCulture, out var cols) && rows > 0 && cols > 0)
-                return (rows, cols);
-        }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }
-        return (40, 120);
-    }
-
-    /// <summary>Removes a tab's output capture; for a tab that is gone without its shell cleaning up (Lost).</summary>
-    public void DeleteOutput(string id)
-    {
-        foreach (var name in new[] { id + ".out", id + ".out.1", id + ".size" })
-        {
-            try { File.Delete(Path.Combine(Directory, name)); }
-            catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }
-        }
     }
 
     /// <summary>Old sessions are only logs; keep two days, and longer while one of their tabs still runs.</summary>

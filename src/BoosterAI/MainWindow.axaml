@@ -250,7 +250,7 @@
                     <local:StatusPeekButton Grid.Column="0" Classes="status-peek" HorizontalAlignment="Stretch" IsVisible="{Binding HasStatus}"
                           Click="OnStatusPeek" KeyDown="OnStatusPeekKeyDown"
                           AutomationProperties.Name="{Binding StatusActionName}"
-                          ToolTip.ToolTipOpening="OnStatusTipOpening" PropertyChanged="OnStatusTipIsOpenChanged">
+                          ToolTip.ToolTipOpening="OnStatusTipOpening">
                       <ToolTip.Tip>
                         <ToolTip Classes="output"><local:StatusPeekView /></ToolTip>
                       </ToolTip.Tip>

@@ -13,7 +13,7 @@ namespace BoosterAI;
 /// focus changes. The window frame (title bar) is not drawn; only the client area.
 /// </summary>
 internal sealed record ScreenshotOptions(string File, string Window, string? FakeUpdate, string? FakeStatus, bool FakeDenied, bool FakeChanged,
-    int? FakeOutput = null, int FakeRestartable = 0, string? FakeSetup = null, string? Tab = null, bool FakeOptimization = false, int? FakeMemoryCap = null,
+    int? FakePeek = null, int FakeRestartable = 0, string? FakeSetup = null, string? Tab = null, bool FakeOptimization = false, int? FakeMemoryCap = null,
     string? Section = null, string? FakeMemoryState = null, int? Width = null, int? Height = null, bool FakeOrchestraIdle = false, int? FakeMemorySaved = null,
     bool FakeLongStatus = false, bool CheckClipping = false, string? FakeMemoryReclaim = null, int? FakeAgentList = null,
     bool FakeNewSubTab = false, int? FakeRowMenu = null, bool FakeLimits = false, bool FakeQuota = false);
@@ -29,7 +29,7 @@ internal static class Screenshot
         if (Value(args, "--config") is { } cfg) ConfigStore.UseFile(cfg);
         Active = true;
         return new ScreenshotOptions(file, Value(args, "--window") ?? "main", Value(args, "--fake-update"), Value(args, "--fake-status"), args.Contains("--fake-denied"),
-            args.Contains("--fake-changed") || Value(args, "--window") == "restart", FakeOutputIndex(args),
+            args.Contains("--fake-changed") || Value(args, "--window") == "restart", FakePeekIndex(args),
             int.TryParse(Value(args, "--fake-restartable"), out var r) ? r : 0,
             args.Contains("--fake-setup") ? (Value(args, "--fake-setup") is "wsl" or "alias" ? Value(args, "--fake-setup") : "cli") : null,
             Value(args, "--tab"), args.Contains("--fake-optimization"),
@@ -45,9 +45,9 @@ internal static class Screenshot
             args.Contains("--fake-limits"), args.Contains("--fake-quota"));
     }
 
-    /// <summary>--fake-output [N]: the popup of the Nth running sample tab (0: the first, interactive; 1: Watching).</summary>
-    private static int? FakeOutputIndex(string[] args) =>
-        !args.Contains("--fake-output") ? null : int.TryParse(Value(args, "--fake-output"), out var n) ? n : 0;
+    /// <summary>--fake-peek [N]: the status popup of the Nth running or failed sample tab (0: the first).</summary>
+    private static int? FakePeekIndex(string[] args) =>
+        !args.Contains("--fake-peek") ? null : int.TryParse(Value(args, "--fake-peek"), out var n) ? n : 0;
 
     private static string? Value(string[] args, string name)
     {
@@ -267,7 +267,7 @@ internal static class Screenshot
             else if (o.FakeSetup is not null && o.Tab is null) sw.SelectedTabIndex = 1;
         }
         // Room below the first rows for the status popup.
-        if (o.FakeOutput is not null) window.Height = 820;
+        if (o.FakePeek is not null) window.Height = 820;
         if (o.Width is { } shotWidth) window.Width = Math.Max(window.MinWidth, shotWidth);
         if (o.Height is { } shotHeight) window.Height = Math.Max(window.MinHeight, shotHeight);
         window.Show();
@@ -292,8 +292,8 @@ internal static class Screenshot
         }
         var frame = window.CaptureRenderedFrame() ?? throw new InvalidOperationException("No frame was rendered");
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(o.File))!);
-        // --fake-output [N]: a running tab's status popup open over the window, with sample output.
-        if (o.FakeOutput is { } n && vm.ShowSampleOutput(n) is { } tab) WithStatusPopup(window, frame, tab).Save(o.File);
+        // --fake-peek [N]: a tab's status popup open over the window.
+        if (o.FakePeek is { } n && vm.ShowSamplePeek(n) is { } tab) WithStatusPopup(window, frame, tab).Save(o.File);
         // --fake-agent-list [N]: the Nth row's Agent box open, with its agent and account entries (#194).
         else if (o.FakeAgentList is { } row) WithAgentList(window, frame, row).Save(o.File);
         // --fake-row-menu [N]: the Nth visible row's ⋯ menu open (default: the --fake-new-subtab row, else the first).

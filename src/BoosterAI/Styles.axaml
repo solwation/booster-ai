@@ -209,7 +209,7 @@
     <Setter Property="TextTrimming" Value="CharacterEllipsis" />
   </Style>
 
-  <!-- The status popup with a tab's last lines: wider than a normal tip (see TabOutputView). -->
+  <!-- The status popup: no tip chrome or width cap, StatusPeekView draws its own surface and size. -->
   <Style Selector="ToolTip.output">
     <Setter Property="MaxWidth" Value="2000" />
     <Setter Property="Padding" Value="0" />

@@ -4,7 +4,7 @@
              x:Class="BoosterAI.StatusPeekView" x:DataType="local:TabViewModel">
   <Border Classes="peek-surface">
   <ScrollViewer x:Name="OutputScroll" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" Focusable="True">
-    <StackPanel Spacing="8" Width="{x:Static local:TabOutputView.PopupWidth}">
+    <StackPanel Spacing="8" Width="430">
       <StackPanel Orientation="Horizontal" Spacing="7">
         <Ellipse Width="8" Height="8" Fill="{Binding StatusBrush}" VerticalAlignment="Center" />
         <TextBlock Classes="peek-header" Text="{Binding PeekHeader}" TextTrimming="CharacterEllipsis" />
@@ -28,7 +28,7 @@
                 <Grid AutomationProperties.Name="{Binding Name}">
                   <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" SharedSizeGroup="LimitLabel" />
-                    <ColumnDefinition Width="140" />
+                    <ColumnDefinition Width="72" />
                     <ColumnDefinition Width="Auto" SharedSizeGroup="LimitLeft" />
                     <ColumnDefinition Width="Auto" SharedSizeGroup="LimitUsed" />
                     <ColumnDefinition Width="*" />
@@ -51,8 +51,6 @@
       </Border>
       <!-- No plan limits for a live agy tab: why, instead of nothing (#212). -->
       <TextBlock Classes="muted caption" Text="{Binding PeekLimitMissing}" IsVisible="{Binding HasPeekLimitMissing}" TextWrapping="Wrap" />
-      <local:TabOutputView IsVisible="{Binding HasOutput}" />
-      <TextBlock Classes="muted caption" Text="{Binding OutputNote}" IsVisible="{Binding HasOutputNote}" TextWrapping="Wrap" />
       <!-- After an exit with an error, ↻ is the popup's primary action (#153); only where it can be clicked. -->
       <Button x:Name="RestartButton" Classes="primary" HorizontalAlignment="Left" Padding="12,6" IsVisible="False"
               Click="OnRestart" ToolTip.Tip="{Binding RestartTip}" AutomationProperties.Name="{Binding ReloadName}">

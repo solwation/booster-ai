@@ -12,7 +12,7 @@ public static class Launcher
     /// It contains no ';' because Windows Terminal splits its command line on it, and no raw '"' because Windows
     /// Terminal drops those from a new-tab command and wsl.exe then splits it on whitespace (#124; Quote encodes them).
     /// With a <paramref name="track"/>, the shell first sources tab-lib.sh with the tab's name (its title, #66), which logs start, CLI
-    /// start and exit code, tracks terminal output timing and captures a bounded output tail (bs_run, bs_cap), formats the run-once event stream
+    /// start and exit code, tracks terminal output timing (bs_run), formats the run-once event stream
     /// (bs_stream), and logs the shell's own exit (see TabSession); the closing shell is then a
     /// child instead of exec so that the exit trap still fires when the tab is closed. Every logging
     /// step is "|| true", so a missing lib never stops the CLI.

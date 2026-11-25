@@ -10,30 +10,18 @@ public partial class MainWindow
 {
     private Flyout? _statusPeek;
     private StatusPeekButton? _statusPeekTarget;
-    private TabViewModel? _hoverOutputTab;
     private Control? _hoverOutputTarget;
 
     private void OnStatusTipOpening(object? sender, CancelRoutedEventArgs e)
     {
         // A keyboard-opened view remains stable until dismissed; do not open a second preview over it.
         if (_statusPeek?.IsOpen == true) { e.Cancel = true; return; }
-        if (sender is Control { DataContext: TabViewModel tab } target)
+        if (sender is Control { DataContext: TabViewModel } target)
         {
             if (ToolTip.GetTip(target) is ToolTip { Content: StatusPeekView view })
                 view.MaxHeight = Math.Max(100, ClientSize.Height - 48);
-            _hoverOutputTab = tab;
             _hoverOutputTarget = target;
-            _vm.WatchOutput(tab, open: true);
         }
-    }
-
-    private void OnStatusTipIsOpenChanged(object? sender, Avalonia.AvaloniaPropertyChangedEventArgs e)
-    {
-        // The closing routed event can precede IsOpen changing. Follow the actual property instead.
-        if (e.Property != ToolTip.IsOpenProperty || sender is not Control { DataContext: TabViewModel tab } target
-            || ToolTip.GetIsOpen(target)) return;
-        if (_hoverOutputTab == tab) { _hoverOutputTab = null; _hoverOutputTarget = null; }
-        if (_statusPeekTarget?.DataContext != tab) _vm.WatchOutput(tab, open: false);
     }
 
     private void OnStatusPeek(object? sender, RoutedEventArgs e)
@@ -86,17 +74,12 @@ public partial class MainWindow
         {
             if (key.Key is Key.Enter or Key.Space) key.Handled = true;
         }, RoutingStrategies.Tunnel);
-        flyout.Opened += (_, _) =>
-        {
-            _vm.WatchOutput(tab, open: true);
-            content.FocusContent();
-        };
+        flyout.Opened += (_, _) => content.FocusContent();
         flyout.Closed += (_, _) =>
         {
             if (_statusPeek != flyout) return;
             _statusPeek = null;
             _statusPeekTarget = null;
-            if (_hoverOutputTab != tab) _vm.WatchOutput(tab, open: false);
         };
         flyout.ShowAt(target);
     }
@@ -125,11 +108,8 @@ public partial class MainWindow
     private void StopStatusPeek()
     {
         CloseStatusPeek(restoreFocus: false);
-        var tab = _hoverOutputTab;
         var target = _hoverOutputTarget;
-        _hoverOutputTab = null;
         _hoverOutputTarget = null;
         if (target is not null) ToolTip.SetIsOpen(target, false);
-        if (tab is not null) _vm.WatchOutput(tab, open: false);
     }
 }

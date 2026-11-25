@@ -3,7 +3,7 @@ using Avalonia.Interactivity;
 
 namespace BoosterAI;
 
-/// <summary>Identical full status and live output for pointer preview and keyboard-opened details.</summary>
+/// <summary>Identical compact status details (header, explanation, plan limits) for pointer preview and keyboard-opened details.</summary>
 public partial class StatusPeekView : UserControl
 {
     private bool _showsActions;
