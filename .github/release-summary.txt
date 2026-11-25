@@ -1,3 +1,3 @@
-version: 0.46.0
-sv: Statuskolumnen visar kvarvarande kvot, AGY får förbrukningsmätare och alla tider visas lättläst, t.ex. "om 1 h 10 min".
-en: The Status column shows remaining quota, AGY gets a usage meter, and all times read naturally, e.g. "in 1h 10m".
+version: 0.47.0
+sv: Kompakt statuskolumn, varning vid låg kvot, två kvotmätare, "Arbetar" vid CPU-last och klick för att visa fliken i terminalen.
+en: Compact Status column, low-quota warning, two quota meters, "Working" on CPU load and a click to show the tab in the terminal.
