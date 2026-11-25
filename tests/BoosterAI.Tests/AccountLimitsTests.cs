@@ -1118,4 +1118,88 @@ public class AccountLimitsTests
         }
         finally { Loc.Use(previous); }
     }
+
+    [Fact]
+    public void CompactStatusIndicatorShowsRemainingPercentAnErrorCueOrNothing()
+    {
+        var previous = Loc.Language;
+        try
+        {
+            var r = BoosterAI.Tests.UiSession.Run(() =>
+            {
+                Loc.Use("sv");
+                var now = DateTimeOffset.Now;
+                var used = 95.0;
+                var vm = new MainViewModel(new AppConfig
+                {
+                    Accounts = [new() { Id = "claude-work", Agent = "claude", Name = "Work", Directory = "~/.claude-work" }],
+                    Tabs =
+                    [
+                        new() { Name = "A", Directory = "/srv/a", Llm = "claude" },
+                        new() { Name = "B", Directory = "/srv/b", Llm = "claude", Account = "claude-work" },
+                        new() { Name = "C", Directory = "/srv/c", Llm = "aider" },
+                    ],
+                });
+                vm.LimitsClock = () => now;
+                vm.AccountLimitsEnabled = true;
+                vm.ReadAccountLimits = (_, _, dir) => Task.FromResult(
+                    dir is null ? new AccountLimits(null, new LimitWindow(used, now.AddDays(3), 10080), null, now) : AccountLimits.Unknown);
+                var (a, b, c) = (vm.Tabs[0], vm.Tabs[1], vm.Tabs[2]);
+                foreach (var t in vm.Tabs) t.SetState(TabState.Running, null, activity: BoosterAI.Activity.Busy);
+                Assert.True(vm.RefreshAccountLimitsAsync(force: true).IsCompletedSuccessfully);
+                Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+
+                var warn = (a.StatusIndicatorText, a.StatusIndicatorWarn, a.IsStatusError, a.StatusActionName);
+                var unknown = (b.StatusIndicatorText, b.HasStatusIndicatorText);
+                var aider = (c.StatusIndicatorText, c.HasStatusIndicatorText);
+                Loc.Use("en");
+                var warnEn = (a.StatusIndicatorText, a.StatusActionName);
+                Loc.Use("sv");
+
+                used = 0.0;
+                Assert.True(vm.RefreshAccountLimitsAsync(force: true).IsCompletedSuccessfully);
+                Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+                var reset = (a.StatusIndicatorText, a.StatusIndicatorWarn);
+
+                a.PendingRestart = true;
+                var pending = (a.StatusIndicatorText, a.StatusIndicatorWarn, a.IsStatusError);
+                a.PendingRestart = false;
+                a.SetCloseProgress("Sparar…");
+                var closing = (a.StatusIndicatorText, a.IsStatusError);
+                a.SetCloseProgress(null);
+
+                a.SetState(TabState.Closed, null);
+                var closed = (a.StatusIndicatorText, a.HasStatusIndicatorText, a.IsStatusError);
+                a.SetState(TabState.CliExited, 0);
+                var exitedOk = a.StatusIndicatorText;
+                a.SetState(TabState.CliExited, 1);
+                var exitedErr = (a.StatusIndicatorText, a.IsStatusError, a.StatusIndicatorWarn);
+                a.SetState(TabState.Denied, null, ["git"]);
+                var denied = (a.StatusIndicatorText, a.IsStatusError);
+                a.SetState(TabState.Lost, null);
+                var lost = (a.StatusIndicatorText, a.IsStatusError);
+                a.SetState(TabState.CliMissing, null);
+                var missing = (a.StatusIndicatorText, a.IsStatusError);
+                return (warn, warnEn, unknown, aider, reset, pending, closing, closed, exitedOk, exitedErr, denied, lost, missing);
+            });
+
+            Assert.Equal(("5 %", true, false), (r.warn.StatusIndicatorText, r.warn.StatusIndicatorWarn, r.warn.IsStatusError));
+            // The accessible name keeps the full status with the remaining share.
+            Assert.Contains("Körs · 5 % kvar", r.warn.StatusActionName);
+            Assert.Equal("5%", r.warnEn.StatusIndicatorText);
+            Assert.Contains("Running · 5% left", r.warnEn.StatusActionName);
+            Assert.Equal(("", false), r.unknown);
+            Assert.Equal(("", false), r.aider);
+            Assert.Equal(("100 %", false), r.reset);
+            Assert.Equal(("…", false, false), r.pending);
+            Assert.Equal(("…", false), r.closing);
+            Assert.Equal(("", false, false), r.closed);
+            Assert.Equal("100 %", r.exitedOk);
+            Assert.Equal(("!", true, false), r.exitedErr);
+            Assert.Equal(("!", true), r.denied);
+            Assert.Equal(("!", true), r.lost);
+            Assert.Equal(("!", true), r.missing);
+        }
+        finally { Loc.Use(previous); }
+    }
 }

@@ -84,10 +84,11 @@ public sealed class MainListTests : IDisposable
     [Fact]
     public void ProjectColumnsHideTheOrchestraAndKeepTheFixedWidths()
     {
-        // The row's ⋯ (#196) stays last, at the far right, whether or not the orchestra column shows.
-        Assert.Equal("4,20,46,2.7*,5*,200,195,168,32", MainWindow.ProjectColumns(1100, orchestra: true));
-        Assert.Equal("4,20,46,2.7*,5*,200,195,0,32", MainWindow.ProjectColumns(1100, orchestra: false));
-        Assert.EndsWith(",168,32", MainWindow.ProjectColumns(900, orchestra: true));
+        // The project takes all the free room and the status is a narrow fixed column (#209); the row's ⋯ (#196) stays
+        // last, at the far right, whether or not the orchestra column shows.
+        Assert.Equal("4,20,46,*,160,200,195,168,32", MainWindow.ProjectColumns(1100, orchestra: true));
+        Assert.Equal("4,20,46,*,160,200,195,0,32", MainWindow.ProjectColumns(1100, orchestra: false));
+        Assert.Equal("4,20,46,*,160,150,140,168,32", MainWindow.ProjectColumns(900, orchestra: true));
     }
 
     [Fact]

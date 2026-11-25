@@ -24,16 +24,18 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Stripe, handle, Start, project, status, agent, model, orchestra, ⋯. Project and status share the free room (2.7:5 since the show-terminal icon, #213), the
-    /// status a little more (its longest texts must fit at the default width); agent, model and orchestra are fixed,
-    /// and the orchestra column is 0 while no visible row can use it (#152). The row's ⋯ stays last, at the far right (#196).
+    /// Stripe, handle, Start, project, status, agent, model, orchestra, ⋯. The project takes all the free room; the status is a
+    /// narrow fixed column with a compact indicator and the row actions, its details in the popup (#209); agent, model and
+    /// orchestra are fixed, and the orchestra column is 0 while no visible row can use it (#152). The row's ⋯ stays last (#196).
     /// </summary>
     internal static string ProjectColumns(double width, bool orchestra)
     {
         var compact = width is > 0 and < 1050;
         var fixedColumns = compact ? "150,140" : "200,195";
-        return $"4,20,46,2.7*,5*,{fixedColumns},{(orchestra ? 168 : 0)},{MoreColumnWidth}";
+        return $"4,20,46,*,{StatusColumnWidth},{fixedColumns},{(orchestra ? 168 : 0)},{MoreColumnWidth}";
     }
+
+    internal const int StatusColumnWidth = 160;
 
     internal const int MoreColumnWidth = 32;
 

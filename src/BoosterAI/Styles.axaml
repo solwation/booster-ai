@@ -246,6 +246,14 @@
     <Setter Property="BorderBrush" Value="{DynamicResource LinkBrush}" />
     <Setter Property="BorderThickness" Value="2" />
   </Style>
+  <!-- The compact status column's text (#209): the remaining share in the warning colour near the limit, "!" for an error. -->
+  <Style Selector="TextBlock.status-indicator.warn">
+    <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
+  </Style>
+  <Style Selector="TextBlock.status-indicator.danger">
+    <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
   <Style Selector="FlyoutPresenter.status-output">
     <Setter Property="MaxWidth" Value="2000" />
     <Setter Property="Padding" Value="0" />

@@ -307,6 +307,19 @@ internal static class Screenshot
                 .Where(t => t.IsEffectivelyVisible && t.TextTrimming != Avalonia.Media.TextTrimming.None
                     && t.TextLayout.TextLines.Any(l => l.HasCollapsed))
                 .Select(t => t.Text).ToList();
+            // The compact status column (#209) clips its cell: the indicator and the row actions must fit in it side by side.
+            // Each part is measured unconstrained, as the cell's star column would otherwise squeeze the indicator to nothing.
+            foreach (var cell in window.GetVisualDescendants().OfType<Grid>().Where(g => g.Classes.Contains("status-cell") && g.IsEffectivelyVisible).ToList())
+            {
+                var needed = 0.0;
+                foreach (var part in cell.Children.Where(c => c.IsVisible))
+                {
+                    part.Measure(Size.Infinity);
+                    needed += part.DesiredSize.Width;
+                }
+                if (needed > cell.Bounds.Width + 0.5)
+                    clipped.Add($"status column ({needed:0} > {cell.Bounds.Width:0} px): {(cell.DataContext as TabViewModel)?.StatusText}");
+            }
             foreach (var text in clipped) Console.WriteLine("clipped: " + text);
             if (clipped.Count > 0) return 3;
         }

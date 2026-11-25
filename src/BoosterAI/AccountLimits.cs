@@ -66,6 +66,9 @@ public sealed record LimitIndicator(string Caption, bool Warn, string Tip, strin
     /// <summary>Localized remaining text for the status column (#207): "38 % kvar" (sv) or "38% left" (en).</summary>
     public string RemainingCaption => Loc.Format("account.limit.remaining", Loc.Number(RemainingPercent, "0"));
 
+    /// <summary>The compact status column's remaining share (#209): "38 %" (sv) or "38%" (en).</summary>
+    public string RemainingShort => Loc.Format("account.limit.chip", Loc.Number(RemainingPercent, "0"));
+
     public static LimitIndicator? For(AccountLimits limits, DateTimeOffset now)
     {
         limits = limits.AsOf(now);

@@ -169,7 +169,7 @@
 
     <!-- Column widths are set in MainWindow.axaml.cs (ProjectColumns): compact or wide, orchestra shown or 0 (#152), and
          the rows' ⋯ (#196). The header is inset like the rows inside their segment (#196), so labels sit over their fields. -->
-    <Grid Grid.Row="2" Classes="project-columns" Loaded="OnProjectGridLoaded" ColumnDefinitions="4,20,46,2.7*,5*,200,195,168,32" Margin="5,0,5,6" IsVisible="{Binding HasTabs}">
+    <Grid Grid.Row="2" Classes="project-columns" Loaded="OnProjectGridLoaded" ColumnDefinitions="4,20,46,*,160,200,195,168,32" Margin="5,0,5,6" IsVisible="{Binding HasTabs}">
       <TextBlock Grid.Column="2" Classes="colhead" Text="{local:T col.with}" />
       <TextBlock Grid.Column="3" Classes="colhead" Text="{local:T col.project}" />
       <TextBlock Grid.Column="4" Classes="colhead" Text="{local:T col.status}" />
@@ -211,7 +211,7 @@
                   </ContextMenu>
                 </Border.ContextMenu>
                 <StackPanel>
-                <Grid Classes="project-columns" Loaded="OnProjectGridLoaded" ColumnDefinitions="4,20,46,2.7*,5*,200,195,168,32">
+                <Grid Classes="project-columns" Loaded="OnProjectGridLoaded" ColumnDefinitions="4,20,46,*,160,200,195,168,32">
                   <!-- A project's colour stripe; in a group the segment draws it instead, joined across the rows (#196). -->
                   <Border Grid.Column="0" Background="{Binding ColorBrush}" CornerRadius="{StaticResource RadiusSmall}" IsVisible="{Binding !InGroup}" />
                   <Border Grid.Column="1" Classes="grip" PointerPressed="OnTabDragStart"
@@ -243,10 +243,12 @@
                     </Button>
                   </Grid>
 
-                  <Grid Grid.Column="4" ColumnDefinitions="*,Auto" VerticalAlignment="Center"
+                  <!-- The compact status column (#209): the status dot with the remaining share ("38 %"), "!" on an error row or "…"
+                       while closing or waiting to restart; the full status, its explanation and the plan limits are in the popup. -->
+                  <Grid Grid.Column="4" Classes="status-cell" ColumnDefinitions="*,Auto" VerticalAlignment="Center"
                         Margin="0,0,12,0" IsVisible="{Binding ShowStatusColumn}" ClipToBounds="True">
-                    <!-- Hover previews; keyboard or click opens the same details until dismissed. It fills its column (#156):
-                         left-aligned, it could keep a stale narrow arrange after ↻/Continue hid and truncate the status. -->
+                    <!-- Hover previews; keyboard or click opens the same details until dismissed. It fills its column (#156), so the
+                         whole free part of the cell opens the popup and the row actions line up at the column's right edge. -->
                     <local:StatusPeekButton Grid.Column="0" Classes="status-peek" HorizontalAlignment="Stretch" IsVisible="{Binding HasStatus}"
                           Click="OnStatusPeek" KeyDown="OnStatusPeekKeyDown"
                           AutomationProperties.Name="{Binding StatusActionName}"
@@ -254,11 +256,12 @@
                       <ToolTip.Tip>
                         <ToolTip Classes="output"><local:StatusPeekView /></ToolTip>
                       </ToolTip.Tip>
-                      <Grid ColumnDefinitions="Auto,*">
-                        <Ellipse Grid.Column="0" Width="8" Height="8" Fill="{Binding StatusBrush}" VerticalAlignment="Center" Margin="0,0,7,0" />
-                        <TextBlock Classes="caption" Grid.Column="1" Text="{Binding StatusDisplay}" VerticalAlignment="Center"
-                                   TextTrimming="CharacterEllipsis" />
-                      </Grid>
+                      <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
+                        <Ellipse Width="9" Height="9" Fill="{Binding StatusBrush}" VerticalAlignment="Center" />
+                        <TextBlock Classes="caption status-indicator" Classes.warn="{Binding StatusIndicatorWarn}" Classes.danger="{Binding IsStatusError}"
+                                   Text="{Binding StatusIndicatorText}" IsVisible="{Binding HasStatusIndicatorText}"
+                                   VerticalAlignment="Center" Margin="6,0,0,0" TextTrimming="CharacterEllipsis" />
+                      </StackPanel>
                     </local:StatusPeekButton>
                     <!-- Restart is ↻; Continue is a word, shown only when the conversation can be continued (#156). A tab never
                          opened has the Start icon in their place (#198): it starts only that tab, in the open terminal window if any. -->
@@ -272,11 +275,11 @@
                               ToolTip.Tip="{Binding ShowTerminalTip}" AutomationProperties.Name="{Binding ShowTerminalName}">
                         <Path Data="{StaticResource ShowTerminalIcon}" />
                       </Button>
-                      <Button Classes="icon" Click="OnRestart" IsVisible="{Binding ShowReload}" Margin="7,-6,0,-6"
+                      <Button Classes="icon" Click="OnRestart" IsVisible="{Binding ShowReload}" Margin="4,-6,0,-6"
                               ToolTip.Tip="{Binding RestartTip}" AutomationProperties.Name="{Binding ReloadName}">
                         <Path Data="{StaticResource RestartIcon}" />
                       </Button>
-                      <Button Classes="link" Click="OnContinue" IsVisible="{Binding CanContinueClosed}" Margin="6,0,0,0"
+                      <Button Classes="link" Click="OnContinue" IsVisible="{Binding CanContinueClosed}" Margin="4,0,0,0"
                               Padding="0,4" VerticalAlignment="Center"
                               ToolTip.Tip="{Binding ContinueTip}" AutomationProperties.Name="{Binding ContinueName}">
                         <TextBlock Classes="caption" Text="{local:T restart.continue.link}" />
@@ -362,7 +365,7 @@
                 </Grid>
                 <!-- Advisor belongs to the project choices (#173). -->
                 <Panel IsVisible="{Binding IsProject}">
-                  <Grid Classes="project-columns" Loaded="OnProjectGridLoaded" ColumnDefinitions="4,20,46,2.7*,5*,200,195,168,32"
+                  <Grid Classes="project-columns" Loaded="OnProjectGridLoaded" ColumnDefinitions="4,20,46,*,160,200,195,168,32"
                         RowDefinitions="Auto,Auto" IsVisible="{Binding AdvisorVisible}" Margin="0,6,0,0">
                     <TextBlock Grid.Column="3" Grid.ColumnSpan="2" Classes="muted caption" Text="{local:T advisor.scope}"
                                TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,12,0" />

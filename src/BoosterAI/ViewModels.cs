@@ -97,7 +97,7 @@ public sealed class TabViewModel : Observable
         PropertyChanged += (_, e) =>
         {
             if (e.PropertyName is nameof(Name) or nameof(Llm) or nameof(StatusText) or nameof(Account)) Raise(nameof(PeekHeader));
-            if (e.PropertyName is nameof(StatusText)) Raise(nameof(StatusDisplay));
+            if (e.PropertyName is nameof(StatusText)) { Raise(nameof(StatusDisplay)); RaiseStatusIndicator(); }
             if (e.PropertyName is nameof(StatusText) or nameof(StatusTip)) { Raise(nameof(PeekDetail)); Raise(nameof(HasPeekDetail)); }
         };
     }
@@ -391,6 +391,7 @@ public sealed class TabViewModel : Observable
         Raise(nameof(AgentChoices));
         Raise(nameof(SelectedAgentChoice));
         foreach (var n in new[] { nameof(HasPeekLimit), nameof(PeekLimitWarn), nameof(PeekLimitRows), nameof(PeekLimitAge), nameof(HasPeekLimitAge), nameof(PeekLimitName), nameof(StatusDisplay), nameof(PeekLimitMissing), nameof(HasPeekLimitMissing) }) Raise(n);
+        RaiseStatusIndicator();
     }
     public IReadOnlyList<string> Models => Catalog.ModelsFor(_llm);
     public bool IsAi => _llm != Catalog.ShellOnly;
@@ -587,6 +588,7 @@ public sealed class TabViewModel : Observable
     private void RaiseRestart()
     {
         foreach (var n in new[] { nameof(IsChanged), nameof(CanRestart), nameof(RestartTip), nameof(PendingRestart), nameof(StatusActionName), nameof(CanContinueClosed), nameof(CanReloadOrchestra), nameof(ShowReload), nameof(ReloadName), nameof(CanStart), nameof(ShowStatusColumn) }) Raise(n);
+        RaiseStatusIndicator();
         _owner.RestartableChanged();
     }
     /// <summary>The programs of the commands agy denied (state Denied).</summary>
@@ -628,16 +630,40 @@ public sealed class TabViewModel : Observable
     public string PeekLimitMissing => _llm != "agy" || !_owner.AccountLimitsEnabled || PeekLimit is not null || !ShowStatusRemaining ? ""
         : Loc.Get(Session is { } session && Track is { } track && session.HasAgySettings(track.Id) ? "account.limit.missing.agy.pending" : "account.limit.missing.agy.restart");
     public bool HasPeekLimitMissing => PeekLimitMissing.Length > 0;
-    public string StatusActionName => Loc.Format("peek.action", Name, StatusTip);
+    /// <summary>The status indicator's accessible name: the full status (tip), with the remaining share when the indicator shows it (#209).</summary>
+    public string StatusActionName => Loc.Format("peek.action", Name, WithRemaining(StatusTip));
 
     /// <summary>
-    /// The status column's visible text (#207): on normal live/starting/idle tabs, appends remaining quota percentage
-    /// ("Körs · 38 % kvar" / "Running · 38% left") when the tab's agent/account has a known limit; closed, error,
-    /// changed-choice and auto-cleared rows keep their full status/action text unclipped beside ↻/Continue.
+    /// The full status with the remaining quota (#207): on normal live/starting/idle tabs with a known limit
+    /// "Körs · 38 % kvar" / "Running · 38% left"; other rows keep their plain status. The main list shows only the
+    /// compact <see cref="StatusIndicatorText"/> (#209); this text is what it stands for.
     /// </summary>
-    public string StatusDisplay => StatusText is { Length: > 0 } text && ShowStatusRemaining && PeekLimit is { } limit
-        ? Loc.Format("tabstate.withRemaining", text, limit.RemainingCaption)
-        : StatusText;
+    public string StatusDisplay => WithRemaining(StatusText);
+
+    private string WithRemaining(string status) => status is { Length: > 0 } && ShowStatusRemaining && PeekLimit is { } limit
+        ? Loc.Format("tabstate.withRemaining", status, limit.RemainingCaption)
+        : status;
+
+    /// <summary>
+    /// The compact status column's text beside the status dot (#209): the remaining share of the tightest known window on
+    /// live, idle, watching and starting tabs ("38 %" / "38%"), "!" on an error row so colour is not the only cue, "…" while
+    /// the tab closes or waits for idle to restart, and nothing otherwise. The full status is in the popup and the accessible name.
+    /// </summary>
+    public string StatusIndicatorText =>
+        _closeProgress is not null || (_state is TabState.Running && PendingRestart) ? "…"
+        : IsStatusError ? "!"
+        : ShowStatusRemaining && PeekLimit is { } limit ? limit.RemainingShort
+        : "";
+    public bool HasStatusIndicatorText => StatusIndicatorText.Length > 0;
+    /// <summary>A failed row: the CLI exited with an error, is missing, did not start, was denied or the tab was lost (#209).</summary>
+    public bool IsStatusError => _closeProgress is null && (IsExitError || _state is TabState.CliMissing or TabState.NotStarted or TabState.Lost or TabState.Denied);
+    /// <summary>The remaining share is shown in the warning colour from <see cref="LimitIndicator.WarnAt"/> percent used.</summary>
+    public bool StatusIndicatorWarn => !IsStatusError && StatusIndicatorText.Length > 0 && StatusIndicatorText != "…" && PeekLimit?.Warn == true;
+
+    private void RaiseStatusIndicator()
+    {
+        foreach (var n in new[] { nameof(StatusIndicatorText), nameof(HasStatusIndicatorText), nameof(IsStatusError), nameof(StatusIndicatorWarn), nameof(StatusActionName) }) Raise(n);
+    }
 
     private bool ShowStatusRemaining => _closeProgress is null && _state switch
     {
