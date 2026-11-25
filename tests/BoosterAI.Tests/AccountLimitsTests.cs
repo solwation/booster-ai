@@ -79,7 +79,7 @@ public class AccountLimitsTests
             var limits = AccountLimitsProbe.Parse("codex", output);
             Assert.Equal(12.5, limits.Session!.UsedPercent);
             Assert.Equal(300, limits.Session.Minutes);
-            Assert.Equal(Now + 3600, limits.Session.ResetsAt.ToUnixTimeSeconds());
+            Assert.Equal(Now + 3600, limits.Session.ResetsAt?.ToUnixTimeSeconds());
             Assert.Equal(140, limits.Week!.UsedPercent); // Codex allows more than 100 %
             Assert.Equal(new LimitCredits(true, false, "17.50"), limits.Credits);
             Assert.Equal(DateTimeOffset.Parse("2026-11-25T08:01:00Z"), limits.At);

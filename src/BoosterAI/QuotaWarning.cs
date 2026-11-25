@@ -53,16 +53,16 @@ public sealed class QuotaWarnings
 
     private void Check(string agent, string accountKey, string? account, string label, LimitWindow? window, int threshold, List<QuotaWarning> result)
     {
-        if (window is null) return;
+        if (window?.ResetsAt is not { } resetsAt) return;
         var key = agent + "\0" + accountKey + "\0" + (label == Loc.Get("account.limit.week") ? "week" : "session");
         var remaining = LimitPercent.Remaining(window.UsedPercent);
         lock (_lock)
         {
             if (remaining >= threshold) { _warned.Remove(key); return; }
-            if (_warned.TryGetValue(key, out var seen) && (window.ResetsAt - seen).Duration() < SameWindow) return;
-            _warned[key] = window.ResetsAt;
+            if (_warned.TryGetValue(key, out var seen) && (resetsAt - seen).Duration() < SameWindow) return;
+            _warned[key] = resetsAt;
         }
-        result.Add(new QuotaWarning(agent, account, label, remaining, window.ResetsAt));
+        result.Add(new QuotaWarning(agent, account, label, remaining, resetsAt));
     }
 }
 

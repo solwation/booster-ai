@@ -615,7 +615,7 @@ public sealed class TabViewModel : Observable
 
     /// <summary>The tab's account's plan limits for the status popup (#200); null for other agents and while unknown.</summary>
     private LimitIndicator? PeekLimit => _owner.LimitIndicatorOf(_llm,
-        _account == "" ? "" : Accounts.Find(_owner.AccountsFor(_llm), _llm, _account)?.Directory ?? "\0");
+        _account == "" ? "" : Accounts.Find(_owner.AccountsFor(_llm), _llm, _account)?.Directory ?? "\0", includeFable: true);
     public bool HasPeekLimit => PeekLimit is not null;
     public bool PeekLimitWarn => PeekLimit?.Warn == true;
     /// <summary>The popup's limit table (#210): one row per window with remaining/used share and reset time.</summary>
@@ -640,7 +640,7 @@ public sealed class TabViewModel : Observable
     /// </summary>
     public string StatusDisplay => WithRemaining(StatusText);
 
-    private string WithRemaining(string status) => status is { Length: > 0 } && ShowStatusRemaining && PeekLimit is { } limit
+    private string WithRemaining(string status) => status is { Length: > 0 } && ShowStatusRemaining && PeekLimit is { HasSharedWindows: true } limit
         ? Loc.Format("tabstate.withRemaining", status, limit.RemainingCaption)
         : status;
 
@@ -652,7 +652,7 @@ public sealed class TabViewModel : Observable
     public string StatusIndicatorText =>
         _closeProgress is not null || (_state is TabState.Running && PendingRestart) ? "…"
         : IsStatusError ? "!"
-        : ShowStatusRemaining && PeekLimit is { } limit ? limit.RemainingShort
+        : ShowStatusRemaining && PeekLimit is { HasSharedWindows: true } limit ? limit.RemainingShort
         : "";
     public bool HasStatusIndicatorText => StatusIndicatorText.Length > 0;
     /// <summary>A failed row: the CLI exited with an error, is missing, did not start, was denied or the tab was lost (#209).</summary>
@@ -1002,6 +1002,17 @@ public sealed partial class MainViewModel : Observable
     public bool Notifications { get => _cfg.Notifications; set { _cfg.Notifications = value; Raise(); } }
     /// <summary>Settings → General (#211): warn in the main window when a plan window has little quota left.</summary>
     public bool QuotaWarn { get => _cfg.QuotaWarn; set { _cfg.QuotaWarn = value; Raise(); } }
+    public bool ReadClaudeFableQuota
+    {
+        get => _cfg.ReadClaudeFableQuota;
+        set
+        {
+            if (_cfg.ReadClaudeFableQuota == value) return;
+            _cfg.ReadClaudeFableQuota = value;
+            Raise();
+            ClaudeFableQuotaChanged();
+        }
+    }
     public decimal? QuotaWarnPercent
     {
         get => QuotaWarnings.Normalize(_cfg.QuotaWarnPercent);
@@ -1391,8 +1402,9 @@ public sealed partial class MainViewModel : Observable
         if (_saved.WslDistro != _cfg.WslDistro) InvalidateCompactMetadata();
         foreach (var editor in _compactEditors.Values) editor.UpdateSettings(_cfg.AutoCompactSettings);
         RefreshCompactMode();
+        if (_saved.ReadClaudeFableQuota != _cfg.ReadClaudeFableQuota) ClaudeFableQuotaChanged();
         foreach (var name in new[] { nameof(WslDistro), nameof(LinuxTerminal), nameof(ProjectSearchRoot), nameof(CanResetProjectSearchRoot), nameof(Theme), nameof(SelectedTheme), nameof(SelectedLanguage),
-            nameof(SelectedAppearance), nameof(SelectedAfterLaunch), nameof(MinimizeToTray), nameof(Notifications), nameof(QuotaWarn), nameof(QuotaWarnPercent), nameof(ShowAdvisor), nameof(SelectedZoom), nameof(AutoUpdateClis), nameof(AutoClearIdle), nameof(AutoClearMinutes), nameof(CheckForUpdates) })
+            nameof(SelectedAppearance), nameof(SelectedAfterLaunch), nameof(MinimizeToTray), nameof(Notifications), nameof(QuotaWarn), nameof(QuotaWarnPercent), nameof(ReadClaudeFableQuota), nameof(ShowAdvisor), nameof(SelectedZoom), nameof(AutoUpdateClis), nameof(AutoClearIdle), nameof(AutoClearMinutes), nameof(CheckForUpdates) })
             Raise(name);
         foreach (var t in Tabs) t.RaiseColor();
         foreach (var p in Projects) p.RaiseAdvisorVisible();

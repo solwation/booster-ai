@@ -4,7 +4,7 @@ using System.Text.Json;
 namespace BoosterAI;
 
 /// <summary>One plan window (#199): how much of it is used and when it starts over. <see cref="Minutes"/> is its length when the agent says.</summary>
-public sealed record LimitWindow(double UsedPercent, DateTimeOffset ResetsAt, int? Minutes = null);
+public sealed record LimitWindow(double UsedPercent, DateTimeOffset? ResetsAt, int? Minutes = null);
 
 /// <summary>Codex's credits beside the plan windows (#199), as its last turn reported them.</summary>
 public sealed record LimitCredits(bool HasCredits, bool Unlimited, string? Balance);
@@ -26,6 +26,8 @@ public sealed record AccountLimits(LimitWindow? Session, LimitWindow? Week, Limi
     /// <summary>The same for the weekly window (#214).</summary>
     public bool WeekReset { get; init; }
 
+    public LimitWindow? Fable { get; init; }
+
     /// <summary>
     /// Drops the windows whose reset time has passed: their old percentage says nothing about the new window. A dropped window is
     /// remembered as reset (<see cref="SessionReset"/>, <see cref="WeekReset"/>). A window still running keeps its last known level,
@@ -35,6 +37,7 @@ public sealed record AccountLimits(LimitWindow? Session, LimitWindow? Week, Limi
     {
         Session = Session is { } s && s.ResetsAt > now ? s : null,
         Week = Week is { } w && w.ResetsAt > now ? w : null,
+        Fable = Fable?.ResetsAt <= now ? null : Fable,
         SessionReset = SessionReset || Session is { } rs && rs.ResetsAt <= now,
         WeekReset = WeekReset || Week is { } rw && rw.ResetsAt <= now,
     };
@@ -85,7 +88,7 @@ public sealed record LimitIndicator(string Caption, bool Warn, string Tip, strin
     public const double WarnAt = 80;
 
     /// <summary>Value equality including <see cref="Rows"/>: agent choices compare their indicator to keep the selected entry (#202, #210).</summary>
-    public bool Equals(LimitIndicator? other) => other is not null && Caption == other.Caption && Warn == other.Warn && Tip == other.Tip
+    public bool Equals(LimitIndicator? other) => other is not null && HasSharedWindows == other.HasSharedWindows && Caption == other.Caption && Warn == other.Warn && Tip == other.Tip
         && Name == other.Name && Age == other.Age && Stale == other.Stale && Percent.Equals(other.Percent) && Rows.SequenceEqual(other.Rows);
 
     public override int GetHashCode() => HashCode.Combine(Caption, Warn, Tip, Name, Age, Percent, Rows.Count);
@@ -99,12 +102,15 @@ public sealed record LimitIndicator(string Caption, bool Warn, string Tip, strin
     /// <summary>The compact status column's remaining share (#209): "38 %" (sv) or "38%" (en).</summary>
     public string RemainingShort => Loc.Format("account.limit.chip", LimitPercent.Text(RemainingPercent));
 
-    public static LimitIndicator? For(AccountLimits limits, DateTimeOffset now)
+    public bool HasSharedWindows { get; init; } = true;
+
+    public static LimitIndicator? For(AccountLimits limits, DateTimeOffset now, bool includeFable = false)
     {
         limits = limits.AsOf(now);
         var known = new[] { limits.Session, limits.Week }.OfType<LimitWindow>().ToList();
-        if (known.Count == 0) return null;
-        var percent = LimitPercent.Used(known.Max(w => w.UsedPercent));
+        var fable = includeFable ? limits.Fable : null;
+        if (known.Count == 0 && fable is null) return null;
+        var percent = LimitPercent.Used(known.Count > 0 ? known.Max(w => w.UsedPercent) : fable!.UsedPercent);
         var warn = percent >= WarnAt;
         var number = LimitPercent.Text(percent);
         var session = Loc.Format("account.limit.hours", Loc.Number((limits.Session?.Minutes ?? 300) / 60.0, "0.#"));
@@ -114,14 +120,20 @@ public sealed record LimitIndicator(string Caption, bool Warn, string Tip, strin
             session + ": " + LimitText.Used(limits.Session, now, limits.SessionReset),
             Loc.Get("account.limit.week") + ": " + LimitText.Used(limits.Week, now, limits.WeekReset),
         };
+        if (fable is not null) lines.Add(Loc.Get("account.limit.fable") + ": " + LimitText.Used(fable, now));
         if (limits.At is { } at) lines.Add(LimitText.Age(at, now));
         var name = Loc.Format("account.limit.chip.name", number)
             + (percent >= 100 ? ", " + Loc.Get("account.limit.full") : warn ? ", " + Loc.Get("account.limit.near") : "");
-        var rows = new[] { LimitRow.For(session, limits.Session, now, limits.SessionReset), LimitRow.For(Loc.Get("account.limit.week"), limits.Week, now, limits.WeekReset) };
+        var rows = new List<LimitRow>
+        {
+            LimitRow.For(session, limits.Session, now, limits.SessionReset),
+            LimitRow.For(Loc.Get("account.limit.week"), limits.Week, now, limits.WeekReset),
+        };
+        if (fable is not null) rows.Add(LimitRow.For(Loc.Get("account.limit.fable"), fable, now));
         var age = limits.At is { } when ? LimitText.Age(when, now) : "";
         var stale = limits.At is { } old && now - old >= StaleAfter ? HumanTime.Since(old, now) : "";
         if (stale.Length > 0) name += ", " + age;
-        return new LimitIndicator(Loc.Format("account.limit.chip", number), warn, string.Join("\n", lines), name, rows, age, Math.Clamp(percent, 0, 100)) { Stale = stale };
+        return new LimitIndicator(Loc.Format("account.limit.chip", number), warn, string.Join("\n", lines), name, rows, age, Math.Clamp(percent, 0, 100)) { Stale = stale, HasSharedWindows = known.Count > 0 };
     }
 
     /// <summary>A reading at least this old shows its time beside the level in the Agent list (#214): "62 % · i går 18:10".</summary>
@@ -180,8 +192,10 @@ public sealed record LimitRow(string Label, bool Known, double Remaining, string
         var warn = used >= LimitIndicator.WarnAt;
         var remainingText = Loc.Format("account.limit.remaining", LimitPercent.Text(remaining));
         var usedText = Loc.Format("account.limit.usedShort", LimitPercent.Text(used));
-        var resetText = Loc.Format("account.limit.resets", LimitText.Resets(window.ResetsAt, now));
-        var name = Loc.Format("account.limit.row.name", label, remainingText, usedText, resetText) + (warn ? ", " + Loc.Get("account.limit.near") : "");
+        var resetText = window.ResetsAt is { } at ? Loc.Format("account.limit.resets", LimitText.Resets(at, now)) : "";
+        var name = resetText.Length > 0 ? Loc.Format("account.limit.row.name", label, remainingText, usedText, resetText)
+            : $"{label}: {remainingText}, {usedText}";
+        if (warn) name += ", " + Loc.Get("account.limit.near");
         return new(label, true, remaining, remainingText, usedText, resetText, warn, name, Math.Clamp(used, 0, 100));
     }
 }
@@ -190,7 +204,8 @@ public sealed record LimitRow(string Label, bool Known, double Remaining, string
 public static class LimitText
 {
     public static string Used(LimitWindow? window, DateTimeOffset now, bool reset = false) => window is null ? Loc.Get(reset ? "account.limit.reset" : "account.limit.unknown")
-        : Loc.Format("account.limit.used", LimitPercent.UsedText(window.UsedPercent), Resets(window.ResetsAt, now));
+        : window.ResetsAt is { } at ? Loc.Format("account.limit.used", LimitPercent.UsedText(window.UsedPercent), Resets(at, now))
+        : Loc.Format("account.limit.usedShort", LimitPercent.UsedText(window.UsedPercent));
 
     /// <summary>Codex's credits: unlimited, a balance, or none; empty when the agent reported nothing (Claude never does).</summary>
     public static string Credits(LimitCredits? credits) => credits switch
