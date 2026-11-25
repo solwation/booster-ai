@@ -770,7 +770,7 @@
             <div style="width: 20px;"></div>
           </div>
           <div class="showcase-media-container">
-            <img id="previewImg" class="showcase-media" src="screenshot-dark.png?v=20261125-196" alt="BoosterAI with six AI CLIs selected across example project tabs, two Claude tabs showing their account label">
+            <img id="previewImg" class="showcase-media" src="screenshot-dark.png?v=20261125-202" alt="BoosterAI with six AI CLIs selected across example project tabs, two Claude tabs showing their account label and usage meter">
           </div>
         </div>
       </div>
@@ -861,7 +861,7 @@
           <div class="card-icon">🔑</div>
           <h3>Several Accounts per Agent</h3>
           <p>
-            Keep a private and a work login for Claude Code (<code>CLAUDE_CONFIG_DIR</code>) or Codex (<code>CODEX_HOME</code>). Add accounts under Settings &rarr; AI agents, see whether each one is logged in, log in from Settings and rename the default account (for example <em>Private</em>). Choose agent and account together in one Agent box per tab; a small label shows which account a tab uses.
+            Keep a private and a work login for Claude Code (<code>CLAUDE_CONFIG_DIR</code>) or Codex (<code>CODEX_HOME</code>). Add accounts under Settings &rarr; AI agents, see whether each one is logged in and how much of its 5-hour and weekly plan limits it has used, log in from Settings and rename the default account (for example <em>Private</em>). Choose agent and account together in one Agent box per tab, with a thin usage meter in each Claude or Codex row and a small label for the chosen account.
             <a href="https://github.com/solwation/booster-ai/blob/main/docs/DETAILS.md#accounts-per-agent" style="color:var(--cyan);text-decoration:underline;" target="_blank" rel="noopener">How accounts work</a>
           </p>
         </div>
@@ -1010,8 +1010,8 @@
       };
       img.alt = descriptions[mode] || 'BoosterAI app screenshot';
       setTimeout(() => {
-        if (mode === 'dark') img.src = 'screenshot-dark.png?v=20261125-196';
-        else if (mode === 'light') img.src = 'screenshot.png?v=20261125-196';
+        if (mode === 'dark') img.src = 'screenshot-dark.png?v=20261125-202';
+        else if (mode === 'light') img.src = 'screenshot.png?v=20261125-202';
         else if (mode === 'settings') img.src = 'settings-general.png?v=20261124-195';
         else if (mode === 'appearance') img.src = 'settings-appearance.png?v=20261124-195';
         else if (mode === 'memory') img.src = 'settings-ram.png?v=20261124-195';
