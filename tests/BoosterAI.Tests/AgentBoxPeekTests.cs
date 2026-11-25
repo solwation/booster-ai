@@ -73,4 +73,41 @@ public sealed class AgentBoxPeekTests : IDisposable
             Assert.True(r.Context);
         });
     }
+
+    /// <summary>#224: with meters along the closed box's bottom edge, the account label keeps a visible gap above them.</summary>
+    [Fact]
+    public void TheAccountLabelKeepsAGapAboveTheMeters()
+    {
+        var gaps = UiSession.Run(() =>
+        {
+            Loc.Use("sv");
+            var vm = new MainViewModel(new AppConfig
+            {
+                DefaultAccountNames = new() { ["claude"] = "Privat" },
+                Accounts = [new AgentAccount { Id = "claude-work", Agent = "claude", Name = "Work", Directory = "~/.claude-work" }],
+                Tabs = [new TabConfig { Name = "Atlas", Directory = "/srv/atlas", Enabled = true, Llm = "claude" }],
+            });
+            vm.ShowSampleLimitsForAll();
+            var window = new MainWindow(vm) { Width = 1100, Height = 400 };
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            try
+            {
+                return window.GetVisualDescendants().OfType<ComboBox>().Where(b => b.Classes.Contains("agent-choice") && b.IsEffectivelyVisible).Select(box =>
+                {
+                    var host = (Panel)box.GetVisualParent()!;
+                    var meters = host.Children.OfType<Panel>().Single(p => p.Classes.Contains("limit-meter"));
+                    var pill = box.GetVisualDescendants().OfType<Border>().Single(b => b.Classes.Contains("account-pill") && b.IsEffectivelyVisible);
+                    var pillBottom = pill.TranslatePoint(new Point(0, pill.Bounds.Height), host)!.Value.Y;
+                    var barTop = meters.GetVisualDescendants().OfType<ProgressBar>().First().TranslatePoint(new Point(0, 0), host)!.Value.Y;
+                    return (meters.IsVisible, Gap: barTop - pillBottom, box.Bounds.Height);
+                }).ToList();
+            }
+            finally { window.Close(); }
+        });
+        var g = Assert.Single(gaps);
+        Assert.True(g.IsVisible);
+        Assert.True(g.Gap >= 2, $"gap {g.Gap} px");
+        Assert.Equal(34, g.Height);
+    }
 }

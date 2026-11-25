@@ -305,7 +305,7 @@
                     <ToolTip.Tip>
                       <ToolTip Classes="output"><local:StatusPeekView /></ToolTip>
                     </ToolTip.Tip>
-                    <ComboBox Classes="field agent-choice" ItemsSource="{Binding AgentChoices}" SelectedItem="{Binding SelectedAgentChoice}"
+                    <ComboBox Classes="field agent-choice" Classes.meters="{Binding SelectedAgentChoice.HasMeters, FallbackValue=False}" ItemsSource="{Binding AgentChoices}" SelectedItem="{Binding SelectedAgentChoice}"
                               AutomationProperties.Name="{Binding SelectedAgentChoice.Name}">
                       <ComboBox.ItemTemplate>
                         <DataTemplate x:DataType="local:AgentChoice">
