@@ -32,23 +32,44 @@ public sealed class TabViewModel : Observable
     public bool IsSubTab => Parent is not null;
     public bool IsProject => Parent is null;
     private bool _expanded;
-    public bool Expanded
-    {
-        get => _expanded;
-        set
-        {
-            if (!Set(ref _expanded, value)) return;
-            _owner.TabsChanged();
-        }
-    }
+    /// <summary>Kept in the config for compatibility only (#196): subtabs are always shown, so this no longer hides anything.</summary>
+    public bool Expanded { get => _expanded; set => Set(ref _expanded, value); }
     public bool CanRemoveSubTab => IsSubTab && !HasOpenTerminal && !IsAlive;
+    /// <summary>The subtab's × and its menu item explain why they are inactive while its terminal tab is open (#196).</summary>
+    public string RemoveSubTabTip => Loc.Get(CanRemoveSubTab ? "subtab.remove.tip" : "subtab.remove.blocked");
+    public string RemoveSubTabName => Loc.Format("subtab.remove.name", Name);
+    /// <summary>A disabled menu item cannot take focus, so its header carries the reason for screen readers.</summary>
+    public string RemoveSubTabMenu => Loc.Get(CanRemoveSubTab ? "subtab.remove" : "subtab.remove.menu.blocked");
+    /// <summary>The accessible name of the row's ⋯ (more options) button.</summary>
+    public string MoreName => Loc.Format("row.more.name", Name);
+    public string SubTabOfName => Parent is null ? "" : Loc.Format("subtab.of", Parent.Name);
     public bool CanRemoveProject => _owner.CanRemoveProject(this);
     public string ProjectRemovalHint => Loc.Get("project.remove.blocked");
-    public string SubTabSummary => Loc.FormatCount("subtab.summary", _owner.Tabs.Count(t => t.Parent == this));
-    internal void GroupChanged()
+    internal void GroupChanged() => Raise(nameof(CanRemoveProject));
+
+    /// <summary>
+    /// The group card (#196): a project with subtabs and its subtabs are drawn as one card, one segment per row. A project
+    /// row with subtabs is the card's top, the last subtab its bottom; a project without subtabs is no group.
+    /// </summary>
+    public bool InGroup => IsSubTab || _owner.Tabs.Any(t => t.Parent == this);
+    public bool GroupTop => IsProject && InGroup;
+    public bool GroupBottom
     {
-        Raise(nameof(SubTabSummary));
-        Raise(nameof(CanRemoveProject));
+        get
+        {
+            if (Parent is not { } parent) return false;
+            var index = _owner.Tabs.IndexOf(this);
+            return index >= 0 && (index + 1 == _owner.Tabs.Count || _owner.Tabs[index + 1].Parent != parent);
+        }
+    }
+    /// <summary>The group's colour: the project's, also on its subtab rows.</summary>
+    public IBrush GroupColorBrush => (Parent ?? this).ColorBrush;
+
+    private void RaiseRemoveSubTab()
+    {
+        Raise(nameof(CanRemoveSubTab));
+        Raise(nameof(RemoveSubTabTip));
+        Raise(nameof(RemoveSubTabMenu));
     }
 
     private string _name, _directory, _llm, _model;
@@ -90,6 +111,9 @@ public sealed class TabViewModel : Observable
             Raise(nameof(OpenTip));
             Raise(nameof(ContinueName));
             Raise(nameof(ReorderName));
+            Raise(nameof(MoreName));
+            Raise(nameof(RemoveSubTabName));
+            foreach (var child in _owner.Tabs.Where(t => t.Parent == this)) child.Raise(nameof(SubTabOfName));
             _owner.RaiseLaunchTip();
         }
     }
@@ -331,6 +355,8 @@ public sealed class TabViewModel : Observable
     {
         Raise(nameof(Color));
         Raise(nameof(ColorBrush));
+        Raise(nameof(GroupColorBrush));
+        if (IsProject) foreach (var child in _owner.Tabs.Where(t => t.Parent == this)) child.Raise(nameof(GroupColorBrush));
     }
 
     private static int LegacyIndex(string color, int fallback)
@@ -419,7 +445,7 @@ public sealed class TabViewModel : Observable
         set
         {
             if (!Set(ref _track, value)) return;
-            Raise(nameof(CanRemoveSubTab));
+            RaiseRemoveSubTab();
             (Parent ?? this).GroupChanged();
         }
     }
@@ -512,6 +538,9 @@ public sealed class TabViewModel : Observable
     {
         Raise(nameof(CanMoveUp));
         Raise(nameof(CanMoveDown));
+        Raise(nameof(InGroup));
+        Raise(nameof(GroupTop));
+        Raise(nameof(GroupBottom));
     }
     /// <summary>The accessible name of the row's grip, which moves the row with Alt+Up/Down (#156).</summary>
     public string ReorderName => Loc.Format("tab.reorder.name", Name);
@@ -651,7 +680,8 @@ public sealed class TabViewModel : Observable
         _clearedAt = clearedAt;
         if (state != TabState.Running) PendingRestart = false;
         foreach (var n in new[] { nameof(HasStatus), nameof(IsRunning), nameof(IsAlive), nameof(OpenTip), nameof(WillStart), nameof(Activity), nameof(StatusText), nameof(StatusTip), nameof(StatusBrush),
-            nameof(ShowsOutput), nameof(IsExitError), nameof(HasOutput), nameof(OutputNote), nameof(HasOutputNote), nameof(CanRemoveSubTab) }) Raise(n);
+            nameof(ShowsOutput), nameof(IsExitError), nameof(HasOutput), nameof(OutputNote), nameof(HasOutputNote) }) Raise(n);
+        RaiseRemoveSubTab();
         RaiseRestart();
         (Parent ?? this).GroupChanged();
         if (stateChanged) _owner.RecoveredTabChanged(this);
@@ -712,7 +742,7 @@ public sealed partial class MainViewModel : Observable
             Tabs.Add(new TabViewModel(tab, this, parent?.ColorIndex ?? NextProjectColor()) { Parent = parent });
         }
         _projects = Tabs.Where(t => t.IsProject).ToArray();
-        _visibleTabs = Tabs.Where(IsVisibleTab).ToArray();
+        _visibleTabs = Tabs.ToArray();
         // An existing chosen advisor starts with the switch on, so the switch and the visible rows agree (#180).
         if (_projects.Any(p => p.CanAdvisor && p.Advisor != AdvisorPolicy.Disabled)) cfg.ShowAdvisor = true;
         AdvisorSwitchChanged();
@@ -743,7 +773,6 @@ public sealed partial class MainViewModel : Observable
     public IReadOnlyList<TabViewModel> Projects => _projects;
     private IReadOnlyList<TabViewModel> _visibleTabs = [];
     public IReadOnlyList<TabViewModel> VisibleTabs => _visibleTabs;
-    private static bool IsVisibleTab(TabViewModel tab) => tab.Parent is null || tab.Parent.Expanded;
     public bool IsWindows => OperatingSystem.IsWindows();
     public bool IsLinux => !OperatingSystem.IsWindows();
     public IReadOnlyList<string> LinuxTerminals => Launcher.LinuxTerminals;
@@ -1005,7 +1034,7 @@ public sealed partial class MainViewModel : Observable
             AdvisorSwitchChanged();
             Raise(nameof(Projects));
         }
-        var visible = Tabs.Where(IsVisibleTab).ToArray();
+        var visible = Tabs.ToArray();
         if (!_visibleTabs.SequenceEqual(visible))
         {
             _visibleTabs = visible;

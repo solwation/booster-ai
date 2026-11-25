@@ -444,12 +444,68 @@
     <Setter Property="Stroke" Value="{DynamicResource TextBrush}" />
   </Style>
 
-  <!-- A subtab's guide (#156): a 1 px line continuing down from the parent's colour stripe. -->
-  <Style Selector="Border.subtab-guide">
-    <Setter Property="Width" Value="1" />
+  <!-- The subtab group card (#196). Each main-list row sits in a segment; a project with subtabs and its subtabs are the
+       segments of one card: the project colour as a tint and a 1 px outline (opacities per theme in App.axaml) and one
+       continuous 4 px stripe. Segments butt with no margin, so the outline and stripe run unbroken. Every row is inset
+       5 px (the header too), so the columns stay put when a card appears. -->
+  <Style Selector="Border.segment > Panel > Border.row">
+    <Setter Property="Margin" Value="5,0,5,2" />
+  </Style>
+  <Style Selector="Border.segment.grouped > Panel > Border.row">
+    <Setter Property="Margin" Value="5,2,5,0" />
+  </Style>
+  <Style Selector="Border.segment.grouped.bottom > Panel > Border.row">
+    <Setter Property="Margin" Value="5,2,5,2" />
+  </Style>
+  <Style Selector="Border.segment.grouped.top">
+    <Setter Property="Margin" Value="0,4,0,0" />
+  </Style>
+  <Style Selector="Border.segment.grouped.bottom">
+    <Setter Property="Margin" Value="0,0,0,6" />
+  </Style>
+  <Style Selector="Border.segment-tint">
+    <Setter Property="IsHitTestVisible" Value="False" />
+    <Setter Property="Opacity" Value="{DynamicResource GroupTintOpacity}" />
+  </Style>
+  <Style Selector="Border.segment-outline">
+    <Setter Property="IsHitTestVisible" Value="False" />
+    <Setter Property="Opacity" Value="{DynamicResource GroupOutlineOpacity}" />
+    <Setter Property="BorderThickness" Value="1,0,1,0" />
+  </Style>
+  <Style Selector="Border.segment.top > Panel > Border.segment-tint, Border.segment.top > Panel > Border.segment-outline">
+    <Setter Property="CornerRadius" Value="8,8,0,0" />
+  </Style>
+  <Style Selector="Border.segment.top > Panel > Border.segment-outline">
+    <Setter Property="BorderThickness" Value="1,1,1,0" />
+  </Style>
+  <Style Selector="Border.segment.bottom > Panel > Border.segment-tint, Border.segment.bottom > Panel > Border.segment-outline">
+    <Setter Property="CornerRadius" Value="0,0,8,8" />
+  </Style>
+  <Style Selector="Border.segment.bottom > Panel > Border.segment-outline">
+    <Setter Property="BorderThickness" Value="1,0,1,1" />
+  </Style>
+  <Style Selector="Border.segment-stripe">
+    <Setter Property="IsHitTestVisible" Value="False" />
+    <Setter Property="Width" Value="4" />
     <Setter Property="HorizontalAlignment" Value="Left" />
-    <Setter Property="Margin" Value="1,0,0,0" />
-    <Setter Property="Background" Value="{DynamicResource BorderBrush}" />
+    <Setter Property="Margin" Value="5,0,0,0" />
+  </Style>
+  <Style Selector="Border.segment.top > Panel > Border.segment-stripe">
+    <Setter Property="Margin" Value="5,12,0,0" />
+    <Setter Property="CornerRadius" Value="4,4,0,0" />
+  </Style>
+  <Style Selector="Border.segment.bottom > Panel > Border.segment-stripe">
+    <Setter Property="Margin" Value="5,0,0,12" />
+    <Setter Property="CornerRadius" Value="0,0,4,4" />
+  </Style>
+  <!-- A dragged project lands before or after a whole group: the line marks the card's edge, not a row inside it. -->
+  <Style Selector="Border.segment.drop-before">
+    <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColor}" />
+    <Setter Property="BorderThickness" Value="0,2,0,0" />
+  </Style>
+  <Style Selector="Border.segment.drop-after">
+    <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColor}" />
+    <Setter Property="BorderThickness" Value="0,0,0,2" />
   </Style>
 
   <!-- The update prompt: a soft outlined bar, not a dialog. -->

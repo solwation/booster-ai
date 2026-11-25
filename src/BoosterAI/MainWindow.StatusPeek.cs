@@ -46,7 +46,6 @@ public partial class MainWindow
     /// <summary>The error banner's "Visa detaljer": the tab's status popup, as a click on its status opens it.</summary>
     private void OpenStatusPeek(TabViewModel tab)
     {
-        if (tab.Parent is { Expanded: false } parent) parent.Expanded = true;
         Avalonia.Threading.Dispatcher.UIThread.Post(() =>
         {
             var target = this.GetVisualDescendants().OfType<StatusPeekButton>().FirstOrDefault(b => b.DataContext == tab);

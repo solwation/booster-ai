@@ -84,9 +84,10 @@ public sealed class MainListTests : IDisposable
     [Fact]
     public void ProjectColumnsHideTheOrchestraAndKeepTheFixedWidths()
     {
-        Assert.Equal("4,20,46,4*,5*,200,195,168", MainWindow.ProjectColumns(1100, orchestra: true));
-        Assert.Equal("4,20,46,4*,5*,200,195,0", MainWindow.ProjectColumns(1100, orchestra: false));
-        Assert.EndsWith(",168", MainWindow.ProjectColumns(900, orchestra: true));
+        // The row's ⋯ (#196) stays last, at the far right, whether or not the orchestra column shows.
+        Assert.Equal("4,20,46,4*,5*,200,195,168,32", MainWindow.ProjectColumns(1100, orchestra: true));
+        Assert.Equal("4,20,46,4*,5*,200,195,0,32", MainWindow.ProjectColumns(1100, orchestra: false));
+        Assert.EndsWith(",168,32", MainWindow.ProjectColumns(900, orchestra: true));
     }
 
     [Fact]
@@ -155,6 +156,8 @@ public sealed class MainListTests : IDisposable
             {
                 Name = n, Directory = "/srv/" + n.ToLowerInvariant(), Llm = l,
                 Account = n is "Atlas" ? "claude-kundjobb" : n is "Boreal" ? "codex-kund" : "",
+                // A group card (#196) insets its rows; its subtabs must fit as well as plain rows.
+                SubTabs = new[] { new { Name = n + "-api", Llm = "codex" }, new { Name = n + "-test", Llm = "claude" } }.Take(n is "Atlas" ? 2 : 0),
             }),
         }));
         var app = typeof(Screenshot).Assembly.Location;

@@ -32,9 +32,7 @@ public sealed class SubTabTests : IDisposable
 
         var child = vm.AddSubTab(a);
         Assert.Contains(child, vm.VisibleTabs);
-        a.Expanded = false;
-        Assert.DoesNotContain(child, vm.VisibleTabs);
-        a.Expanded = true;
+        a.Expanded = false; // kept for compatibility only (#196): it hides nothing
         Assert.Contains(child, vm.VisibleTabs);
         vm.MoveTabRelative(vm.Tabs.Single(t => t.Name == "B"), a, after: false);
         Assert.Equal(["B", "A", child.Name], vm.VisibleTabs.Select(t => t.Name));
@@ -97,22 +95,86 @@ public sealed class SubTabTests : IDisposable
         Assert.Empty(Assert.Single(ConfigStore.Load().Tabs).SubTabs);
     }
 
-    [Theory]
-    [InlineData("sv", "1 underflik · samma mapp", "2 underflikar · samma mapp")]
-    [InlineData("en", "1 subtab · same folder", "2 subtabs · same folder")]
-    public void SubtabSummaryUsesTheCorrectPlural(string lang, string one, string two)
+    [Fact]
+    public void ACollapsedConfigShowsAllSubtabsAndKeepsItsExpandedValue()
     {
+        var config = ConfigStore.Parse("""{"Tabs":[{"Name":"Alpha","Directory":"~/alpha","Expanded":false,"SubTabs":[{"Name":"a1"},{"Name":"a2"}]},{"Name":"Beta","Expanded":true}]}""")!;
+        var vm = new MainViewModel(config);
+        Assert.Equal(["Alpha", "a1", "a2", "Beta"], vm.VisibleTabs.Select(t => t.Name));
+        vm.Save();
+        var saved = ConfigStore.Load().Tabs;
+        Assert.False(saved[0].Expanded);
+        Assert.True(saved[1].Expanded);
+        Assert.Equal(["a1", "a2"], saved[0].SubTabs.Select(t => t.Name));
+    }
+
+    /// <summary>The group card (#196): a project with subtabs is the card's top, its last subtab the bottom; a project without subtabs is no group.</summary>
+    [Fact]
+    public void GroupFlagsFollowSubtabsMovesAndRemoval()
+    {
+        var vm = new MainViewModel(new AppConfig { Tabs = [new() { Name = "A" }, new() { Name = "B" }] });
+        var (a, b) = (vm.Tabs[0], vm.Tabs[1]);
+        string Flags() => string.Join(" ", vm.Tabs.Select(t => (t.InGroup ? "g" : "-") + (t.GroupTop ? "t" : "") + (t.GroupBottom ? "b" : "")));
+        Assert.Equal("- -", Flags());
+
+        var raised = new List<string?>();
+        a.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+        var one = vm.AddSubTab(a);
+        Assert.Contains(nameof(TabViewModel.InGroup), raised);
+        Assert.Equal("gt gb -", Flags());
+        var two = vm.AddSubTab(one); // from a subtab's menu: a sibling, last in the same project
+        Assert.Same(a, two.Parent);
+        Assert.Equal(["A", one.Name, two.Name, "B"], vm.Tabs.Select(t => t.Name));
+        Assert.Equal("gt g gb -", Flags());
+
+        vm.MoveTabRelative(b, a, after: false);
+        Assert.Equal("- gt g gb", Flags());
+        Assert.True(vm.MoveStep(two, -1));
+        Assert.Equal("- gt g gb", Flags());
+        Assert.True(one.GroupBottom);
+        Assert.False(two.GroupBottom);
+
+        var childRaised = new List<string?>();
+        one.PropertyChanged += (_, e) => childRaised.Add(e.PropertyName);
+        a.NextColor();
+        Assert.Contains(nameof(TabViewModel.GroupColorBrush), childRaised);
+        Assert.All(new[] { a, one, two }, t => Assert.Equal(Avalonia.Media.Color.Parse(a.Color), ((Avalonia.Media.ISolidColorBrush)t.GroupColorBrush).Color));
+
+        Assert.True(vm.RemoveSubTab(one));
+        Assert.Equal("- gt gb", Flags());
+        Assert.True(vm.RemoveSubTab(two));
+        Assert.Equal("- -", Flags());
+    }
+
+    [Fact]
+    public void RemoveExplainsWhyItIsInactiveWhileTheTabIsOpen()
+    {
+        var language = Loc.Language;
         try
         {
-            Loc.Use(lang);
-            var vm = new MainViewModel(new AppConfig { Tabs = [new() { Name = "Alpha", Directory = "~/alpha", Llm = "claude" }] });
-            var parent = vm.Tabs[0];
-            vm.AddSubTab(parent);
-            Assert.Equal(one, parent.SubTabSummary);
-            vm.AddSubTab(parent);
-            Assert.Equal(two, parent.SubTabSummary);
+            Loc.Use("sv");
+            var vm = new MainViewModel(new AppConfig { Tabs = [new() { Name = "Atlas", SubTabs = [new() { Name = "Atlas-api" }] }] });
+            var child = vm.Tabs[1];
+            Assert.True(child.CanRemoveSubTab);
+            Assert.Equal("Ta bort underfliken. Mappen påverkas inte.", child.RemoveSubTabTip);
+            Assert.Equal("Ta bort underflik", child.RemoveSubTabMenu);
+            Assert.Equal("Ta bort underfliken Atlas-api", child.RemoveSubTabName);
+            Assert.Equal("Underflik i Atlas", child.SubTabOfName);
+            Assert.Equal("Fler val för Atlas", vm.Tabs[0].MoreName);
+            var raised = new List<string?>();
+            child.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+            child.Track = new TabTrack("/tmp/none-lib", "/tmp/none", "track-1");
+            child.SetState(TabState.Running, null);
+            Assert.False(child.CanRemoveSubTab);
+            Assert.Contains(nameof(TabViewModel.RemoveSubTabTip), raised);
+            Assert.Equal("Stäng terminalfliken först, sedan kan underfliken tas bort.", child.RemoveSubTabTip);
+            Assert.Equal("Ta bort underflik (fliken är öppen)", child.RemoveSubTabMenu);
+            Assert.False(vm.RemoveSubTab(child));
+            vm.Tabs[0].Name = "Boreal";
+            Assert.Contains(nameof(TabViewModel.SubTabOfName), raised);
+            Assert.Equal("Underflik i Boreal", child.SubTabOfName);
         }
-        finally { Loc.Use("en"); }
+        finally { Loc.Use(language); }
     }
 
     [Fact]
@@ -151,7 +213,7 @@ public sealed class SubTabTests : IDisposable
         Assert.False(restored.Tabs[2].Enabled);
         Assert.All(restored.Tabs, t => Assert.Equal("~/moved", t.Directory));
         restored.Tabs[0].Expanded = false;
-        Assert.Single(restored.VisibleTabs);
+        Assert.Equal(3, restored.VisibleTabs.Count);
         Assert.Equal(2, restored.EnabledCount);
     }
 

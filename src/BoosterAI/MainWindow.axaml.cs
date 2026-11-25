@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
 using Avalonia.Input;
 using Avalonia.Threading;
@@ -23,16 +24,18 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Stripe, handle, Start, project, status, agent, model, orchestra. Project and status share the free room, the
+    /// Stripe, handle, Start, project, status, agent, model, orchestra, ⋯. Project and status share the free room, the
     /// status a little more (its longest texts must fit at the default width); agent, model and orchestra are fixed,
-    /// and the orchestra column is 0 while no visible row can use it (#152).
+    /// and the orchestra column is 0 while no visible row can use it (#152). The row's ⋯ stays last, at the far right (#196).
     /// </summary>
     internal static string ProjectColumns(double width, bool orchestra)
     {
         var compact = width is > 0 and < 1050;
         var fixedColumns = compact ? "150,140" : "200,195";
-        return $"4,20,46,4*,5*,{fixedColumns},{(orchestra ? 168 : 0)}";
+        return $"4,20,46,4*,5*,{fixedColumns},{(orchestra ? 168 : 0)},{MoreColumnWidth}";
     }
+
+    internal const int MoreColumnWidth = 32;
 
     private void ApplyAllProjectColumns()
     {
@@ -168,14 +171,41 @@ public partial class MainWindow : Window
         if ((sender as Control)?.DataContext is TabViewModel tab) _vm.OpenFolder(tab);
     }
 
-    private void OnExpandProject(object? sender, RoutedEventArgs e)
-    {
-        if ((sender as Control)?.DataContext is TabViewModel tab) tab.Expanded = !tab.Expanded;
-    }
-
+    /// <summary>The row menu's Create subtab (#196): a new subtab last in the row's project, its name focused and selected.</summary>
     private void OnAddSubTab(object? sender, RoutedEventArgs e)
     {
-        if ((sender as Control)?.DataContext is TabViewModel tab) _vm.AddSubTab(tab);
+        if ((sender as Control)?.DataContext is not TabViewModel tab) return;
+        var child = _vm.AddSubTab(tab);
+        Dispatcher.UIThread.Post(() => FocusSubTabName(child), DispatcherPriority.Loaded);
+    }
+
+    internal bool FocusSubTabName(TabViewModel tab)
+    {
+        if (this.GetVisualDescendants().OfType<TextBox>().FirstOrDefault(b => b.Classes.Contains("name") && b.DataContext == tab) is not { } box) return false;
+        box.BringIntoView();
+        if (!box.Focus(NavigationMethod.Tab)) return false;
+        box.SelectAll();
+        return true;
+    }
+
+    /// <summary>
+    /// The row's ⋯ (#196) opens the same menu as a right-click, below the button. The menu is shared, so its placement goes
+    /// back to the pointer when it closes, and a later right-click opens at the pointer again.
+    /// </summary>
+    private void OnRowMore(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button button || button.GetVisualAncestors().OfType<Border>().FirstOrDefault(b => b.Classes.Contains("row")) is not { ContextMenu: { } menu } row) return;
+        menu.PlacementTarget = button;
+        menu.Placement = PlacementMode.BottomEdgeAlignedRight;
+        menu.Open(row);
+        e.Handled = true;
+    }
+
+    private void OnRowMenuClosed(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not ContextMenu menu) return;
+        menu.PlacementTarget = null;
+        menu.Placement = PlacementMode.Pointer;
     }
 
     private void OnRemoveSubTab(object? sender, RoutedEventArgs e)
@@ -223,25 +253,51 @@ public partial class MainWindow : Window
         var data = new DataTransfer();
         data.Add(DataTransferItem.Create(TabDragFormat, index.ToString(System.Globalization.CultureInfo.InvariantCulture)));
         e.Handled = true;
-        await DragDrop.DoDragDropAsync(e, data, DragDropEffects.Move);
+        _dragSource = tab;
+        try { await DragDrop.DoDragDropAsync(e, data, DragDropEffects.Move); }
+        finally
+        {
+            _dragSource = null;
+            ClearDropTarget();
+        }
     }
 
-    private static void OnTabDragOver(object? sender, DragEventArgs e)
+    /// <summary>The row being dragged from this window, so the drop line can show where the drop really lands (#196).</summary>
+    private TabViewModel? _dragSource;
+    private Border? _dropMarked;
+
+    private void OnTabDragOver(object? sender, DragEventArgs e)
     {
-        if (sender is not Border target || !e.DataTransfer.Contains(TabDragFormat))
+        if (sender is not Border { DataContext: TabViewModel target } row || !e.DataTransfer.Contains(TabDragFormat)
+            || DropMark(row, _dragSource, target, e.GetPosition(row).Y < row.Bounds.Height / 2) is not { } mark)
         {
+            ClearDropTarget();
             e.DragEffects = DragDropEffects.None;
             return;
         }
         e.DragEffects = DragDropEffects.Move;
-        SetDropTarget(target, e.GetPosition(target).Y < target.Bounds.Height / 2);
+        SetDropTarget(mark.Border, mark.Before);
         e.Handled = true;
     }
 
-    private static void OnTabDragLeave(object? sender, DragEventArgs e)
+    /// <summary>
+    /// Where the drop line goes: a subtab moves within its own project, so the line sits on the row inside the card; a
+    /// project lands before or after a whole group (MoveTabRelative), so the line marks the card's top or bottom edge.
+    /// Null where the drop would do nothing (a subtab over another project, a project over its own group).
+    /// </summary>
+    internal (Border Border, bool Before)? DropMark(Border row, TabViewModel? source, TabViewModel target, bool before)
     {
-        if (sender is Border target) ClearDropTarget(target);
+        if (source is null) return (row, before); // a drag from elsewhere: as before
+        if (source.Parent is { } parent) return target.Parent == parent && target != source ? (row, before) : null;
+        var project = target.Parent ?? target;
+        if (project == source) return null;
+        var edge = before ? project : _vm.Tabs.LastOrDefault(t => t == project || t.Parent == project) ?? project;
+        var segment = this.GetVisualDescendants().OfType<Border>()
+            .FirstOrDefault(b => b.Classes.Contains("segment") && b.DataContext == edge);
+        return segment is null ? (row, before) : (segment, before);
     }
+
+    private void OnTabDragLeave(object? sender, DragEventArgs e) => ClearDropTarget();
 
     private void OnTabDrop(object? sender, DragEventArgs e)
     {
@@ -253,21 +309,26 @@ public partial class MainWindow : Window
         var after = e.GetPosition(target).Y >= target.Bounds.Height / 2;
         if (sourceIndex < 0 || sourceIndex >= _vm.Tabs.Count) return;
         _vm.MoveTabRelative(_vm.Tabs[sourceIndex], tab, after);
-        ClearDropTarget(target);
+        ClearDropTarget();
         e.DragEffects = DragDropEffects.Move;
         e.Handled = true;
     }
 
-    private static void SetDropTarget(Border target, bool before)
+    private void SetDropTarget(Border target, bool before)
     {
-        ClearDropTarget(target);
-        target.Classes.Add(before ? "drop-before" : "drop-after");
+        var name = before ? "drop-before" : "drop-after";
+        if (_dropMarked == target && target.Classes.Contains(name)) return;
+        ClearDropTarget();
+        target.Classes.Add(name);
+        _dropMarked = target;
     }
 
-    private static void ClearDropTarget(Border target)
+    private void ClearDropTarget()
     {
+        if (_dropMarked is not { } target) return;
         target.Classes.Remove("drop-before");
         target.Classes.Remove("drop-after");
+        _dropMarked = null;
     }
 
     private void OnLaunch(object? sender, RoutedEventArgs e)

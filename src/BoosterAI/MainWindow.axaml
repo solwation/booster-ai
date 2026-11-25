@@ -9,7 +9,7 @@
         WindowStartupLocation="CenterScreen">
 
   <!--
-    Today's choices: which tabs, the AI, model and /orkester for each, plus expandable subtabs.
+    Today's choices: which tabs, the AI, model and /orkester for each; a project and its subtabs form one group card.
     Project names/directories are edited in Settings; subtab names are edited here. The header and the rows share
     one responsive column layout (with enough room for longer agent names such as interpreter)
     inside the same padding, so labels sit exactly over their fields.
@@ -146,8 +146,9 @@
     </Border>
     </StackPanel>
 
-    <!-- Column widths are set in MainWindow.axaml.cs (ProjectColumns): compact or wide, orchestra shown or 0 (#152). -->
-    <Grid Grid.Row="2" Classes="project-columns" Loaded="OnProjectGridLoaded" ColumnDefinitions="4,20,46,4*,5*,200,195,168" Margin="0,0,0,6" IsVisible="{Binding HasTabs}">
+    <!-- Column widths are set in MainWindow.axaml.cs (ProjectColumns): compact or wide, orchestra shown or 0 (#152), and
+         the rows' ⋯ (#196). The header is inset like the rows inside their segment (#196), so labels sit over their fields. -->
+    <Grid Grid.Row="2" Classes="project-columns" Loaded="OnProjectGridLoaded" ColumnDefinitions="4,20,46,4*,5*,200,195,168,32" Margin="5,0,5,6" IsVisible="{Binding HasTabs}">
       <TextBlock Grid.Column="2" Classes="colhead" Text="{local:T col.with}" />
       <TextBlock Grid.Column="3" Classes="colhead" Text="{local:T col.project}" />
       <TextBlock Grid.Column="4" Classes="colhead" Text="{local:T col.status}" />
@@ -161,11 +162,21 @@
         <ItemsControl ItemsSource="{Binding VisibleTabs}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="local:TabViewModel">
-              <!-- Keyboard (#156): Alt+Up/Down moves the focused row (KeyDown), and the row menu offers the row's actions. -->
+              <!-- The group card (#196): a project with subtabs and its subtabs share one tinted, outlined card with one
+                   continuous colour stripe, drawn as one segment per row (top, middle, bottom) so the list stays flat. A
+                   project without subtabs is no group and keeps only its short stripe. -->
+              <Border Classes="segment" Classes.grouped="{Binding InGroup}" Classes.top="{Binding GroupTop}" Classes.bottom="{Binding GroupBottom}">
+              <Panel>
+              <Border Classes="segment-tint" Background="{Binding GroupColorBrush}" IsVisible="{Binding InGroup}" />
+              <Border Classes="segment-outline" BorderBrush="{Binding GroupColorBrush}" IsVisible="{Binding InGroup}" />
+              <!-- Keyboard (#156): Alt+Up/Down moves the focused row (KeyDown), and the row menu offers the row's actions,
+                   also from the row's ⋯ button (#196). -->
               <Border Classes="row" DragDrop.AllowDrop="True" DragDrop.DragOver="OnTabDragOver"
                       DragDrop.DragLeave="OnTabDragLeave" DragDrop.Drop="OnTabDrop" KeyDown="OnRowKeyDown">
                 <Border.ContextMenu>
-                  <ContextMenu>
+                  <ContextMenu Closed="OnRowMenuClosed">
+                    <MenuItem Header="{local:T subtab.create}" Click="OnAddSubTab" />
+                    <Separator />
                     <MenuItem Header="{local:T row.menu.up}" Click="OnRowMoveUp" IsEnabled="{Binding CanMoveUp}" />
                     <MenuItem Header="{local:T row.menu.down}" Click="OnRowMoveDown" IsEnabled="{Binding CanMoveDown}" />
                     <Separator />
@@ -173,13 +184,14 @@
                     <MenuItem Header="{local:T row.menu.continue}" Click="OnContinue" IsEnabled="{Binding CanContinueClosed}" />
                     <Separator />
                     <MenuItem Header="{x:Static local:TabViewModel.OpenFolderName}" Click="OnOpenFolder" />
+                    <MenuItem Header="{Binding RemoveSubTabMenu}" Click="OnRemoveSubTab" IsEnabled="{Binding CanRemoveSubTab}" IsVisible="{Binding IsSubTab}"
+                              ToolTip.Tip="{Binding RemoveSubTabTip}" ToolTip.ShowOnDisabled="True" />
                   </ContextMenu>
                 </Border.ContextMenu>
                 <StackPanel>
-                <Grid Classes="project-columns" Loaded="OnProjectGridLoaded" ColumnDefinitions="4,20,46,4*,5*,200,195,168">
-                  <!-- A project's colour stripe; a subtab instead continues it as a 1 px guide (#156). -->
-                  <Border Grid.Column="0" Background="{Binding ColorBrush}" CornerRadius="{StaticResource RadiusSmall}" IsVisible="{Binding IsProject}" />
-                  <Border Grid.Column="0" Classes="subtab-guide" IsVisible="{Binding IsSubTab}" Margin="1,-12,0,-10" />
+                <Grid Classes="project-columns" Loaded="OnProjectGridLoaded" ColumnDefinitions="4,20,46,4*,5*,200,195,168,32">
+                  <!-- A project's colour stripe; in a group the segment draws it instead, joined across the rows (#196). -->
+                  <Border Grid.Column="0" Background="{Binding ColorBrush}" CornerRadius="{StaticResource RadiusSmall}" IsVisible="{Binding !InGroup}" />
                   <Border Grid.Column="1" Classes="grip" PointerPressed="OnTabDragStart"
                           ToolTip.Tip="{local:T tab.reorder.tip}" AutomationProperties.Name="{Binding ReorderName}">
                     <Path Data="{StaticResource GripIcon}" />
@@ -188,29 +200,23 @@
                   <CheckBox Grid.Column="2" IsChecked="{Binding Enabled}" Classes.alive="{Binding IsAlive}" AutomationProperties.Name="{Binding OpenTip}"
                             VerticalAlignment="Center" MinWidth="0" ToolTip.Tip="{Binding OpenTip}" />
 
-                  <!-- The folder belongs to the project; children only edit their own tab name, indented 20 px. Only the
-                       name dims on an unticked row; the icon buttons keep full opacity (#156). -->
-                  <Grid Grid.Column="3" ColumnDefinitions="Auto,*,Auto,Auto" VerticalAlignment="Center" Margin="0,0,10,0">
-                    <Button Grid.Column="0" Classes="icon" Click="OnExpandProject" IsVisible="{Binding IsProject}"
-                            Padding="2,4" Margin="-4,0,4,0" Width="20"
-                            ToolTip.Tip="{local:T subtab.expand}" AutomationProperties.Name="{local:T subtab.expand}">
-                      <Panel>
-                        <Path Data="{StaticResource ChevronRightIcon}" IsVisible="{Binding !Expanded}" />
-                        <Path Data="{StaticResource ChevronDownIcon}" IsVisible="{Binding Expanded}" />
-                      </Panel>
-                    </Button>
-                    <Border Grid.Column="0" Width="40" IsVisible="{Binding IsSubTab}" />
-                    <TextBlock Grid.Column="1" Classes="name" Text="{Binding Name}" IsVisible="{Binding IsProject}" Opacity="{Binding RowOpacity}"
+                  <!-- No indent (#196): every name starts at the same x. The project has its name as text and the folder; a
+                       subtab has an editable name and × in the folder's place. Only the name dims on an unticked row; the
+                       icon buttons keep full opacity (#156). -->
+                  <Grid Grid.Column="3" ColumnDefinitions="*,Auto" VerticalAlignment="Center" Margin="0,0,10,0">
+                    <TextBlock Grid.Column="0" Classes="name" Text="{Binding Name}" IsVisible="{Binding IsProject}" Opacity="{Binding RowOpacity}"
                                VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Directory}" />
-                    <TextBox Grid.Column="1" Classes="inline name" Text="{Binding Name}" IsVisible="{Binding IsSubTab}" Opacity="{Binding RowOpacity}"
-                             Watermark="{local:T col.tabname}" ToolTip.Tip="{Binding Directory}" MinWidth="30" />
-                    <Button Grid.Column="2" Classes="icon" Click="OnOpenFolder" Margin="4,-6,0,-6" IsVisible="{Binding IsProject}"
+                    <TextBox Grid.Column="0" Classes="inline name" Text="{Binding Name}" IsVisible="{Binding IsSubTab}" Opacity="{Binding RowOpacity}"
+                             Watermark="{local:T col.tabname}" ToolTip.Tip="{Binding Directory}" MinWidth="30"
+                             AutomationProperties.HelpText="{Binding SubTabOfName}" />
+                    <Button Grid.Column="1" Classes="icon" Click="OnOpenFolder" Margin="4,-6,0,-6" IsVisible="{Binding IsProject}"
                             ToolTip.Tip="{x:Static local:TabViewModel.OpenFolderName}" AutomationProperties.Name="{x:Static local:TabViewModel.OpenFolderName}">
                       <Path Data="{StaticResource FolderIcon}" />
                     </Button>
-                    <Button Grid.Column="3" Classes="icon" Click="OnRemoveSubTab" IsVisible="{Binding IsSubTab}"
-                            IsEnabled="{Binding CanRemoveSubTab}" Margin="2,0,0,0"
-                            ToolTip.Tip="{local:T subtab.remove.tip}" AutomationProperties.Name="{local:T subtab.remove}">
+                    <!-- Inactive with its reason while the subtab's terminal tab is open (#196). -->
+                    <Button Grid.Column="1" Classes="icon" Click="OnRemoveSubTab" IsVisible="{Binding IsSubTab}"
+                            IsEnabled="{Binding CanRemoveSubTab}" Margin="4,-6,0,-6"
+                            ToolTip.Tip="{Binding RemoveSubTabTip}" ToolTip.ShowOnDisabled="True" AutomationProperties.Name="{Binding RemoveSubTabName}">
                       <Path Data="{StaticResource CloseIcon}" />
                     </Button>
                   </Grid>
@@ -284,32 +290,31 @@
                       <TextBlock Text="{local:T install.link}" />
                     </Button>
                   </Panel>
+
+                  <!-- More options (#196): the row menu (Create subtab first) for mouse, keyboard and screen readers. -->
+                  <Button Grid.Column="8" Classes="icon" Click="OnRowMore" HorizontalAlignment="Right" VerticalAlignment="Center"
+                          ToolTip.Tip="{local:T row.more.tip}" AutomationProperties.Name="{Binding MoreName}">
+                    <Path Data="{StaticResource MoreIcon}" StrokeThickness="2.5" />
+                  </Button>
                 </Grid>
-                <!-- Advisor belongs to the project choices, independently of the subtab expander (#173). -->
+                <!-- Advisor belongs to the project choices (#173). -->
                 <Panel IsVisible="{Binding IsProject}">
-                  <Grid Classes="project-columns" Loaded="OnProjectGridLoaded" ColumnDefinitions="4,20,46,4*,5*,200,195,168"
+                  <Grid Classes="project-columns" Loaded="OnProjectGridLoaded" ColumnDefinitions="4,20,46,4*,5*,200,195,168,32"
                         RowDefinitions="Auto,Auto" IsVisible="{Binding AdvisorVisible}" Margin="0,6,0,0">
                     <TextBlock Grid.Column="3" Grid.ColumnSpan="2" Classes="muted caption" Text="{local:T advisor.scope}"
-                               TextWrapping="Wrap" VerticalAlignment="Center" Margin="20,0,12,0" />
+                               TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,12,0" />
                     <TextBlock Grid.Column="5" Classes="muted caption" Text="{local:T advisor.label}" VerticalAlignment="Center" />
                     <ComboBox Grid.Column="6" Classes="field" IsEditable="True" ItemsSource="{Binding Advisors}" Text="{Binding AdvisorChoice}"
                               Margin="0,0,12,0" ToolTip.Tip="{local:T advisor.tip}" AutomationProperties.Name="{local:T advisor.label}" />
                     <TextBlock Grid.Row="1" Grid.Column="3" Grid.ColumnSpan="4" Classes="caption" Foreground="{DynamicResource WarningBrush}"
-                               Text="{Binding AdvisorWarning}" IsVisible="{Binding HasAdvisorWarning}" TextWrapping="Wrap" Margin="20,4,12,0" />
+                               Text="{Binding AdvisorWarning}" IsVisible="{Binding HasAdvisorWarning}" TextWrapping="Wrap" Margin="0,4,12,0" />
                   </Grid>
                 </Panel>
-                <!-- Only an expanded project carries a line under it, so collapsed rows keep one rhythm (#152). -->
-                <Panel IsVisible="{Binding IsProject}">
-                  <Panel IsVisible="{Binding Expanded}">
-                    <Border Classes="subtab-guide" Margin="1,0,0,-10" />
-                    <StackPanel Orientation="Horizontal" Spacing="12" Margin="62,6,0,2">
-                      <Button Classes="link" Content="{local:T subtab.add}" Click="OnAddSubTab" Padding="0,2"
-                              AutomationProperties.Name="{local:T subtab.add}" />
-                      <TextBlock Classes="muted caption" Text="{Binding SubTabSummary}" VerticalAlignment="Center" />
-                    </StackPanel>
-                  </Panel>
-                </Panel>
                 </StackPanel>
+              </Border>
+              <!-- The group's stripe, continuous across its segments; drawn over the row so its hover cannot hide it. -->
+              <Border Classes="segment-stripe" Background="{Binding GroupColorBrush}" IsVisible="{Binding InGroup}" />
+              </Panel>
               </Border>
             </DataTemplate>
           </ItemsControl.ItemTemplate>
