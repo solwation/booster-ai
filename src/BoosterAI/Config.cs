@@ -71,6 +71,10 @@ public sealed class AppConfig
     public bool MinimizeToTray { get; set; } = true;
     /// <summary>System notification when a watched tab closes, fails to start or its CLI fails.</summary>
     public bool Notifications { get; set; } = true;
+    /// <summary>Warn in the main window when a plan window (5 h or week) of an agent drops below <see cref="QuotaWarnPercent"/> % left (#211). On by default, like Notifications: a quiet, non-modal bar.</summary>
+    public bool QuotaWarn { get; set; } = true;
+    /// <summary>The remaining share (percent) under which <see cref="QuotaWarn"/> warns; clamped to QuotaWarnings.MinPercent..MaxPercent.</summary>
+    public int QuotaWarnPercent { get; set; } = QuotaWarnings.DefaultPercent;
     /// <summary>Main window: show the Advisor row under Claude projects (#180). Only display; launches never read it.</summary>
     public bool ShowAdvisor { get; set; }
     /// <summary>Global CLI zoom in percent of the terminal's default font size; 0 = terminal default (nothing is changed).</summary>
@@ -209,6 +213,8 @@ public static class ConfigMerge
         S(c => c.AfterLaunch, (c, v) => c.AfterLaunch = v),
         S(c => c.MinimizeToTray, (c, v) => c.MinimizeToTray = v),
         S(c => c.Notifications, (c, v) => c.Notifications = v),
+        S(c => c.QuotaWarn, (c, v) => c.QuotaWarn = v),
+        S(c => c.QuotaWarnPercent, (c, v) => c.QuotaWarnPercent = v),
         S(c => c.ShowAdvisor, (c, v) => c.ShowAdvisor = v),
         S(c => c.ZoomPercent, (c, v) => c.ZoomPercent = v),
         S(c => c.ProjectSearchRoot, (c, v) => c.ProjectSearchRoot = v),

@@ -8,7 +8,7 @@ using Avalonia.Threading;
 namespace BoosterAI;
 
 /// <summary>
-/// <c>--screenshot file.png [--window main|local-model|local-models|close|settings|install|import|restart|remove-project|alias|wsl-shutdown|memory-reclaim|agent-yolo|wsl|unsaved|setup|uninstall] [--theme light|dark] [--config file.json] [--fake-update [manual:]0.3.0] [--fake-status [error:]text] [--fake-denied] [--fake-changed] [--fake-restartable N] [--fake-output [N]] [--fake-setup [cli|wsl|alias]] [--fake-long-status] [--check-clipping] [--fake-agent-list [N]] [--fake-new-subtab] [--fake-row-menu [N]] [--fake-memory-reclaim gradual|dropcache|disabled|other|old|unknown] [--fake-limits]</c>:
+/// <c>--screenshot file.png [--window main|local-model|local-models|close|settings|install|import|restart|remove-project|alias|wsl-shutdown|memory-reclaim|agent-yolo|wsl|unsaved|setup|uninstall] [--theme light|dark] [--config file.json] [--fake-update [manual:]0.3.0] [--fake-status [error:]text] [--fake-denied] [--fake-changed] [--fake-restartable N] [--fake-output [N]] [--fake-setup [cli|wsl|alias]] [--fake-long-status] [--check-clipping] [--fake-agent-list [N]] [--fake-new-subtab] [--fake-row-menu [N]] [--fake-memory-reclaim gradual|dropcache|disabled|other|old|unknown] [--fake-limits] [--fake-quota]</c>:
 /// renders a window with Avalonia's headless Skia platform. Nothing is shown on the desktop and no
 /// focus changes. The window frame (title bar) is not drawn; only the client area.
 /// </summary>
@@ -16,7 +16,7 @@ internal sealed record ScreenshotOptions(string File, string Window, string? Fak
     int? FakeOutput = null, int FakeRestartable = 0, string? FakeSetup = null, string? Tab = null, bool FakeOptimization = false, int? FakeMemoryCap = null,
     string? Section = null, string? FakeMemoryState = null, int? Width = null, int? Height = null, bool FakeOrchestraIdle = false, int? FakeMemorySaved = null,
     bool FakeLongStatus = false, bool CheckClipping = false, string? FakeMemoryReclaim = null, int? FakeAgentList = null,
-    bool FakeNewSubTab = false, int? FakeRowMenu = null, bool FakeLimits = false);
+    bool FakeNewSubTab = false, int? FakeRowMenu = null, bool FakeLimits = false, bool FakeQuota = false);
 
 internal static class Screenshot
 {
@@ -42,7 +42,7 @@ internal static class Screenshot
             !args.Contains("--fake-agent-list") ? null : int.TryParse(Value(args, "--fake-agent-list"), out var list) ? list : 0,
             args.Contains("--fake-new-subtab"),
             !args.Contains("--fake-row-menu") ? null : int.TryParse(Value(args, "--fake-row-menu"), out var menu) ? menu : -1,
-            args.Contains("--fake-limits"));
+            args.Contains("--fake-limits"), args.Contains("--fake-quota"));
     }
 
     /// <summary>--fake-output [N]: the popup of the Nth running sample tab (0: the first, interactive; 1: Watching).</summary>
@@ -191,6 +191,8 @@ internal static class Screenshot
         vm.ShowSampleStatus();
         // --fake-limits: invented plan limits (#199, #200) in the main window's Agent boxes and on the Accounts page; no file is read.
         if (o.FakeLimits) vm.ShowSampleLimitsForAll();
+        // --fake-quota: two invented low-quota warnings (#211) through the real threshold check.
+        if (o.FakeQuota) vm.ShowSampleQuota();
         // --fake-update 0.3.0 shows the update prompt as an installed copy would see it, manual:0.3.0 as a copy
         // that cannot update itself (no network, screenshots only).
         if (o.FakeUpdate is { } fake) vm.Update.ShowFake(fake);

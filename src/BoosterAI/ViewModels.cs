@@ -838,6 +838,8 @@ public sealed partial class MainViewModel : Observable
     public bool StatusIsError => Error.IsVisible;
     /// <summary>The danger banner at the top of the main window.</summary>
     public ErrorBannerViewModel Error { get; } = new();
+    /// <summary>Low-quota warnings (#211), a quiet bar per agent/account/window in the banner area; never modal.</summary>
+    public QuotaNotices Quota { get; } = new();
 
     // Every status publication invalidates pending recovery notices, even when its text is unchanged.
     internal long StatusRevision { get; private set; }
@@ -965,6 +967,13 @@ public sealed partial class MainViewModel : Observable
     }
     public bool MinimizeToTray { get => _cfg.MinimizeToTray; set { _cfg.MinimizeToTray = value; Raise(); } }
     public bool Notifications { get => _cfg.Notifications; set { _cfg.Notifications = value; Raise(); } }
+    /// <summary>Settings → General (#211): warn in the main window when a plan window has little quota left.</summary>
+    public bool QuotaWarn { get => _cfg.QuotaWarn; set { _cfg.QuotaWarn = value; Raise(); } }
+    public decimal? QuotaWarnPercent
+    {
+        get => QuotaWarnings.Normalize(_cfg.QuotaWarnPercent);
+        set { if (value is { } v) _cfg.QuotaWarnPercent = QuotaWarnings.Normalize((int)Math.Round(v)); Raise(); }
+    }
     /// <summary>The main window's Advisor switch (#180): shows the Advisor row under every Claude project.</summary>
     public bool ShowAdvisor
     {
@@ -1350,7 +1359,7 @@ public sealed partial class MainViewModel : Observable
         foreach (var editor in _compactEditors.Values) editor.UpdateSettings(_cfg.AutoCompactSettings);
         RefreshCompactMode();
         foreach (var name in new[] { nameof(WslDistro), nameof(LinuxTerminal), nameof(ProjectSearchRoot), nameof(CanResetProjectSearchRoot), nameof(Theme), nameof(SelectedTheme), nameof(SelectedLanguage),
-            nameof(SelectedAppearance), nameof(SelectedAfterLaunch), nameof(MinimizeToTray), nameof(Notifications), nameof(ShowAdvisor), nameof(SelectedZoom), nameof(AutoUpdateClis), nameof(AutoClearIdle), nameof(AutoClearMinutes), nameof(CheckForUpdates) })
+            nameof(SelectedAppearance), nameof(SelectedAfterLaunch), nameof(MinimizeToTray), nameof(Notifications), nameof(QuotaWarn), nameof(QuotaWarnPercent), nameof(ShowAdvisor), nameof(SelectedZoom), nameof(AutoUpdateClis), nameof(AutoClearIdle), nameof(AutoClearMinutes), nameof(CheckForUpdates) })
             Raise(name);
         foreach (var t in Tabs) t.RaiseColor();
         foreach (var p in Projects) p.RaiseAdvisorVisible();

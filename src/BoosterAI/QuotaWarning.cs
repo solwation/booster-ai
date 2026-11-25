@@ -1,0 +1,91 @@
+using System.Collections.ObjectModel;
+
+namespace BoosterAI;
+
+/// <summary>One low-quota warning (#211): which agent/account/window is nearly used up, how much is left and when it resets.</summary>
+public sealed record QuotaWarning(string Agent, string? Account, string Window, double RemainingPercent, DateTimeOffset ResetsAt)
+{
+    /// <summary>Identity of the notice: a newer warning for the same agent, account and window replaces the older one.</summary>
+    public string Key => Agent + "\0" + Account + "\0" + Window;
+
+    /// <summary>"claude (Privat), 5 h: 4 % kvar, återställs om 1 h 10 min (15:30)" (#208 times).</summary>
+    public string Text(DateTimeOffset now)
+    {
+        var who = Account is { Length: > 0 } ? Loc.Format("quota.warn.who", Agent, Account) : Agent;
+        return Loc.Format("quota.warn.text", who, Window, Loc.Format("account.limit.remaining", Loc.Number(RemainingPercent, "0")),
+            LimitText.Resets(ResetsAt, now));
+    }
+}
+
+/// <summary>
+/// Decides when a plan window crosses below the warning threshold (#211), pure and testable. A window warns once per agent, account and
+/// window instance: the same reset time never warns again while it stays below the threshold. It re-arms when the quota is at or above
+/// the threshold again or when the window has reset (a different reset time). An unknown or expired window changes nothing.
+/// </summary>
+public sealed class QuotaWarnings
+{
+    public const int MinPercent = 1;
+    public const int MaxPercent = 50;
+    public const int DefaultPercent = 5;
+
+    /// <summary>Reset times of one window that differ by less than this are the same window (readings round differently).</summary>
+    private static readonly TimeSpan SameWindow = TimeSpan.FromMinutes(10);
+
+    private readonly Dictionary<string, DateTimeOffset> _warned = [];
+    private readonly object _lock = new();
+
+    public static int Normalize(int percent) => Math.Clamp(percent, MinPercent, MaxPercent);
+
+    /// <summary>
+    /// A reading for one agent/account: the warnings that are new now, 5 h window first. <paramref name="account"/> is the account's name when
+    /// the agent has several, else null. Remaining share is rounded like the "N % kvar" shown, so the text never contradicts the threshold.
+    /// </summary>
+    public IReadOnlyList<QuotaWarning> Update(string agent, string accountKey, string? account, AccountLimits limits, DateTimeOffset now, int thresholdPercent)
+    {
+        limits = limits.AsOf(now);
+        var threshold = Normalize(thresholdPercent);
+        var result = new List<QuotaWarning>();
+        var session = Loc.Format("account.limit.hours", Loc.Number((limits.Session?.Minutes ?? 300) / 60.0, "0.#"));
+        Check(agent, accountKey, account, session, limits.Session, threshold, result);
+        Check(agent, accountKey, account, Loc.Get("account.limit.week"), limits.Week, threshold, result);
+        return result;
+    }
+
+    private void Check(string agent, string accountKey, string? account, string label, LimitWindow? window, int threshold, List<QuotaWarning> result)
+    {
+        if (window is null) return;
+        var key = agent + "\0" + accountKey + "\0" + (label == Loc.Get("account.limit.week") ? "week" : "session");
+        var remaining = Math.Round(Math.Clamp(100 - window.UsedPercent, 0, 100), MidpointRounding.AwayFromZero);
+        lock (_lock)
+        {
+            if (remaining >= threshold) { _warned.Remove(key); return; }
+            if (_warned.TryGetValue(key, out var seen) && (window.ResetsAt - seen).Duration() < SameWindow) return;
+            _warned[key] = window.ResetsAt;
+        }
+        result.Add(new QuotaWarning(agent, account, label, remaining, window.ResetsAt));
+    }
+}
+
+/// <summary>A quota warning shown in the main window's non-modal bar until it is closed (#211).</summary>
+public sealed class QuotaNotice(QuotaWarning warning, string text) : Observable
+{
+    public QuotaWarning Warning { get; } = warning;
+    public string Text { get; } = text;
+}
+
+/// <summary>The open quota notices, newest last; one notice per agent/account/window and a few at most.</summary>
+public sealed class QuotaNotices
+{
+    public const int Max = 4;
+    public ObservableCollection<QuotaNotice> Items { get; } = [];
+
+    public void Show(QuotaWarning warning, DateTimeOffset now)
+    {
+        var old = Items.FirstOrDefault(n => n.Warning.Key == warning.Key);
+        if (old is not null) Items.Remove(old);
+        Items.Add(new QuotaNotice(warning, warning.Text(now)));
+        while (Items.Count > Max) Items.RemoveAt(0);
+    }
+
+    public void Close(QuotaNotice notice) => Items.Remove(notice);
+}

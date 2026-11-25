@@ -453,6 +453,11 @@ public partial class MainWindow : Window
 
     private void OnErrorClose(object? sender, RoutedEventArgs e) => _vm.Error.Hide();
 
+    private void OnQuotaClose(object? sender, RoutedEventArgs e)
+    {
+        if ((sender as Control)?.DataContext is QuotaNotice notice) _vm.Quota.Close(notice);
+    }
+
     private async void RunErrorAction(int index)
     {
         var error = _vm.Error;

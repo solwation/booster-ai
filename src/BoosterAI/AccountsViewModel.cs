@@ -176,6 +176,7 @@ public sealed class AgentAccountsViewModel : Observable
         }
         foreach (var row in Rows) row.RefreshLimits();
         _owner.AccountLimitsChanged(Cli);
+        if (keep) _owner.CheckQuota(Cli, key, Rows.Count > 1 ? account?.Name ?? DefaultName : null, result);
     }
 
     /// <summary>Screenshots (--fake-limits): invented limits in row order (both windows, then Unknown, then only the week); never reads a file.</summary>
@@ -326,6 +327,32 @@ public sealed partial class MainViewModel
             _agentLimits[cli] = result;
         }
         AccountLimitsChanged(cli);
+        CheckQuota(cli, "", null, result);
+    }
+
+    private readonly QuotaWarnings _quotaWarnings = new();
+
+    /// <summary>
+    /// A limits reading answered (#211): shows a non-modal notice for each plan window that has just crossed below the configured
+    /// share left, once per window and account (see <see cref="QuotaWarnings"/>). May run off the UI thread.
+    /// </summary>
+    internal void CheckQuota(string cli, string key, string? accountName, AccountLimits limits)
+    {
+        if (!_cfg.QuotaWarn) return;
+        var now = LimitsClock();
+        var fresh = _quotaWarnings.Update(Loc.Display("llm", cli), cli + "\0" + key, accountName, limits, now, _cfg.QuotaWarnPercent);
+        if (fresh.Count == 0) return;
+        Dispatcher.UIThread.Post(() => { foreach (var w in fresh) Quota.Show(w, now); });
+    }
+
+    /// <summary>Screenshots (--fake-quota): two invented readings that just fell below the threshold, through the real check.</summary>
+    internal void ShowSampleQuota()
+    {
+        var now = LimitsClock();
+        var hour = new DateTimeOffset(now.Year, now.Month, now.Day, now.Hour, 0, 0, now.Offset);
+        CheckQuota("claude", "/work/a", "Privat", new(new LimitWindow(96, hour.AddHours(1).AddMinutes(40), 300), new LimitWindow(41, hour.AddDays(3), 10080), null, hour));
+        CheckQuota("codex", "", null, new(new LimitWindow(30, hour.AddHours(2), 300), new LimitWindow(97, hour.AddDays(2).AddHours(3), 10080), null, hour));
+        Dispatcher.UIThread.RunJobs();
     }
 
     /// <summary>

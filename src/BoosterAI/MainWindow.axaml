@@ -58,6 +58,27 @@
       </Grid>
     </Border>
 
+    <!-- Low-quota warnings (#211): quiet, non-modal, one bar per agent/account/window, closed by the user. -->
+    <ItemsControl ItemsSource="{Binding Quota.Items}">
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="local:QuotaNotice">
+          <Border CornerRadius="{StaticResource RadiusLarge}" BorderThickness="1" BorderBrush="{DynamicResource WarningBrush}"
+                  Background="{DynamicResource SurfaceBrush}" Padding="14,8" Margin="0,0,0,14">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+              <Path Grid.Column="0" Data="{StaticResource WarningIcon}" Width="15" Height="15" Stretch="Uniform" StrokeThickness="1.5"
+                    StrokeLineCap="Round" StrokeJoin="Round" Stroke="{DynamicResource WarningBrush}" VerticalAlignment="Center" Margin="0,0,10,0" />
+              <TextBlock Grid.Column="1" Classes="body-small" Text="{Binding Text}" TextWrapping="Wrap" VerticalAlignment="Center"
+                         AutomationProperties.LiveSetting="Polite" />
+              <Button Grid.Column="2" Classes="icon" Click="OnQuotaClose" Margin="10,0,-4,0" VerticalAlignment="Center"
+                      ToolTip.Tip="{local:T quota.warn.close}" AutomationProperties.Name="{local:T quota.warn.close}">
+                <Path Data="{StaticResource CloseIcon}" />
+              </Button>
+            </Grid>
+          </Border>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+
     <!-- Update prompt: a quiet bar, only while a newer release is offered (see UpdateViewModel). -->
     <Border Classes="update" IsVisible="{Binding Update.IsVisible}" Margin="0,0,0,14">
       <Grid ColumnDefinitions="Auto,*,Auto">
