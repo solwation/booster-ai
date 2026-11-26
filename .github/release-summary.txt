@@ -1,3 +1,3 @@
-version: 0.49.2
-sv: Codex-planer med bara veckogräns visar ”ingen 5 h-gräns” i stället för Okänd, och mätaren följer veckan.
-en: Codex plans with only a weekly limit show “no 5 h limit” instead of Unknown, and the meter follows the week.
+version: 0.49.3
+sv: Claude-flikar fastnar inte längre i nya turer när aktivitetsloggen inte kan skrivas, till exempel vid fel på /mnt/c.
+en: Claude tabs no longer loop through new turns when the activity log cannot be written, such as when /mnt/c fails.
