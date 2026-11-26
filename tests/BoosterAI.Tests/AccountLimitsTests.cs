@@ -1294,6 +1294,7 @@ public class AccountLimitsTests
     [Fact]
     public async Task ReaderKeepsANullWindowNullAndAnUnreadableOneAnObject()
     {
+        if (OperatingSystem.IsWindows()) return; // the reader runs in WSL bash; Windows temp paths do not reach it
         var root = Path.Combine(Path.GetTempPath(), "bai-231-" + Guid.NewGuid().ToString("N"));
         var dir = Path.Combine(root, "sessions", "2026", "11", "25");
         Directory.CreateDirectory(dir);
