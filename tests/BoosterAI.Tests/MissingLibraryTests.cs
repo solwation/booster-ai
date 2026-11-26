@@ -54,9 +54,11 @@ public class MissingLibraryTests
                 if (mode != "shell")
                 {
                     var expected = new List<string> { "--from-alias" };
-                    if (mode == "resume") expected.AddRange(llm == "codex" ? ["resume", "--last"] : ["--continue"]);
                     if (mode == "once" && llm == "codex") expected.Add("exec");
                     expected.AddRange(["--model", model]);
+                    // The stub fails at once, so a resumed start falls back to a fresh one with the orchestra (#235).
+                    if (mode == "resume") expected.Add(llm == "agy" ? "-i" : "/orkester");
+                    if (mode == "resume" && llm == "agy") expected.Add("/orkester");
                     if (mode == "prompt")
                     {
                         if (llm == "agy") expected.Add("-i");
@@ -67,7 +69,7 @@ public class MissingLibraryTests
                         if (llm != "codex") expected.Add("-p");
                         expected.Add(llm == "claude" ? "/orkester" : "/orkester " + Launcher.ForegroundWatchNote);
                     }
-                    Assert.Single(File.ReadAllLines(Path.Combine(project, "cli-runs")));
+                    Assert.Equal(mode == "resume" ? 2 : 1, File.ReadAllLines(Path.Combine(project, "cli-runs")).Length);
                     Assert.Equal(expected, File.ReadAllText(Path.Combine(project, "args.bin")).Split('\0')[..^1]);
                     Assert.Equal(project, File.ReadAllText(Path.Combine(project, "cli-pwd")).Trim());
                 }

@@ -279,7 +279,7 @@ public class AutoClearConfigTests
         var off = on with { AutoClear = false };
         var claude = new TabConfig { Llm = "claude", Orkester = true };
         Assert.Contains("' input && ", Launcher.TabScript(claude, track: on));
-        Assert.Contains("' input && ", Launcher.RestartScript(claude, on, resume: true));
+        Assert.Contains("' input || {", Launcher.RestartScript(claude, on, resume: true));
         Assert.Contains(" input", Launcher.TabScript(claude, track: off));
         Assert.Contains(" input", Launcher.RestartScript(claude, off, resume: false));
         Assert.DoesNotContain(" input", Launcher.TabScript(new TabConfig { Llm = "claude" }, track: off));

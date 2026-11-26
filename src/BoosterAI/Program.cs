@@ -61,6 +61,10 @@ internal static class Program
                 if (tabs[i].Llm == "agy" && tracks[i] is { } t)
                     Console.WriteLine($"agy settings {tabs[i].Name} ({Launcher.AgySettingsFile(t)}; {t.Id}.agy-replace.json when user has a replacing statusLine, {t.Id}.agy-plain.json when python3 is missing): "
                         + TabSession.AgySettingsJson(AgyStatusLine.Command(t.Dir), stackWithDefault: true));
+            // Restart with conversation (Restart all, bs_next, model change): a continuation that does not get going falls back once (#235).
+            for (var i = 0; i < tabs.Count; i++)
+                if (Launcher.CanContinue(tabs[i]) && tracks[i] is { } rt)
+                    Console.WriteLine($"{tabs[i].Name} restart with conversation (falls back once to a fresh start when the continuation exits with an error within {Launcher.ResumeGraceSeconds} s): {Launcher.RestartScript(tabs[i], rt, resume: true)}");
             // Every interactive agy launch path passes that file (#212); the example stands in when no enabled tab uses agy.
             var agyTabs = Enumerable.Range(0, tabs.Count).Where(i => tabs[i].Llm == "agy" && tracks[i] is not null)
                 .Select(i => (Tab: tabs[i], Track: tracks[i]!)).ToList();

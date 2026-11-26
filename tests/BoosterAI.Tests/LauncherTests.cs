@@ -261,8 +261,10 @@ public class LauncherTests
         var tab = new TabConfig { Directory = "~/project's folder", Llm = llm, Model = "x", Orkester = true };
         var resumed = Launcher.TabScript(tab, prompt: "do not send me", resume: true);
         Assert.Contains(command, resumed);
-        Assert.DoesNotContain("do not send me", resumed);
-        Assert.DoesNotContain("orkester", resumed);
+        // The resumed command itself carries no prompt; only the fresh fallback after it starts the orchestra (#235).
+        Assert.DoesNotContain("orkester", resumed[..resumed.IndexOf("bs_rc=$?", StringComparison.Ordinal)]);
+        Assert.DoesNotContain("do not send me", resumed[..resumed.IndexOf("bs_rc=$?", StringComparison.Ordinal)]);
+        Assert.Contains("do not send me", resumed[resumed.IndexOf("bs_rc=$?", StringComparison.Ordinal)..]); // a fresh start gets the given prompt
         Assert.DoesNotContain(';', resumed);
         var fresh = Launcher.TabScript(tab);
         Assert.DoesNotContain("--continue", fresh);
@@ -343,7 +345,8 @@ public class LauncherTests
                         "aider" => "aider --restore-chat-history",
                         _ => llm + " --continue",
                     }, restart);
-                    Assert.DoesNotContain("orkester", restart);
+                    // Only the fresh fallback after the resumed command starts the orchestra (#235).
+                    Assert.DoesNotContain("orkester", restart[..restart.IndexOf("bs_rc=$?", StringComparison.Ordinal)]);
                 }
                 if (!OperatingSystem.IsLinux()) continue;
                 var psi = new ProcessStartInfo("bash") { UseShellExecute = false, RedirectStandardError = true };

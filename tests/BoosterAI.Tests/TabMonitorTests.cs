@@ -417,14 +417,14 @@ public class InPlaceRestartTests
     public void ModelChangeOnClaudeContinuesTheConversation()
     {
         var script = Launcher.RestartScript(Tab("claude", "y"), Track, resume: true);
-        Assert.Contains("&& CLAUDE_CODE_DISABLE_ADVISOR_TOOL=1 bs_run 'claude --continue --model", script);
+        Assert.Contains("\nCLAUDE_CODE_DISABLE_ADVISOR_TOOL=1 bs_run 'claude --continue --model", script);
         Assert.Contains("--settings", script);
         Assert.Contains("(bs_done 0 2>/dev/null || true) || (bs_done $? 2>/dev/null || true)", script);
     }
 
     [Fact]
     public void ModelChangeOnCodexResumesTheLastSession() => Assert.Contains(
-        "&& bs_run 'codex resume --last --model", Launcher.RestartScript(Tab("codex", "y"), Track, resume: true));
+        "\nbs_run 'codex resume --last --model", Launcher.RestartScript(Tab("codex", "y"), Track, resume: true));
 
     [Fact]
     public void LlmChangeStartsFreshWithTheOrchestra() => Assert.Contains(

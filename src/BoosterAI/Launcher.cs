@@ -129,7 +129,28 @@ public static class Launcher
         + "Run every queue poll and the whole idle watch in the foreground of this turn, as blocking commands that wait at most 60 seconds each, for example sleep 60, "
         + "never as a background loop or job. End your turn only when the session is finished.)";
 
+    /// <summary>Seconds within which a resumed CLI's failing exit counts as "the continuation did not get going" (#235).</summary>
+    internal const int ResumeGraceSeconds = 15;
+
+    /// <summary>
+    /// A resumed start (claude/agy --continue, codex resume --last, aider --restore-chat-history) that fails at once falls back,
+    /// once, to the normal fresh start of the same agent, model and settings (with /orkester when the tab has it on, #235).
+    /// Detection: the resumed command exits with a code of 1..127 within <see cref="ResumeGraceSeconds"/> seconds. Claude prints
+    /// "No conversation found to continue" and exits with code 1, so does any CLI that dies at startup. A normal session lasts
+    /// longer, a user quit usually ends with code 0, and an exit by signal (128 and up, such as BoosterAI's own restart that stops
+    /// the CLI with TERM) never counts, so a session that ran is not relaunched. The fresh start is not guarded again, so it
+    /// cannot loop. Plain shell (no ';', see TabScript), runs in the tab's own shell, so it needs nothing from tab-lib.sh.
+    /// </summary>
     private static string LaunchCommand(TabConfig tab, string? prompt, TabTrack? track, bool resume)
+    {
+        if (!resume || tab.Llm is not ("claude" or "codex" or "agy" or "aider")) return LaunchOnce(tab, prompt, track, resume);
+        var again = track is null ? "" : Hook("bs_reset") + " && " + Hook("bs_cli") + " && ";
+        return "{ bs_t=$SECONDS\n" + LaunchOnce(tab, prompt, track, true) + " || {\nbs_rc=$?\n"
+            + "if [ $bs_rc -lt 128 ] && [ $((SECONDS - bs_t)) -lt " + ResumeGraceSeconds + " ]\nthen "
+            + again + LaunchOnce(tab, prompt, track, false) + "\nelse (exit $bs_rc)\nfi\n}\n}";
+    }
+
+    private static string LaunchOnce(TabConfig tab, string? prompt, TabTrack? track, bool resume)
     {
         string Build(bool compact)
         {
