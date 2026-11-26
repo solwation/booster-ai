@@ -420,6 +420,11 @@ public sealed partial class MainViewModel
     /// </summary>
     internal void CheckQuota(string cli, string key, string? accountName, AccountLimits limits)
     {
+        if (QuotaWatched(cli, key)) WarnQuota(cli, key, accountName, limits);
+    }
+
+    private void WarnQuota(string cli, string key, string? accountName, AccountLimits limits)
+    {
         if (!_cfg.QuotaWarn) return;
         var now = LimitsClock();
         var fresh = _quotaWarnings.Update(Loc.Display("llm", cli), cli + "\0" + key, accountName, limits, now, _cfg.QuotaWarnPercent);
@@ -427,13 +432,23 @@ public sealed partial class MainViewModel
         Dispatcher.UIThread.Post(() => { foreach (var w in fresh) Quota.Show(w, now); });
     }
 
+    /// <summary>
+    /// Whether a tab or subtab has chosen this agent and account now (#238). Agents and accounts no tab uses are still read for the
+    /// Agent list (#214) but never warn. Off the UI thread the tab list may change meanwhile; a snapshot that fails just skips this reading.
+    /// </summary>
+    private bool QuotaWatched(string cli, string key)
+    {
+        try { return Tabs.ToList().Any(t => t.Llm == cli && (t.QuotaAccountKey ?? "") == key); }
+        catch (InvalidOperationException) { return false; }
+    }
+
     /// <summary>Screenshots (--fake-quota): two invented readings that just fell below the threshold, through the real check.</summary>
     internal void ShowSampleQuota()
     {
         var now = LimitsClock();
         var hour = new DateTimeOffset(now.Year, now.Month, now.Day, now.Hour, 0, 0, now.Offset);
-        CheckQuota("claude", "/work/a", "Privat", new(new LimitWindow(96, hour.AddHours(1).AddMinutes(40), 300), new LimitWindow(41, hour.AddDays(3), 10080), null, hour));
-        CheckQuota("codex", "", null, new(new LimitWindow(30, hour.AddHours(2), 300), new LimitWindow(97, hour.AddDays(2).AddHours(3), 10080), null, hour));
+        WarnQuota("claude", "/work/a", "Privat", new(new LimitWindow(96, hour.AddHours(1).AddMinutes(40), 300), new LimitWindow(41, hour.AddDays(3), 10080), null, hour));
+        WarnQuota("codex", "", null, new(new LimitWindow(30, hour.AddHours(2), 300), new LimitWindow(97, hour.AddDays(2).AddHours(3), 10080), null, hour));
         Dispatcher.UIThread.RunJobs();
     }
 

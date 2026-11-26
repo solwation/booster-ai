@@ -238,10 +238,8 @@ public class AccountLimitsTests
             }
             Assert.All(choices.Where(c => c.Llm is not ("claude" or "codex" or "agy")), c => Assert.False(c.HasLimitNote));
 
-            // The still-running maxed week warns once (#211), the reset 5 h window never.
-            var notice = Assert.Single(vm.Quota.Items);
-            Assert.Contains("Vecka", notice.Text);
-            Assert.Contains("(Work)", notice.Text);
+            // No tab uses claude, so its maxed week does not warn (#238); the Agent list still shows it above.
+            Assert.Empty(vm.Quota.Items);
 
             // Tab-less agents are read again only after the idle interval; the clock alone still updates them.
             clock = now.AddSeconds(31);
@@ -251,10 +249,9 @@ public class AccountLimitsTests
             await vm.RefreshAccountLimitsAsync(force: true);
             Avalonia.Threading.Dispatcher.UIThread.RunJobs();
             Assert.Equal(8, calls.Count);
-            Assert.Single(vm.Quota.Items); // same window, no second warning
+            Assert.Empty(vm.Quota.Items);
 
             // After the week's reset time: "Troligen återställd" instead of a blank, and no warning for the old snapshot.
-            vm.Quota.Close(notice);
             clock = now.AddHours(8).AddMinutes(1);
             var after = vm.Tabs[0].AgentChoices.Single(c => c.Llm == "claude" && c.AccountId == "claude-work");
             Assert.False(after.HasLimit);

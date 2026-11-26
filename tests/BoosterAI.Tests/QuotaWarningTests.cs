@@ -172,7 +172,11 @@ public class QuotaWarningTests : IDisposable
     [Fact]
     public async Task ReadingBelowTheThresholdShowsOneNoticeAndTheSettingSilencesIt()
     {
-        var cfg = new AppConfig { Accounts = [new() { Id = "c-work", Agent = "claude", Name = "Jobb", Directory = "~/.claude-work" }] };
+        var cfg = new AppConfig
+        {
+            Accounts = [new() { Id = "c-work", Agent = "claude", Name = "Jobb", Directory = "~/.claude-work" }],
+            Tabs = [new() { Name = "A", Directory = "/srv/a", Llm = "claude" }],
+        };
         var vm = new MainViewModel(cfg);
         vm.LimitsClock = () => Now;
         vm.AccountLimitsEnabled = true;
@@ -206,5 +210,32 @@ public class QuotaWarningTests : IDisposable
         var weekly = new AccountLimits(null, new LimitWindow(97, Now.AddDays(3), 10080), null, Now) { SessionAbsent = true };
         var w = Assert.Single(Read(q, weekly));
         Assert.Equal("Vecka", w.Window);
+    }
+
+    [Fact]
+    public async Task OnlyAgentsAndAccountsAChosenTabUsesWarn()
+    {
+        // #238: an agent or account no tab has chosen is still read for the Agent list (#214) but never warns.
+        var cfg = new AppConfig
+        {
+            Accounts = [new() { Id = "c-work", Agent = "claude", Name = "Jobb", Directory = "~/.claude-work" }],
+            Tabs = [new() { Name = "A", Directory = "/srv/a", Llm = "aider" }],
+        };
+        var vm = new MainViewModel(cfg);
+        vm.LimitsClock = () => Now;
+        vm.AccountLimitsEnabled = true;
+        vm.ReadAccountLimits = (_, _, _) => Task.FromResult(Limits(98, null));
+        var accounts = vm.AccountsEditor("claude")!;
+        await accounts.RefreshLimitsAsync();
+        Dispatcher.UIThread.RunJobs();
+        Assert.Empty(vm.Quota.Items);
+
+        // Choosing claude with the work account warns for that account only, at the next reading.
+        vm.Tabs[0].Llm = "claude";
+        vm.Tabs[0].Account = "c-work";
+        await accounts.RefreshLimitsAsync();
+        Dispatcher.UIThread.RunJobs();
+        var notice = Assert.Single(vm.Quota.Items);
+        Assert.Contains("(Jobb)", notice.Text);
     }
 }
