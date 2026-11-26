@@ -434,8 +434,11 @@ public sealed partial class MainViewModel
         if (notify)
         {
             // Same once-per-window rule as the in-app notice; a notification never takes focus (#239).
-            foreach (var w in changes.Warnings) QuotaNotify("BoosterAI", w.Text(now));
-            foreach (var r in changes.Recoveries) QuotaNotify("BoosterAI", r.Text());
+            // The Notifications setting gates the toasts, Sound effects the sounds; the in-app bar below is neither.
+            foreach (var w in changes.Warnings) { if (_cfg.Notifications) QuotaNotify("BoosterAI", w.Text(now)); }
+            foreach (var r in changes.Recoveries) { if (_cfg.Notifications) QuotaNotify("BoosterAI", r.Text()); }
+            if (changes.Warnings.Count > 0) PlaySound(SoundEffect.QuotaLow);
+            if (changes.Recoveries.Count > 0) PlaySound(SoundEffect.QuotaBack);
         }
         if (changes.Warnings.Count == 0) return;
         var fresh = changes.Warnings;

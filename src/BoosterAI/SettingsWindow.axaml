@@ -124,6 +124,8 @@
                           ToolTip.Tip="{local:T settings.minimizeToTray.tip}" />
                 <CheckBox IsChecked="{Binding Notifications}" Content="{local:T settings.notifications}"
                           ToolTip.Tip="{local:T settings.notifications.tip}" />
+                <CheckBox IsChecked="{Binding SoundEffects}" Content="{local:T settings.soundEffects}"
+                          ToolTip.Tip="{local:T settings.soundEffects.tip}" />
                 <WrapPanel Orientation="Horizontal" ToolTip.Tip="{local:T settings.quotaWarn.tip}">
                   <CheckBox IsChecked="{Binding QuotaWarn}" Content="{local:T settings.quotaWarn}" Margin="0,0,8,0" />
                   <NumericUpDown Value="{Binding QuotaWarnPercent}" Minimum="1" Maximum="50" Increment="1" FormatString="0"

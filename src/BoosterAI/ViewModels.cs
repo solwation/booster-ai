@@ -1053,6 +1053,25 @@ public sealed partial class MainViewModel : Observable
     }
     public bool MinimizeToTray { get => _cfg.MinimizeToTray; set { _cfg.MinimizeToTray = value; Raise(); } }
     public bool Notifications { get => _cfg.Notifications; set { _cfg.Notifications = value; Raise(); } }
+    public bool SoundEffects { get => _cfg.SoundEffects; set { _cfg.SoundEffects = value; Raise(); } }
+
+    /// <summary>Plays the sound effects (#240); silent by default so tests never make a sound, the app sets the real one at startup.</summary>
+    internal ISoundPlayer Sound { get; set; } = new NoSoundPlayer();
+    internal Func<DateTime> SoundClock { get; set; } = () => DateTime.UtcNow;
+    private readonly Dictionary<SoundEffect, DateTime> _soundPlayed = [];
+
+    /// <summary>Plays an effect when Sound effects is on and the same effect has not played in the last few seconds. May run off the UI thread.</summary>
+    internal void PlaySound(SoundEffect effect)
+    {
+        if (!_cfg.SoundEffects) return;
+        var now = SoundClock();
+        lock (_soundPlayed)
+        {
+            if (_soundPlayed.TryGetValue(effect, out var last) && now - last < SoundCatalog.Throttle) return;
+            _soundPlayed[effect] = now;
+        }
+        Sound.Play(effect);
+    }
     /// <summary>Settings → General (#211): warn in the main window when a plan window has little quota left.</summary>
     public bool QuotaWarn { get => _cfg.QuotaWarn; set { _cfg.QuotaWarn = value; Raise(); } }
     public decimal? QuotaWarnPercent
@@ -1445,7 +1464,7 @@ public sealed partial class MainViewModel : Observable
         foreach (var editor in _compactEditors.Values) editor.UpdateSettings(_cfg.AutoCompactSettings);
         RefreshCompactMode();
         foreach (var name in new[] { nameof(WslDistro), nameof(LinuxTerminal), nameof(ProjectSearchRoot), nameof(CanResetProjectSearchRoot), nameof(Theme), nameof(SelectedTheme), nameof(SelectedLanguage),
-            nameof(SelectedAppearance), nameof(SelectedAfterLaunch), nameof(MinimizeToTray), nameof(Notifications), nameof(QuotaWarn), nameof(QuotaWarnPercent), nameof(ShowAdvisor), nameof(SelectedZoom), nameof(AutoUpdateClis), nameof(AutoClearIdle), nameof(AutoClearMinutes), nameof(CheckForUpdates) })
+            nameof(SelectedAppearance), nameof(SelectedAfterLaunch), nameof(MinimizeToTray), nameof(Notifications), nameof(SoundEffects), nameof(QuotaWarn), nameof(QuotaWarnPercent), nameof(ShowAdvisor), nameof(SelectedZoom), nameof(AutoUpdateClis), nameof(AutoClearIdle), nameof(AutoClearMinutes), nameof(CheckForUpdates) })
             Raise(name);
         foreach (var t in Tabs) t.RaiseColor();
         foreach (var p in Projects) p.RaiseAdvisorVisible();
@@ -1829,6 +1848,7 @@ public sealed partial class MainViewModel : Observable
         if (error != "")
         {
             if (_cfg.Notifications) Notifier.Show("BoosterAI", error);
+            PlaySound(SoundEffect.Error);
             return error;
         }
         foreach (var (row, tab) in rows)
@@ -1969,8 +1989,11 @@ public sealed partial class MainViewModel : Observable
                 row.RefreshInputState(log, lastOutput);
                 RequestAutoClear(row, id, state, log, lastOutput);
                 if (!changed) continue;
-                if (_cfg.Notifications && TabStatus.IsUnexpected(state, rc))
-                    Notifier.Show("BoosterAI", Loc.Format("notify.body", row.Name, row.StatusText));
+                if (TabStatus.IsUnexpected(state, rc))
+                {
+                    if (_cfg.Notifications) Notifier.Show("BoosterAI", Loc.Format("notify.body", row.Name, row.StatusText));
+                    PlaySound(SoundEffect.Finished);
+                }
             }
             if (anyActivityChanged) _ = RefreshAccountLimitsAsync();
             // A tab that closed can be started again: the Start button counts it.
@@ -2114,7 +2137,11 @@ public sealed partial class MainViewModel : Observable
         var error = Launcher.Launch(cfg, Launcher.InstallOrkesterPrompt, _ => track);
         // The files appear once the agent has worked; reopening BoosterAI or editing the path rechecks.
         ShowLaunchOutcome(error, cfg.Tabs, () => InstallOrkester(tab), Loc.Format("status.installRunning", tab.Name.Trim()));
-        if (error != "" && _cfg.Notifications) Notifier.Show("BoosterAI", error);
+        if (error != "")
+        {
+            if (_cfg.Notifications) Notifier.Show("BoosterAI", error);
+            PlaySound(SoundEffect.Error);
+        }
     }
 }
 

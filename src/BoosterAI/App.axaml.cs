@@ -57,7 +57,7 @@ public partial class App : Application
         {
             // A minimized or tray-hidden window keeps the app running; closing it (with Minimize to tray off), or Quit in the tray, ends it.
             desktop.ShutdownMode = ShutdownMode.OnMainWindowClose;
-            var vm = new MainViewModel(_config);
+            var vm = new MainViewModel(_config) { Sound = new SystemSoundPlayer() };
             var main = new MainWindow(vm, background: desktop.Args?.Contains("--background") == true);
             main.RememberSize();
             desktop.MainWindow = main;

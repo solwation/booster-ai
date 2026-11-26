@@ -19,6 +19,13 @@ internal static class Program
             TerminalPlacement.Watch(requestFile);
             return;
         }
+        // --play-sound <finished|error|quota-low|quota-back> plays one sound effect and exits (manual check, #240).
+        if (args is ["--play-sound", var soundName])
+        {
+            if (SoundCatalog.Parse(soundName) is not { } effect) { Console.Error.WriteLine("unknown sound: " + soundName); Environment.Exit(2); return; }
+            new SystemSoundPlayer().PlayAndWait(effect);
+            return;
+        }
         // --dry-run prints what "Starta" would run, without opening anything.
         if (args.Contains("--dry-run"))
         {
