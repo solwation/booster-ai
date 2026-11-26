@@ -64,8 +64,8 @@ public sealed class AccountRow : Observable
     /// <summary>The bar's value; a use above 100 % (Codex allows it) fills the bar.</summary>
     public double SessionPercent => Math.Clamp(Limits.Session?.UsedPercent ?? 0, 0, 100);
     public double WeekPercent => Math.Clamp(Limits.Week?.UsedPercent ?? 0, 0, 100);
-    public string SessionText => LimitText.Used(Limits.Session, _owner.Now, Limits.SessionReset);
-    public string WeekText => LimitText.Used(Limits.Week, _owner.Now, Limits.WeekReset);
+    public string SessionText => LimitText.Used(Limits.Session, _owner.Now, Limits.SessionReset, LimitText.Absent(Limits.SessionAbsent, "account.limit.absent.session", SessionLabel));
+    public string WeekText => LimitText.Used(Limits.Week, _owner.Now, Limits.WeekReset, LimitText.Absent(Limits.WeekAbsent, "account.limit.absent.week", ""));
     public string CreditsText => LimitText.Credits(Limits.Credits);
     public bool HasCredits => CreditsText.Length > 0;
     /// <summary>"avläst för 8 min sedan": when the agent reported the values; "Ingen avläsning än" before any.</summary>
@@ -194,7 +194,8 @@ public sealed class AgentAccountsViewModel : Observable
                 cli == "codex" ? new LimitCredits(true, false, "120") : null, hour.AddMinutes(-15))
                 { Fable = cli == "claude" ? new LimitWindow(82.5, hour.AddDays(3).AddHours(2)) : null },
             AccountLimits.Unknown,
-            new(null, new LimitWindow(8, hour.AddDays(5), 10080), cli == "codex" ? new LimitCredits(false, false, null) : null, hour.AddDays(-1).AddHours(2)),
+            // Codex plans may report only the week: then there is no 5 h window at all (#231), which is not Unknown.
+            new(null, new LimitWindow(8, hour.AddDays(5), 10080), cli == "codex" ? new LimitCredits(false, false, null) : null, hour.AddDays(-1).AddHours(2)) { SessionAbsent = cli == "codex" },
             new(new LimitWindow(91, hour.AddHours(1).AddMinutes(40), 300), new LimitWindow(64, hour.AddDays(2), 10080), null, hour.AddMinutes(-4)),
             // #214: an account no tab uses, maxed at its last reading yesterday, and one whose windows have reset since.
             new(new LimitWindow(100, hour.AddHours(-20), 300), new LimitWindow(100, hour.AddDays(1).AddHours(3), 10080), null, hour.AddDays(-1).AddHours(-2)),

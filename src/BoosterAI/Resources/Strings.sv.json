@@ -927,6 +927,8 @@
   "account.limit.week": "Vecka",
   "account.limit.used": "{0} % använt · återställs {1}",
   "account.limit.unknown": "Okänd",
+  "account.limit.absent.session": "ingen {0}-gräns",
+  "account.limit.absent.week": "ingen veckogräns",
   "account.limit.credits": "Krediter: {0}",
   "account.limit.credits.unlimited": "obegränsade",
   "account.limit.credits.none": "inga",

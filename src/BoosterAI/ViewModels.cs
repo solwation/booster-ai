@@ -2472,8 +2472,11 @@ public sealed record AgentChoice(string Llm, string AccountId, string AccountNam
     public double WeekMeterPercent => WeekMeter.Percent;
     public bool SessionMeterWarn => SessionMeter.Warn;
     public bool WeekMeterWarn => WeekMeter.Warn;
-    public bool SessionMeterUnknown => !SessionMeter.Known;
-    public bool WeekMeterUnknown => !WeekMeter.Known;
+    public bool SessionMeterUnknown => !SessionMeter.Known && !SessionMeter.Absent;
+    public bool WeekMeterUnknown => !WeekMeter.Known && !WeekMeter.Absent;
+    /// <summary>A window the agent does not have (#231, Codex with only a weekly window): its track is not drawn, and it is not "unknown".</summary>
+    public bool SessionMeterAbsent => SessionMeter.Absent;
+    public bool WeekMeterAbsent => WeekMeter.Absent;
     /// <summary>The meters' tooltip: both windows with use and reset time, or why the level is unknown.</summary>
     public string? MeterTip => Limit?.Tip ?? Note?.Tip;
     /// <summary>What a screen reader reads for the meters: both windows by name with remaining, used and reset time.</summary>

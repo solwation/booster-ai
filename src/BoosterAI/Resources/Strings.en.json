@@ -927,6 +927,8 @@
   "account.limit.week": "Week",
   "account.limit.used": "{0}% used · resets {1}",
   "account.limit.unknown": "Unknown",
+  "account.limit.absent.session": "no {0} limit",
+  "account.limit.absent.week": "no weekly limit",
   "account.limit.credits": "Credits: {0}",
   "account.limit.credits.unlimited": "unlimited",
   "account.limit.credits.none": "none",

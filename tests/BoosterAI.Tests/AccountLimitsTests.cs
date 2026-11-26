@@ -1256,4 +1256,100 @@ public class AccountLimitsTests
         }
         finally { Loc.Use(previous); }
     }
+
+    // #231: Codex may report only a weekly window, in primary with secondary null: there is then no 5 h window at all.
+    private static string Marker(string primary, string secondary) =>
+        $$$"""BOOSTER_LIMITS={"at":"2026-11-25T08:00:00Z","primary":{{{primary}}},"secondary":{{{secondary}}},"credits":null}""";
+    private static string Codex(int used, int minutes) => $$$"""{"used":{{{used}}},"resets_at":{{{Now + 3600}}},"minutes":{{{minutes}}}}""";
+
+    [Fact]
+    public void CodexBindsWindowsByLengthAndOnlyANullWindowIsAbsent()
+    {
+        // Both windows, in either order: nothing is absent.
+        foreach (var line in new[] { Marker(Codex(10, 300), Codex(20, 10080)), Marker(Codex(20, 10080), Codex(10, 300)) })
+        {
+            var both = AccountLimitsProbe.Parse("codex", line);
+            Assert.Equal(10, both.Session!.UsedPercent);
+            Assert.Equal(20, both.Week!.UsedPercent);
+            Assert.False(both.SessionAbsent || both.WeekAbsent);
+        }
+        // Only the week, in primary: the week row, and no 5 h window rather than an unknown one.
+        var weekly = AccountLimitsProbe.Parse("codex", Marker(Codex(3, 10080), "null"));
+        Assert.Null(weekly.Session);
+        Assert.Equal(3, weekly.Week!.UsedPercent);
+        Assert.True(weekly.SessionAbsent);
+        Assert.False(weekly.WeekAbsent);
+        Assert.True(weekly.AsOf(DateTimeOffset.UtcNow).SessionAbsent); // survives AsOf
+        // The same in secondary, and only a 5 h window in primary.
+        Assert.True(AccountLimitsProbe.Parse("codex", Marker("null", Codex(3, 10080))).SessionAbsent);
+        Assert.True(AccountLimitsProbe.Parse("codex", Marker(Codex(3, 300), "null")).WeekAbsent);
+        // A window that should exist but cannot be read stays unknown, and so does nothing read at all.
+        var unreadable = AccountLimitsProbe.Parse("codex", Marker(Codex(3, 10080), """{"used":"x"}"""));
+        Assert.False(unreadable.SessionAbsent);
+        Assert.False(AccountLimitsProbe.Parse("codex", Marker("null", "null")).SessionAbsent);
+        Assert.False(AccountLimitsProbe.Parse("codex", "BOOSTER_LIMITS={}").SessionAbsent);
+        Assert.False(AccountLimitsProbe.Parse("codex", Marker(Codex(3, 10080), Codex(3, 3000))).SessionAbsent);
+    }
+
+    [Fact]
+    public async Task ReaderKeepsANullWindowNullAndAnUnreadableOneAnObject()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "bai-231-" + Guid.NewGuid().ToString("N"));
+        var dir = Path.Combine(root, "sessions", "2026", "11", "25");
+        Directory.CreateDirectory(dir);
+        try
+        {
+            string Event(string limits) => $$$"""{"timestamp":"2026-11-25T08:00:00Z","type":"event_msg","payload":{"type":"token_count","rate_limits":{{{limits}}}}}""";
+            var week = $$$"""{"used_percent":3.0,"window_minutes":10080,"resets_at":{{{Now + 3600}}}}""";
+            await File.WriteAllTextAsync(Path.Combine(dir, "rollout-a.jsonl"), Event($$$"""{"primary":{{{week}}},"secondary":null}""") + "\n");
+            var weekly = AccountLimitsProbe.Parse("codex", (await Bash(root, AccountLimitsProbe.Script("codex", root))).Out);
+            Assert.True(weekly.SessionAbsent);
+            Assert.Equal(3, weekly.Week!.UsedPercent);
+
+            await File.WriteAllTextAsync(Path.Combine(dir, "rollout-a.jsonl"), Event($$$"""{"primary":{{{week}}},"secondary":{"used_percent":"?"}}""") + "\n");
+            var broken = AccountLimitsProbe.Parse("codex", (await Bash(root, AccountLimitsProbe.Script("codex", root))).Out);
+            Assert.False(broken.SessionAbsent);
+            Assert.Equal(3, broken.Week!.UsedPercent);
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public void AbsentWindowIsNotUnknownInRowsMetersTipAndStatusColumn()
+    {
+        var previous = Loc.Language;
+        try
+        {
+            var now = DateTimeOffset.Now;
+            var limits = new AccountLimits(null, Win(40, now, 10080), null, now) { SessionAbsent = true };
+            foreach (var (lang, absent, week, remaining, chip) in new[] { ("sv", "ingen 5 h-gräns", "Vecka", "60 % kvar", "60 %"), ("en", "no 5 h limit", "Week", "60% left", "60%") })
+            {
+                Loc.Use(lang);
+                var indicator = LimitIndicator.For(limits, now)!;
+                Assert.Equal(absent, indicator.Rows[0].RemainingText);
+                Assert.True(indicator.Rows[0].Absent);
+                Assert.Equal("5 h: " + absent, indicator.Rows[0].Name);
+                Assert.Contains("5 h: " + absent, indicator.Tip);
+                Assert.DoesNotContain(Loc.Get("account.limit.unknown"), indicator.Tip + indicator.Rows[0].Name);
+                Assert.Equal(remaining, indicator.Rows[1].RemainingText);
+                Assert.Equal(week, indicator.Rows[1].Label);
+                // The compact status column and "kvar" use the window that exists.
+                Assert.Equal(chip, indicator.RemainingShort);
+                Assert.Equal(remaining, indicator.RemainingCaption);
+                var choice = new AgentChoice("codex", "", "", false, null, indicator);
+                Assert.True(choice.SessionMeterAbsent);
+                Assert.False(choice.SessionMeterUnknown);
+                Assert.False(choice.WeekMeterAbsent || choice.WeekMeterUnknown);
+                Assert.Equal(40, choice.WeekMeterPercent);
+                Assert.Contains(absent, choice.MeterName);
+                Assert.Equal(absent, LimitText.Used(limits.Session, now, false, LimitText.Absent(limits.SessionAbsent, "account.limit.absent.session", "5 h")));
+            }
+            // A window that is merely unread stays "Okänd".
+            Loc.Use("sv");
+            Assert.Equal("Okänd", LimitIndicator.For(new(null, Win(40, now, 10080), null, now), now)!.Rows[0].RemainingText);
+            // Only a 5 h window: no weekly limit.
+            Assert.Equal("ingen veckogräns", LimitIndicator.For(new(Win(40, now, 300), null, null, now) { WeekAbsent = true }, now)!.Rows[1].RemainingText);
+        }
+        finally { Loc.Use(previous); }
+    }
 }

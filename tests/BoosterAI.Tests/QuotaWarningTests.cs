@@ -198,4 +198,13 @@ public class QuotaWarningTests : IDisposable
         Dispatcher.UIThread.RunJobs();
         Assert.Empty(vm.Quota.Items);
     }
+
+    [Fact]
+    public void AbsentFiveHourWindowNeverWarnsAndTheWeekStillDoes()
+    {
+        var q = new QuotaWarnings();
+        var weekly = new AccountLimits(null, new LimitWindow(97, Now.AddDays(3), 10080), null, Now) { SessionAbsent = true };
+        var w = Assert.Single(Read(q, weekly));
+        Assert.Equal("Vecka", w.Window);
+    }
 }

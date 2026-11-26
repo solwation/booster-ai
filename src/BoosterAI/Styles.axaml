@@ -415,6 +415,8 @@
   <Style Selector="ProgressBar.limit-meter.warn"><Setter Property="Foreground" Value="{DynamicResource WarningBrush}" /></Style>
   <!-- #219: a window without a known level is an empty, muted track. -->
   <Style Selector="ProgressBar.limit-meter.unknown"><Setter Property="Opacity" Value="0.45" /></Style>
+  <!-- #231: a window the agent does not have is not drawn; it keeps its place so the other meter stays where it is. -->
+  <Style Selector="ProgressBar.limit-meter.absent"><Setter Property="Opacity" Value="0" /></Style>
   <!-- The status popup's limit table (#210): a taller meter of the remaining share, the remaining percentage emphasized. -->
   <Style Selector="ProgressBar.limit-meter.peek">
     <Setter Property="Height" Value="6" />

@@ -26,6 +26,15 @@ public sealed record AccountLimits(LimitWindow? Session, LimitWindow? Week, Limi
     /// <summary>The same for the weekly window (#214).</summary>
     public bool WeekReset { get; init; }
 
+    /// <summary>
+    /// True when the agent reported its windows but has no 5 h window at all (#231): Codex plans that report only the week leave
+    /// <c>secondary</c> null. Not unknown: the UI says "ingen 5 h-gräns" or hides the window, never "Okänd". Kept by <see cref="AsOf"/>.
+    /// </summary>
+    public bool SessionAbsent { get; init; }
+
+    /// <summary>The same for the weekly window (#231).</summary>
+    public bool WeekAbsent { get; init; }
+
     public LimitWindow? Fable { get; init; }
 
     /// <summary>
@@ -115,8 +124,8 @@ public sealed record LimitIndicator(string Caption, bool Warn, string Tip, strin
         var lines = new List<string>
         {
             Loc.Get("account.limit.title"),
-            session + ": " + LimitText.Used(limits.Session, now, limits.SessionReset),
-            Loc.Get("account.limit.week") + ": " + LimitText.Used(limits.Week, now, limits.WeekReset),
+            session + ": " + LimitText.Used(limits.Session, now, limits.SessionReset, LimitText.Absent(limits.SessionAbsent, "account.limit.absent.session", session)),
+            Loc.Get("account.limit.week") + ": " + LimitText.Used(limits.Week, now, limits.WeekReset, LimitText.Absent(limits.WeekAbsent, "account.limit.absent.week", "")),
         };
         if (includeFable) lines.Add(Loc.Get("account.limit.fable") + ": " + LimitText.Used(fable, now));
         if (limits.At is { } at) lines.Add(LimitText.Age(at, now));
@@ -124,8 +133,8 @@ public sealed record LimitIndicator(string Caption, bool Warn, string Tip, strin
             + (percent >= 100 ? ", " + Loc.Get("account.limit.full") : warn ? ", " + Loc.Get("account.limit.near") : "");
         var rows = new List<LimitRow>
         {
-            LimitRow.For(session, limits.Session, now, limits.SessionReset),
-            LimitRow.For(Loc.Get("account.limit.week"), limits.Week, now, limits.WeekReset),
+            LimitRow.For(session, limits.Session, now, limits.SessionReset, LimitText.Absent(limits.SessionAbsent, "account.limit.absent.session", session)),
+            LimitRow.For(Loc.Get("account.limit.week"), limits.Week, now, limits.WeekReset, LimitText.Absent(limits.WeekAbsent, "account.limit.absent.week", "")),
         };
         if (includeFable) rows.Insert(1, LimitRow.For(Loc.Get("account.limit.fable"), fable, now));
         var age = limits.At is { } when ? LimitText.Age(when, now) : "";
@@ -160,10 +169,10 @@ public sealed record LimitIndicator(string Caption, bool Warn, string Tip, strin
 /// One of the two thin meters under an agent's name (#219), "5 h" on top and "Vecka" below: filled to the window's use
 /// (<paramref name="Percent"/>, 0 while <paramref name="Known"/> is false, which shows an empty, muted track). <paramref name="Warn"/> from 80 %.
 /// </summary>
-public sealed record LimitMeter(string Label, bool Known, double Percent, bool Warn)
+public sealed record LimitMeter(string Label, bool Known, double Percent, bool Warn, bool Absent = false)
 {
     public static readonly LimitMeter Empty = new("", false, 0, false);
-    public static LimitMeter From(LimitRow row) => new(row.Label, row.Known, row.Known ? row.Used : 0, row.Warn);
+    public static LimitMeter From(LimitRow row) => new(row.Label, row.Known, row.Known ? row.Used : 0, row.Warn, row.Absent);
 }
 
 /// <summary>The Agent list's text for a limit-capable entry without a known level (#214): "Okänd" or "Troligen återställd", and why.</summary>
@@ -176,10 +185,12 @@ public sealed record LimitNote(string Caption, string Tip, bool Reset)
 /// One window in the status popup's limit table (#210): "5 h", a meter of the remaining share, "62 % kvar", "38 % använt" and
 /// "återställs om 2 h (15:00)". An unknown window has only its label and "Okänd", or "Troligen återställd" once it has reset (#214). <see cref="Warn"/> from <see cref="LimitIndicator.WarnAt"/> % used.
 /// </summary>
-public sealed record LimitRow(string Label, bool Known, double Remaining, string RemainingText, string UsedText, string ResetText, bool Warn, string Name, double Used = 0)
+public sealed record LimitRow(string Label, bool Known, double Remaining, string RemainingText, string UsedText, string ResetText, bool Warn, string Name, double Used = 0, bool Absent = false)
 {
-    public static LimitRow For(string label, LimitWindow? window, DateTimeOffset now, bool reset = false)
+    /// <summary><paramref name="absent"/> is the text for a window the agent does not have (#231, "ingen 5 h-gräns"); the row is then not "Okänd" and its meter is not drawn.</summary>
+    public static LimitRow For(string label, LimitWindow? window, DateTimeOffset now, bool reset = false, string? absent = null)
     {
+        if (window is null && absent is not null) return new(label, false, 0, absent, "", "", false, label + ": " + absent, 0, true);
         if (window is null)
         {
             var unknown = Loc.Get(reset ? "account.limit.reset" : "account.limit.unknown");
@@ -201,7 +212,10 @@ public sealed record LimitRow(string Label, bool Known, double Remaining, string
 /// <summary>The texts of the Accounts page's limit lines (#199): "37 % använt · återställs om 4 h 20 min (14:20)", "Okänd", credits and times.</summary>
 public static class LimitText
 {
-    public static string Used(LimitWindow? window, DateTimeOffset now, bool reset = false) => window is null ? Loc.Get(reset ? "account.limit.reset" : "account.limit.unknown")
+    /// <summary>The text of a window that is not there (#231): <paramref name="absent"/> says the agent does not have it ("ingen 5 h-gräns"), else "Okänd".</summary>
+    public static string? Absent(bool absent, string key, string label) => absent ? Loc.Format(key, label) : null;
+
+    public static string Used(LimitWindow? window, DateTimeOffset now, bool reset = false, string? absent = null) => window is null ? absent ?? Loc.Get(reset ? "account.limit.reset" : "account.limit.unknown")
         : window.ResetsAt is { } at ? Loc.Format("account.limit.used", LimitPercent.UsedText(window.UsedPercent), Resets(at, now))
         : Loc.Format("account.limit.usedShort", LimitPercent.UsedText(window.UsedPercent));
 
@@ -246,10 +260,11 @@ import json, os, sys
 def num(v):
     return v if isinstance(v, (int, float)) and not isinstance(v, bool) else None
 def window(w, used, minutes):
-    if not isinstance(w, dict): return None
+    if w is None: return None  # not reported at all: stays null, so the reader can tell it from a window it cannot read (#231)
+    if not isinstance(w, dict): return {}
     out = {'used': num(w.get(used)), 'resets_at': num(w.get('resets_at'))}
     if minutes: out['minutes'] = num(w.get(minutes))
-    return out if out['used'] is not None and out['resets_at'] is not None else None
+    return out if out['used'] is not None and out['resets_at'] is not None else {}
 def last_count(path):
     with open(path, 'rb') as f:
         f.seek(0, 2)
@@ -357,11 +372,17 @@ print('BOOSTER_LIMITS=' + json.dumps(out))
     private static AccountLimits ParseCodex(JsonElement root)
     {
         LimitWindow? session = null, week = null;
+        var unreadable = false; // a window is there but cannot be read or placed: then nothing is known to be absent
         foreach (var name in new[] { "primary", "secondary" })
         {
-            if (Window(root, name) is not { Minutes: { } minutes } w) continue;
-            if (minutes > 0 && minutes <= 24 * 60) session ??= w;
-            else if (minutes >= 6 * 24 * 60 && minutes <= 8 * 24 * 60) week ??= w;
+            if (root.TryGetProperty(name, out var slot) && slot.ValueKind == JsonValueKind.Null) continue; // not reported (#231)
+            var placed = false;
+            if (Window(root, name) is { Minutes: { } minutes } w)
+            {
+                if (minutes > 0 && minutes <= 24 * 60) { session ??= w; placed = true; }
+                else if (minutes >= 6 * 24 * 60 && minutes <= 8 * 24 * 60) { week ??= w; placed = true; }
+            }
+            if (!placed && root.TryGetProperty(name, out _)) unreadable = true;
         }
         LimitCredits? credits = null;
         if (root.TryGetProperty("credits", out var c) && c.ValueKind == JsonValueKind.Object)
@@ -369,7 +390,8 @@ print('BOOSTER_LIMITS=' + json.dumps(out))
                 c.TryGetProperty("balance", out var b) && b.ValueKind == JsonValueKind.String && Clean(b.GetString()) is { } balance ? balance : null);
         DateTimeOffset? at = root.TryGetProperty("at", out var a) && a.ValueKind == JsonValueKind.String
             && DateTimeOffset.TryParse(a.GetString(), CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var t) ? t : null;
-        return new AccountLimits(session, week, credits, at);
+        // #231: a window Codex does not report while another one was read is absent, not unknown (windows bind by length, not position).
+        return new AccountLimits(session, week, credits, at) { SessionAbsent = !unreadable && session is null && week is not null, WeekAbsent = !unreadable && week is null && session is not null };
     }
 
     private static LimitWindow? Window(JsonElement root, string name)

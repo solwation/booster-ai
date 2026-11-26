@@ -334,9 +334,9 @@
                             <Panel Grid.Row="1" Grid.ColumnSpan="3" Classes="limit-entry"><StackPanel Spacing="1" Width="64" HorizontalAlignment="Left" Margin="22,2,0,1"
                                         IsVisible="{Binding HasMeters}" Background="Transparent"
                                         ToolTip.Tip="{Binding MeterTip}" AutomationProperties.Name="{Binding MeterName}">
-                              <ProgressBar Classes="limit-meter" Classes.warn="{Binding SessionMeterWarn}" Classes.unknown="{Binding SessionMeterUnknown}"
+                              <ProgressBar Classes="limit-meter" Classes.warn="{Binding SessionMeterWarn}" Classes.unknown="{Binding SessionMeterUnknown}" Classes.absent="{Binding SessionMeterAbsent}"
                                            Value="{Binding SessionMeterPercent}" Minimum="0" Maximum="100" Height="3" MinHeight="3" MinWidth="0" />
-                              <ProgressBar Classes="limit-meter" Classes.warn="{Binding WeekMeterWarn}" Classes.unknown="{Binding WeekMeterUnknown}"
+                              <ProgressBar Classes="limit-meter" Classes.warn="{Binding WeekMeterWarn}" Classes.unknown="{Binding WeekMeterUnknown}" Classes.absent="{Binding WeekMeterAbsent}"
                                            Value="{Binding WeekMeterPercent}" Minimum="0" Maximum="100" Height="3" MinHeight="3" MinWidth="0" />
                             </StackPanel></Panel>
                           </Grid>
@@ -352,11 +352,11 @@
                            AutomationProperties.Name="{Binding SelectedAgentChoice.MeterName}" PointerPressed="OnLimitMeterPressed">
                       <StackPanel Spacing="1" VerticalAlignment="Center" IsHitTestVisible="False">
                         <ProgressBar Classes="limit-meter" Classes.warn="{Binding SelectedAgentChoice.SessionMeterWarn, FallbackValue=False}"
-                                     Classes.unknown="{Binding SelectedAgentChoice.SessionMeterUnknown, FallbackValue=False}"
+                                     Classes.unknown="{Binding SelectedAgentChoice.SessionMeterUnknown, FallbackValue=False}" Classes.absent="{Binding SelectedAgentChoice.SessionMeterAbsent, FallbackValue=False}"
                                      Value="{Binding SelectedAgentChoice.SessionMeterPercent, FallbackValue=0}" Minimum="0" Maximum="100"
                                      Height="3" MinHeight="3" MinWidth="0" />
                         <ProgressBar Classes="limit-meter" Classes.warn="{Binding SelectedAgentChoice.WeekMeterWarn, FallbackValue=False}"
-                                     Classes.unknown="{Binding SelectedAgentChoice.WeekMeterUnknown, FallbackValue=False}"
+                                     Classes.unknown="{Binding SelectedAgentChoice.WeekMeterUnknown, FallbackValue=False}" Classes.absent="{Binding SelectedAgentChoice.WeekMeterAbsent, FallbackValue=False}"
                                      Value="{Binding SelectedAgentChoice.WeekMeterPercent, FallbackValue=0}" Minimum="0" Maximum="100"
                                      Height="3" MinHeight="3" MinWidth="0" />
                       </StackPanel>
