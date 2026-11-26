@@ -1,5 +1,6 @@
 using System.Buffers.Binary;
 using System.IO.Pipes;
+using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Security.Principal;
@@ -52,7 +53,7 @@ internal sealed class SingleInstance : IDisposable
         {
             if (TryOwn(mutex)) return new SingleInstance(mutex, name);
             try { Notify(name, activate).GetAwaiter().GetResult(); }
-            catch (Exception e) when (e is IOException or OperationCanceledException or TimeoutException)
+            catch (Exception e) when (e is IOException or SocketException or OperationCanceledException or TimeoutException)
             {
                 // If startup crashed, the abandoned mutex permits a fresh owner. Never open a second GUI
                 // just because a live owner is slow or its IPC is temporarily unavailable.
@@ -116,7 +117,13 @@ internal sealed class SingleInstance : IDisposable
                 if (request[0] <= 1) await pipe.WriteAsync(new byte[] { 1 }, clientTimeout.Token);
             }
             catch (OperationCanceledException) { }
-            catch (IOException) { await Task.Delay(50); }
+            // A client that vanishes mid-exchange surfaces as IOException, but on Unix a failed pipe Send can arrive as a
+            // SocketException or ObjectDisposedException. Anything escaping here would end the listener for good, so a
+            // later launch could no longer reach this GUI; keep serving.
+            catch (Exception e) when (e is IOException or SocketException or ObjectDisposedException or InvalidOperationException)
+            {
+                try { await Task.Delay(50, _stop.Token); } catch (OperationCanceledException) { }
+            }
         }
     }
 
@@ -142,7 +149,7 @@ internal sealed class SingleInstance : IDisposable
                 if (ack[0] != 1) throw new IOException("Invalid BoosterAI activation response.");
                 return;
             }
-            catch (IOException)
+            catch (Exception e) when (e is IOException or SocketException)
             {
                 // Simultaneous clients may connect while the previous one is being disposed (Unix pipes).
                 // Retry within the shared deadline rather than opening another GUI or losing the request.
