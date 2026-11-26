@@ -1,3 +1,3 @@
-version: 0.50.0
-sv: Kvotändringar animeras med t.ex. (-5%) när appen öppnas igen, och en omstart som inte kan fortsätta startar en ny session.
-en: Quota changes animate with e.g. (-5%) when the app reopens, and a restart that cannot continue starts a new session instead.
+version: 0.51.0
+sv: Systemnotis när kvoten börjar ta slut och när den kommer tillbaka, och varningar bara för agenter som en flik har valt.
+en: System notifications when quota runs low and when it comes back, with warnings only for agents a tab has chosen.
