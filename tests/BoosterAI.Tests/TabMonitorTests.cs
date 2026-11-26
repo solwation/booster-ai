@@ -1103,11 +1103,21 @@ public class ExitedRestartTests
     [Fact]
     public async Task WakeWaitsForASlowIdleShell()
     {
-        if (!OperatingSystem.IsLinux()) return;
+        if (!OperatingSystem.IsLinux() || !File.Exists("/usr/bin/perl")) return;
         var root = Directory.CreateTempSubdirectory("booster-wake").FullName;
-        using var idle = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("setsid") { ArgumentList = { "sleep", "60" } })!;
+        // The sleeper leads its own process group (the wake sends HUP to the group). setsid forks when the caller
+        // already leads a group, so its PID is not the sleeper's: perl records its own PID, then execs sleep. It also
+        // restores the default HUP disposition, which a nohup-started test run would otherwise hand down as ignored.
+        var pidFile = Path.Combine(root, "idle.pid");
+        using var launcher = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("setsid")
+        {
+            ArgumentList = { "perl", "-e", "$SIG{HUP}='DEFAULT'; open F, '>', \"$ARGV[0].tmp\"; print F \"$$\\n\"; close F; rename \"$ARGV[0].tmp\", $ARGV[0]; exec 'sleep', '60'", pidFile },
+        })!;
+        System.Diagnostics.Process? idle = null;
         try
         {
+            Assert.True(SpinWait.SpinUntil(() => File.Exists(pidFile), 10000));
+            idle = System.Diagnostics.Process.GetProcessById(int.Parse(File.ReadAllText(pidFile).Trim()));
             var track = new TabTrack(Path.Combine(root, "tab-lib.sh"), root, "tab1");
             File.WriteAllText(Path.Combine(root, "tab1.next"), "touch ran\n");
             var wake = Task.Run(() => Launcher.WakeIdleShell(track, "Ubuntu"));
@@ -1121,7 +1131,9 @@ public class ExitedRestartTests
         }
         finally
         {
-            if (!idle.HasExited) idle.Kill();
+            try { if (idle is { HasExited: false }) idle.Kill(entireProcessTree: true); } catch (InvalidOperationException) { }
+            idle?.Dispose();
+            if (!launcher.HasExited) launcher.Kill(entireProcessTree: true);
             TestShell.StopLeftovers(root);
             Directory.Delete(root, true);
         }
