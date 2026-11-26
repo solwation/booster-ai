@@ -739,6 +739,44 @@ public class InPlaceRestartTests
         }
         finally { TestShell.StopLeftovers(dir); Directory.Delete(dir, recursive: true); }
     }
+
+    /// <summary>#233: a log that cannot be written leaves both hooks silent with exit 0; a writable one still gets its line.</summary>
+    [Fact]
+    public void HooksStaySilentAndSucceedWhenTheLogCannotBeWritten()
+    {
+        if (!OperatingSystem.IsLinux()) return;
+        var dir = Directory.CreateTempSubdirectory("bs-hook").FullName;
+        try
+        {
+            foreach (var (log, writable) in new[] { (Path.Combine(dir, "missing", "t.log"), false), (Path.Combine(dir, "t.log"), true) })
+            {
+                var hooks = System.Text.Json.JsonDocument.Parse(TabSession.HooksJson(log)).RootElement.GetProperty("hooks");
+                foreach (var name in new[] { "UserPromptSubmit", "Stop" })
+                {
+                    var command = hooks.GetProperty(name)[0].GetProperty("hooks")[0].GetProperty("command").GetString()!;
+                    var psi = new System.Diagnostics.ProcessStartInfo("sh") { WorkingDirectory = dir, RedirectStandardInput = true,
+                        RedirectStandardError = true, RedirectStandardOutput = true };
+                    psi.ArgumentList.Add("-c");
+                    psi.ArgumentList.Add(command);
+                    using var p = System.Diagnostics.Process.Start(psi)!;
+                    try
+                    {
+                        p.StandardInput.Write("{\"background_tasks\":[]}");
+                        p.StandardInput.Close();
+                        var error = p.StandardError.ReadToEnd();
+                        p.StandardOutput.ReadToEnd();
+                        Assert.True(p.WaitForExit(10_000));
+                        Assert.Equal("", error);
+                        Assert.Equal(0, p.ExitCode);
+                    }
+                    finally { if (!p.HasExited) p.Kill(entireProcessTree: true); }
+                }
+                Assert.Equal(writable, File.Exists(log));
+                if (writable) Assert.Equal(2, File.ReadAllLines(log).Length);
+            }
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
 }
 
 public class TabActivityStatusTests

@@ -917,18 +917,20 @@ for line in sys.stdin:
     {
         var to = "'" + log.Replace("'", "'\\''") + "'";
         object Hook(string command) => new[] { new { hooks = new[] { new { type = "command", command } } } };
+        // #233: logging is only a hint. A log that cannot be written (e.g. /mnt/c failing with an I/O error) must not print or
+        // fail: Claude feeds a Stop hook's error back to the agent, which then starts turn after turn.
         var settings = new Dictionary<string, object>
         {
             ["hooks"] = new Dictionary<string, object>
             {
                 // Not Notification: it also fires for a permission prompt in the middle of a turn. UserPromptSubmit also
                 // fires for the turns that task notifications and wakeups start, without anyone typing.
-                ["UserPromptSubmit"] = Hook($"printf '%s busy\\n' \"$(date +%s%3N)\" >> {to}"),
+                ["UserPromptSubmit"] = Hook($"{{ printf '%s busy\\n' \"$(date +%s%3N)\" >> {to}; }} 2>/dev/null; exit 0"),
                 // Stop comes when the main turn ends, also while background agents, background commands, Monitor or a
                 // scheduled wakeup/loop still run and will start the next turn (#71). Claude then lists them in the hook
                 // input's background_tasks and session_crons (compact JSON): any entry logs "waiting" instead of "idle".
                 ["Stop"] = Hook("if grep -Eq '\"(background_tasks|session_crons)\" *: *\\[ *[^] ]'; then e=waiting; else e=idle; fi; "
-                    + $"printf '%s %s\\n' \"$(date +%s%3N)\" \"$e\" >> {to}"),
+                    + $"{{ printf '%s %s\\n' \"$(date +%s%3N)\" \"$e\" >> {to}; }} 2>/dev/null; exit 0"),
             },
         };
         if (statusLine is not null) settings["statusLine"] = new { type = "command", command = statusLine };
