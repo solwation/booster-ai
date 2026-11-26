@@ -98,6 +98,88 @@ public class QuotaWarningTests : IDisposable
         Assert.Equal(50, QuotaWarnings.Normalize(99));
     }
 
+    private static QuotaChanges Eval(QuotaWarnings q, AccountLimits l, DateTimeOffset? now = null) =>
+        q.Evaluate("claude", "a", "Privat", l, now ?? Now, 5);
+
+    [Fact]
+    public void RecoveryIsReportedOnceAfterAWarningAndNeverWithoutOne()
+    {
+        var q = new QuotaWarnings();
+        Assert.Empty(Eval(q, Limits(40, null)).Recoveries); // never warned
+        Assert.Single(Eval(q, Limits(97, null)).Warnings);
+        Assert.Empty(Eval(q, Limits(98, null)).Recoveries); // still low
+        var back = Assert.Single(Eval(q, Limits(10, null)).Recoveries);
+        Assert.Equal("5 h", back.Window);
+        Assert.Equal(90, back.RemainingPercent);
+        Assert.Empty(Eval(q, Limits(10, null)).Recoveries); // once per recovery
+        Assert.Single(Eval(q, Limits(97, null)).Warnings); // a new drop warns and can recover again
+        Assert.Single(Eval(q, Limits(0, null)).Recoveries);
+    }
+
+    [Fact]
+    public void UsedUpWindowRecoversWhenAFreshReadingShowsAResetNotWhenTheClockPasses()
+    {
+        var q = new QuotaWarnings();
+        Assert.Single(Eval(q, Limits(100, null)).Warnings);
+        var later = Now.AddHours(3);
+        Assert.Empty(Eval(q, Limits(100, null), later).Recoveries); // expired by the clock only: "Troligen återställd"
+        var back = Assert.Single(Eval(q, Limits(2, null, later.AddHours(5)), later).Recoveries);
+        Assert.Equal(98, back.RemainingPercent);
+    }
+
+    [Fact]
+    public void RecoveryTextNamesAgentAccountWindowAndShare()
+    {
+        Assert.Equal("Nu har din claude (Privat) fått fler tokens: 5 h, 80 % kvar", new QuotaRecovery("claude", "Privat", "5 h", 80).Text());
+        Assert.Equal("Nu har din codex fått fler tokens: Vecka, 100 % kvar", new QuotaRecovery("codex", null, "Vecka", 100).Text());
+    }
+
+    private static (MainViewModel Vm, List<string> Sent) Watched(bool quotaWarn = true)
+    {
+        var sent = new List<string>();
+        var vm = new MainViewModel(new AppConfig { QuotaWarn = quotaWarn, Tabs = [new() { Name = "Atlas", Llm = "claude" }] })
+        {
+            LimitsClock = () => Now,
+            QuotaNotify = (_, body) => sent.Add(body),
+        };
+        return (vm, sent);
+    }
+
+    [Fact]
+    public void LowQuotaIsAlsoSentAsASystemNotificationOncePerWindow()
+    {
+        var (vm, sent) = Watched();
+        vm.CheckQuota("claude", "", null, Limits(97, null));
+        vm.CheckQuota("claude", "", null, Limits(98, null));
+        Assert.StartsWith("claude, 5 h: 3 % kvar", Assert.Single(sent));
+    }
+
+    [Fact]
+    public void RecoveryNotificationFollowsAWarningOnlyAndOnlyOnce()
+    {
+        var (vm, sent) = Watched();
+        vm.CheckQuota("claude", "", null, Limits(30, null));
+        Assert.Empty(sent);
+        vm.CheckQuota("claude", "", null, Limits(97, null));
+        vm.CheckQuota("claude", "", null, Limits(20, null));
+        vm.CheckQuota("claude", "", null, Limits(20, null));
+        Assert.Equal(2, sent.Count);
+        Assert.Equal("Nu har din claude fått fler tokens: 5 h, 80 % kvar", sent[1]);
+    }
+
+    [Fact]
+    public void AgentsNoTabUsesAndTheSettingOffStaySilent()
+    {
+        var (vm, sent) = Watched();
+        vm.CheckQuota("codex", "", null, Limits(97, null)); // no codex tab
+        vm.CheckQuota("codex", "", null, Limits(10, null));
+        Assert.Empty(sent);
+        var (off, offSent) = Watched(quotaWarn: false);
+        off.CheckQuota("claude", "", null, Limits(97, null));
+        off.CheckQuota("claude", "", null, Limits(10, null));
+        Assert.Empty(offSent);
+    }
+
     [Theory]
     [InlineData("sv", "claude (Privat), 5 h: 3 % kvar, återställs om 1 h 40 min (11:40)", "codex, Vecka: 3 % kvar, återställs ")]
     [InlineData("en", "claude (Privat), 5 h: 3% left, resets in 1h 40m (11:40)", "codex, Week: 3% left, resets ")]
