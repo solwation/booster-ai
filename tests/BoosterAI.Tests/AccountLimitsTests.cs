@@ -857,6 +857,7 @@ public class AccountLimitsTests
                 var main = new MainWindow(vm);
                 main.Show();
                 Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+                vm.LimitAnim = new(); // showing the window armed the change animation (#234); this test reads the settled meter
                 try
                 {
                     (bool Visible, double Value, bool WarnClass, bool ClosedWarnVisible) ReadMeter()

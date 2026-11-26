@@ -206,6 +206,15 @@ public sealed class AgentAccountsViewModel : Observable
         _owner.AccountLimitsChanged(Cli);
     }
 
+    /// <summary>Screenshots (--fake-limit-change): a new reading for the first account, through the same path as a real one.</summary>
+    internal void SetSampleLimits(string cli, AccountLimits limits)
+    {
+        if (Rows.Count == 0) return;
+        lock (_statusLock) _limits[Rows[0].Key] = limits;
+        foreach (var row in Rows) row.RefreshLimits();
+        _owner.AccountLimitsChanged(Cli);
+    }
+
     /// <summary>Screenshots: invented statuses, in row order (logged in, logged out, unknown, then again); never runs an agent.</summary>
     internal void ShowSampleStatus(string cli)
     {
@@ -309,6 +318,51 @@ public sealed partial class MainViewModel
     /// <summary>Off until the real app starts its background checks (#199); tests and screenshots never read an account's files.</summary>
     internal bool AccountLimitsEnabled { get; set; }
     internal Func<DateTimeOffset> LimitsClock { get; set; } = () => DateTimeOffset.Now;
+
+    /// <summary>The animated plan-limit changes (#234); memory only until the real app starts (see <see cref="StartSetupChecks"/>).</summary>
+    internal LimitAnimations LimitAnim { get; set; } = new();
+    private DispatcherTimer? _limitAnimTimer;
+
+    internal static string LimitAnimKey(string cli, string key, bool fable, string part) => $"{cli}|{key}|{(fable ? 1 : 0)}|{part}";
+
+    /// <summary>The window came back or the app started: a reading that changes a level now is animated (#234).</summary>
+    internal void ArmLimitAnimations() => LimitAnim.Arm(LimitsClock());
+
+    /// <summary>
+    /// Feeds a reading's levels to <see cref="LimitAnim"/> (#234): the status column's remaining share ("t") and each window's meter
+    /// ("s", "w"), per account and with or without the Fable window. Runs before the Agent boxes refresh, so they already see the change.
+    /// </summary>
+    private void ObserveLimitLevels(string cli, IEnumerable<string> keys)
+    {
+        var now = LimitsClock();
+        var started = false;
+        foreach (var key in keys)
+            foreach (var fable in cli == "claude" ? new[] { false, true } : [false])
+            {
+                var indicator = LimitIndicatorOf(cli, key, fable);
+                double? Meter(int i) => indicator is { } l && l.Rows.Count > i && l.Rows[i].Known ? LimitMeter.From(l.Rows[i]).Percent : null;
+                started |= LimitAnim.Observe(LimitAnimKey(cli, key, fable, "t"), indicator?.RemainingPercent, now);
+                started |= LimitAnim.Observe(LimitAnimKey(cli, key, fable, "s"), Meter(0), now);
+                started |= LimitAnim.Observe(LimitAnimKey(cli, key, fable, "w"), Meter(1), now);
+            }
+        if (started) Dispatcher.UIThread.Post(StartLimitAnimationFrames);
+    }
+
+    private void StartLimitAnimationFramesForScreenshot() { foreach (var tab in Tabs.ToList()) tab.RaiseLimitAnimation(); Dispatcher.UIThread.RunJobs(); }
+
+    private void StartLimitAnimationFrames()
+    {
+        if (_limitAnimTimer is not null) return;
+        _limitAnimTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(40) };
+        _limitAnimTimer.Tick += (_, _) =>
+        {
+            foreach (var tab in Tabs.ToList()) tab.RaiseLimitAnimation();
+            if (LimitAnim.AnyActive(LimitsClock())) return;
+            _limitAnimTimer?.Stop();
+            _limitAnimTimer = null;
+        };
+        _limitAnimTimer.Start();
+    }
     internal Func<string, string, string?, Task<AccountLimits>> ReadAccountLimits { get; set; } =
         (distro, llm, directory) => Task.Run(() => AccountLimitsProbe.Read(distro, llm, directory));
     internal ClaudeFableUsage FableUsage { get; set; } = new();
@@ -425,6 +479,28 @@ public sealed partial class MainViewModel
         AccountLimitsChanged("agy");
     }
 
+    /// <summary>
+    /// Screenshots (--fake-limit-change): after <see cref="ShowSampleLimitsForAll"/>, a new reading arrives as if the window had just come
+    /// back: the first claude/codex account is 5 % fuller (the status column "(-5%)"), agy 5 % emptier ("(+5%)"). The clock is then
+    /// held <paramref name="seconds"/> after it, so the picture shows the animation midway.
+    /// </summary>
+    internal void ShowSampleLimitChange(double seconds)
+    {
+        var start = LimitsClock();
+        LimitsClock = () => start;
+        ArmLimitAnimations();
+        var hour = new DateTimeOffset(start.Year, start.Month, start.Day, start.Hour, 0, 0, start.Offset);
+        foreach (var cli in Catalog.Llms.Where(Accounts.Supports))
+            AccountsEditor(cli)!.SetSampleLimits(cli,
+                new(new LimitWindow(42, hour.AddHours(3).AddMinutes(20), 300), new LimitWindow(67, hour.AddDays(3).AddHours(2), 10080), null, hour.AddMinutes(-1))
+                    { Fable = cli == "claude" ? new LimitWindow(87.5, hour.AddDays(3).AddHours(2)) : null });
+        lock (_agentLimitsLock)
+            _agentLimits["agy"] = new(new LimitWindow(20, hour.AddHours(2).AddMinutes(45), 300), new LimitWindow(39, hour.AddDays(4).AddHours(1), 10080), null, hour.AddMinutes(-1));
+        AccountLimitsChanged("agy");
+        LimitsClock = () => start.AddSeconds(seconds);
+        StartLimitAnimationFramesForScreenshot();
+    }
+
     private readonly Dictionary<string, string> _limitSignature = [];
     private readonly object _limitSignatureLock = new();
 
@@ -432,7 +508,8 @@ public sealed partial class MainViewModel
     internal void AccountLimitsChanged(string cli)
     {
         if (!AccountLimitsProbe.Supports(cli)) return;
-        var keys = Accounts.Supports(cli) ? new[] { "" }.Concat(AccountsFor(cli).Select(a => a.Directory)) : new[] { "" };
+        var keys = (Accounts.Supports(cli) ? new[] { "" }.Concat(AccountsFor(cli).Select(a => a.Directory)) : new[] { "" }).ToList();
+        ObserveLimitLevels(cli, keys);
         var signature = string.Join("|", keys.Select(k => LimitIndicatorOf(cli, k, includeFable: true) is { } i ? i.Caption + i.Warn + i.Tip + i.Stale
             : LimitNoteOf(cli, k) is { } n ? n.Caption + n.Tip : "-"));
         lock (_limitSignatureLock)

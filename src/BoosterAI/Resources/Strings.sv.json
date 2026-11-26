@@ -973,6 +973,7 @@
   "time.month.12": "dec",
   "account.limit.title": "Planens gränser",
   "account.limit.chip": "{0} %",
+  "account.limit.diff": "({0}%)",
   "account.limit.remaining": "{0} % kvar",
   "account.limit.usedShort": "{0} % använt",
   "account.limit.resets": "återställs {0}",

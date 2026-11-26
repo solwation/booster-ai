@@ -973,6 +973,7 @@
   "time.month.12": "Dec",
   "account.limit.title": "Plan limits",
   "account.limit.chip": "{0}%",
+  "account.limit.diff": "({0}%)",
   "account.limit.remaining": "{0}% left",
   "account.limit.usedShort": "{0}% used",
   "account.limit.resets": "resets {0}",

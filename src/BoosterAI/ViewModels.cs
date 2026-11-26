@@ -673,8 +673,40 @@ public sealed class TabViewModel : Observable
     public string StatusIndicatorText =>
         _closeProgress is not null || (_state is TabState.Running && PendingRestart) ? "…"
         : IsStatusError ? "!"
-        : ShowStatusRemaining && PeekLimit is { } limit ? limit.RemainingShort
+        : ShowStatusRemaining && PeekLimit is { } limit ? AnimatedRemainingShort(limit)
         : "";
+
+    private string LimitAnimKey(string part) => MainViewModel.LimitAnimKey(_llm, QuotaAccountKey ?? "\0", UsesFableQuota && _llm == "claude", part);
+
+    /// <summary>The compact remaining share; while a change counts (#234) the current whole number on its way to the new one.</summary>
+    private string AnimatedRemainingShort(LimitIndicator limit)
+    {
+        var key = LimitAnimKey("t");
+        var now = _owner.LimitsClock();
+        if (!_owner.LimitAnim.IsCounting(key, now)) return limit.RemainingShort;
+        return Loc.Format("account.limit.chip", LimitPercent.Text(Math.Round(_owner.LimitAnim.Value(key, limit.RemainingPercent, now))));
+    }
+
+    /// <summary>"(-5%)" beside the compact remaining share after a changed reading (#234); fades out, then is empty.</summary>
+    public string StatusDiffText => ShowStatusRemaining && PeekLimit is { } limit ? _owner.LimitAnim.Diff(LimitAnimKey("t"), limit.RemainingPercent, _owner.LimitsClock()).Text : "";
+    public double StatusDiffOpacity => ShowStatusRemaining && PeekLimit is { } limit ? _owner.LimitAnim.Diff(LimitAnimKey("t"), limit.RemainingPercent, _owner.LimitsClock()).Opacity : 0;
+    public bool HasStatusDiff => StatusDiffText.Length > 0;
+
+    /// <summary>The closed Agent box's two meters (#202, #219), counting from the old to the new level after a changed reading (#234).</summary>
+    public double SessionMeterValue => MeterValue(0, "s");
+    public double WeekMeterValue => MeterValue(1, "w");
+
+    private double MeterValue(int row, string part)
+    {
+        if (PeekLimit is not { } l || l.Rows.Count <= row || !l.Rows[row].Known) return part == "s" ? SelectedAgentChoice?.SessionMeterPercent ?? 0 : SelectedAgentChoice?.WeekMeterPercent ?? 0;
+        return _owner.LimitAnim.Value(LimitAnimKey(part), LimitMeter.From(l.Rows[row]).Percent, _owner.LimitsClock());
+    }
+
+    /// <summary>One frame of a limit change animation (#234).</summary>
+    internal void RaiseLimitAnimation()
+    {
+        foreach (var n in new[] { nameof(StatusIndicatorText), nameof(StatusDiffText), nameof(StatusDiffOpacity), nameof(HasStatusDiff), nameof(SessionMeterValue), nameof(WeekMeterValue) }) Raise(n);
+    }
     public bool HasStatusIndicatorText => StatusIndicatorText.Length > 0;
     /// <summary>A failed row: the CLI exited with an error, is missing, did not start, was denied or the tab was lost (#209).</summary>
     public bool IsStatusError => _closeProgress is null && (IsExitError || _state is TabState.CliMissing or TabState.NotStarted or TabState.Lost or TabState.Denied);
@@ -684,7 +716,7 @@ public sealed class TabViewModel : Observable
     private void RaiseStatusIndicator()
     {
         foreach (var n in new[] { nameof(StatusIndicatorText), nameof(HasStatusIndicatorText), nameof(IsStatusError), nameof(StatusIndicatorWarn), nameof(StatusActionName),
-            nameof(StatusDot), nameof(StatusDotFilled), nameof(StatusDotRing), nameof(StatusDotDiamond), nameof(StatusPulse), nameof(StatusHalo) }) Raise(n);
+            nameof(StatusDiffText), nameof(StatusDiffOpacity), nameof(HasStatusDiff), nameof(SessionMeterValue), nameof(WeekMeterValue), nameof(StatusDot), nameof(StatusDotFilled), nameof(StatusDotRing), nameof(StatusDotDiamond), nameof(StatusPulse), nameof(StatusHalo) }) Raise(n);
     }
 
     /// <summary>

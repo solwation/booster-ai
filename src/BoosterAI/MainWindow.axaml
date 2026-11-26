@@ -261,6 +261,8 @@
                         <TextBlock Classes="caption status-indicator" Classes.warn="{Binding StatusIndicatorWarn}" Classes.danger="{Binding IsStatusError}"
                                    Text="{Binding StatusIndicatorText}" IsVisible="{Binding HasStatusIndicatorText}"
                                    VerticalAlignment="Center" Margin="4,0,0,0" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Classes="caption muted" Text="{Binding StatusDiffText}" Opacity="{Binding StatusDiffOpacity}" IsVisible="{Binding HasStatusDiff}"
+                                   VerticalAlignment="Center" Margin="2,0,0,0" IsHitTestVisible="False" />
                       </StackPanel>
                     </local:StatusPeekButton>
                     <!-- Restart is ↻; Continue is a word, shown only when the conversation can be continued (#156). A tab never
@@ -353,11 +355,11 @@
                       <StackPanel Spacing="1" VerticalAlignment="Center" IsHitTestVisible="False">
                         <ProgressBar Classes="limit-meter" Classes.warn="{Binding SelectedAgentChoice.SessionMeterWarn, FallbackValue=False}"
                                      Classes.unknown="{Binding SelectedAgentChoice.SessionMeterUnknown, FallbackValue=False}" Classes.absent="{Binding SelectedAgentChoice.SessionMeterAbsent, FallbackValue=False}"
-                                     Value="{Binding SelectedAgentChoice.SessionMeterPercent, FallbackValue=0}" Minimum="0" Maximum="100"
+                                     Value="{Binding SessionMeterValue}" Minimum="0" Maximum="100"
                                      Height="3" MinHeight="3" MinWidth="0" />
                         <ProgressBar Classes="limit-meter" Classes.warn="{Binding SelectedAgentChoice.WeekMeterWarn, FallbackValue=False}"
                                      Classes.unknown="{Binding SelectedAgentChoice.WeekMeterUnknown, FallbackValue=False}" Classes.absent="{Binding SelectedAgentChoice.WeekMeterAbsent, FallbackValue=False}"
-                                     Value="{Binding SelectedAgentChoice.WeekMeterPercent, FallbackValue=0}" Minimum="0" Maximum="100"
+                                     Value="{Binding WeekMeterValue}" Minimum="0" Maximum="100"
                                      Height="3" MinHeight="3" MinWidth="0" />
                       </StackPanel>
                     </Panel>
