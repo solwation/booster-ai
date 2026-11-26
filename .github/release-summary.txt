@@ -1,3 +1,3 @@
-version: 0.49.3
-sv: Claude-flikar fastnar inte längre i nya turer när aktivitetsloggen inte kan skrivas, till exempel vid fel på /mnt/c.
-en: Claude tabs no longer loop through new turns when the activity log cannot be written, such as when /mnt/c fails.
+version: 0.50.0
+sv: Kvotändringar animeras med t.ex. (-5%) när appen öppnas igen, och en omstart som inte kan fortsätta startar en ny session.
+en: Quota changes animate with e.g. (-5%) when the app reopens, and a restart that cannot continue starts a new session instead.
