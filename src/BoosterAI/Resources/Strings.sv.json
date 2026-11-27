@@ -195,6 +195,8 @@
   "settings.updates.tip": "Fråga GitHub vid start, när fönstret får fokus och var femte minut medan det är aktivt om det finns en nyare version (nu {0})",
   "settings.cliUpdates": "Uppdatera agenter automatiskt",
   "settings.cliUpdates.tip": "Uppdatera claude, codex och agy i fliken innan de startar när en nyare version finns, högst var sjätte timme per CLI. Fel stoppar aldrig starten.",
+  "settings.tabLogo": "Visa animerad BoosterAI-logotyp i flikarna",
+  "settings.tabLogo.tip": "Visa BoosterAI-logotypen kort i varje flik när agenten startar, startas om eller fortsätter. Den visas inte vid Kör en gång.",
   "settings.autoClear": "Auto-clear vid inaktivitet efter",
   "settings.autoClear.minutes": "min",
   "settings.autoClear.name": "Minuter utan aktivitet före auto-clear",

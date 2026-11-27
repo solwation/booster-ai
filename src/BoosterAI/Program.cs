@@ -53,7 +53,7 @@ internal static class Program
             // Each Start gets a session directory with a status log per tab; shown here with a placeholder.
             var root = OperatingSystem.IsWindows() ? PathMapping.ToWslPath(TabSession.DefaultRoot) : TabSession.DefaultRoot;
             var dir = root.Replace('\\', '/') + "/<session>";
-            var tracks = tabs.Select((_, i) => (TabTrack?)new TabTrack(dir + "/tab-lib.sh", dir, "tab" + (i + 1), cfg.AutoUpdateClis, cfg.AutoClearIdle)).ToList();
+            var tracks = tabs.Select((_, i) => (TabTrack?)new TabTrack(dir + "/tab-lib.sh", dir, "tab" + (i + 1), cfg.AutoUpdateClis, cfg.AutoClearIdle, cfg.ShowTabLogo)).ToList();
             for (var i = 0; i < tabs.Count; i++) Console.WriteLine($"{tabs[i].Name}: bash -lic {Launcher.TabScript(tabs[i], null, tracks[i])}");
             // Interactive claude tabs get --settings with the activity hooks and BoosterAI's status line (#199).
             for (var i = 0; i < tabs.Count; i++)
@@ -77,7 +77,7 @@ internal static class Program
                 .Select(i => (Tab: tabs[i], Track: tracks[i]!)).ToList();
             if (agyTabs.Count == 0)
                 agyTabs.Add((new TabConfig { Name = "agy example", Directory = "~", Llm = "agy", Orkester = true },
-                    new TabTrack(dir + "/tab-lib.sh", dir, "tab" + (tabs.Count + 1), cfg.AutoUpdateClis, cfg.AutoClearIdle)));
+                    new TabTrack(dir + "/tab-lib.sh", dir, "tab" + (tabs.Count + 1), cfg.AutoUpdateClis, cfg.AutoClearIdle, cfg.ShowTabLogo)));
             foreach (var (tab, t) in agyTabs)
                 foreach (var (path, script) in Launcher.AgyLaunchPaths(tab, t))
                     Console.WriteLine($"agy launch {tab.Name}, {path}: {script}");
@@ -92,6 +92,11 @@ internal static class Program
             Console.WriteLine(cfg.AutoClearIdle
                 ? $"auto-clear: after {AutoClear.Minutes(cfg.AutoClearMinutes)} min idle, claude tabs run under bs_pty (bs_run ... input) and get /clear once per idle period"
                 : "auto-clear: off (AutoClearIdle false)");
+            Console.WriteLine(cfg.ShowTabLogo
+                ? "tab logo (bs_logo, #242): after bs_reset of each interactive start, continuation and in-place restart, not for Run once (bs_stream, codex exec, aider -m); "
+                    + $"full >= {TabLogo.FullColumns}x{TabLogo.FullLines}, wordmark >= {TabLogo.WordColumns}x{TabLogo.WordLines}, one line >= {TabLogo.LineColumns} columns, "
+                    + "still and plain with NO_COLOR or without 256 colours, nothing without a terminal"
+                : "tab logo: off (ShowTabLogo false)");
             Console.WriteLine("wt.exe " + string.Join(' ', Launcher.WindowsTerminalArgs(tabs, cfg.WslDistro, null, tracks, "BoosterAI-<session>", cfg.ZoomPercent)
                 .Select(a => a.Contains(' ') ? $"\"{a}\"" : a)));
             // "Show the tab in the terminal" (#213): the tab's index is its rank among the session's live tabs, here all of them.

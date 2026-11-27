@@ -87,6 +87,8 @@ public sealed class AppConfig
     public bool CheckForUpdates { get; set; } = true;
     /// <summary>Update claude, codex and agy in the tab before they start, at most every 6 hours per CLI (tab-lib.sh's bs_update).</summary>
     public bool AutoUpdateClis { get; set; } = true;
+    /// <summary>Show BoosterAI's animated logo in a tab before its agent starts, restarts or continues (tab-lib.sh's bs_logo, #242).</summary>
+    public bool ShowTabLogo { get; set; } = true;
     /// <summary>
     /// Type /clear into an interactive claude tab once it has been idle for <see cref="AutoClearMinutes"/> (#69), once per idle
     /// period. Off by default; read when a tab starts or restarts (its CLI must run under tab-lib.sh's bs_pty).
@@ -222,6 +224,7 @@ public static class ConfigMerge
         S(c => c.ZoomPercent, (c, v) => c.ZoomPercent = v),
         S(c => c.ProjectSearchRoot, (c, v) => c.ProjectSearchRoot = v),
         S(c => c.AutoUpdateClis, (c, v) => c.AutoUpdateClis = v),
+        S(c => c.ShowTabLogo, (c, v) => c.ShowTabLogo = v),
         S(c => c.AutoClearIdle, (c, v) => c.AutoClearIdle = v),
         S(c => c.AutoClearMinutes, (c, v) => c.AutoClearMinutes = v),
         S(c => c.CheckForUpdates, (c, v) => c.CheckForUpdates = v),

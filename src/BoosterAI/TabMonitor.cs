@@ -8,8 +8,9 @@ namespace BoosterAI;
 /// Lib is the sourced script, Dir the session directory, Id the tab's file name in it.
 /// <paramref name="UpdateClis"/>: the tab updates its AI CLI before starting it (AppConfig.AutoUpdateClis, tab-lib.sh's bs_update).
 /// <paramref name="AutoClear"/>: an interactive claude runs under bs_pty so BoosterAI can type /clear into it (AppConfig.AutoClearIdle, #69).
+/// <paramref name="Logo"/>: an interactive start or restart first shows BoosterAI's logo (AppConfig.ShowTabLogo, tab-lib.sh's bs_logo, #242).
 /// </summary>
-public sealed record TabTrack(string Lib, string Dir, string Id, bool UpdateClis = false, bool AutoClear = false);
+public sealed record TabTrack(string Lib, string Dir, string Id, bool UpdateClis = false, bool AutoClear = false, bool Logo = true);
 
 public enum TabState { Starting, Running, CliExited, CliMissing, NotStarted, Closed, Lost, Denied }
 
@@ -736,7 +737,7 @@ for line in sys.stdin:
   fi
 }
 
-""" + AgentAliasRuntime.Script;
+""" + AgentAliasRuntime.Script + TabLogo.Script;
 
     private int _next;
 
@@ -857,11 +858,11 @@ for line in sys.stdin:
     /// A new log id and the paths the tab's shell uses; null when the path cannot go into a tab script.
     /// Also writes the claude settings whose hooks log busy (prompt sent) and idle (turn done).
     /// </summary>
-    public TabTrack? NewTrack(bool updateClis = false, bool autoClear = false)
+    public TabTrack? NewTrack(bool updateClis = false, bool autoClear = false, bool logo = true)
     {
         var dir = OperatingSystem.IsWindows() ? PathMapping.ToWslPath(Directory) : Directory;
         if (dir.IndexOfAny([';', '\n', '\r']) >= 0) return null;
-        var track = new TabTrack(dir + "/tab-lib.sh", dir, "tab" + Interlocked.Increment(ref _next), updateClis, autoClear);
+        var track = new TabTrack(dir + "/tab-lib.sh", dir, "tab" + Interlocked.Increment(ref _next), updateClis, autoClear, logo);
         WriteSettings(track.Id, dir, onlyMissing: false);
         return track;
     }

@@ -183,7 +183,7 @@ public class TrackedScriptTests
     public void ShellOnlyTabIsTrackedToo()
     {
         var script = Launcher.TabScript(new TabConfig { Llm = Catalog.ShellOnly }, null, Track);
-        Assert.Contains("\nthen cd ~ || true && (bs_reset 2>/dev/null || true) && (bs_cli 2>/dev/null || true) && bs_run 'bash'", script);
+        Assert.Contains("\nthen cd ~ || true && (bs_reset 2>/dev/null || true) && (bs_logo 2>/dev/null || true) && (bs_cli 2>/dev/null || true) && bs_run 'bash'", script);
     }
 
     [Fact]
@@ -1198,6 +1198,9 @@ public class ExitedRestartTests
         psi.ArgumentList.Add("/dev/null");
         TestShell.Configure(psi, root, home: slowRcRestartAtOnce ? home : null);
         using var process = System.Diagnostics.Process.Start(psi)!;
+        // Drain the terminal's output (each start shows the animated logo, #242): a full pipe would block the tab.
+        process.OutputDataReceived += (_, _) => { };
+        process.BeginOutputReadLine();
         try
         {
             Assert.True(SpinWait.SpinUntil(() => session.ReadLog(track.Id) is { CliExit: 0, CanRestartExited: true }, 30000));

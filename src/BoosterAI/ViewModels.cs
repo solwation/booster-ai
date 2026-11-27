@@ -1102,6 +1102,7 @@ public sealed partial class MainViewModel : Observable
         Raise(nameof(CanShowAdvisor));
     }
     public bool AutoUpdateClis { get => _cfg.AutoUpdateClis; set { _cfg.AutoUpdateClis = value; Raise(); } }
+    public bool ShowTabLogo { get => _cfg.ShowTabLogo; set { _cfg.ShowTabLogo = value; Raise(); } }
     public bool AutoClearIdle { get => _cfg.AutoClearIdle; set { _cfg.AutoClearIdle = value; Raise(); RefreshContextMode(); } }
     /// <summary>The auto-clear minutes for the number box (decimal? is what it binds); an empty box keeps the last value.</summary>
     public decimal? AutoClearMinutes
@@ -1464,7 +1465,7 @@ public sealed partial class MainViewModel : Observable
         foreach (var editor in _compactEditors.Values) editor.UpdateSettings(_cfg.AutoCompactSettings);
         RefreshCompactMode();
         foreach (var name in new[] { nameof(WslDistro), nameof(LinuxTerminal), nameof(ProjectSearchRoot), nameof(CanResetProjectSearchRoot), nameof(Theme), nameof(SelectedTheme), nameof(SelectedLanguage),
-            nameof(SelectedAppearance), nameof(SelectedAfterLaunch), nameof(MinimizeToTray), nameof(Notifications), nameof(SoundEffects), nameof(QuotaWarn), nameof(QuotaWarnPercent), nameof(ShowAdvisor), nameof(SelectedZoom), nameof(AutoUpdateClis), nameof(AutoClearIdle), nameof(AutoClearMinutes), nameof(CheckForUpdates) })
+            nameof(SelectedAppearance), nameof(SelectedAfterLaunch), nameof(MinimizeToTray), nameof(Notifications), nameof(SoundEffects), nameof(QuotaWarn), nameof(QuotaWarnPercent), nameof(ShowAdvisor), nameof(SelectedZoom), nameof(AutoUpdateClis), nameof(ShowTabLogo), nameof(AutoClearIdle), nameof(AutoClearMinutes), nameof(CheckForUpdates) })
             Raise(name);
         foreach (var t in Tabs) t.RaiseColor();
         foreach (var p in Projects) p.RaiseAdvisorVisible();
@@ -1645,7 +1646,7 @@ public sealed partial class MainViewModel : Observable
         try
         {
             var resume = tab.RestartResumes;
-            tab.Session!.QueueNext(tab.Track!.Id, Launcher.RestartScript(next, tab.Track with { UpdateClis = _cfg.AutoUpdateClis, AutoClear = _cfg.AutoClearIdle }, resume));
+            tab.Session!.QueueNext(tab.Track!.Id, Launcher.RestartScript(next, tab.Track with { UpdateClis = _cfg.AutoUpdateClis, AutoClear = _cfg.AutoClearIdle, Logo = _cfg.ShowTabLogo }, resume));
             var pid = tab.ShellPid!.Value;
             var distro = _cfg.WslDistro;
             Task.Run(() => Launcher.StopForeground(pid, distro));
@@ -1757,7 +1758,7 @@ public sealed partial class MainViewModel : Observable
         {
             if (error == "")
             {
-                session.QueueNext(track.Id, Launcher.RestartScript(launched, track with { UpdateClis = _cfg.AutoUpdateClis, AutoClear = _cfg.AutoClearIdle }, resume));
+                session.QueueNext(track.Id, Launcher.RestartScript(launched, track with { UpdateClis = _cfg.AutoUpdateClis, AutoClear = _cfg.AutoClearIdle, Logo = _cfg.ShowTabLogo }, resume));
                 tab.LaunchedAs = launched;
                 session.SaveTab(track.Id, launched);
                 tab.RaiseRestartTip();
@@ -1843,7 +1844,7 @@ public sealed partial class MainViewModel : Observable
         DismissRecoveredStatus();
         try { _session ??= new TabSession(TabSession.DefaultRoot, DateTime.Now, TabSession.Liveness(_cfg.WslDistro)); }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException) { _session = null; }
-        var tracks = rows.ToDictionary(r => r.Tab, r => _session?.NewTrack(_cfg.AutoUpdateClis, _cfg.AutoClearIdle));
+        var tracks = rows.ToDictionary(r => r.Tab, r => _session?.NewTrack(_cfg.AutoUpdateClis, _cfg.AutoClearIdle, _cfg.ShowTabLogo));
         var error = Launcher.Launch(cfg, track: t => tracks.GetValueOrDefault(t), window: window ?? _session?.WindowName ?? "new", resume: resume);
         if (error != "")
         {
@@ -2131,7 +2132,7 @@ public sealed partial class MainViewModel : Observable
         try
         {
             _session ??= new TabSession(TabSession.DefaultRoot, DateTime.Now, TabSession.Liveness(_cfg.WslDistro));
-            track = _session.NewTrack(_cfg.AutoUpdateClis);
+            track = _session.NewTrack(_cfg.AutoUpdateClis, logo: _cfg.ShowTabLogo);
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException) { /* untracked: the plain command */ }
         var error = Launcher.Launch(cfg, Launcher.InstallOrkesterPrompt, _ => track);

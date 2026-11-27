@@ -525,6 +525,8 @@
                 <TextBlock Grid.Row="2" Grid.Column="2" Classes="muted" Text="{local:T zoom.hint}" VerticalAlignment="Center"
                            TextWrapping="Wrap" Margin="14,12,0,0" />
               </Grid>
+              <CheckBox IsChecked="{Binding ShowTabLogo}" Content="{local:T settings.tabLogo}"
+                        ToolTip.Tip="{local:T settings.tabLogo.tip}" />
             </StackPanel>
 
             <!-- Flikfärger -->

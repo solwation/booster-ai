@@ -195,6 +195,8 @@
   "settings.updates.tip": "Ask GitHub at start, when the window gets focus and every five minutes while it is active whether a newer version exists (now {0})",
   "settings.cliUpdates": "Update AI CLIs automatically",
   "settings.cliUpdates.tip": "Update claude, codex and agy in the tab before they start when a newer version exists, at most every six hours per CLI. A failure never stops the start.",
+  "settings.tabLogo": "Show the animated BoosterAI logo in tabs",
+  "settings.tabLogo.tip": "Briefly show the BoosterAI logo in each tab when its agent starts, restarts or continues. Not shown for Run once.",
   "settings.autoClear": "Auto-clear when idle for",
   "settings.autoClear.minutes": "min",
   "settings.autoClear.name": "Idle minutes before auto-clear",

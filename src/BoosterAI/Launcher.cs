@@ -30,8 +30,8 @@ public static class Launcher
         }
         var cli = LaunchCommand(tab, prompt, track, resume && CanContinue(tab));
         var tracked = tab.Llm == Catalog.ShellOnly
-            ? $"{cd} || true && {Hook("bs_reset")} && {Hook("bs_cli")} && bs_run {Quote("bash")}"
-            : $"{account}{cd} && {Hook("bs_reset")} && {UpdateHook(tab, track)}{Hook("bs_cli")} && {cli} && {Hook("bs_done 0")} || {Hook("bs_done $?")} && {Next} && (type bs_shell >/dev/null 2>&1) && bs_shell || bash";
+            ? $"{cd} || true && {Hook("bs_reset")} && {LogoHook(tab, prompt, false, track)}{Hook("bs_cli")} && bs_run {Quote("bash")}"
+            : $"{account}{cd} && {Hook("bs_reset")} && {LogoHook(tab, prompt, resume && CanContinue(tab), track)}{UpdateHook(tab, track)}{Hook("bs_cli")} && {cli} && {Hook("bs_done 0")} || {Hook("bs_done $?")} && {Next} && (type bs_shell >/dev/null 2>&1) && bs_shell || bash";
         // Select before executing: an unsuccessful CLI or a shell's exit code must never run the fallback a second
         // time. if/then/else runs the chosen body in the tab's own shell (the tracked PID) and, unlike the earlier
         // eval "$bs_command", needs no double quotes, which Windows Terminal drops from the command (#124, see Quote).
@@ -57,8 +57,20 @@ public static class Launcher
     /// variable an earlier run exported there and then exports the new choice (#186).
     /// </summary>
     public static string RestartScript(TabConfig tab, TabTrack track, bool resume) =>
-        tab.Llm == Catalog.ShellOnly ? $"{Cd(InWsl(tab))} || true && {Hook("bs_reset")} && {Accounts.ResetCommand}"
-            : $"{Cd(InWsl(tab))} && {Hook("bs_reset")} && {UpdateHook(tab, track)}{Accounts.ResetCommand} && {Accounts.ExportCommand(InWsl(tab))}{Hook("bs_cli")} && {LaunchCommand(tab, null, track, resume)} && {Hook("bs_done 0")} || {Hook("bs_done $?")}";
+        tab.Llm == Catalog.ShellOnly ? $"{Cd(InWsl(tab))} || true && {Hook("bs_reset")} && {LogoHook(tab, null, false, track)}{Accounts.ResetCommand}"
+            : $"{Cd(InWsl(tab))} && {Hook("bs_reset")} && {LogoHook(tab, null, resume, track)}{UpdateHook(tab, track)}{Accounts.ResetCommand} && {Accounts.ExportCommand(InWsl(tab))}{Hook("bs_cli")} && {LaunchCommand(tab, null, track, resume)} && {Hook("bs_done 0")} || {Hook("bs_done $?")}";
+
+    /// <summary>
+    /// The step that shows BoosterAI's logo after the terminal reset of a start, restart or continuation (tab-lib.sh's bs_logo, #242),
+    /// or "" when the setting is off or the run is one-shot (Run once: claude/agy -p under bs_stream, codex exec, aider -m), whose
+    /// output is a log. Once per start: the resume fallback's fresh start (LaunchCommand) does not repeat it.
+    /// </summary>
+    private static string LogoHook(TabConfig tab, string? prompt, bool resume, TabTrack track) =>
+        track.Logo && !IsOneShot(tab, prompt, resume) ? Hook("bs_logo") + " && " : "";
+
+    /// <summary>Run once: the orchestra command without a prompt, not continued, runs once and exits (see CliCommand).</summary>
+    internal static bool IsOneShot(TabConfig tab, string? prompt, bool resume) =>
+        tab.NonInteractive && tab.Orkester && prompt is null && !resume;
 
     /// <summary>
     /// The step that updates the tab's AI CLI before it starts (tab-lib.sh's bs_update, #60), or "" when the setting is off
@@ -192,7 +204,7 @@ public static class Launcher
         if (AdvisorPolicy.Evaluate(tab.Llm, tab.Model, tab.Advisor) == AdvisorPolicy.Verdict.Ok)
             args.Add("--advisor " + Quote(tab.Advisor));
         // One-shot mode applies to the orchestra command only; a given prompt (the install) stays interactive.
-        var once = tab.NonInteractive && tab.Orkester && prompt is null && !resume;
+        var once = IsOneShot(tab, prompt, resume);
         // A resumed conversation gets no first prompt: it already ran /orkester or the install.
         if (resume) { }
         else if (prompt is not null)
