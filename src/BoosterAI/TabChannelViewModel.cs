@@ -34,11 +34,37 @@ public sealed partial class TabViewModel
         _questions = open;
         if (statusChanged) RaiseAgentStatus();
         if (changed) RaiseQuestions();
+        UpdateStatusSeen();
     }
+
+    /// <summary>How long a seen status stays before the block hides (#271).</summary>
+    internal static readonly TimeSpan StatusSeenHideAfter = TimeSpan.FromSeconds(60);
+    private (AgentState State, string Text)? _seenKey;
+    private DateTimeOffset? _seenSince;
+    private bool _statusExpired;
+
+    /// <summary>
+    /// Counts a status as seen from when the main window has focus; 60 s later it hides, unless it is blocked or the tab has an
+    /// open question. A new text or state shows it again and restarts; the same text re-read does not. Runs at every poll and on focus change.
+    /// </summary>
+    internal void UpdateStatusSeen()
+    {
+        var before = ShowAgentStatus;
+        var key = ShownAgentStatus is { } s ? (s.State, s.Text) : ((AgentState, string)?)null;
+        if (key != _seenKey) { _seenKey = key; _seenSince = null; _statusExpired = false; }
+        var now = _owner.Clock();
+        if (key is not null && _seenSince is null && _owner.MainWindowFocused) _seenSince = now;
+        if (_seenSince is { } since && now - since >= StatusSeenHideAfter) _statusExpired = true;
+        if (before != ShowAgentStatus) Raise(nameof(ShowAgentStatus));
+    }
+
+    /// <summary>The status block is shown: there is a status and it is not seen-and-expired; blocked status and open questions always show.</summary>
+    public bool ShowAgentStatus => HasAgentStatus && (!_statusExpired || AgentBlocked || _questions.Count > 0);
 
     /// <summary>The tab's state, name or the setting changed: status visibility, staleness and texts follow.</summary>
     internal void RaiseChannel()
     {
+        UpdateStatusSeen();
         RaiseAgentStatus();
         foreach (var q in _questions) q.RaiseStale();
         RaiseQuestions();
@@ -72,7 +98,7 @@ public sealed partial class TabViewModel
 
     private void RaiseAgentStatus()
     {
-        foreach (var n in new[] { nameof(HasAgentStatus), nameof(AgentStatusText), nameof(AgentStatusTip), nameof(AgentStatusName),
+        foreach (var n in new[] { nameof(HasAgentStatus), nameof(ShowAgentStatus), nameof(AgentStatusText), nameof(AgentStatusTip), nameof(AgentStatusName),
             nameof(AgentDone), nameof(AgentBlocked), nameof(AgentWorking), nameof(AgentIdle) }) Raise(n);
     }
 
@@ -228,6 +254,7 @@ public sealed partial class MainViewModel
     {
         MainWindowFocused = focused;
         if (focused) foreach (var st in _statusNotify.Values) st.Pending = null;
+        foreach (var t in Tabs) t.UpdateStatusSeen();
     }
 
     /// <summary>

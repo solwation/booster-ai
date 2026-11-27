@@ -426,7 +426,7 @@
                 <!-- The agent's latest status from the tab status channel (#249): its own tinted block under the row, up to two lines, cut with "…"; the
                      tooltip has the whole text and when it was reported. Only while the CLI runs and the setting is on. -->
                 <Grid Classes="project-columns" Loaded="OnProjectGridLoaded" ColumnDefinitions="4,20,46,*,160,200,195,168,32"
-                      IsVisible="{Binding HasAgentStatus}" Margin="0,0,0,2">
+                      IsVisible="{Binding ShowAgentStatus}" Margin="0,0,0,2">
                   <Panel Grid.Column="3" Grid.ColumnSpan="5" Margin="0,4,12,0">
                     <!-- The tab's own colour as a muted background and a left edge (#268), so the block visibly belongs to the tab. -->
                     <Border Classes="agent-status-tint" Background="{Binding ColorBrush}" />

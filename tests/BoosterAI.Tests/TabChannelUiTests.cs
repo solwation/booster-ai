@@ -365,4 +365,83 @@ public sealed class TabChannelUiTests : IDisposable
         Assert.Contains($"launch=\"{Notifier.QuestionUri}\"", Notifier.ToastScript("T", "B", openQuestion: true));
         Assert.Contains($"launch=\"{Notifier.ShowUri}\"", Notifier.ToastScript("T", "B"));
     }
+
+    [Fact]
+    public void SeenStatusHidesAfterAMinuteAndNewTextShowsAgain()
+    {
+        var (vm, _, sub, session) = Setup();
+        var clock = DateTimeOffset.UtcNow;
+        vm.Clock = () => clock;
+        vm.SetMainWindowFocused(true);
+        Write(session, sub, Status(Now - 1000, "done", "Finished"));
+        Poll(vm, session, sub);
+        Assert.True(sub.ShowAgentStatus);
+        clock = clock.AddSeconds(59);
+        Poll(vm, session, sub);
+        Assert.True(sub.ShowAgentStatus);
+        clock = clock.AddSeconds(2);
+        Poll(vm, session, sub);
+        Assert.False(sub.ShowAgentStatus);
+        // The same text re-read (even with a new time) stays hidden.
+        Write(session, sub, Status(Now, "done", "Finished"));
+        Poll(vm, session, sub);
+        Assert.False(sub.ShowAgentStatus);
+        // New text shows at once and restarts the minute.
+        Write(session, sub, Status(Now + 1, "working", "Next step"));
+        Poll(vm, session, sub);
+        Assert.True(sub.ShowAgentStatus);
+        clock = clock.AddSeconds(59);
+        Poll(vm, session, sub);
+        Assert.True(sub.ShowAgentStatus);
+        clock = clock.AddSeconds(2);
+        Poll(vm, session, sub);
+        Assert.False(sub.ShowAgentStatus);
+    }
+
+    [Fact]
+    public void StatusThatArrivedUnfocusedCountsFromFocus()
+    {
+        var (vm, _, sub, session) = Setup();
+        var clock = DateTimeOffset.UtcNow;
+        vm.Clock = () => clock;
+        vm.SetMainWindowFocused(false);
+        Write(session, sub, Status(Now - 1000, "working", "Unseen"));
+        Poll(vm, session, sub);
+        clock = clock.AddMinutes(10);
+        Poll(vm, session, sub);
+        Assert.True(sub.ShowAgentStatus);
+        vm.SetMainWindowFocused(true);
+        Assert.True(sub.ShowAgentStatus);
+        clock = clock.AddSeconds(59);
+        Poll(vm, session, sub);
+        Assert.True(sub.ShowAgentStatus);
+        clock = clock.AddSeconds(2);
+        vm.SetMainWindowFocused(true);
+        Assert.False(sub.ShowAgentStatus);
+    }
+
+    [Fact]
+    public void BlockedStatusAndOpenQuestionNeverHide()
+    {
+        var (vm, _, sub, session) = Setup();
+        var clock = DateTimeOffset.UtcNow;
+        vm.Clock = () => clock;
+        vm.SetMainWindowFocused(true);
+        Write(session, sub, Status(Now - 1000, "blocked", "Need input"));
+        Poll(vm, session, sub);
+        clock = clock.AddMinutes(10);
+        Poll(vm, session, sub);
+        Assert.True(sub.ShowAgentStatus);
+
+        Write(session, sub, Status(Now, "done", "Done now"));
+        Poll(vm, session, sub);
+        clock = clock.AddSeconds(61);
+        Poll(vm, session, sub);
+        Assert.False(sub.ShowAgentStatus);
+        Write(session, sub, Question(Now + 1, "q1", "Which one?", ["a", "b"], false));
+        Poll(vm, session, sub);
+        clock = clock.AddMinutes(10);
+        Poll(vm, session, sub);
+        Assert.True(sub.ShowAgentStatus);
+    }
 }
