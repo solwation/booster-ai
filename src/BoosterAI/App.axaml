@@ -27,6 +27,8 @@
       <ResourceDictionary x:Key="Dark">
         <!-- The subtab group card (#196): the project colour as a faint tint and a 1 px outline. The tint keeps text at
              4.5:1 and icons and field edges at 3:1 over every palette colour (RowControlsTests). -->
+        <x:Double x:Key="AgentStatusTintOpacity">0.12</x:Double>
+        <SolidColorBrush x:Key="AgentBlockedTextBrush" Color="#E8A93A" />
         <x:Double x:Key="GroupTintOpacity">0.10</x:Double>
         <x:Double x:Key="GroupOutlineOpacity">0.45</x:Double>
         <SolidColorBrush x:Key="TextBrush" Color="#F2F3F7" />
@@ -95,6 +97,8 @@
         <SolidColorBrush x:Key="ExpanderContentBorderBrush" Color="#343846" />
       </ResourceDictionary>
       <ResourceDictionary x:Key="Light">
+        <x:Double x:Key="AgentStatusTintOpacity">0.12</x:Double>
+        <SolidColorBrush x:Key="AgentBlockedTextBrush" Color="#7A4D00" />
         <x:Double x:Key="GroupTintOpacity">0.07</x:Double>
         <x:Double x:Key="GroupOutlineOpacity">0.55</x:Double>
         <SolidColorBrush x:Key="TextBrush" Color="#1B1D26" />

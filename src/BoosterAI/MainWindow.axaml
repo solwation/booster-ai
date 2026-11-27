@@ -423,21 +423,26 @@
                     <Path Data="{StaticResource MoreIcon}" StrokeThickness="2.5" />
                   </Button>
                 </Grid>
-                <!-- The agent's latest status from the tab status channel (#249): one line under the row, cut with "…"; the
+                <!-- The agent's latest status from the tab status channel (#249): its own tinted block under the row, up to two lines, cut with "…"; the
                      tooltip has the whole text and when it was reported. Only while the CLI runs and the setting is on. -->
                 <Grid Classes="project-columns" Loaded="OnProjectGridLoaded" ColumnDefinitions="4,20,46,*,160,200,195,168,32"
-                      IsVisible="{Binding HasAgentStatus}" Margin="0,-2,0,2">
-                  <Grid Grid.Column="3" Grid.ColumnSpan="5" ColumnDefinitions="Auto,*" Classes="agent-status" Background="Transparent" Margin="0,0,12,0"
-                        Focusable="True" ToolTip.Tip="{Binding AgentStatusTip}" AutomationProperties.Name="{Binding AgentStatusName}">
-                    <Panel Grid.Column="0" Width="12" Height="12" VerticalAlignment="Center" Margin="0,0,6,0">
-                      <Path Classes="agent-done" Data="{StaticResource CheckIcon}" IsVisible="{Binding AgentDone}" />
-                      <Path Classes="agent-blocked" Data="{StaticResource WarningIcon}" IsVisible="{Binding AgentBlocked}" />
-                      <Ellipse Classes="agent-working" IsVisible="{Binding AgentWorking}" />
-                      <Ellipse Classes="agent-idle" IsVisible="{Binding AgentIdle}" />
-                    </Panel>
-                    <TextBlock Grid.Column="1" Classes="caption agent-status-text" Classes.blocked="{Binding AgentBlocked}"
-                               Text="{Binding AgentStatusText}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                  </Grid>
+                      IsVisible="{Binding HasAgentStatus}" Margin="0,0,0,2">
+                  <Panel Grid.Column="3" Grid.ColumnSpan="5" Margin="0,4,12,0">
+                    <!-- The tab's own colour as a muted background and a left edge (#268), so the block visibly belongs to the tab. -->
+                    <Border Classes="agent-status-tint" Background="{Binding ColorBrush}" />
+                    <Border Classes="agent-status-edge" Background="{Binding ColorBrush}" />
+                    <Grid ColumnDefinitions="Auto,*" Classes="agent-status" Background="Transparent"
+                          Focusable="True" ToolTip.Tip="{Binding AgentStatusTip}" AutomationProperties.Name="{Binding AgentStatusName}">
+                      <Panel Grid.Column="0" Width="12" Height="12" VerticalAlignment="Top" Margin="0,2,8,0">
+                        <Path Classes="agent-done" Data="{StaticResource CheckIcon}" IsVisible="{Binding AgentDone}" />
+                        <Path Classes="agent-blocked" Data="{StaticResource WarningIcon}" IsVisible="{Binding AgentBlocked}" />
+                        <Ellipse Classes="agent-working" IsVisible="{Binding AgentWorking}" />
+                        <Ellipse Classes="agent-idle" IsVisible="{Binding AgentIdle}" />
+                      </Panel>
+                      <TextBlock Grid.Column="1" Classes="caption agent-status-text" Classes.blocked="{Binding AgentBlocked}"
+                                 Text="{Binding AgentStatusText}" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                    </Grid>
+                  </Panel>
                 </Grid>
                 <!-- Advisor belongs to the project choices (#173). -->
                 <Panel IsVisible="{Binding IsProject}">

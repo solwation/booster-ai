@@ -327,6 +327,20 @@
     <Setter Property="Padding" Value="12,5" />
     <Setter Property="MaxWidth" Value="420" />
   </Style>
+  <Style Selector="Border.agent-status-tint">
+    <Setter Property="IsHitTestVisible" Value="False" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusSmall}" />
+    <Setter Property="Opacity" Value="{DynamicResource AgentStatusTintOpacity}" />
+  </Style>
+  <Style Selector="Border.agent-status-edge">
+    <Setter Property="IsHitTestVisible" Value="False" />
+    <Setter Property="Width" Value="3" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+    <Setter Property="CornerRadius" Value="4,0,0,4" />
+  </Style>
+  <Style Selector="Grid.agent-status">
+    <Setter Property="Margin" Value="12,6,10,6" />
+  </Style>
   <Style Selector="Grid.agent-status:focus-visible">
     <Setter Property="Background" Value="{DynamicResource RowHoverBrush}" />
   </Style>
@@ -339,7 +353,7 @@
     <Setter Property="StrokeJoin" Value="Round" />
   </Style>
   <Style Selector="Path.agent-done"><Setter Property="Stroke" Value="{DynamicResource SuccessBrush}" /></Style>
-  <Style Selector="Path.agent-blocked"><Setter Property="Stroke" Value="{DynamicResource WarningBrush}" /></Style>
+  <Style Selector="Path.agent-blocked"><Setter Property="Stroke" Value="{DynamicResource AgentBlockedTextBrush}" /></Style>
   <Style Selector="Ellipse.agent-working, Ellipse.agent-idle">
     <Setter Property="Width" Value="8" />
     <Setter Property="Height" Value="8" />
@@ -349,7 +363,7 @@
   <Style Selector="Ellipse.agent-working"><Setter Property="Fill" Value="{DynamicResource InfoDotBrush}" /></Style>
   <Style Selector="Ellipse.agent-idle"><Setter Property="Stroke" Value="{DynamicResource NeutralStatusBrush}" /><Setter Property="StrokeThickness" Value="1.5" /></Style>
   <Style Selector="TextBlock.agent-status-text"><Setter Property="Foreground" Value="{DynamicResource MutedBrush}" /></Style>
-  <Style Selector="TextBlock.agent-status-text.blocked"><Setter Property="Foreground" Value="{DynamicResource WarningBrush}" /></Style>
+  <Style Selector="TextBlock.agent-status-text.blocked"><Setter Property="Foreground" Value="{DynamicResource AgentBlockedTextBrush}" /></Style>
 
   <!-- Small secondary text (the 12/16 step of the type scale); pair with muted for captions beside controls. -->
   <Style Selector="TextBlock.caption">
