@@ -1,0 +1,19 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="using:BoosterAI"
+        x:Class="BoosterAI.ConfirmChoiceWindow"
+        x:DataType="local:ChoiceQuestion"
+        Title="{Binding Title}"
+        Icon="avares://BoosterAI/Assets/boosterai.ico"
+        Width="520" SizeToContent="Height" CanResize="False"
+        WindowStartupLocation="CenterOwner">
+  <StackPanel Margin="28,24,28,22" Spacing="14">
+    <TextBlock Classes="title" Text="{Binding Heading}" TextWrapping="Wrap" />
+    <TextBlock Classes="muted" Text="{Binding Body}" IsVisible="{Binding HasBody}" TextWrapping="Wrap" LineHeight="20" />
+    <!-- Cancelling is the default; the action is the primary button (#279). -->
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,6,0,0">
+      <Button x:Name="CancelChoice" Classes="secondary" Content="{Binding Cancel}" Click="OnCancel" IsCancel="True" IsDefault="True" Padding="18,8" />
+      <Button x:Name="ConfirmChoice" Classes="primary" Content="{Binding Confirm}" Click="OnConfirm" Padding="18,8" />
+    </StackPanel>
+  </StackPanel>
+</Window>

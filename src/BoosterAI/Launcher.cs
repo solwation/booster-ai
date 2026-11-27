@@ -58,9 +58,10 @@ public static class Launcher
     /// (claude --continue, codex resume --last) for a model change. It runs in the tab's shell, so it first takes back an account
     /// variable an earlier run exported there and then exports the new choice (#186).
     /// </summary>
-    public static string RestartScript(TabConfig tab, TabTrack track, bool resume) =>
+    /// <paramref name="prompt"/>: the new CLI's first prompt, as at a start (#279: the continuation prompt after a switch); never with resume.
+    public static string RestartScript(TabConfig tab, TabTrack track, bool resume, string? prompt = null) =>
         tab.Llm == Catalog.ShellOnly ? $"{TabChannelAgent.ExportCommand(track)}{Cd(InWsl(tab))} || true && {Hook("bs_reset")} && {RestartLogoHook(tab, resume: false, track)}{Accounts.ResetCommand}"
-            : $"{TabChannelAgent.ExportCommand(track)}{Cd(InWsl(tab))} && {Hook("bs_reset")} && {RestartLogoHook(tab, resume, track)}{UpdateHook(tab, track)}{Accounts.ResetCommand} && {Accounts.ExportCommand(InWsl(tab))}{Hook("bs_cli")} && {LaunchCommand(tab, null, track, resume)} && {Hook("bs_done 0")} || {Hook("bs_done $?")}";
+            : $"{TabChannelAgent.ExportCommand(track)}{Cd(InWsl(tab))} && {Hook("bs_reset")} && {RestartLogoHook(tab, resume, track)}{UpdateHook(tab, track)}{Accounts.ResetCommand} && {Accounts.ExportCommand(InWsl(tab))}{Hook("bs_cli")} && {LaunchCommand(tab, resume ? null : prompt, track, resume)} && {Hook("bs_done 0")} || {Hook("bs_done $?")}";
 
     /// <summary>
     /// The step that shows BoosterAI's logo after the terminal reset of a start, restart or continuation (tab-lib.sh's bs_logo, #242),

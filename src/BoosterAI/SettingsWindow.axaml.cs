@@ -36,6 +36,15 @@ public partial class SettingsWindow : Window
         Closing += OnClosing;
     }
 
+    /// <summary>The experimental automatic switch (#279): turning it on asks first; Avbryt leaves it off.</summary>
+    private async void OnAutoModelSwitchClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not CheckBox box) return;
+        var on = await _vm.RequestAutoModelSwitchAsync(box.IsChecked == true,
+            () => new ConfirmChoiceWindow(ChoiceQuestion.EnableAutoSwitch()).ShowDialog<bool>(this));
+        box.IsChecked = on;
+    }
+
     private bool _closeApproved;
 
     /// <summary>

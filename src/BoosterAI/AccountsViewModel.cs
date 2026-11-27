@@ -577,6 +577,7 @@ public sealed partial class MainViewModel
         if (!QuotaWatched(cli, key)) return;
         WarnQuota(cli, key, accountName, limits);
         CheckSaveNotice(cli, key, accountName, limits);
+        CheckModelSwitch(cli, key, accountName, limits);
     }
 
     /// <summary>Sends a system notification (#239); tests replace it so no real notification is shown.</summary>

@@ -147,6 +147,15 @@
               </StackPanel>
             </StackPanel>
 
+            <!-- Experimentella funktioner: AppConfig.AutoModelSwitch (#279), off by default; turning it on asks first (OnAutoModelSwitchClick). -->
+            <StackPanel Spacing="8">
+              <TextBlock Classes="sectionhead" Text="{local:T settings.section.experimental}" />
+              <StackPanel Spacing="6">
+                <CheckBox x:Name="AutoModelSwitchBox" IsChecked="{Binding AutoModelSwitch, Mode=OneWay}" Content="{local:T settings.autoSwitch}"
+                          ToolTip.Tip="{local:T settings.autoSwitch.tip}" Click="OnAutoModelSwitchClick" />
+              </StackPanel>
+            </StackPanel>
+
             <!-- Uppdateringar -->
             <StackPanel Spacing="8">
               <TextBlock Classes="sectionhead" Text="{local:T settings.section.updates}" />

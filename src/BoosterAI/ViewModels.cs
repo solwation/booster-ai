@@ -853,7 +853,7 @@ public sealed partial class TabViewModel : Observable
     public string StatusText => _closeProgress ?? (_state switch
     {
         null => "",
-        TabState.Running when PendingRestart => Loc.Get("tabstate.waitingIdle"),
+        TabState.Running when PendingRestart => PendingSwitchText ?? Loc.Get("tabstate.waitingIdle"),
         TabState.Running when IsChanged => Loc.Get("tabstate.changed"),
         TabState.Running when Activity == Activity.Busy => Loc.Get("tabstate.busy"),
         TabState.Running when Activity == Activity.Working => Loc.Get("tabstate.working"),
@@ -1609,7 +1609,7 @@ public sealed partial class MainViewModel : Observable
         foreach (var editor in _compactEditors.Values) editor.UpdateSettings(_cfg.AutoCompactSettings);
         RefreshCompactMode();
         foreach (var name in new[] { nameof(WslDistro), nameof(LinuxTerminal), nameof(ProjectSearchRoot), nameof(CanResetProjectSearchRoot), nameof(Theme), nameof(SelectedTheme), nameof(SelectedLanguage),
-            nameof(SelectedAppearance), nameof(SelectedAfterLaunch), nameof(MinimizeToTray), nameof(Notifications), nameof(SoundEffects), nameof(QuotaWarn), nameof(QuotaWarnPercent), nameof(QuotaSaveNotice), nameof(QuotaSaveNoticePercent), nameof(ShowAdvisor), nameof(SelectedZoom), nameof(AutoUpdateClis), nameof(ShowTabLogo), nameof(TabStatusChannel), nameof(AutoClearIdle), nameof(AutoClearMinutes), nameof(CheckForUpdates) })
+            nameof(SelectedAppearance), nameof(SelectedAfterLaunch), nameof(MinimizeToTray), nameof(Notifications), nameof(SoundEffects), nameof(QuotaWarn), nameof(QuotaWarnPercent), nameof(QuotaSaveNotice), nameof(QuotaSaveNoticePercent), nameof(AutoModelSwitch), nameof(ShowAdvisor), nameof(SelectedZoom), nameof(AutoUpdateClis), nameof(ShowTabLogo), nameof(TabStatusChannel), nameof(AutoClearIdle), nameof(AutoClearMinutes), nameof(CheckForUpdates) })
             Raise(name);
         foreach (var t in Tabs) t.RaiseColor();
         foreach (var p in Projects) p.RaiseAdvisorVisible();
@@ -1775,6 +1775,20 @@ public sealed partial class MainViewModel : Observable
     /// Restarts a running tab whose LLM or model changed, in the same tab: queues the new CLI for the tab's
     /// bs_next, then stops the old CLI. Its conversation is kept for a model change (claude, codex).
     /// </summary>
+    /// <summary>Stops the CLI in the foreground of a tab's shell for an in-place restart; tests replace it so no process is signalled.</summary>
+    internal Action<int, string> StopTabForeground { get; set; } = Launcher.StopForeground;
+
+    /// <summary>
+    /// A poll's reading of a tab waiting to restart: restarts it once its CLI is idle. A waiting model switch (#279) also counts the
+    /// agent's own idle, done or blocked status as idle; it never restarts while the agent works or its activity is unknown.
+    /// </summary>
+    internal void RestartWhenIdle(TabViewModel row, TabState state, Activity activity)
+    {
+        if (!row.PendingRestart || state != TabState.Running) return;
+        if (activity == Activity.Idle || row.PendingSwitch is not null && ModelSwitch.ActivityOf(activity, row.Channel.Status) == SwitchActivity.Idle)
+            RestartChanged(row);
+    }
+
     public void RestartChanged(TabViewModel tab)
     {
         DismissRecoveredStatus();
@@ -1790,16 +1804,20 @@ public sealed partial class MainViewModel : Observable
         }
         try
         {
-            var resume = tab.RestartResumes;
-            tab.Session!.QueueNext(tab.Track!.Id, Launcher.RestartScript(next, tab.Track with { UpdateClis = _cfg.AutoUpdateClis, AutoClear = _cfg.AutoClearIdle, Logo = _cfg.ShowTabLogo, StatusChannel = _cfg.TabStatusChannel }, resume));
+            // A switch to another agent or account (#279) starts fresh with the continuation prompt instead of keeping the conversation.
+            var prompt = tab.SwitchPrompt;
+            var resume = prompt is null && tab.RestartResumes;
+            tab.Session!.QueueNext(tab.Track!.Id, Launcher.RestartScript(next, tab.Track with { UpdateClis = _cfg.AutoUpdateClis, AutoClear = _cfg.AutoClearIdle, Logo = _cfg.ShowTabLogo, StatusChannel = _cfg.TabStatusChannel }, resume, prompt));
             var pid = tab.ShellPid!.Value;
             var distro = _cfg.WslDistro;
-            Task.Run(() => Launcher.StopForeground(pid, distro));
+            var stop = StopTabForeground;
+            Task.Run(() => stop(pid, distro));
             tab.LaunchedAs = next;
             tab.Session.SaveTab(tab.Track.Id, next);
             tab.RaiseRestartTip();
-            ShowStatus(Loc.Format(resume ? "status.restartedResume" : "status.restarted", tab.Name.Trim(), next.Llm,
+            ShowStatus(Loc.Format(resume ? "status.restartedResume" : prompt is not null ? "status.switched" : "status.restarted", tab.Name.Trim(), next.Llm,
                 next.Model == Catalog.StandardModel ? Loc.Get("restart.standardModel") : next.Model));
+            if (prompt is not null) SwitchRestarted(tab);
             Save();
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.ComponentModel.Win32Exception)
@@ -2140,7 +2158,7 @@ public sealed partial class MainViewModel : Observable
                 var activity = TabCpu.Combine(hookActivity, row.Cpu.Update(sample, DateTime.UtcNow));
                 var previousActivity = row.Activity;
                 row.ShellPid = pid;
-                if (row.PendingRestart && state == TabState.Running && activity == Activity.Idle) RestartChanged(row);
+                RestartWhenIdle(row, state, activity);
                 var changed = row.SetState(state, rc, denied, activity, activity == Activity.Watching ? watchingSince : null, AutoClear.ClearedAt(log));
                 if (changed || row.Activity != previousActivity) anyActivityChanged = true;
                 row.RefreshInputState(log, lastOutput);

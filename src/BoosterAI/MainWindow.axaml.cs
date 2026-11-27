@@ -134,6 +134,30 @@ public partial class MainWindow : Window
         limitsTimer.Start();
         Closed += (_, _) => limitsTimer.Stop();
         Deactivated += (_, _) => { _vm.SetMainWindowFocused(false); _vm.Update.WindowActive(false); };
+        // Model switch questions (#279): asked while the window has focus; an unfocused one gets them on its next activation
+        // (a notification's click activates it).
+        vm.SwitchOffered += () => Avalonia.Threading.Dispatcher.UIThread.Post(ShowSwitchOffers);
+        Activated += (_, _) => Avalonia.Threading.Dispatcher.UIThread.Post(ShowSwitchOffers);
+    }
+
+    private bool _askingSwitch;
+
+    /// <summary>Asks each waiting switch question in turn (#279): Byt, Avbryt, and "Aktiviteten är okänd, byt ändå?" when needed.</summary>
+    private async void ShowSwitchOffers()
+    {
+        if (_askingSwitch || !IsActive || !IsVisible) return;
+        _askingSwitch = true;
+        try
+        {
+            while (_vm.SwitchOffers.FirstOrDefault() is { } offer)
+            {
+                if (!await new ConfirmChoiceWindow(ChoiceQuestion.Switch(offer)).ShowDialog<bool>(this)) { _vm.DeclineSwitch(offer); continue; }
+                if (_vm.AcceptSwitch(offer) != SwitchResult.ConfirmUnknown) continue;
+                if (await new ConfirmChoiceWindow(ChoiceQuestion.SwitchUnknown(offer)).ShowDialog<bool>(this)) _vm.AcceptSwitch(offer, unknownConfirmed: true);
+                else _vm.DeclineSwitch(offer);
+            }
+        }
+        finally { _askingSwitch = false; }
     }
 
     private void OnBackgroundOpened(object? sender, EventArgs e)
@@ -609,7 +633,8 @@ public partial class MainWindow : Window
         if (tab.IsAlive && !tab.IsChanged) { _vm.ReloadOrchestra(tab); return; }
         if (!tab.IsChanged) { _vm.Restart(tab); return; }
         // A changed running tab: a second click cancels the wait; an idle CLI restarts at once; otherwise ask.
-        if (tab.PendingRestart) { tab.PendingRestart = false; return; }
+        // A waiting model switch (#279) is cancelled with its choices restored; any other wait just ends.
+        if (tab.PendingRestart) { if (tab.PendingSwitch is not null) _vm.CancelSwitch(tab); else tab.PendingRestart = false; return; }
         if (tab.Activity == Activity.Idle) { _vm.RestartChanged(tab); return; }
         switch (await new ConfirmRestartWindow(tab).ShowDialog<RestartChoice>(this))
         {

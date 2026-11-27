@@ -72,6 +72,10 @@ internal static class Program
             for (var i = 0; i < tabs.Count; i++)
                 if (Launcher.CanContinue(tabs[i]) && tracks[i] is { } rt)
                     Console.WriteLine($"{tabs[i].Name} restart with conversation (falls back once to a fresh start when the continuation exits with an error within {Launcher.ResumeGraceSeconds} s): {Launcher.RestartScript(tabs[i], rt, resume: true)}");
+            // A model switch (#279): the in-place restart with the new choices and the continuation prompt, never --continue.
+            for (var i = 0; i < tabs.Count; i++)
+                if (tabs[i].Llm is "claude" or "codex" or "agy" && tracks[i] is { } st)
+                    Console.WriteLine($"{tabs[i].Name} restart after a model switch (continuation prompt): {Launcher.RestartScript(tabs[i], st, resume: false, ModelSwitch.ContinuationPrompt)}");
             // Every interactive agy launch path passes that file (#212); the example stands in when no enabled tab uses agy.
             var agyTabs = Enumerable.Range(0, tabs.Count).Where(i => tabs[i].Llm == "agy" && tracks[i] is not null)
                 .Select(i => (Tab: tabs[i], Track: tracks[i]!)).ToList();

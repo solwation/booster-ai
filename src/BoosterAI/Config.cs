@@ -99,6 +99,11 @@ public sealed class AppConfig
     public bool QuotaSaveNotice { get; set; } = true;
     /// <summary>The remaining share (percent) at or under which <see cref="QuotaSaveNotice"/> sends; clamped to QuotaWarnings.MinPercent..MaxPercent.</summary>
     public int QuotaSaveNoticePercent { get; set; } = QuotaSaveNotices.DefaultPercent;
+    /// <summary>
+    /// Experimental (#279): when an account's quota is used up with no resets and a long wait, switch its running tabs to an equivalent
+    /// model with quota left without asking, with a notification each time. Off by default; turning it on asks first.
+    /// </summary>
+    public bool AutoModelSwitch { get; set; }
     /// <summary>Main window: show the Advisor row under Claude projects (#180). Only display; launches never read it.</summary>
     public bool ShowAdvisor { get; set; }
     /// <summary>Global CLI zoom in percent of the terminal's default font size; 0 = terminal default (nothing is changed).</summary>
@@ -264,6 +269,7 @@ public static class ConfigMerge
         S(c => c.QuotaWarnPercent, (c, v) => c.QuotaWarnPercent = v),
         S(c => c.QuotaSaveNotice, (c, v) => c.QuotaSaveNotice = v),
         S(c => c.QuotaSaveNoticePercent, (c, v) => c.QuotaSaveNoticePercent = v),
+        S(c => c.AutoModelSwitch, (c, v) => c.AutoModelSwitch = v),
         S(c => c.ShowAdvisor, (c, v) => c.ShowAdvisor = v),
         S(c => c.ZoomPercent, (c, v) => c.ZoomPercent = v),
         S(c => c.ProjectSearchRoot, (c, v) => c.ProjectSearchRoot = v),
