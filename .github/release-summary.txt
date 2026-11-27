@@ -1,3 +1,3 @@
-version: 0.52.0
-sv: Diskreta ljudeffekter när en flik är klar, vid fel och vid kvotändringar, med en egen inställning för att stänga av dem.
-en: Discreet sound effects when a tab finishes, on errors and on quota changes, with a setting to turn them off.
+version: 0.53.0
+sv: Flikarna visar en animerad BoosterAI-logotyp vid start, och Claude och Codex skriver inga recaps som kostar tokens.
+en: Tabs show an animated BoosterAI logo on start, and Claude and Codex no longer write token-costing recaps.
