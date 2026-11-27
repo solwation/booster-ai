@@ -1,0 +1,19 @@
+{
+  "passed": true,
+  "privateDesktop": true,
+  "switchedDesktop": false,
+  "foregroundUnchanged": true,
+  "generatedLogoStep": true,
+  "recapOptOut": "0",
+  "logo": {
+    "tty": "tty",
+    "depth": "24",
+    "cols": "120",
+    "lines": "30",
+    "variant": "full",
+    "ms": "655",
+    "rc": "0"
+  },
+  "scriptHasSemicolon": false,
+  "terminalClosed": true
+}

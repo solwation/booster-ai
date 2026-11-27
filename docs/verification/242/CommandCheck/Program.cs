@@ -24,14 +24,17 @@ var track = session.NewTrack(logo: true) ?? throw new Exception("No track");
 // Record what the real bs_logo decided in this terminal: TTY, colour depth, size, variant and duration.
 File.AppendAllText(Path.Combine(session.Directory, "tab-lib.sh"),
     "\neval \"$(declare -f bs_logo | sed '1s/^bs_logo/bs_logo_orig/')\"\n"
-    + "bs_logo() {\n  local t=$(date +%s%N) c=$(tput cols) l=$(tput lines)\n  bs_logo_orig\n  local rc=$?\n"
-    + "  printf '%s %s %s %s %s %s %s' \"$([ -t 1 ] && echo tty || echo notty)\" \"$(bs_logo_depth)\" \"$c\" \"$l\" \"$(bs_logo_size \"$c\" \"$l\")\" \"$(( ($(date +%s%N) - t) / 1000000 ))\" \"$rc\" > "
+    + "bs_logo() {\n  local t=$(date +%s%N) c=$(tput cols) l=$(tput lines) y=notty\n  [ -t 1 ] && y=tty\n  bs_logo_orig\n  local rc=$?\n"
+    + "  printf '%s %s %s %s %s %s %s' \"$y\" \"$(bs_logo_depth)\" \"$c\" \"$l\" \"$(bs_logo_size \"$c\" \"$l\")\" \"$(( ($(date +%s%N) - t) / 1000000 ))\" \"$rc\" > "
     + ShellQuote(marker + ".logo") + "\n}\n");
 var cli = Launcher.TabScript(new TabConfig { Name = token, Directory = "/tmp", Llm = "claude", Model = "sonnet" }, track: track);
 if (!cli.Contains("bs_logo")) throw new Exception("No logo step in the tracked script");
-// Define a neutral shell function so no real agent, saved settings or network request is used.
-var script = "unalias claude 2>/dev/null || true\nclaude() {\nprintf '%s %s %s' $CLAUDE_CODE_ENABLE_AWAY_SUMMARY $$ $(cut -d' ' -f22 /proc/$$/stat) > "
-    + ShellQuote(marker) + "\nsleep 20\n}\n" + cli;
+// A neutral fake claude first on PATH (the user's alias, reloaded by bs_run, still resolves to it): no real agent or network.
+var bin = "/tmp/" + token + "-bin";
+RunWsl("mkdir -p " + ShellQuote(bin) + " && printf '%s\\n' '#!/bin/bash' "
+    + ShellQuote("printf '%s %s %s' \"$CLAUDE_CODE_ENABLE_AWAY_SUMMARY\" $$ $(cut -d' ' -f22 /proc/$$/stat) > " + ShellQuote(marker))
+    + " 'sleep 20' > " + ShellQuote(bin + "/claude") + " && chmod +x " + ShellQuote(bin + "/claude"));
+var script = "export PATH=" + ShellQuote(bin) + ":$PATH\n" + cli;
 if (script.Contains(';')) throw new Exception("WT splits semicolons");
 var wt = Launcher.WindowsTerminalArgs([new TabConfig { Name = token, Script = script }], "Ubuntu", window: token);
 try
@@ -87,7 +90,7 @@ finally
         && int.TryParse(pidText, out var shellPid) && long.TryParse(startText, out var shellStart))
         RunWsl("test $(cut -d' ' -f22 /proc/" + shellPid + "/stat 2>/dev/null) = " + shellStart
             + " && kill -HUP " + shellPid + " 2>/dev/null || true");
-    RunWsl("rm -f " + ShellQuote(marker) + " " + ShellQuote(marker + ".logo"));
+    RunWsl("rm -rf " + ShellQuote(marker) + " " + ShellQuote(marker + ".logo") + " " + ShellQuote(bin));
     try { Directory.Delete(sessionRoot, recursive: true); } catch (IOException) { }
     Native.CloseDesktop(desktop);
 }

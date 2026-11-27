@@ -243,6 +243,7 @@ internal static class Screenshot
                     });
                 }
             }
+            else if (o.Tab is "appearance" or "utseende") sw.SelectedTabIndex = 3;
             else if (o.Tab is "agents" or "agenter")
             {
                 vm.ShowSampleAgents(localClisMissing: o.Section == "missing" || o.Section?.Contains("-missing", StringComparison.Ordinal) == true,
