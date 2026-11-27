@@ -9,8 +9,9 @@ namespace BoosterAI;
 /// <paramref name="UpdateClis"/>: the tab updates its AI CLI before starting it (AppConfig.AutoUpdateClis, tab-lib.sh's bs_update).
 /// <paramref name="AutoClear"/>: an interactive claude runs under bs_pty so BoosterAI can type /clear into it (AppConfig.AutoClearIdle, #69).
 /// <paramref name="Logo"/>: an interactive start or restart first shows BoosterAI's logo (AppConfig.ShowTabLogo, tab-lib.sh's bs_logo, #242).
+/// <paramref name="StatusChannel"/>: the tab's agent may report status and questions in tabN.events (AppConfig.TabStatusChannel, TabChannel, #247).
 /// </summary>
-public sealed record TabTrack(string Lib, string Dir, string Id, bool UpdateClis = false, bool AutoClear = false, bool Logo = true);
+public sealed record TabTrack(string Lib, string Dir, string Id, bool UpdateClis = false, bool AutoClear = false, bool Logo = true, bool StatusChannel = false);
 
 public enum TabState { Starting, Running, CliExited, CliMissing, NotStarted, Closed, Lost, Denied }
 
@@ -104,6 +105,21 @@ public sealed record TabLog(int? Pid, long? StartTime, bool CliStarted, int? Cli
             InputReadyAt = inputReadyAt, InputKind = inputKind, OrchestraIdleAt = orchestraIdleAt,
             InputProtocol = inputProtocol, InputTypedAt = inputTypedAt,
         };
+    }
+
+    /// <summary>
+    /// Epoch-ms of the latest cli-start in a tab log (null: none). Status channel events before it belong to a CLI that an
+    /// in-place restart replaced (#247). Not a TabLog property, so TabLog's equality stays as it was.
+    /// </summary>
+    public static long? LastCliStart(string text)
+    {
+        long? last = null;
+        foreach (var line in text.Split('\n'))
+        {
+            var parts = line.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length >= 2 && parts[1] == "cli-start" && long.TryParse(parts[0], CultureInfo.InvariantCulture, out var at)) last = at;
+        }
+        return last;
     }
 
     private static string Decode(string? base64)
@@ -860,11 +876,11 @@ for line in sys.stdin:
     /// A new log id and the paths the tab's shell uses; null when the path cannot go into a tab script.
     /// Also writes the claude settings whose hooks log busy (prompt sent) and idle (turn done).
     /// </summary>
-    public TabTrack? NewTrack(bool updateClis = false, bool autoClear = false, bool logo = true)
+    public TabTrack? NewTrack(bool updateClis = false, bool autoClear = false, bool logo = true, bool statusChannel = false)
     {
         var dir = OperatingSystem.IsWindows() ? PathMapping.ToWslPath(Directory) : Directory;
         if (dir.IndexOfAny([';', '\n', '\r']) >= 0) return null;
-        var track = new TabTrack(dir + "/tab-lib.sh", dir, "tab" + Interlocked.Increment(ref _next), updateClis, autoClear, logo);
+        var track = new TabTrack(dir + "/tab-lib.sh", dir, "tab" + Interlocked.Increment(ref _next), updateClis, autoClear, logo, statusChannel);
         WriteSettings(track.Id, dir, onlyMissing: false);
         return track;
     }
@@ -1000,6 +1016,38 @@ for line in sys.stdin:
             return File.Exists(path) ? TabLog.Parse(File.ReadAllText(path)) : null;
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return null; }
+    }
+
+    /// <summary>
+    /// What tab <paramref name="id"/>'s agent reported in tabN.events since the latest cli-start in its log (#247), with
+    /// the answers in tabN.answers/. Empty when there is no events file (the channel is off or unused) or it cannot be read.
+    /// </summary>
+    public TabChannelState ReadChannel(string id)
+    {
+        try
+        {
+            var path = Path.Combine(Directory, TabChannel.EventsFile(id));
+            if (!File.Exists(path)) return TabChannelState.Empty;
+            var log = Path.Combine(Directory, id + ".log");
+            var since = File.Exists(log) ? TabLog.LastCliStart(File.ReadAllText(log)) : null;
+            var answers = Path.Combine(Directory, TabChannel.AnswersDirectory(id));
+            return TabChannel.Parse(TabChannel.ReadTail(path), since,
+                q => TabChannel.ReadAnswer(Path.Combine(answers, q)));
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return TabChannelState.Empty; }
+    }
+
+    /// <summary>
+    /// Answers the open question <paramref name="questionId"/> of tab <paramref name="id"/> (#247): once, atomically
+    /// (TabChannel.WriteAnswer). A question that is not open since the latest cli-start is unknown or already answered.
+    /// </summary>
+    public AnswerResult Answer(string id, string questionId, string text)
+    {
+        var state = ReadChannel(id);
+        if (state.Answered.Any(a => a.Question.Id == questionId)) return AnswerResult.AlreadyAnswered;
+        if (state.Open.FirstOrDefault(q => q.Id == questionId) is not { } question) return AnswerResult.UnknownQuestion;
+        return TabChannel.WriteAnswer(Path.Combine(Directory, TabChannel.AnswersDirectory(id)), question, text,
+            DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
     }
 
     /// <summary>Uses explicit CLI hooks when available, otherwise the last terminal output time.</summary>

@@ -133,6 +133,9 @@
                                  AutomationProperties.Name="{local:T settings.quotaWarn.name}" Margin="0,0,8,0" />
                   <TextBlock Text="{local:T settings.quotaWarn.percent}" VerticalAlignment="Center" />
                 </WrapPanel>
+                <!-- Tab status channel: AppConfig.TabStatusChannel (#247). -->
+                <CheckBox IsChecked="{Binding TabStatusChannel}" Content="{local:T settings.tabStatusChannel}"
+                          ToolTip.Tip="{local:T settings.tabStatusChannel.tip}" />
               </StackPanel>
             </StackPanel>
 

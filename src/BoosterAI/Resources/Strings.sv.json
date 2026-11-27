@@ -197,6 +197,8 @@
   "settings.cliUpdates.tip": "Uppdatera claude, codex och agy i fliken innan de startar när en nyare version finns, högst var sjätte timme per CLI. Fel stoppar aldrig starten.",
   "settings.tabLogo": "Visa animerad BoosterAI-logotyp i flikarna",
   "settings.tabLogo.tip": "Visa BoosterAI-logotypen kort i varje flik när agenten startar, startas om eller fortsätter. Den visas inte vid Kör en gång.",
+  "settings.tabStatusChannel": "Låt agenterna i flikarna rapportera status och frågor till BoosterAI",
+  "settings.tabStatusChannel.tip": "Agenten i en flik kan meddela att den är klar, arbetar eller är blockerad och ställa frågor som du svarar på i BoosterAI. Allt går via filer i sessionskatalogen på den här datorn, utan nätverksport. Gäller flikar som startas eller startas om efter ändringen.",
   "settings.autoClear": "Auto-clear vid inaktivitet efter",
   "settings.autoClear.minutes": "min",
   "settings.autoClear.name": "Minuter utan aktivitet före auto-clear",

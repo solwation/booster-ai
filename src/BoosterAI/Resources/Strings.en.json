@@ -197,6 +197,8 @@
   "settings.cliUpdates.tip": "Update claude, codex and agy in the tab before they start when a newer version exists, at most every six hours per CLI. A failure never stops the start.",
   "settings.tabLogo": "Show the animated BoosterAI logo in tabs",
   "settings.tabLogo.tip": "Briefly show the BoosterAI logo in each tab when its agent starts, restarts or continues. Not shown for Run once.",
+  "settings.tabStatusChannel": "Let the agents in tabs report status and questions to BoosterAI",
+  "settings.tabStatusChannel.tip": "The agent in a tab can say it is done, working or blocked and ask questions that you answer in BoosterAI. Everything goes through files in the session directory on this computer, with no network port. Applies to tabs started or restarted after the change.",
   "settings.autoClear": "Auto-clear when idle for",
   "settings.autoClear.minutes": "min",
   "settings.autoClear.name": "Idle minutes before auto-clear",

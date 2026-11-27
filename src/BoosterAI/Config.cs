@@ -90,6 +90,11 @@ public sealed class AppConfig
     /// <summary>Show BoosterAI's animated logo in a tab before its agent starts, restarts or continues (tab-lib.sh's bs_logo, #242).</summary>
     public bool ShowTabLogo { get; set; } = true;
     /// <summary>
+    /// Let the tabs' agents report status and questions to BoosterAI through files in the session directory (TabChannel, #246/#247).
+    /// On by default; read when a tab starts or restarts. Off: nothing of the channel is created and tabs start as without it.
+    /// </summary>
+    public bool TabStatusChannel { get; set; } = true;
+    /// <summary>
     /// Type /clear into an interactive claude tab once it has been idle for <see cref="AutoClearMinutes"/> (#69), once per idle
     /// period. Off by default; read when a tab starts or restarts (its CLI must run under tab-lib.sh's bs_pty).
     /// </summary>
@@ -229,6 +234,7 @@ public static class ConfigMerge
         S(c => c.ProjectSearchRoot, (c, v) => c.ProjectSearchRoot = v),
         S(c => c.AutoUpdateClis, (c, v) => c.AutoUpdateClis = v),
         S(c => c.ShowTabLogo, (c, v) => c.ShowTabLogo = v),
+        S(c => c.TabStatusChannel, (c, v) => c.TabStatusChannel = v),
         S(c => c.AutoClearIdle, (c, v) => c.AutoClearIdle = v),
         S(c => c.AutoClearMinutes, (c, v) => c.AutoClearMinutes = v),
         S(c => c.CheckForUpdates, (c, v) => c.CheckForUpdates = v),
