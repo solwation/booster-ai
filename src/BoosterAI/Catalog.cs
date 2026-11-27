@@ -11,16 +11,22 @@ public static class Catalog
 
     public static readonly IReadOnlyList<string> Llms = ["claude", "codex", "agy", "aider", "interpreter", "openhands", ShellOnly];
 
-    // Lists from `agy models` and the Codex model cache, 2026-10-26.
+    // Built-in fallback lists (from `agy models` and the Codex model cache, 2026-11-27); ModelDiscovery adds what the CLIs report.
     private static readonly Dictionary<string, string[]> Models = new()
     {
         ["claude"] = [StandardModel, "claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5", "claude-fable-5-2", "claude-fable-5-1"],
-        ["codex"] = [StandardModel, "gpt-6.1-sol", "gpt-6-astra", "gpt-6-sol", "gpt-6-luna", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"],
+        ["codex"] = [StandardModel, "gpt-6.2-sol", "gpt-6.2-astra", "gpt-6.1-sol", "gpt-6.1-terra", "gpt-6-astra", "gpt-6-sol", "gpt-6-luna", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"],
         ["agy"] =
         [
-            StandardModel, "gemini-4-argon-high", "gemini-4-argon-medium", "gemini-4-argon-low",
+            StandardModel,
+            "gemini-4-neon-high", "gemini-4-neon-xhigh", "gemini-4-neon-medium", "gemini-4-neon-low",
+            "gemini-4-carbon-medium", "gemini-4-carbon-high", "gemini-4-carbon-low",
+            "gemini-4-argon-medium", "gemini-4-argon-high", "gemini-4-argon-low",
+            "gemini-4-hydrogen-high", "gemini-4-hydrogen-xhigh", "gemini-4-hydrogen-medium", "gemini-4-hydrogen-low",
+            "gemini-pro-orchestrator-neon", "gemini-pro-orchestrator", "gemini-pro-orchestrator-argon",
             "gemini-3.8-flash-high", "gemini-3.8-flash-medium", "gemini-3.8-flash-low",
-            "claude-opus-5-5-high", "claude-opus-5-5-medium", "claude-sonnet-5-5-high", "claude-sonnet-5-5-medium",
+            "claude-opus-5-5-low", "claude-opus-5-5-medium", "claude-opus-5-5-high",
+            "claude-sonnet-5-5-low", "claude-sonnet-5-5-medium", "claude-sonnet-5-5-high",
             "gpt-oss-120b-medium",
         ],
         ["aider"] =
@@ -32,8 +38,31 @@ public static class Catalog
         [ShellOnly] = [StandardModel],
     };
 
-    public static IReadOnlyList<string> ModelsFor(string llm) =>
-        Models.TryGetValue(llm, out var list) ? list : [StandardModel];
+    private static readonly object DiscoveredLock = new();
+    private static Dictionary<string, string[]> _discovered = [];
+    private static readonly Dictionary<string, IReadOnlyList<string>> Merged = [];
+
+    /// <summary>Models the agent CLIs reported (#265); replaces the earlier discovery. Ids that are not safe are dropped.</summary>
+    public static void SetDiscovered(IReadOnlyDictionary<string, string[]> found)
+    {
+        lock (DiscoveredLock)
+        {
+            _discovered = found.ToDictionary(p => p.Key, p => p.Value.Where(IsSafeModel).ToArray());
+            Merged.Clear();
+        }
+    }
+
+    /// <summary>Standard first, then the discovered ids in the CLI's order, then built-in ones the CLI did not list; no duplicates.</summary>
+    public static IReadOnlyList<string> ModelsFor(string llm)
+    {
+        lock (DiscoveredLock)
+        {
+            if (Merged.TryGetValue(llm, out var cached)) return cached;
+            var builtIn = Models.TryGetValue(llm, out var list) ? list : [StandardModel];
+            var found = _discovered.TryGetValue(llm, out var f) ? f : [];
+            return Merged[llm] = [StandardModel, .. found.Concat(builtIn).Where(m => m != StandardModel).Distinct()];
+        }
+    }
 
     /// <summary>Tab colour themes; a tab keeps its index, so switching theme recolours every tab.</summary>
     public static readonly IReadOnlyList<ColorTheme> Themes =

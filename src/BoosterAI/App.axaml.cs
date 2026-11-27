@@ -58,6 +58,8 @@ public partial class App : Application
             // A minimized or tray-hidden window keeps the app running; closing it (with Minimize to tray off), or Quit in the tray, ends it.
             desktop.ShutdownMode = ShutdownMode.OnMainWindowClose;
             var vm = new MainViewModel(_config) { Sound = new SystemSoundPlayer() };
+            // Model lists from the agent CLIs (#265): cached, refreshed at most daily, never blocks the UI.
+            _ = ModelDiscovery.RefreshAsync(_config.WslDistro, () => Avalonia.Threading.Dispatcher.UIThread.Post(() => { foreach (var t in vm.Tabs) t.RaiseModels(); }));
             var main = new MainWindow(vm, background: desktop.Args?.Contains("--background") == true);
             main.RememberSize();
             desktop.MainWindow = main;

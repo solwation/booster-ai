@@ -477,6 +477,7 @@ public sealed partial class TabViewModel : Observable
         RaiseStatusIndicator();
     }
     public IReadOnlyList<string> Models => Catalog.ModelsFor(_llm);
+    public void RaiseModels() => Raise(nameof(Models));
     public bool IsAi => _llm != Catalog.ShellOnly;
 
     public string Llm
