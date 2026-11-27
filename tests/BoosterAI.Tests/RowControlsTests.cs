@@ -365,7 +365,7 @@ public sealed class RowControlsTests : IDisposable
                 {
                     var row = Row(window, t);
                     Visual name = t.IsSubTab
-                        ? row.GetVisualDescendants().OfType<TextBox>().Single(b => b.Classes.Contains("name"))
+                        ? row.GetVisualDescendants().OfType<TextBox>().Single(b => b.Classes.Contains("name") && !b.Classes.Contains("rename"))
                             .GetVisualDescendants().OfType<Avalonia.Controls.Presenters.TextPresenter>().Single()
                         : row.GetVisualDescendants().OfType<TextBlock>().First(b => b.Classes.Contains("name") && b.IsEffectivelyVisible);
                     return name.TranslatePoint(default, window)!.Value.X;
