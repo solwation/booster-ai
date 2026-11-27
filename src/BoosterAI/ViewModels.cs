@@ -2249,6 +2249,10 @@ public sealed class UpdateViewModel : Observable
     /// <summary>"Show more" and the version link: the release page from the running version to the new release, or
     /// without one what is new in the running version since the version it was updated from.</summary>
     public string MoreUrl => UpdateLogic.MoreUrl(_release, UpdateLogic.Current, AppVersion.Parse(_cfg.UpdatedFromVersion), Loc.Language);
+    /// <summary>The from/to that "Show more" and the version link open in the What's new view (#252); same rule as <see cref="MoreUrl"/>.</summary>
+    public ReleaseRange MoreRange => UpdateLogic.MoreRange(_release, UpdateLogic.Current, AppVersion.Parse(_cfg.UpdatedFromVersion));
+    /// <summary>The release the bar offers, if any: the view shows its summary when the release data does not have it yet.</summary>
+    public ReleaseInfo? OfferedRelease => _release;
     public string InstallTip => Loc.Format("update.install.tip", _release?.Version.ToString() ?? "");
 
     private void RaiseButtons()

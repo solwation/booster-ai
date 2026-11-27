@@ -1,0 +1,195 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="using:BoosterAI"
+        x:Class="BoosterAI.ReleaseNotesWindow" x:DataType="local:ReleaseNotesViewModel"
+        Title="{local:T news.title}" Icon="avares://BoosterAI/Assets/boosterai.ico"
+        Width="980" Height="780" MinWidth="560" MinHeight="420" CanResize="True" WindowStartupLocation="CenterOwner">
+  <!-- What's new (#252): docs/releases.json rendered natively, the same content as docs/releases.html. -->
+  <Window.Styles>
+    <Style Selector="Border.news-section">
+      <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="{StaticResource RadiusLarge}" />
+      <Setter Property="Padding" Value="22,18" />
+      <Setter Property="Margin" Value="0,0,0,18" />
+    </Style>
+    <Style Selector="Border.news-card">
+      <Setter Property="Background" Value="{DynamicResource BackgroundBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="{StaticResource RadiusLarge}" />
+      <Setter Property="Padding" Value="16" />
+      <Setter Property="Margin" Value="0,0,0,12" />
+    </Style>
+    <Style Selector="Border.news-tag">
+      <Setter Property="Background" Value="{DynamicResource SurfaceStrongBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="{StaticResource RadiusSmall}" />
+      <Setter Property="Padding" Value="8,1" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="TextBlock.howto-label">
+      <Setter Property="Foreground" Value="{DynamicResource LinkBrush}" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="Button.chip">
+      <Setter Property="Padding" Value="10,4" />
+      <Setter Property="Margin" Value="0,0,8,8" />
+      <Setter Property="CornerRadius" Value="{StaticResource RadiusMedium}" />
+    </Style>
+    <Style Selector="Button.news-image">
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Background" Value="{DynamicResource SurfaceStrongBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="{StaticResource RadiusMedium}" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalAlignment" Value="Top" />
+      <Setter Property="Cursor" Value="Hand" />
+      <Setter Property="ClipToBounds" Value="True" />
+    </Style>
+  </Window.Styles>
+
+  <Window.Resources>
+    <DataTemplate x:Key="FeatureCard" x:DataType="local:FeatureCardViewModel">
+      <Border Classes="news-card">
+        <Grid ColumnDefinitions="23*,20*">
+          <Button Grid.Column="0" Classes="news-image" IsVisible="{Binding HasImageArea}" Click="OnOpenImage" Margin="0,0,18,0"
+                  ToolTip.Tip="{Binding ImageUrl}" AutomationProperties.Name="{Binding ImageName}">
+            <Panel>
+              <Image Source="{Binding Image}" Stretch="Uniform" MaxHeight="420" IsVisible="{Binding !ShowImageStatus}" />
+              <TextBlock Classes="caption muted" Text="{Binding ImageStatus}" IsVisible="{Binding ShowImageStatus}" TextWrapping="Wrap"
+                         TextAlignment="Center" HorizontalAlignment="Center" Margin="16,36" />
+            </Panel>
+          </Button>
+          <StackPanel Grid.Column="{Binding TextColumn}" Grid.ColumnSpan="{Binding TextSpan}" Spacing="4">
+            <TextBlock Classes="subtitle" Text="{Binding Title}" TextWrapping="Wrap" AutomationProperties.HeadingLevel="3" />
+            <TextBlock Classes="caption muted" Text="{Binding VersionsText}" IsVisible="{Binding HasVersions}" />
+            <TextBlock Classes="caption howto-label" Text="{local:T news.howto}" IsVisible="{Binding HasHowto}" Margin="0,6,0,0" />
+            <TextBlock Classes="body muted" Text="{Binding Howto}" TextWrapping="Wrap" IsVisible="{Binding HasHowto}" />
+            <ItemsControl ItemsSource="{Binding Links}" IsVisible="{Binding HasLinks}" Margin="0,10,0,0">
+              <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="local:NewsLink">
+                  <Button Classes="chip" Click="OnOpenLink" ToolTip.Tip="{Binding Url}" AutomationProperties.Name="{Binding Name}">
+                    <TextBlock Classes="body-small" Text="{Binding Text}" />
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </Grid>
+      </Border>
+    </DataTemplate>
+  </Window.Resources>
+
+  <Grid RowDefinitions="Auto,*">
+    <Grid ColumnDefinitions="*,Auto" Margin="28,22,28,14">
+      <StackPanel Spacing="4">
+        <TextBlock Classes="display" Text="{Binding Title}" TextWrapping="Wrap" AutomationProperties.HeadingLevel="1" />
+        <TextBlock Classes="body muted" Text="{Binding Subtitle}" TextWrapping="Wrap" />
+        <ItemsControl ItemsSource="{Binding Notices}" IsVisible="{Binding HasNotices}" Margin="0,8,0,0">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="x:String">
+              <Border Classes="callout warning" Margin="0,0,0,6">
+                <TextBlock Classes="body-small" Text="{Binding}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <TextBlock x:Name="LinkFailed" Classes="body-small error" Text="{local:T news.linkFailed}" IsVisible="False" />
+      </StackPanel>
+      <Button x:Name="BrowserButton" Grid.Column="1" Classes="secondary" Click="OnOpenBrowser" VerticalAlignment="Top" Margin="16,4,0,0" Padding="14,6"
+              Content="{local:T news.browser}" ToolTip.Tip="{local:T news.browser.tip}" />
+    </Grid>
+
+    <ScrollViewer x:Name="Scroller" Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
+      <StackPanel Margin="28,0,28,24">
+        <StackPanel IsVisible="{Binding IsEmpty}" Spacing="8" HorizontalAlignment="Center" Margin="0,40">
+          <TextBlock Classes="body muted" Text="{Binding EmptyText}" HorizontalAlignment="Center" />
+          <Button Classes="secondary" Content="{local:T news.showAll}" Click="OnShowAll" HorizontalAlignment="Center" Padding="14,6" />
+        </StackPanel>
+
+        <Border Classes="news-section" IsVisible="{Binding HasOverview}">
+          <StackPanel Spacing="8">
+            <TextBlock Classes="title" Text="{local:T news.overview}" AutomationProperties.HeadingLevel="2" />
+            <TextBlock Classes="body muted" Text="{Binding OverviewIntro}" TextWrapping="Wrap" Margin="0,0,0,6" />
+            <ItemsControl ItemsSource="{Binding Overview}" ItemTemplate="{StaticResource FeatureCard}" />
+          </StackPanel>
+        </Border>
+
+        <ItemsControl ItemsSource="{Binding Releases}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="local:ReleaseSectionViewModel">
+              <Border Classes="news-section">
+                <StackPanel Spacing="8">
+                  <WrapPanel>
+                    <TextBlock Classes="title" Text="{Binding Heading}" Margin="0,0,14,0" AutomationProperties.HeadingLevel="2" VerticalAlignment="Center" />
+                    <TextBlock Classes="body muted" Text="{Binding Date}" IsVisible="{Binding HasDate}" Margin="0,0,12,0" VerticalAlignment="Center" />
+                    <Border Classes="news-tag" IsVisible="{Binding HasTag}">
+                      <TextBlock Classes="caption" Text="{Binding Tag}" />
+                    </Border>
+                  </WrapPanel>
+                  <TextBlock Classes="body" Text="{Binding Summary}" IsVisible="{Binding HasSummary}" TextWrapping="Wrap" />
+                  <WrapPanel IsVisible="{Binding HasRefs}">
+                    <TextBlock Classes="body-small muted" Text="{local:T news.newsIn}" Margin="0,0,10,0" VerticalAlignment="Center" />
+                    <ItemsControl ItemsSource="{Binding Refs}">
+                      <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="local:NewsRef">
+                          <Button Classes="link" Click="OnJumpToCard" Margin="0,0,14,0" ToolTip.Tip="{local:T news.newsIn.tip}"
+                                  AutomationProperties.Name="{Binding Text}">
+                            <TextBlock Text="{Binding Text}" />
+                          </Button>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </WrapPanel>
+                  <ItemsControl ItemsSource="{Binding Features}" IsVisible="{Binding HasFeatures}" ItemTemplate="{StaticResource FeatureCard}" Margin="0,4,0,0" />
+                  <Expander Header="{Binding ChangesHeader}" IsExpanded="{Binding ChangesOpen}" HorizontalAlignment="Stretch">
+                    <StackPanel Spacing="4">
+                      <TextBlock Classes="body-small muted" Text="{local:T news.noChanges}" IsVisible="{Binding NoChanges}" />
+                      <ItemsControl ItemsSource="{Binding Changes}">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="local:ChangeLine">
+                            <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,2">
+                              <TextBlock Classes="body-small muted" Text="•" Margin="0,0,8,0" />
+                              <SelectableTextBlock Grid.Column="1" Classes="body-small" Text="{Binding Text}" TextWrapping="Wrap" />
+                              <ItemsControl Grid.Column="2" ItemsSource="{Binding Issues}" IsVisible="{Binding HasIssues}" Margin="12,0,0,0">
+                                <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="8" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                  <DataTemplate x:DataType="local:NewsLink">
+                                    <Button Classes="link" Padding="0" Click="OnOpenLink" ToolTip.Tip="{Binding Url}" AutomationProperties.Name="{Binding Name}">
+                                      <TextBlock Classes="caption" Text="{Binding Text}" />
+                                    </Button>
+                                  </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                              </ItemsControl>
+                            </Grid>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </StackPanel>
+                  </Expander>
+                  <ItemsControl ItemsSource="{Binding Links}" Margin="0,6,0,0">
+                    <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="local:NewsLink">
+                        <Button Classes="chip" Click="OnOpenLink" ToolTip.Tip="{Binding Url}" AutomationProperties.Name="{Binding Name}">
+                          <TextBlock Classes="body-small" Text="{Binding Text}" />
+                        </Button>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+    </ScrollViewer>
+  </Grid>
+</Window>

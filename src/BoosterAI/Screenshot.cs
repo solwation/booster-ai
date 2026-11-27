@@ -8,7 +8,7 @@ using Avalonia.Threading;
 namespace BoosterAI;
 
 /// <summary>
-/// <c>--screenshot file.png [--window main|local-model|local-models|close|settings|install|import|restart|remove-project|alias|wsl-shutdown|memory-reclaim|agent-yolo|wsl|unsaved|setup|uninstall] [--theme light|dark] [--config file.json] [--fake-update [manual:]0.3.0] [--fake-status [error:]text] [--fake-denied] [--fake-changed] [--fake-restartable N] [--fake-peek [N]] [--fake-setup [cli|wsl|alias]] [--fake-long-status] [--check-clipping] [--fake-agent-list [N]] [--fake-new-subtab] [--fake-row-menu [N]] [--fake-memory-reclaim gradual|dropcache|disabled|other|old|unknown] [--fake-limits] [--fake-limit-change [seconds]] [--fake-quota] [--fake-dots] [--fake-channel status|question|answered|stale]</c>:
+/// <c>--screenshot file.png [--window main|local-model|local-models|close|settings|install|import|restart|remove-project|alias|wsl-shutdown|memory-reclaim|agent-yolo|wsl|unsaved|setup|releases|uninstall] [--theme light|dark] [--config file.json] [--fake-update [manual:]0.3.0] [--fake-status [error:]text] [--fake-denied] [--fake-changed] [--fake-restartable N] [--fake-peek [N]] [--fake-setup [cli|wsl|alias]] [--fake-long-status] [--check-clipping] [--fake-agent-list [N]] [--fake-new-subtab] [--fake-row-menu [N]] [--fake-memory-reclaim gradual|dropcache|disabled|other|old|unknown] [--fake-limits] [--fake-limit-change [seconds]] [--fake-quota] [--fake-dots] [--fake-channel status|question|answered|stale]</c>:
 /// renders a window with Avalonia's headless Skia platform. Nothing is shown on the desktop and no
 /// focus changes. The window frame (title bar) is not drawn; only the client area.
 /// </summary>
@@ -148,6 +148,26 @@ internal static class Screenshot
         return ConfirmSetupWindow.MemoryReclaim(value, vm.Optimization.Reclaim.Preview(value), @"C:\Users\me\.wslconfig");
     }
 
+    /// <summary>
+    /// --window releases [--section FROM..TO|VERSION|all]: What's new (#252) for that range from the built-in release data,
+    /// with the screenshots read from the repository's docs/ folder; no network. FROM..TO (either side may be empty) as the
+    /// update bar passes it, VERSION alone as the range from the release before it; default all releases.
+    /// </summary>
+    private static ReleaseNotesWindow SampleReleaseNotes(string? section)
+    {
+        var range = ReleaseRange.All;
+        if (section is { Length: > 0 } and not "all")
+        {
+            var parts = section.Split("..");
+            range = parts.Length == 2 ? new ReleaseRange(AppVersion.Parse(parts[0]), AppVersion.Parse(parts[1]))
+                : AppVersion.Parse(section) is { } only ? new ReleaseRange(only, only)
+                : throw new ArgumentException($"Unknown --section '{section}' for --window releases (FROM..TO, VERSION or all)");
+        }
+        var vm = new ReleaseNotesViewModel(OfflineReleaseNotesSource.ForScreenshot(), range);
+        vm.LoadImagesAsync().GetAwaiter().GetResult();
+        return new ReleaseNotesWindow(vm);
+    }
+
     /// <summary>The valid <c>--window</c> values and how to build each window. The error message, and the docs checked by a test, use these names.</summary>
     internal static readonly IReadOnlyDictionary<string, Func<ScreenshotOptions, MainViewModel, App, Window>> Windows =
         new Dictionary<string, Func<ScreenshotOptions, MainViewModel, App, Window>>
@@ -168,6 +188,7 @@ internal static class Screenshot
             ["wsl"] = (o, vm, app) => ConfirmSetupWindow.Wsl(),
             ["unsaved"] = (o, vm, app) => new UnsavedChangesWindow(SampleUnsaved(vm)),
             ["setup"] = (o, vm, app) => SampleWizard(app, o.Section),
+            ["releases"] = (o, vm, app) => SampleReleaseNotes(o.Section),
             ["uninstall"] = (o, vm, app) => ConfirmSetupWindow.Uninstall(Installer.SamplePlan()),
         };
 

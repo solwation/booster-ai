@@ -24,6 +24,8 @@
   <ItemGroup>
     <EmbeddedResource Include="Resources/Strings.*.json" WithCulture="false" />
     <EmbeddedResource Include="../../assets/sounds/*.wav" LogicalName="Sounds.%(Filename)%(Extension)" />
+    <!-- What's new (#252) works offline from the release data of the build; screenshots load from Pages and are cached. -->
+    <EmbeddedResource Include="../../docs/releases.json" LogicalName="releases.json" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="11.3.22" />

@@ -43,7 +43,7 @@ public sealed class VersionLinkTests : IDisposable
             {
                 var link = window.GetVisualDescendants().OfType<Button>().Single(b => b.Classes.Contains("version"));
                 return (AutomationProperties.GetName(link), ToolTip.GetTip(link) as string,
-                    (link.Content as TextBlock)?.Text, link.Focusable && link.IsEffectivelyVisible, vm.Update.MoreUrl);
+                    (link.Content as TextBlock)?.Text, link.Focusable && link.IsEffectivelyVisible, (vm.Update.MoreUrl, vm.Update.MoreRange));
             }
             finally { window.Close(); }
         });
@@ -52,6 +52,43 @@ public sealed class VersionLinkTests : IDisposable
         Assert.Equal("v" + UpdateLogic.Current, text);
         Assert.True(focusable);
         // Without a known newer release, "Show more" and the version both lead to what is new in the running version (#245).
-        Assert.Equal(UpdateLogic.ReleaseNotesUrl(null, UpdateLogic.Current, language), more);
+        Assert.Equal(UpdateLogic.ReleaseNotesUrl(null, UpdateLogic.Current, language), more.MoreUrl);
+        // #252: they open What's new inside BoosterAI for the same range.
+        Assert.Equal(UpdateLogic.Range(null, UpdateLogic.Current), more.MoreRange);
+    }
+
+    [Fact]
+    public void TheVersionLinkOpensWhatsNewInsideBoosterAIAndReusesIt()
+    {
+        var (opened, range, sameWindow, owner) = UiSession.Run(() =>
+        {
+            var before = MainWindow.NewsSource;
+            MainWindow.NewsSource = () => new OfflineReleaseNotesSource(ReleaseNotes.EmbeddedJson, null);
+            var vm = new MainViewModel(new AppConfig { UpdatedFromVersion = "0.0.1" });
+            var window = new MainWindow(vm);
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            try
+            {
+                var link = window.GetVisualDescendants().OfType<Button>().Single(b => b.Classes.Contains("version"));
+                link.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                Dispatcher.UIThread.RunJobs();
+                var news = window.News;
+                link.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                Dispatcher.UIThread.RunJobs();
+                var result = (news is { IsVisible: true }, news?.ViewModel.Range, ReferenceEquals(news, window.News), news?.Owner == window);
+                news?.Close();
+                return result;
+            }
+            finally
+            {
+                window.Close();
+                MainWindow.NewsSource = before;
+            }
+        });
+        Assert.True(opened);
+        Assert.True(sameWindow);
+        Assert.True(owner);
+        Assert.Equal(UpdateLogic.Range(AppVersion.Parse("0.0.1"), UpdateLogic.Current), range);
     }
 }

@@ -62,7 +62,7 @@ BoosterAI-*-linux-x64/install-linux.sh
 ## Documentation & More
 
 - **[Website](https://solwation.github.io/booster-ai/)**: Features overview, screenshots, and visual tour.
-- **[What's new](https://solwation.github.io/booster-ai/releases.html)**: Every release, newest first, with screenshots, how to use each feature and the full list of changes (Swedish and English).
+- **[What's new](https://solwation.github.io/booster-ai/releases.html)**: Every release, newest first, with screenshots, how to use each feature and the full list of changes (Swedish and English). In the app, *Show more* in the update bar and the version in the bottom-left corner show the same news inside BoosterAI, with *Open in browser* for this page.
 - **[Details](docs/DETAILS.md)**: Deep dive into platform architecture, settings, configuration, tab recovery, and background updating.
 - **[Development](docs/DEVELOPMENT.md)**: Building from source, testing, headless screenshot rendering, and release process.
 - **[Contributing](AGENTS.md)**: Issue workflow, orchestra coordination, and development guidelines.

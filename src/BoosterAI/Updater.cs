@@ -212,29 +212,42 @@ public static class UpdateLogic
     /// <summary>The release page on GitHub Pages (docs/releases.html): every release between from and to, with screenshots (#245).</summary>
     public const string ReleaseNotesPage = "https://solwation.github.io/booster-ai/releases.html";
 
+    private static bool Known(AppVersion? v) => v is not null && v.CompareTo(new AppVersion(0, 0, 0, "")) > 0;
+
     /// <summary>
-    /// The release page for the releases after <paramref name="from"/> up to and including <paramref name="to"/>, in the
-    /// app language. An unknown version (null or 0.0.0) is left out, and so is a from that is not older than to; with
-    /// neither the page lists every release.
+    /// The releases after <paramref name="from"/> up to and including <paramref name="to"/>: an unknown version (null
+    /// or 0.0.0) is left out, and so is a from that is not older than to; with neither every release is shown.
     /// </summary>
-    public static string ReleaseNotesUrl(AppVersion? from, AppVersion? to, string language)
+    public static ReleaseRange Range(AppVersion? from, AppVersion? to) =>
+        new(Known(from) && (!Known(to) || from!.CompareTo(to) < 0) ? from : null, Known(to) ? to : null);
+
+    /// <summary>
+    /// The release page for <see cref="Range"/>(from, to) in the app language and, when given, the app's resolved theme
+    /// (light or dark, #251/#252), which the page then uses instead of the browser's preference.
+    /// </summary>
+    public static string ReleaseNotesUrl(AppVersion? from, AppVersion? to, string language, string? theme = null) =>
+        ReleaseNotesUrl(Range(from, to), language, theme);
+
+    public static string ReleaseNotesUrl(ReleaseRange range, string language, string? theme = null)
     {
-        static bool Known(AppVersion? v) => v is not null && v.CompareTo(new AppVersion(0, 0, 0, "")) > 0;
         var query = new List<string>();
-        if (Known(from) && (!Known(to) || from!.CompareTo(to) < 0)) query.Add("from=" + Uri.EscapeDataString(from!.ToString()));
-        if (Known(to)) query.Add("to=" + Uri.EscapeDataString(to!.ToString()));
+        if (range.From is { } from) query.Add("from=" + Uri.EscapeDataString(from.ToString()));
+        if (range.To is { } to) query.Add("to=" + Uri.EscapeDataString(to.ToString()));
         query.Add("lang=" + (language == "sv" ? "sv" : "en"));
+        if (theme is "light" or "dark") query.Add("theme=" + theme);
         return ReleaseNotesPage + "?" + string.Join("&", query);
     }
 
     /// <summary>
-    /// The "Show more" and version link target, the release page: from the running version to an offered newer
-    /// release; without one, what is new in the running version since the version it was updated from (when known).
+    /// What "Show more" and the version link show (#245, #252): from the running version to an offered newer release;
+    /// without one, what is new in the running version since the version it was updated from (when known).
     /// </summary>
-    public static string MoreUrl(ReleaseInfo? release, AppVersion current, AppVersion? updatedFrom, string language) =>
-        release is not null && current.CompareTo(release.Version) < 0
-            ? ReleaseNotesUrl(current, release.Version, language)
-            : ReleaseNotesUrl(updatedFrom, current, language);
+    public static ReleaseRange MoreRange(ReleaseInfo? release, AppVersion current, AppVersion? updatedFrom) =>
+        release is not null && current.CompareTo(release.Version) < 0 ? Range(current, release.Version) : Range(updatedFrom, current);
+
+    /// <summary>The release page for <see cref="MoreRange"/>, for "Open in browser" in the in-app view.</summary>
+    public static string MoreUrl(ReleaseInfo? release, AppVersion current, AppVersion? updatedFrom, string language, string? theme = null) =>
+        ReleaseNotesUrl(MoreRange(release, current, updatedFrom), language, theme);
 
     /// <summary>
     /// Records that <paramref name="current"/> runs: when the last run was an older version, that one becomes

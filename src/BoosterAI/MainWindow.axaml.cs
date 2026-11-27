@@ -422,10 +422,33 @@ public partial class MainWindow : Window
         catch (Exception ex) { _vm.ShowError(ErrorKind.Link, Loc.Format("status.openFailed", ex.Message), () => OnUpdatePage(sender, e)); }
     }
 
+    private ReleaseNotesWindow? _news;
+
+    /// <summary>Where What's new gets its data; tests replace it so no request leaves the machine.</summary>
+    internal static Func<IReleaseNotesSource> NewsSource { get; set; } = ReleaseNotesSource.ForApp;
+
+    /// <summary>The open What's new view, if any.</summary>
+    internal ReleaseNotesWindow? News => _news;
+
+    /// <summary>
+    /// "Show more" in the update bar and the version link (#252): What's new in BoosterAI, from the running version to
+    /// the offered release, or what is new since the version this one was updated from. An open view is reused.
+    /// </summary>
     private async void OnUpdateMore(object? sender, RoutedEventArgs e)
     {
-        try { if (TopLevel.GetTopLevel(this)?.Launcher is { } l) await l.LaunchUriAsync(new Uri(_vm.Update.MoreUrl)); }
-        catch (Exception ex) { _vm.ShowError(ErrorKind.Link, Loc.Format("status.openFailed", ex.Message), () => OnUpdateMore(sender, e)); }
+        var range = _vm.Update.MoreRange;
+        if (_news is { } open && open.ViewModel.Range == range)
+        {
+            if (open.WindowState == WindowState.Minimized) open.WindowState = WindowState.Normal;
+            open.Activate();
+            return;
+        }
+        _news?.Close();
+        var news = new ReleaseNotesWindow(new ReleaseNotesViewModel(NewsSource(), range, _vm.Update.OfferedRelease));
+        _news = news;
+        news.Closed += (_, _) => { if (_news == news) _news = null; };
+        news.Show(this);
+        await news.LoadAsync();
     }
 
     private void OnUpdateLater(object? sender, RoutedEventArgs e) => _vm.Update.Later();

@@ -11,6 +11,10 @@
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://solwation.github.io/booster-ai/releases.html">
   <meta property="og:image" content="https://solwation.github.io/booster-ai/assets/boosterai.png">
+  <script>
+    // theme=light|dark (the app's resolved theme, #251/#252) wins over the browser's prefers-color-scheme; set before the styles apply.
+    (function () { var t = new URLSearchParams(location.search).get('theme'); if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t); })();
+  </script>
   <link rel="icon" type="image/svg+xml" href="assets/boosterai.svg">
   <link rel="icon" type="image/png" href="assets/boosterai.png">
   <!-- The release page (#245): data from releases.json (tools/release-page.py), the GitHub releases API as fallback.
@@ -36,8 +40,9 @@
       --heading: linear-gradient(180deg, #ffffff 30%, #94a3b8 100%);
       --link: #7dd3fc;
     }
+    /* Light: the browser's preference, unless the app passed theme=dark; theme=light always (#251/#252). */
     @media (prefers-color-scheme: light) {
-      :root {
+      :root:not([data-theme="dark"]) {
         --bg: #f6f8fc;
         --bg-card: rgba(255, 255, 255, 0.9);
         --bg-inset: rgba(15, 23, 42, 0.03);
@@ -58,6 +63,28 @@
         --link: #0369a1;
       }
     }
+    :root[data-theme="light"] {
+      --bg: #f6f8fc;
+      --bg-card: rgba(255, 255, 255, 0.9);
+      --bg-inset: rgba(15, 23, 42, 0.03);
+      --border: rgba(15, 23, 42, 0.09);
+      --border-strong: rgba(15, 23, 42, 0.18);
+      --cyan: #0284c7;
+      --blue: #2563eb;
+      --purple: #7c3aed;
+      --amber: #b45309;
+      --text: #0f172a;
+      --text-muted: #475569;
+      --text-dim: #64748b;
+      --header-bg: rgba(246, 248, 252, 0.8);
+      --shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+      --glow-a: rgba(56, 189, 248, 0.16);
+      --glow-b: rgba(168, 85, 247, 0.09);
+      --heading: linear-gradient(180deg, #0f172a 30%, #334155 100%);
+      --link: #0369a1;
+    }
+    :root[data-theme="light"] { color-scheme: light; }
+    :root[data-theme="dark"] { color-scheme: dark; }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -296,7 +323,12 @@
     var params = new URLSearchParams(location.search);
     var lang = params.get('lang');
     if (lang !== 'sv' && lang !== 'en') lang = /^sv\b/i.test(navigator.language || '') ? 'sv' : 'en';
+    var theme = params.get('theme');
+    if (theme !== 'light' && theme !== 'dark') theme = null;
     var data = null, fromApi = false, loadFailed = false;
+
+    // "All releases" keeps the language and the theme the page was opened with.
+    function allHref() { return 'releases.html?lang=' + lang + (theme ? '&theme=' + theme : ''); }
 
     function t(key, args) {
       var s = (T[lang] && T[lang][key]) || T.en[key] || key;
@@ -448,6 +480,7 @@
       document.documentElement.lang = lang;
       document.title = t('title');
       document.querySelectorAll('[data-t]').forEach(function (e) { e.textContent = t(e.getAttribute('data-t')); });
+      document.querySelectorAll('a[data-t="all"]').forEach(function (a) { a.setAttribute('href', allHref()); });
       document.querySelectorAll('.lang button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-lang') === lang)); });
       var list = document.getElementById('releases'), notices = document.getElementById('notices'), toc = document.getElementById('toc');
       notices.textContent = ''; toc.textContent = ''; toc.setAttribute('aria-label', t('tocLabel'));
@@ -499,7 +532,7 @@
 
       list.textContent = '';
       if (!shown.length) {
-        list.appendChild(el('p', { class: 'empty' }, [t('empty'), ' ', el('a', { href: 'releases.html?lang=' + lang, text: t('showAll') })]));
+        list.appendChild(el('p', { class: 'empty' }, [t('empty'), ' ', el('a', { href: allHref(), text: t('showAll') })]));
         return;
       }
       var cards = shown.length > 1 ? group(shown) : null;
