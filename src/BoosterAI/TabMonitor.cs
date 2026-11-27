@@ -785,6 +785,9 @@ for line in sys.stdin:
         catch (IOException) { /* restarts of older tabs show no logo */ }
         try { File.WriteAllText(Path.Combine(Directory, AgyStatusLine.ScriptFile), AgyStatusLine.Script.Replace("\r\n", "\n") + "\n"); }
         catch (IOException) { /* no plan limits from this session's agy tabs */ }
+        // The status channel's agent side (#248); inert until a tab starts with TabStatusChannel on, also for a later restart.
+        try { TabChannelAgent.Write(Directory, OperatingSystem.IsWindows() ? PathMapping.ToWslPath(Directory) : Directory); }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { /* the tabs' agents cannot report */ }
         _next = System.IO.Directory.GetFiles(Directory, "tab*.log")
             .Select(f => int.TryParse(Path.GetFileNameWithoutExtension(f)[3..], CultureInfo.InvariantCulture, out var n) ? n : 0)
             .DefaultIfEmpty(0).Max();

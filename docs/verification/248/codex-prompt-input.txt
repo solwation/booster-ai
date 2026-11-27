@@ -1,0 +1,10 @@
+# codex-cli 0.172.0: codex <the tab's -c overrides> debug prompt-input hi  (renders what the model sees; no model call)
+# Overrides: mcp_servers.boosterai.command=python3, args=['-I','<session>/bin/boosterai-tab','mcp'], env_vars=[BOOSTERAI_TAB_*],
+#            tool_timeout_sec=3660, default_tools_approval_mode=approve, developer_instructions=<instruction>
+
+## developer message containing the instruction:
+You run in a BoosterAI tab. Call boosterai_status with state done when you have finished and have nothing left to do, blocked with the reason when you cannot continue, and working when you start a new task. Use boosterai_ask only for questions that only the user can answer.
+
+## tools section (excerpt): the server started and listed its tools under mcp__boosterai
+Deferred tool namespaces:
+- mcp__boosterai

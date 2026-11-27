@@ -1,0 +1,5 @@
+{"Language":"en","TabStatusChannel":true,"AutoUpdateClis":false,"Tabs":[
+{"Name":"Example web","Directory":"~/projects/example-web","Llm":"claude","Model":"standard","Orkester":true,"Enabled":true},
+{"Name":"Example api","Directory":"~/projects/example-api","Llm":"codex","Model":"standard","Orkester":true,"Enabled":true},
+{"Name":"Example docs","Directory":"~/projects/example-docs","Llm":"agy","Model":"standard","Orkester":false,"Enabled":true},
+{"Name":"Example batch","Directory":"~/projects/example-batch","Llm":"claude","Model":"standard","Orkester":true,"NonInteractive":true,"Enabled":true}]}

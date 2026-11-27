@@ -248,9 +248,10 @@ public class TabChannelTests
             Assert.Equal("1", env[TabChannel.VersionVariable]);
             Assert.Empty(Directory.GetFileSystemEntries(session.Directory, "*.events"));
             Assert.Empty(Directory.GetFileSystemEntries(session.Directory, "*.answers"));
-            // The tab script is the same either way until the agent side (#248) uses the channel.
+            // Off, the tab script has nothing of the channel (#248 exports and registers it only when on).
             var tab = new TabConfig { Name = "Example", Directory = "~/example", Llm = "claude" };
-            Assert.Equal(Launcher.TabScript(tab, null, off), Launcher.TabScript(tab, null, off with { StatusChannel = true }));
+            Assert.DoesNotContain("BOOSTERAI_TAB", Launcher.TabScript(tab, null, off));
+            Assert.Contains("BOOSTERAI_TAB", Launcher.TabScript(tab, null, on));
         }
         finally { Directory.Delete(root, recursive: true); }
     }

@@ -97,11 +97,20 @@ internal static class Program
                     + $"full >= {TabLogo.FullColumns}x{TabLogo.FullLines}, wordmark >= {TabLogo.WordColumns}x{TabLogo.WordLines}, one line >= {TabLogo.LineColumns} columns, "
                     + "still and plain with NO_COLOR or without 256 colours, nothing without a terminal"
                 : "tab logo: off (ShowTabLogo false)");
-            // The tab status channel's files (#247); the agent's side and its registration come with #248.
-            Console.WriteLine(cfg.TabStatusChannel
-                ? $"tab status channel (#247, protocol v{TabChannel.Version}): agents append to {dir}/tabN.events, BoosterAI answers in {dir}/tabN.answers/<id>; "
-                    + $"variables for the agent side (tab1, not exported yet) {string.Join(", ", TabChannel.Environment(new TabTrack(dir + "/tab-lib.sh", dir, "tab1", StatusChannel: true)).Select(p => p.Key + "=" + p.Value))}"
-                : "tab status channel: off (TabStatusChannel false)");
+            // The tab status channel (#247) and its agent side (#248): variables, command, MCP server and instruction.
+            if (cfg.TabStatusChannel)
+            {
+                var ct = new TabTrack(dir + "/tab-lib.sh", dir, "tab1", StatusChannel: true);
+                Console.WriteLine($"tab status channel (#247, protocol v{TabChannel.Version}): agents append to {dir}/tabN.events, BoosterAI answers in {dir}/tabN.answers/<id>; "
+                    + $"each tracked tab exports (tab1) {TabChannelAgent.ExportCommand(ct)[..^4]}");
+                Console.WriteLine($"tab status channel agent side (#248, python3): {TabChannelAgent.CommandPath(dir)} status|ask on PATH, {TabChannelAgent.CommandName} mcp is the stdio MCP server "
+                    + $"(boosterai_status, boosterai_ask waits up to {TabChannelAgent.AskTimeoutSeconds} s by default, at most {TabChannelAgent.MaxAskTimeoutSeconds} s); not for Run once");
+                Console.WriteLine($"tab status channel claude ({TabChannelAgent.McpConfigPath(dir)}, added to the user's own MCP servers):{TabChannelAgent.Arguments("claude", ct)}");
+                Console.WriteLine("  " + TabChannelAgent.McpConfigJson(dir).ReplaceLineEndings(" ").Trim());
+                Console.WriteLine($"tab status channel codex:{TabChannelAgent.Arguments("codex", ct)}");
+                Console.WriteLine("tab status channel other agents (agy, aider, openhands, interpreter): variables and the command only, no MCP registration or instruction");
+            }
+            else Console.WriteLine("tab status channel: off (TabStatusChannel false): no variables, no MCP server, no instruction");
             Console.WriteLine("wt.exe " + string.Join(' ', Launcher.WindowsTerminalArgs(tabs, cfg.WslDistro, null, tracks, "BoosterAI-<session>", cfg.ZoomPercent)
                 .Select(a => a.Contains(' ') ? $"\"{a}\"" : a)));
             // "Show the tab in the terminal" (#213): the tab's index is its rank among the session's live tabs, here all of them.

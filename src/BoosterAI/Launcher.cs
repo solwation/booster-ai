@@ -29,9 +29,11 @@ public static class Launcher
             return $"{account}{cd} && {LaunchCommand(tab, prompt, null, resume && CanContinue(tab))} || true && exec bash";
         }
         var cli = LaunchCommand(tab, prompt, track, resume && CanContinue(tab));
+        // The status channel's variables and boosterai-tab on PATH (#248), "" when the setting is off.
+        var channel = TabChannelAgent.ExportCommand(track);
         var tracked = tab.Llm == Catalog.ShellOnly
-            ? $"{cd} || true && {Hook("bs_reset")} && {LogoHook(tab, prompt, false, track)}{Hook("bs_cli")} && bs_run {Quote("bash")}"
-            : $"{account}{cd} && {Hook("bs_reset")} && {LogoHook(tab, prompt, resume && CanContinue(tab), track)}{UpdateHook(tab, track)}{Hook("bs_cli")} && {cli} && {Hook("bs_done 0")} || {Hook("bs_done $?")} && {Next} && (type bs_shell >/dev/null 2>&1) && bs_shell || bash";
+            ? $"{channel}{cd} || true && {Hook("bs_reset")} && {LogoHook(tab, prompt, false, track)}{Hook("bs_cli")} && bs_run {Quote("bash")}"
+            : $"{account}{channel}{cd} && {Hook("bs_reset")} && {LogoHook(tab, prompt, resume && CanContinue(tab), track)}{UpdateHook(tab, track)}{Hook("bs_cli")} && {cli} && {Hook("bs_done 0")} || {Hook("bs_done $?")} && {Next} && (type bs_shell >/dev/null 2>&1) && bs_shell || bash";
         // Select before executing: an unsuccessful CLI or a shell's exit code must never run the fallback a second
         // time. if/then/else runs the chosen body in the tab's own shell (the tracked PID) and, unlike the earlier
         // eval "$bs_command", needs no double quotes, which Windows Terminal drops from the command (#124, see Quote).
@@ -57,8 +59,8 @@ public static class Launcher
     /// variable an earlier run exported there and then exports the new choice (#186).
     /// </summary>
     public static string RestartScript(TabConfig tab, TabTrack track, bool resume) =>
-        tab.Llm == Catalog.ShellOnly ? $"{Cd(InWsl(tab))} || true && {Hook("bs_reset")} && {RestartLogoHook(tab, resume: false, track)}{Accounts.ResetCommand}"
-            : $"{Cd(InWsl(tab))} && {Hook("bs_reset")} && {RestartLogoHook(tab, resume, track)}{UpdateHook(tab, track)}{Accounts.ResetCommand} && {Accounts.ExportCommand(InWsl(tab))}{Hook("bs_cli")} && {LaunchCommand(tab, null, track, resume)} && {Hook("bs_done 0")} || {Hook("bs_done $?")}";
+        tab.Llm == Catalog.ShellOnly ? $"{TabChannelAgent.ExportCommand(track)}{Cd(InWsl(tab))} || true && {Hook("bs_reset")} && {RestartLogoHook(tab, resume: false, track)}{Accounts.ResetCommand}"
+            : $"{TabChannelAgent.ExportCommand(track)}{Cd(InWsl(tab))} && {Hook("bs_reset")} && {RestartLogoHook(tab, resume, track)}{UpdateHook(tab, track)}{Accounts.ResetCommand} && {Accounts.ExportCommand(InWsl(tab))}{Hook("bs_cli")} && {LaunchCommand(tab, null, track, resume)} && {Hook("bs_done 0")} || {Hook("bs_done $?")}";
 
     /// <summary>
     /// The step that shows BoosterAI's logo after the terminal reset of a start, restart or continuation (tab-lib.sh's bs_logo, #242),
@@ -239,6 +241,8 @@ public static class Launcher
         if (track is not null && tab.Llm == "claude" && !once) args.Add("--settings " + Quote(HooksFile(track)));
         // An interactive agy records quota usage through its statusLine (#206).
         if (track is not null && tab.Llm == "agy" && !once) args.Add("--settings " + Quote(AgySettingsFile(track)));
+        // The status channel's MCP server and instruction (#248), last so that no variadic option takes the prompt; never Run once.
+        if (!once && TabChannelAgent.Arguments(tab.Llm, track) is { Length: > 0 } channel) args.Add(channel[1..]);
         var cli = string.Join(' ', new[] { tab.Llm }.Concat(args));
         if (once && tab.Llm == "codex") cli = "codex exec" + cli["codex".Length..];
         if (resume && tab.Llm == "codex") cli = "codex resume --last" + cli["codex".Length..];

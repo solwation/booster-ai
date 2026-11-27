@@ -1207,7 +1207,8 @@ public class ExitedRestartTests
             var idleFile = Path.Combine(session.Directory, track.Id + ".next.idle");
             var original = session.ReadLog(track.Id)!;
             // No CLI update: the fake codex is a function, and the real one on PATH must never be updated by a test.
-            var vm = new MainViewModel(new AppConfig { Tabs = [tab], AutoUpdateClis = false });
+            // Without the status channel (#248), whose Codex arguments TabChannelAgentTests covers, the exact arguments stay comparable.
+            var vm = new MainViewModel(new AppConfig { Tabs = [tab], AutoUpdateClis = false, TabStatusChannel = false });
             var row = vm.Tabs[0];
             row.LaunchedAs = tab;
             row.Track = track;

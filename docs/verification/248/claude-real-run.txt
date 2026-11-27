@@ -1,0 +1,32 @@
+# Real Claude Code 2.1.332 (claude -p --model haiku) with the session's MCP config, allow rule and instruction (#248)
+# Flags as a tab gets them: --mcp-config <session>/boosterai-mcp.json --allowedTools mcp__boosterai --append-system-prompt '<instruction>'
+# The prompts did not mention BoosterAI; the agent called the tools from the instruction alone.
+
+## prompt: Say hello in one word. Then you are finished.
+mcp servers: [('boosterai', 'connected', 'dynamic'), ("<the user's own server>", 'connected', 'claudeai')]
+tool use: ToolSearch {"query": "select:mcp__boosterai__boosterai_status"}
+tool result: [{'type': 'tool_reference', 'tool_name': 'mcp__boosterai__boosterai_status'}]
+tool use: mcp__boosterai__boosterai_status {"state": "done", "text": "Said hello in one word."}
+tool result: [{'type': 'text', 'text': 'BoosterAI shows the status done: Said hello in one word..'}]
+final result: Hello
+
+## prompt: I want you to paint my fence in my favourite colour, but only I know it. Find out which colour, offering Red, Blue and Green. Then reply with just the colour.
+mcp servers: [('boosterai', 'connected', 'dynamic'), ("<the user's own server>", 'connected', 'claudeai')]
+tool use: ToolSearch {"query": "select:mcp__boosterai__boosterai_ask,mcp__boosterai__boosterai_status"}
+tool result: [{'type': 'tool_reference', 'tool_name': 'mcp__boosterai__boosterai_ask'}, {'type': 'tool_reference', 'tool_name': 'mcp__boosterai__boosterai_status'}]
+tool use: mcp__boosterai__boosterai_ask {"question": "Which is your favourite colour, so I can paint your fence in it?", "options": ["Red", "Blue", "Green"]}
+tool use: mcp__boosterai__boosterai_status {"state": "blocked", "text": "Waiting for you to pick your favourite colour (Red, Blue or Green) for the fence."}
+tool result: [{'type': 'text', 'text': 'The user answered: Blue'}]
+tool result: [{'type': 'text', 'text': 'BoosterAI shows the status blocked: Waiting for you to pick your favourite colour (Red, Blue or Green) for the fence..'}]
+tool use: mcp__boosterai__boosterai_status {"state": "done", "text": "Favourite colour received: Blue."}
+tool result: [{'type': 'text', 'text': 'BoosterAI shows the status done: Favourite colour received: Blue..'}]
+final result: Blue
+
+## tabN.events written by the server (first run tab1, second run tab2)
+{"v":1,"at":1795783592761,"kind":"status","state":"done","text":"Said hello in one word."}
+{"v":1,"at":1795783979482,"kind":"question","id":"q1a21d10f1da28b0","text":"Which is your favourite colour, so I can paint your fence in it?","options":["Red","Blue","Green"],"free":false}
+{"v":1,"at":1795783980000,"kind":"status","state":"blocked","text":"Waiting for you to pick your favourite colour (Red, Blue or Green) for the fence."}
+{"v":1,"at":1795783981197,"kind":"status","state":"done","text":"Favourite colour received: Blue."}
+## tab2.answers/<id> (written by a stand-in for BoosterAI in the protocol's format, while claude waited)
+{"v": 1, "id": "q1a21d10f1da28b0", "question_at": 1795783979482, "text": "Blue", "at": 1795783979622}
+(The doubled '..' in the status tool results above came from the server's reply format, since fixed: it no longer adds a period.)
