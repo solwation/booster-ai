@@ -62,6 +62,22 @@ dotnet run --project tools/IconRender
 
 Pushing a tag `vX.Y.Z` runs `.github/workflows/release.yml`: `dotnet test` and `tools/publish.sh` on Linux, then (when [code signing](#code-signing) is enabled) Authenticode signing of the Windows files on a Windows runner, then `SKIP_PUBLISH=1 tools/package.sh` (win-x64 setup exe and zip, linux-x64 tar.gz, `SHA256SUMS` of the final, signed files), then a GitHub Release with generated notes (a tag with a `-suffix` becomes a pre-release). The tag sets the version; the `<Version>` in `BoosterAI.csproj` is only the default for local builds, so bump it afterwards. Try it locally with `tools/package.sh v0.0.0-test` (output in `dist/release/`).
 
+### Release page
+
+[`docs/releases.html`](releases.html) (GitHub Pages: `https://solwation.github.io/booster-ai/releases.html?from=X&to=Y&lang=sv|en`) shows every release after `from` up to and including `to`, newest first, in Swedish or English; the app's update bar and version link open it. Its data is `docs/releases.json`, written by `tools/release-page.py` from the tags, `.github/release-summary.txt` and the commit subjects (version bumps, release summaries and subtree squashes left out); the page falls back to the GitHub releases API for a release missing from the file. Before tagging, describe each notable feature in `.github/release-summary.txt` after the `sv:`/`en:` lines (a screenshot that clearly shows what is new goes in `docs/releases/<version>/`, paths are relative to `docs/`):
+
+```text
+feature: 245
+title.sv: Releasesida med skärmbilder
+title.en: Release page with screenshots
+howto.sv: Klicka Visa mer i uppdateringsfältet eller på versionen nere till vänster.
+howto.en: Click Show more in the update bar or the version in the bottom-left corner.
+image: releases/0.55.0/release-page.png
+docs: DETAILS.md#updates
+```
+
+`image.sv:`/`image.en:` give per-language screenshots, and `feature:` may be empty when there is no issue. Then run `tools/release-page.py update vX.Y.Z` and commit `docs/releases.json` with the summary. The workflow runs `tools/release-page.py check vX.Y.Z` and fails when the entry is missing or stale (another commit after the update) or a screenshot is missing; `tools/release-page.py rebuild` refreshes every release from its tag and keeps hand-written features.
+
 ```sh
 git tag v0.2.0 && git push origin v0.2.0
 ```

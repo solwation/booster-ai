@@ -209,14 +209,48 @@ public static class UpdateLogic
         return null;
     }
 
+    /// <summary>The release page on GitHub Pages (docs/releases.html): every release between from and to, with screenshots (#245).</summary>
+    public const string ReleaseNotesPage = "https://solwation.github.io/booster-ai/releases.html";
+
     /// <summary>
-    /// The "Show more" target: GitHub's compare page from the installed version to the new tag, or the
-    /// release page when the installed version is unknown (0.0.0) or not older than the release.
+    /// The release page for the releases after <paramref name="from"/> up to and including <paramref name="to"/>, in the
+    /// app language. An unknown version (null or 0.0.0) is left out, and so is a from that is not older than to; with
+    /// neither the page lists every release.
     /// </summary>
-    public static string MoreUrl(ReleaseInfo release, AppVersion current) =>
-        current.CompareTo(new AppVersion(0, 0, 0, "")) > 0 && current.CompareTo(release.Version) < 0
-            ? $"https://github.com/{Repository}/compare/v{current}...{release.Tag}"
-            : release.PageUrl;
+    public static string ReleaseNotesUrl(AppVersion? from, AppVersion? to, string language)
+    {
+        static bool Known(AppVersion? v) => v is not null && v.CompareTo(new AppVersion(0, 0, 0, "")) > 0;
+        var query = new List<string>();
+        if (Known(from) && (!Known(to) || from!.CompareTo(to) < 0)) query.Add("from=" + Uri.EscapeDataString(from!.ToString()));
+        if (Known(to)) query.Add("to=" + Uri.EscapeDataString(to!.ToString()));
+        query.Add("lang=" + (language == "sv" ? "sv" : "en"));
+        return ReleaseNotesPage + "?" + string.Join("&", query);
+    }
+
+    /// <summary>
+    /// The "Show more" and version link target, the release page: from the running version to an offered newer
+    /// release; without one, what is new in the running version since the version it was updated from (when known).
+    /// </summary>
+    public static string MoreUrl(ReleaseInfo? release, AppVersion current, AppVersion? updatedFrom, string language) =>
+        release is not null && current.CompareTo(release.Version) < 0
+            ? ReleaseNotesUrl(current, release.Version, language)
+            : ReleaseNotesUrl(updatedFrom, current, language);
+
+    /// <summary>
+    /// Records that <paramref name="current"/> runs: when the last run was an older version, that one becomes
+    /// <see cref="AppConfig.UpdatedFromVersion"/> (the "from" of what is new); a downgrade clears it. Unknown
+    /// versions (local 0.0.0 builds) change nothing. True when the config changed and should be saved.
+    /// </summary>
+    public static bool NoteRun(AppConfig cfg, AppVersion current)
+    {
+        if (current.CompareTo(new AppVersion(0, 0, 0, "")) <= 0) return false;
+        var last = AppVersion.Parse(cfg.LastRunVersion);
+        if (last is not null && last.CompareTo(current) == 0) return false;
+        if (last is not null && last.CompareTo(new AppVersion(0, 0, 0, "")) > 0)
+            cfg.UpdatedFromVersion = last.CompareTo(current) < 0 ? last.ToString() : null;
+        cfg.LastRunVersion = current.ToString();
+        return true;
+    }
 
     /// <summary>Single-quoted PowerShell literal.</summary>
     public static string PsQuote(string s) => "'" + s.Replace("'", "''") + "'";

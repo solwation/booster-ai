@@ -5,7 +5,8 @@
 Start your whole working day with one click: BoosterAI opens every project you work on as a dedicated terminal tab with an AI coding CLI (`claude`, `codex`, `agy`, `aider`, `interpreter`, or `openhands`) already running. Pick models per tab to balance your token budget, see each agent's status and plan limits without switching windows, and automate your daily multi-agent workflow on Windows and Linux.
 
 🌐 **Website & Interactive Previews:** **[solwation.github.io/booster-ai](https://solwation.github.io/booster-ai/)**  
-📦 **Download:** **[Latest Release (Windows & Linux)](https://github.com/solwation/booster-ai/releases/latest)**
+📦 **Download:** **[Latest Release (Windows & Linux)](https://github.com/solwation/booster-ai/releases/latest)**  
+✨ **What's new:** **[Release history with screenshots](https://solwation.github.io/booster-ai/releases.html)**
 
 ![The BoosterAI start window](docs/screenshot-dark.png)
 
@@ -61,6 +62,7 @@ BoosterAI-*-linux-x64/install-linux.sh
 ## Documentation & More
 
 - **[Website](https://solwation.github.io/booster-ai/)**: Features overview, screenshots, and visual tour.
+- **[What's new](https://solwation.github.io/booster-ai/releases.html)**: Every release, newest first, with screenshots, how to use each feature and the full list of changes (Swedish and English).
 - **[Details](docs/DETAILS.md)**: Deep dive into platform architecture, settings, configuration, tab recovery, and background updating.
 - **[Development](docs/DEVELOPMENT.md)**: Building from source, testing, headless screenshot rendering, and release process.
 - **[Contributing](AGENTS.md)**: Issue workflow, orchestra coordination, and development guidelines.

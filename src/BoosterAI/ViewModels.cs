@@ -2232,8 +2232,9 @@ public sealed class UpdateViewModel : Observable
     /// <summary>The release's one-line summary in the app language; null (nothing shown) for releases without one.</summary>
     public string? Summary => _release?.SummaryFor(Loc.Language);
     public bool HasSummary => Summary is not null && !IsBusy && !Failed;
-    /// <summary>"Show more": the compare page from the installed version to the new release.</summary>
-    public string MoreUrl => _release is null ? UpdateLogic.ReleasesPage : UpdateLogic.MoreUrl(_release, UpdateLogic.Current);
+    /// <summary>"Show more" and the version link: the release page from the running version to the new release, or
+    /// without one what is new in the running version since the version it was updated from.</summary>
+    public string MoreUrl => UpdateLogic.MoreUrl(_release, UpdateLogic.Current, AppVersion.Parse(_cfg.UpdatedFromVersion), Loc.Language);
     public string InstallTip => Loc.Format("update.install.tip", _release?.Version.ToString() ?? "");
 
     private void RaiseButtons()
@@ -2255,6 +2256,7 @@ public sealed class UpdateViewModel : Observable
     /// <summary>Called once the main window exists: tidies a previous update, checks now and then each minute while the window is active.</summary>
     public void Start()
     {
+        if (UpdateLogic.NoteRun(_cfg, UpdateLogic.Current)) { _save(); Raise(nameof(MoreUrl)); }
         if (IsInstalledCopy)
             foreach (var leftover in new[] { InstalledPath + ".new", InstalledPath + ".new.part", InstalledPath + ".old" })
                 try { File.Delete(leftover); } catch (Exception) { /* still locked; the next start tries again */ }

@@ -51,7 +51,7 @@ public sealed class VersionLinkTests : IDisposable
         Assert.Equal(Loc.Table(language)["version.tip"], tip);
         Assert.Equal("v" + UpdateLogic.Current, text);
         Assert.True(focusable);
-        // Without a known newer release, "Show more" and the version both lead to the latest release.
-        Assert.Equal(UpdateLogic.ReleasesPage, more);
+        // Without a known newer release, "Show more" and the version both lead to what is new in the running version (#245).
+        Assert.Equal(UpdateLogic.ReleaseNotesUrl(null, UpdateLogic.Current, language), more);
     }
 }

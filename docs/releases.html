@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BoosterAI — Nyheter och releaser</title>
+  <meta name="description" content="What is new in BoosterAI: every release with screenshots, how to use each feature and the full list of changes.">
+  <meta name="color-scheme" content="dark light">
+  <meta property="og:title" content="BoosterAI — What's new">
+  <meta property="og:description" content="Every BoosterAI release with screenshots, how to use each feature and the full list of changes.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://solwation.github.io/booster-ai/releases.html">
+  <meta property="og:image" content="https://solwation.github.io/booster-ai/assets/boosterai.png">
+  <link rel="icon" type="image/svg+xml" href="assets/boosterai.svg">
+  <link rel="icon" type="image/png" href="assets/boosterai.png">
+  <!-- The release page (#245): data from releases.json (tools/release-page.py), the GitHub releases API as fallback.
+       Plain HTML/CSS/JS, no external resources apart from that API. -->
+  <style>
+    :root {
+      --bg: #090c13;
+      --bg-card: rgba(18, 22, 34, 0.75);
+      --bg-inset: rgba(255, 255, 255, 0.03);
+      --border: rgba(255, 255, 255, 0.08);
+      --border-strong: rgba(255, 255, 255, 0.16);
+      --cyan: #38bdf8;
+      --blue: #3b82f6;
+      --purple: #a855f7;
+      --amber: #f59e0b;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --header-bg: rgba(9, 12, 19, 0.7);
+      --shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+      --glow-a: rgba(56, 189, 248, 0.18);
+      --glow-b: rgba(168, 85, 247, 0.12);
+      --heading: linear-gradient(180deg, #ffffff 30%, #94a3b8 100%);
+      --link: #7dd3fc;
+    }
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #f6f8fc;
+        --bg-card: rgba(255, 255, 255, 0.9);
+        --bg-inset: rgba(15, 23, 42, 0.03);
+        --border: rgba(15, 23, 42, 0.09);
+        --border-strong: rgba(15, 23, 42, 0.18);
+        --cyan: #0284c7;
+        --blue: #2563eb;
+        --purple: #7c3aed;
+        --amber: #b45309;
+        --text: #0f172a;
+        --text-muted: #475569;
+        --text-dim: #64748b;
+        --header-bg: rgba(246, 248, 252, 0.8);
+        --shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+        --glow-a: rgba(56, 189, 248, 0.16);
+        --glow-b: rgba(168, 85, 247, 0.09);
+        --heading: linear-gradient(180deg, #0f172a 30%, #334155 100%);
+        --link: #0369a1;
+      }
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+      min-height: 100vh;
+      background-image:
+        radial-gradient(ellipse 80% 50% at 50% -20%, var(--glow-a), transparent),
+        radial-gradient(ellipse 60% 40% at 80% 30%, var(--glow-b), transparent);
+      background-attachment: fixed;
+    }
+
+    a { color: inherit; text-decoration: none; }
+    a:focus-visible, button:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; border-radius: 6px; }
+
+    .container { max-width: 1040px; margin: 0 auto; padding: 0 24px; }
+
+    header {
+      position: sticky; top: 0; z-index: 50;
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      background: var(--header-bg);
+    }
+    .nav-wrapper { display: flex; align-items: center; justify-content: space-between; height: 64px; gap: 16px; }
+    .brand { display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 1.2rem; letter-spacing: -0.02em; }
+    .brand img { width: 32px; height: 32px; filter: drop-shadow(0 0 12px rgba(56, 189, 248, 0.4)); }
+    .nav-links { display: flex; align-items: center; gap: 24px; }
+    .nav-links a { color: var(--text-muted); font-size: 0.95rem; font-weight: 500; transition: color 0.2s ease; }
+    .nav-links a:hover { color: var(--text); }
+    .lang { display: inline-flex; border: 1px solid var(--border-strong); border-radius: 9999px; overflow: hidden; }
+    .lang button {
+      font: inherit; font-size: 0.8rem; font-weight: 600; letter-spacing: 0.04em;
+      background: transparent; color: var(--text-muted); border: 0; padding: 5px 12px; cursor: pointer;
+    }
+    .lang button[aria-pressed="true"] { background: linear-gradient(135deg, #38bdf8 0%, #2563eb 100%); color: #fff; }
+
+    .hero { padding: 64px 0 28px; text-align: center; }
+    .badge {
+      display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 9999px;
+      background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.25);
+      font-size: 0.85rem; font-weight: 600; color: var(--cyan); margin-bottom: 20px; letter-spacing: 0.02em;
+    }
+    .hero h1 {
+      font-size: clamp(2.1rem, 5.5vw, 3.4rem); font-weight: 800; letter-spacing: -0.03em; line-height: 1.15;
+      margin-bottom: 14px; background: var(--heading); -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero p { color: var(--text-muted); font-size: 1.1rem; max-width: 640px; margin: 0 auto; }
+    .range { font-weight: 600; color: var(--text); }
+
+    .notice {
+      margin: 20px auto 0; max-width: 720px; padding: 12px 16px; border-radius: 12px;
+      border: 1px solid rgba(245, 158, 11, 0.35); background: rgba(245, 158, 11, 0.08); color: var(--text);
+      font-size: 0.95rem; text-align: left;
+    }
+    .notice + .notice { margin-top: 8px; }
+    .notice a, .empty a { color: var(--link); text-decoration: underline; text-underline-offset: 3px; }
+
+    .toc { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 26px 0 8px; }
+    .toc a {
+      font-size: 0.85rem; font-weight: 600; padding: 5px 12px; border-radius: 9999px;
+      border: 1px solid var(--border-strong); color: var(--text-muted); background: var(--bg-inset);
+      font-variant-numeric: tabular-nums;
+    }
+    .toc a:hover { color: var(--text); border-color: var(--cyan); }
+
+    main { padding: 24px 0 72px; }
+    .release {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px;
+      padding: 28px; margin-bottom: 28px; box-shadow: var(--shadow); scroll-margin-top: 84px;
+    }
+    .release-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; margin-bottom: 10px; }
+    .release h2 { font-size: 1.7rem; font-weight: 800; letter-spacing: -0.02em; }
+    .release h2 a:hover { color: var(--cyan); }
+    .date { color: var(--text-dim); font-size: 0.95rem; font-variant-numeric: tabular-nums; }
+    .tag {
+      font-size: 0.75rem; font-weight: 700; padding: 3px 10px; border-radius: 9999px; letter-spacing: 0.03em;
+      background: rgba(56, 189, 248, 0.12); color: var(--cyan); border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+    .tag.running { background: rgba(168, 85, 247, 0.12); color: var(--purple); border-color: rgba(168, 85, 247, 0.3); }
+    .summary { font-size: 1.12rem; color: var(--text); margin-bottom: 18px; max-width: 820px; }
+
+    .features { display: grid; gap: 18px; margin: 8px 0 22px; }
+    .feature {
+      display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 22px; align-items: start;
+      padding: 18px; border-radius: 16px; background: var(--bg-inset); border: 1px solid var(--border);
+    }
+    .feature.no-image { grid-template-columns: minmax(0, 1fr); }
+    .feature figure a { display: block; border-radius: 12px; overflow: hidden; border: 1px solid var(--border-strong); background: #0c0c0c; }
+    .feature img { display: block; width: 100%; height: auto; }
+    .feature h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 6px; letter-spacing: -0.01em; }
+    .howto-label { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--cyan); margin-bottom: 4px; }
+    .feature p { color: var(--text-muted); }
+    .links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+    .links a, .release-foot a {
+      display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; font-weight: 600;
+      padding: 6px 12px; border-radius: 9999px; border: 1px solid var(--border-strong); color: var(--text);
+      background: var(--bg-inset); transition: border-color 0.2s ease, transform 0.2s ease;
+    }
+    .links a:hover, .release-foot a:hover { border-color: var(--cyan); transform: translateY(-1px); }
+
+    details.changes { border-top: 1px solid var(--border); padding-top: 14px; }
+    details.changes summary { cursor: pointer; font-weight: 600; color: var(--text-muted); font-size: 0.95rem; }
+    details.changes summary:hover { color: var(--text); }
+    details.changes ul { margin: 10px 0 0 20px; color: var(--text-muted); }
+    details.changes li { margin: 3px 0; overflow-wrap: anywhere; }
+    details.changes li a { color: var(--link); }
+    .release-foot { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+
+    .empty, .loading { text-align: center; color: var(--text-muted); padding: 48px 0; }
+
+    footer { border-top: 1px solid var(--border); padding: 28px 0; color: var(--text-dim); font-size: 0.9rem; }
+    .footer-grid { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; align-items: center; }
+    .footer-links { display: flex; flex-wrap: wrap; gap: 18px; }
+    .footer-links a:hover { color: var(--text); }
+
+    @media (max-width: 760px) {
+      .feature { grid-template-columns: minmax(0, 1fr); gap: 14px; padding: 14px; }
+      .nav-links a.wide { display: none; }
+      .release { padding: 20px 16px; border-radius: 16px; }
+      .container { padding: 0 16px; }
+      .hero { padding: 40px 0 18px; }
+    }
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <div class="nav-wrapper">
+        <a href="./" class="brand"><img src="assets/boosterai.svg" alt=""><span>BoosterAI</span></a>
+        <nav class="nav-links">
+          <a class="wide" href="./" data-t="nav.home">Startsida</a>
+          <a class="wide" href="https://github.com/solwation/booster-ai/blob/main/docs/DETAILS.md" target="_blank" rel="noopener" data-t="nav.docs">Dokumentation</a>
+          <a class="wide" href="https://github.com/solwation/booster-ai" target="_blank" rel="noopener">GitHub</a>
+          <span class="lang" role="group" aria-label="Språk / Language">
+            <button type="button" data-lang="sv" aria-pressed="true">SV</button>
+            <button type="button" data-lang="en" aria-pressed="false">EN</button>
+          </span>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="container">
+      <div class="badge" data-t="badge">Nyheter</div>
+      <h1 id="title">Nytt i BoosterAI</h1>
+      <p id="subtitle"></p>
+      <div id="notices"></div>
+      <nav class="toc" id="toc" aria-label=""></nav>
+    </div>
+  </section>
+
+  <main>
+    <div class="container" id="releases"><p class="loading" data-t="loading">Läser in releaser …</p></div>
+  </main>
+
+  <footer>
+    <div class="container footer-grid">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <img src="assets/boosterai.svg" alt="" width="24" height="24">
+        <span data-t="footer">BoosterAI — MIT-licens</span>
+      </div>
+      <div class="footer-links">
+        <a href="./" data-t="nav.home">Startsida</a>
+        <a href="releases.html" data-t="all">Alla releaser</a>
+        <a href="https://github.com/solwation/booster-ai/releases" target="_blank" rel="noopener" data-t="downloads">Nedladdningar</a>
+        <a href="https://github.com/solwation/booster-ai/issues" target="_blank" rel="noopener">Issues</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+  (function () {
+    'use strict';
+    var REPO = 'solwation/booster-ai';
+    var GH = 'https://github.com/' + REPO;
+    var API = 'https://api.github.com/repos/' + REPO + '/releases?per_page=100';
+
+    var T = {
+      sv: {
+        title: 'BoosterAI — Nyheter och releaser', 'nav.home': 'Startsida', 'nav.docs': 'Dokumentation',
+        badge: 'Nyheter', h1: 'Nytt i BoosterAI', h1Range: 'Nytt sedan {from}', loading: 'Läser in releaser …',
+        allIntro: 'Alla {n} releaser av BoosterAI, de nyaste först, med skärmbilder och hur du använder nyheterna.',
+        range: 'Från {from} till {to}', rangeTo: 'Till och med {to}', rangeFrom: 'Efter {from}',
+        count1: '1 release', countN: '{n} releaser', latest: 'Senaste', yours: 'Din nya version',
+        howto: 'Så använder du det', issue: 'Issue #{n}', docs: 'Dokumentation', changes: 'Alla ändringar ({n})',
+        noChanges: 'Inga ändringar listade.', compare: 'Jämför på GitHub', release: 'Release och nedladdningar',
+        invalid: 'Versionen ”{v}” går inte att läsa och ignorerades.',
+        unknown: 'Version {v} finns inte i listan; sidan visar releaserna runt den.',
+        swapped: '”Från” var nyare än ”till”, så de byttes.',
+        same: 'Du har redan {v}. Så här ser den versionen ut:',
+        empty: 'Inga releaser i det här intervallet.', showAll: 'Visa alla releaser',
+        failed: 'Det gick inte att läsa in releaserna just nu.', open: 'Öppna releaserna på GitHub',
+        fallback: 'Några releaser hämtades direkt från GitHub och saknar skärmbilder.',
+        footer: 'BoosterAI — MIT-licens', all: 'Alla releaser', downloads: 'Nedladdningar',
+        tocLabel: 'Releaser på sidan', imgAlt: 'Skärmbild: {t}'
+      },
+      en: {
+        title: "BoosterAI — What's new and releases", 'nav.home': 'Home', 'nav.docs': 'Documentation',
+        badge: "What's new", h1: "What's new in BoosterAI", h1Range: "What's new since {from}", loading: 'Loading releases …',
+        allIntro: 'All {n} BoosterAI releases, newest first, with screenshots and how to use what is new.',
+        range: 'From {from} to {to}', rangeTo: 'Up to and including {to}', rangeFrom: 'After {from}',
+        count1: '1 release', countN: '{n} releases', latest: 'Latest', yours: 'Your new version',
+        howto: 'How to use it', issue: 'Issue #{n}', docs: 'Documentation', changes: 'All changes ({n})',
+        noChanges: 'No changes listed.', compare: 'Compare on GitHub', release: 'Release and downloads',
+        invalid: 'The version “{v}” cannot be read and was ignored.',
+        unknown: 'Version {v} is not in the list; the page shows the releases around it.',
+        swapped: '“From” was newer than “to”, so they were swapped.',
+        same: 'You already have {v}. This is what that version brought:',
+        empty: 'No releases in this range.', showAll: 'Show all releases',
+        failed: 'The releases could not be loaded right now.', open: 'Open the releases on GitHub',
+        fallback: 'Some releases were loaded straight from GitHub and have no screenshots.',
+        footer: 'BoosterAI — MIT License', all: 'All releases', downloads: 'Downloads',
+        tocLabel: 'Releases on this page', imgAlt: 'Screenshot: {t}'
+      }
+    };
+
+    var params = new URLSearchParams(location.search);
+    var lang = params.get('lang');
+    if (lang !== 'sv' && lang !== 'en') lang = /^sv\b/i.test(navigator.language || '') ? 'sv' : 'en';
+    var data = null, fromApi = false, loadFailed = false;
+
+    function t(key, args) {
+      var s = (T[lang] && T[lang][key]) || T.en[key] || key;
+      if (args) Object.keys(args).forEach(function (k) { s = s.split('{' + k + '}').join(String(args[k])); });
+      return s;
+    }
+
+    // Versions: 1.2.3 or v1.2.3 with an optional -suffix; null when unreadable.
+    function parse(v) {
+      var m = /^v?(\d{1,6})\.(\d{1,6})(?:\.(\d{1,6}))?(?:-([0-9A-Za-z.-]+))?$/.exec((v || '').trim());
+      return m ? { n: [+m[1], +m[2], +(m[3] || 0)], s: m[4] || '', text: m[1] + '.' + m[2] + '.' + (m[3] || 0) + (m[4] ? '-' + m[4] : '') } : null;
+    }
+    function cmp(a, b) {
+      for (var i = 0; i < 3; i++) if (a.n[i] !== b.n[i]) return a.n[i] < b.n[i] ? -1 : 1;
+      if (a.s === b.s) return 0;
+      if (!a.s) return 1;
+      if (!b.s) return -1;
+      return a.s < b.s ? -1 : 1;
+    }
+
+    function el(tag, attrs, children) {
+      var e = document.createElement(tag);
+      if (attrs) Object.keys(attrs).forEach(function (k) {
+        if (k === 'text') e.textContent = attrs[k];
+        else if (k === 'class') e.className = attrs[k];
+        else e.setAttribute(k, attrs[k]);
+      });
+      (children || []).forEach(function (c) { if (c) e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); });
+      return e;
+    }
+    function ext(href, text) { return el('a', { href: href, target: '_blank', rel: 'noopener', text: text }); }
+
+    // A commit subject with (#123) and #123 turned into issue links; text only, never HTML.
+    function subject(text) {
+      var li = el('li'), re = /#(\d+)\b/g, last = 0, m;
+      while ((m = re.exec(text))) {
+        li.appendChild(document.createTextNode(text.slice(last, m.index)));
+        li.appendChild(ext(GH + '/issues/' + m[1], '#' + m[1]));
+        last = re.lastIndex;
+      }
+      li.appendChild(document.createTextNode(text.slice(last)));
+      return li;
+    }
+
+    function safePath(p) { return typeof p === 'string' && /^[\w./-]+(#[\w-]+)?$/.test(p) && p.indexOf('..') < 0 ? p : null; }
+    function docsUrl(p) {
+      p = safePath(p);
+      return p ? GH + '/blob/main/docs/' + p : null;
+    }
+
+    function feature(f) {
+      var title = (f.title && (f.title[lang] || f.title.en || f.title.sv)) || '';
+      var howto = (f.howto && (f.howto[lang] || f.howto.en || f.howto.sv)) || '';
+      var img = safePath(f.image && (f.image[lang] || f.image.en || f.image.sv));
+      var links = el('div', { class: 'links' });
+      if (typeof f.issue === 'number') links.appendChild(ext(GH + '/issues/' + f.issue, t('issue', { n: f.issue })));
+      if (docsUrl(f.docs)) links.appendChild(ext(docsUrl(f.docs), t('docs')));
+      var text = el('div', null, [
+        el('h3', { text: title }),
+        howto ? el('div', { class: 'howto-label', text: t('howto') }) : null,
+        howto ? el('p', { text: howto }) : null,
+        links.childNodes.length ? links : null
+      ]);
+      var fig = img ? el('figure', null, [el('a', { href: img, target: '_blank', rel: 'noopener' }, [
+        el('img', { src: img, alt: t('imgAlt', { t: title }), loading: 'lazy', decoding: 'async' })])]) : null;
+      return el('article', { class: 'feature' + (img ? '' : ' no-image') }, [fig, text]);
+    }
+
+    function release(r, i, ctx) {
+      var tag = 'v' + r.version;
+      var head = el('div', { class: 'release-head' }, [
+        el('h2', null, [el('a', { href: '#' + tag, text: 'BoosterAI ' + r.version })]),
+        r.date ? el('span', { class: 'date', text: new Date(r.date + 'T12:00:00Z').toLocaleDateString(lang === 'sv' ? 'sv-SE' : 'en-GB', { year: 'numeric', month: 'long', day: 'numeric' }) }) : null,
+        ctx.to && r.version === ctx.to.text && ctx.from ? el('span', { class: 'tag running', text: t('yours') }) : (r === ctx.newest ? el('span', { class: 'tag', text: t('latest') }) : null)
+      ]);
+      var sum = r.summary && (r.summary[lang] || r.summary.en || r.summary.sv);
+      var feats = (r.features || []).filter(function (f) { return f && (f.title || f.howto); });
+      var changes = r.changes || [];
+      var det = el('details', { class: 'changes' }, [el('summary', { text: t('changes', { n: changes.length }) }),
+        changes.length ? el('ul', null, changes.map(subject)) : el('p', { text: t('noChanges') })]);
+      // Open the list where there is no feature section to read instead, and on short pages.
+      if (ctx.count <= 3 || (!feats.length && i < 10)) det.open = true;
+      var foot = el('div', { class: 'release-foot' }, [
+        ext(GH + '/releases/tag/' + tag, t('release')),
+        r.previous ? ext(GH + '/compare/v' + r.previous + '...' + tag, t('compare')) : null
+      ]);
+      return el('section', { class: 'release', id: tag }, [head, sum ? el('p', { class: 'summary', text: sum }) : null,
+        feats.length ? el('div', { class: 'features' }, feats.map(feature)) : null, det, foot]);
+    }
+
+    function render() {
+      document.documentElement.lang = lang;
+      document.title = t('title');
+      document.querySelectorAll('[data-t]').forEach(function (e) { e.textContent = t(e.getAttribute('data-t')); });
+      document.querySelectorAll('.lang button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-lang') === lang)); });
+      var list = document.getElementById('releases'), notices = document.getElementById('notices'), toc = document.getElementById('toc');
+      notices.textContent = ''; toc.textContent = ''; toc.setAttribute('aria-label', t('tocLabel'));
+      function notice(text, link) {
+        notices.appendChild(el('p', { class: 'notice' }, [text, link ? ' ' : null, link]));
+      }
+      if (!data) {
+        list.textContent = '';
+        list.appendChild(el('p', { class: 'loading', text: t('loading') }));
+        return;
+      }
+      if (!data.length) {
+        list.textContent = '';
+        list.appendChild(el('p', { class: 'empty' }, [t('failed'), ' ', ext(GH + '/releases', t('open'))]));
+        return;
+      }
+
+      var rawFrom = params.get('from'), rawTo = params.get('to');
+      var from = rawFrom ? parse(rawFrom) : null, to = rawTo ? parse(rawTo) : null;
+      if (rawFrom && !from) notice(t('invalid', { v: rawFrom }));
+      if (rawTo && !to) notice(t('invalid', { v: rawTo }));
+      if (from && to && cmp(from, to) > 0) { var x = from; from = to; to = x; notice(t('swapped')); }
+      var known = {};
+      data.forEach(function (r) { known[r.version] = true; });
+      [from, to].forEach(function (v) { if (v && !known[v.text]) notice(t('unknown', { v: v.text })); });
+      if (from && to && cmp(from, to) === 0) { notice(t('same', { v: to.text })); from = null; params.set('only', '1'); }
+      var only = from === null && to && params.get('only') === '1';
+      params.delete('only');
+
+      var shown = data.filter(function (r) {
+        var v = parse(r.version);
+        if (!v) return false;
+        if (only) return cmp(v, to) === 0;
+        return (!from || cmp(v, from) > 0) && (!to || cmp(v, to) <= 0);
+      });
+      if (fromApi) notice(t('fallback'));
+
+      var title = document.getElementById('title'), sub = document.getElementById('subtitle');
+      title.textContent = from ? t('h1Range', { from: from.text }) : t('h1');
+      sub.textContent = '';
+      var count = shown.length === 1 ? t('count1') : t('countN', { n: shown.length });
+      if (from || to) {
+        var range = from && to ? t('range', { from: from.text, to: to.text }) : from ? t('rangeFrom', { from: from.text }) : t('rangeTo', { to: to.text });
+        sub.appendChild(el('span', { class: 'range', text: range }));
+        sub.appendChild(document.createTextNode(' · ' + count));
+      } else {
+        sub.textContent = t('allIntro', { n: shown.length });
+      }
+
+      list.textContent = '';
+      if (!shown.length) {
+        list.appendChild(el('p', { class: 'empty' }, [t('empty'), ' ', el('a', { href: 'releases.html?lang=' + lang, text: t('showAll') })]));
+        return;
+      }
+      if (shown.length > 1 && shown.length <= 40) shown.forEach(function (r) {
+        toc.appendChild(el('a', { href: '#v' + r.version, text: r.version }));
+      });
+      var ctx = { from: from, to: to, newest: data[0], count: shown.length };
+      shown.forEach(function (r, i) { list.appendChild(release(r, i, ctx)); });
+      if (location.hash && document.getElementById(location.hash.slice(1))) document.getElementById(location.hash.slice(1)).scrollIntoView();
+    }
+
+    // A GitHub release body reduced to the releases.json shape: summary markers and the "## Changes" list.
+    function fromGitHub(g) {
+      var body = g.body || '', summary = {}, m, re = /<!--\s*summary:([a-z]{2})\s*:([\s\S]*?)-->/gi;
+      while ((m = re.exec(body))) summary[m[1].toLowerCase()] = m[2].replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+      var changes = [], inChanges = false;
+      body.split(/\r?\n/).forEach(function (line) {
+        if (/^##\s/.test(line)) inChanges = /^##\s+Changes/i.test(line);
+        else if (inChanges && /^- /.test(line)) changes.push(line.slice(2).trim());
+      });
+      var prev = /compare\/v([^.\s]+\.[^.\s]+\.[^.\s]+?)\.\.\.v/.exec(body);
+      return { version: parse(g.tag_name).text, date: (g.published_at || '').slice(0, 10), previous: prev ? prev[1] : null,
+        summary: summary, features: [], changes: changes };
+    }
+
+    function sortDesc(list) { return list.sort(function (a, b) { return cmp(parse(b.version), parse(a.version)); }); }
+
+    function load() {
+      var wanted = parse(params.get('to') || '');
+      fetch('releases.json', { cache: 'no-cache' })
+        .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then(function (j) {
+          return (j.releases || []).filter(function (r) { return r && parse(r.version); });
+        })
+        .catch(function () { return []; })
+        .then(function (local) {
+          // The API fills in what the static file lacks: a release tagged after the last update, or a failed load.
+          var newest = local.length ? parse(sortDesc(local.slice())[0].version) : null;
+          if (local.length && !(wanted && newest && cmp(wanted, newest) > 0)) return local;
+          return fetch(API, { headers: { Accept: 'application/vnd.github+json' } })
+            .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+            .then(function (list) {
+              var have = {};
+              local.forEach(function (r) { have[r.version] = true; });
+              list.forEach(function (g) {
+                var v = !g.draft && !g.prerelease && parse(g.tag_name);
+                if (v && !v.s && !have[v.text]) { local.push(fromGitHub(g)); fromApi = true; }
+              });
+              return local;
+            })
+            .catch(function () { return local; });
+        })
+        .then(function (all) { data = sortDesc(all); render(); });
+    }
+
+    document.querySelectorAll('.lang button').forEach(function (b) {
+      b.addEventListener('click', function () {
+        lang = b.getAttribute('data-lang');
+        var p = new URLSearchParams(location.search);
+        p.set('lang', lang);
+        history.replaceState(null, '', '?' + p.toString() + location.hash);
+        render();
+      });
+    });
+    render();
+    load();
+  })();
+  </script>
+</body>
+</html>

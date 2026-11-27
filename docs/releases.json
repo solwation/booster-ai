@@ -1,0 +1,1622 @@
+{
+  "releases": [
+    {
+      "version": "0.54.0",
+      "date": "2026-11-27",
+      "previous": "0.53.1",
+      "summary": {
+        "sv": "BoosterAI-logotypen visas nu som en centrerad splash i varje flik och tonar ut innan AI-CLI:t startar.",
+        "en": "The BoosterAI logo is now a centred splash in every tab that fades out before the AI CLI starts."
+      },
+      "features": [
+        {
+          "issue": 244,
+          "title": {
+            "sv": "Logotypen som centrerad splash i varje flik",
+            "en": "The logo as a centred splash in every tab"
+          },
+          "howto": {
+            "sv": "Starta, fortsätt eller starta om en flik: BoosterAI-logotypen visas mitt i fliken i drygt en sekund och tonar sedan ut innan agenten startar, utan att lämna något kvar i historiken. Stäng av den under Inställningar → Utseende → Visa animerad BoosterAI-logotyp i flikarna.",
+            "en": "Start, continue or restart a tab: the BoosterAI logo shows in the middle of the tab for just over a second and fades out before the agent starts, leaving nothing in the scrollback. Turn it off under Settings → Appearance → Show the animated BoosterAI logo in tabs."
+          },
+          "image": {
+            "sv": "verification/244/splash-settled.png",
+            "en": "verification/244/splash-settled.png"
+          },
+          "docs": "DETAILS.md#watching-the-tabs"
+        }
+      ],
+      "changes": [
+        "Show the tab logo as a centred splash that fades into the CLI (#244)"
+      ]
+    },
+    {
+      "version": "0.53.1",
+      "date": "2026-11-27",
+      "previous": "0.53.0",
+      "summary": {
+        "sv": "Den animerade logotypen visas nu också när man startar om flikar som öppnades före uppgraderingen.",
+        "en": "The animated logo now also shows when restarting tabs that were opened before the upgrade."
+      },
+      "features": [
+        {
+          "issue": 243,
+          "title": {
+            "sv": "Logotypen även när äldre flikar startas om",
+            "en": "The logo also on restarts of older tabs"
+          },
+          "howto": {
+            "sv": "Inget att göra: klicka Starta om på en flik som öppnades före uppgraderingen, så visas logotypen där också.",
+            "en": "Nothing to do: click Restart on a tab that was opened before the upgrade and the logo shows there too."
+          },
+          "image": {
+            "sv": "releases/0.53.0/tab-logo.png",
+            "en": "releases/0.53.0/tab-logo.png"
+          },
+          "docs": "DETAILS.md#watching-the-tabs"
+        }
+      ],
+      "changes": [
+        "Show the tab logo on restarts of tabs from older builds (#243)"
+      ]
+    },
+    {
+      "version": "0.53.0",
+      "date": "2026-11-27",
+      "previous": "0.52.0",
+      "summary": {
+        "sv": "Flikarna visar en animerad BoosterAI-logotyp vid start, och Claude och Codex skriver inga recaps som kostar tokens.",
+        "en": "Tabs show an animated BoosterAI logo on start, and Claude and Codex no longer write token-costing recaps."
+      },
+      "features": [
+        {
+          "issue": 242,
+          "title": {
+            "sv": "Animerad BoosterAI-logotyp i flikarna",
+            "en": "Animated BoosterAI logo in tabs"
+          },
+          "howto": {
+            "sv": "När en flik startar, fortsätter eller startas om sveper logotypen fram i terminalen innan agenten startar. Inställningen finns under Inställningar → Utseende → Visa animerad BoosterAI-logotyp i flikarna (på som standard).",
+            "en": "When a tab starts, continues or restarts, the logo sweeps in in the terminal before the agent starts. The setting is under Settings → Appearance → Show the animated BoosterAI logo in tabs (on by default)."
+          },
+          "image": {
+            "sv": "releases/0.53.0/tab-logo.png",
+            "en": "releases/0.53.0/tab-logo.png"
+          },
+          "docs": "DETAILS.md#watching-the-tabs"
+        },
+        {
+          "issue": 241,
+          "title": {
+            "sv": "Inga recaps som kostar tokens",
+            "en": "No token-costing recaps"
+          },
+          "howto": {
+            "sv": "Inget att göra: Claude och Codex skriver inte längre en automatisk sammanfattning när en flik som stått stilla får fokus igen. Dina egna inställningar för CLI:erna ändras inte.",
+            "en": "Nothing to do: Claude and Codex no longer write an automatic summary when an idle tab gets focus again. Your own CLI settings are not changed."
+          },
+          "docs": "DETAILS.md#watching-the-tabs"
+        }
+      ],
+      "changes": [
+        "Count the tab logo's setup in its 0.8 s deadline (#242)",
+        "Document the tab logo and add #242 verification evidence",
+        "Add #242 Windows Terminal logo check",
+        "Show an animated BoosterAI logo in each tab before its agent starts (#242)",
+        "Add #241 verification evidence",
+        "Turn off Claude and Codex recaps in every tab (#241)"
+      ]
+    },
+    {
+      "version": "0.52.0",
+      "date": "2026-11-26",
+      "previous": "0.51.0",
+      "summary": {
+        "sv": "Diskreta ljudeffekter när en flik är klar, vid fel och vid kvotändringar, med en egen inställning för att stänga av dem.",
+        "en": "Discreet sound effects when a tab finishes, on errors and on quota changes, with a setting to turn them off."
+      },
+      "features": [
+        {
+          "issue": 240,
+          "title": {
+            "sv": "Diskreta ljudeffekter",
+            "en": "Discreet sound effects"
+          },
+          "howto": {
+            "sv": "Ett kort ljud spelas när en flik blir klar eller fallerar, när kvoten börjar ta slut och när den kommer tillbaka. Stäng av ljuden under Inställningar → Allmänt → Ljudeffekter; aviseringarna påverkas inte.",
+            "en": "A short sound plays when a tab finishes or fails, when quota runs low and when it comes back. Turn the sounds off under Settings → General → Sound effects; notifications are not affected."
+          },
+          "image": {
+            "sv": "verification/240/settings-sv.png",
+            "en": "verification/240/settings-en.png"
+          },
+          "docs": "DETAILS.md#watching-the-tabs"
+        }
+      ],
+      "changes": [
+        "Add #240 verification screenshots",
+        "Add discreet sound effects for tab, error and quota events (#240)"
+      ]
+    },
+    {
+      "version": "0.51.0",
+      "date": "2026-11-26",
+      "previous": "0.50.0",
+      "summary": {
+        "sv": "Systemnotis när kvoten börjar ta slut och när den kommer tillbaka, och varningar bara för agenter som en flik har valt.",
+        "en": "System notifications when quota runs low and when it comes back, with warnings only for agents a tab has chosen."
+      },
+      "features": [],
+      "changes": [
+        "Send low-quota warnings and quota-back recoveries as system notifications (#239)",
+        "Warn about low quota only for agents and accounts a tab has chosen (#238)"
+      ]
+    },
+    {
+      "version": "0.50.0",
+      "date": "2026-11-26",
+      "previous": "0.49.3",
+      "summary": {
+        "sv": "Kvotändringar animeras med t.ex. (-5%) när appen öppnas igen, och en omstart som inte kan fortsätta startar en ny session.",
+        "en": "Quota changes animate with e.g. (-5%) when the app reopens, and a restart that cannot continue starts a new session instead."
+      },
+      "features": [],
+      "changes": [
+        "Describe the resume fallback and limit animations in DETAILS.md",
+        "Track the real sleeper in WakeWaitsForASlowIdleShell and leave nothing behind (#237)",
+        "Keep the single-instance listener alive when a pipe Send fails with a socket error (#236)",
+        "Fall back to a fresh start when a resumed start does not get going (#235)",
+        "Add #234 verification screenshots",
+        "Animate plan-limit changes in the status and Agent columns (#234)"
+      ]
+    },
+    {
+      "version": "0.49.3",
+      "date": "2026-11-26",
+      "previous": "0.49.2",
+      "summary": {
+        "sv": "Claude-flikar fastnar inte längre i nya turer när aktivitetsloggen inte kan skrivas, till exempel vid fel på /mnt/c.",
+        "en": "Claude tabs no longer loop through new turns when the activity log cannot be written, such as when /mnt/c fails."
+      },
+      "features": [],
+      "changes": [
+        "Version 0.49.3 and its release summary",
+        "Keep the tab's activity hooks silent when the log cannot be written (#233)"
+      ]
+    },
+    {
+      "version": "0.49.2",
+      "date": "2026-11-26",
+      "previous": "0.49.1",
+      "summary": {
+        "sv": "Codex-planer med bara veckogräns visar ”ingen 5 h-gräns” i stället för Okänd, och mätaren följer veckan.",
+        "en": "Codex plans with only a weekly limit show “no 5 h limit” instead of Unknown, and the meter follows the week."
+      },
+      "features": [],
+      "changes": [
+        "Describe the absent Codex 5 h window in DETAILS.md (#232)",
+        "Add #231 verification screenshots",
+        "Skip the WSL reader test on Windows like its neighbours (#231)",
+        "Show a Codex window that is not reported as absent, not Okänd (#231)"
+      ]
+    },
+    {
+      "version": "0.49.1",
+      "date": "2026-11-25",
+      "previous": "0.49.0",
+      "summary": {
+        "sv": "Veckomätaren följer flikens modellval. Fables kvot hämtas automatiskt när du väljer Fable.",
+        "en": "The weekly meter follows the tab’s model. Choosing Fable automatically loads its model quota."
+      },
+      "features": [],
+      "changes": [
+        "Keep the model quota UI test independent of dispatcher timing",
+        "Summarize the model-specific quota fix for v0.49.1",
+        "Show weekly quota for the selected Claude model (#230)"
+      ]
+    },
+    {
+      "version": "0.49.0",
+      "date": "2026-11-25",
+      "previous": "0.48.0",
+      "summary": {
+        "sv": "Claudes separata Fable-kvot, samma statuspunkt i statusrutan, luft mellan kontoetikett och kvotmätare och versionsnumret öppnar ändringarna.",
+        "en": "Claude's separate Fable quota, the same status dot in the status popup, room between account label and quota meters, and the version opens the changes."
+      },
+      "features": [],
+      "changes": [
+        "Release summary for v0.49.0 with Fable quota, shared status dot, meter gap and version link",
+        "A CLI update stamp slightly ahead of the clock stays fresh (#229)",
+        "Wait for the AutoClear PTY acknowledgement in the test (#228)",
+        "The status popup draws the same dot as the status column (#227)",
+        "Show the separate Fable weekly quota for Claude accounts (#225)",
+        "The version in the corner opens the changes, like Show more (#226)",
+        "Keep a gap between the account label and the meters in the agent box (#224)"
+      ]
+    },
+    {
+      "version": "0.48.0",
+      "date": "2026-11-25",
+      "previous": "0.47.0",
+      "summary": {
+        "sv": "Statuspunkten visar arbetar (pulserande), väntar (ring) och varning (romb), och hovring över agentrutan visar flikens statusruta.",
+        "en": "The status dot shows working (pulsing), waiting (ring) and warning (diamond), and hovering the agent box shows the tab's status popup."
+      },
+      "features": [],
+      "changes": [
+        "Fix the v0.48.0 release summary's version key",
+        "Release summary for v0.48.0 with status dot shapes and agent box status popup",
+        "Status dot shapes for working, waiting and warning, with a pulse while working (#222)",
+        "Hovering anywhere over the agent box shows the status popup (#221)"
+      ]
+    },
+    {
+      "version": "0.47.0",
+      "date": "2026-11-25",
+      "previous": "0.46.0",
+      "summary": {
+        "sv": "Kompakt statuskolumn, varning vid låg kvot, två kvotmätare, \"Arbetar\" vid CPU-last och klick för att visa fliken i terminalen.",
+        "en": "Compact Status column, low-quota warning, two quota meters, \"Working\" on CPU load and a click to show the tab in the terminal."
+      },
+      "features": [],
+      "changes": [
+        "Release summary for v0.47.0 with compact status, quota warning, two meters, Working and show-in-terminal",
+        "Make Loc-dependent and PTY tests independent of order and load (#218)",
+        "Describe the compact status, Working, terminal switch and quota warning on the web page and README (#220)",
+        "Two thin meters (5 h and week) under the agent name in the Agent box and list (#219)",
+        "Use the near-limit percent rule in the compact status column too (#217)",
+        "Show plan-limit percentages with one shared formatter, one decimal below 3 % left (#217)",
+        "Compact status column: a status dot with details on hover (#209)",
+        "Verification screenshots for the compact status popup (#216)",
+        "Fix --fake-peek in the screenshot usage line (#216)",
+        "Remove the terminal-output preview from the status popup and make it compact (#216)",
+        "Show Working when a tab's processes use the CPU while its agent is idle (#215)",
+        "Verification screenshots for limits without tabs (#214)",
+        "Read plan limits for agents and accounts without a tab, show old and reset readings (#214)",
+        "README screenshots and verification images with the show-in-terminal icon (#213)",
+        "Show the tab in the terminal: a row icon that focuses its Windows Terminal tab (#213)",
+        "Verification screenshots for the low-quota warning (#211)",
+        "Pass AGY --settings on every launch path and explain missing AGY limits (#212)",
+        "Warn in the main window when a plan window drops below N % left (#211)",
+        "Status popup plan limits as a table with left/used, meter and reset (#210)"
+      ]
+    },
+    {
+      "version": "0.46.0",
+      "date": "2026-11-25",
+      "previous": "0.45.0",
+      "summary": {
+        "sv": "Statuskolumnen visar kvarvarande kvot, AGY får förbrukningsmätare och alla tider visas lättläst, t.ex. \"om 1 h 10 min\".",
+        "en": "The Status column shows remaining quota, AGY gets a usage meter, and all times read naturally, e.g. \"in 1h 10m\"."
+      },
+      "features": [],
+      "changes": [
+        "Release summary for v0.46.0 with remaining quota, AGY meter and human-readable times",
+        "Human-readable times in sv and en: reset countdowns, read ages, hour durations and day-aware tooltips (#208)",
+        "Show remaining quota percentage in the Status column on live tabs (#207)",
+        "Show quota usage meter and limits for AGY tabs via statusLine and --settings (#206)",
+        "Refresh plan limits every 30s, on 5s activation cooldown and on tab activity changes (#205)"
+      ]
+    },
+    {
+      "version": "0.45.0",
+      "date": "2026-11-25",
+      "previous": "0.44.0",
+      "summary": {
+        "sv": "Varje Claude- och Codex-rad visar nu en förbrukningsmätare i Agent-rutan, och alla flikars Agent-listor hålls synkade.",
+        "en": "Each Claude and Codex row now shows a usage meter in its Agent box, and all tabs' Agent lists stay in sync."
+      },
+      "features": [],
+      "changes": [
+        "Release summary for v0.45.0 with per-row usage meters",
+        "Website: bump screenshot cache-busters and mention the usage meter (#204)",
+        "Notify all tabs' Agent dropdowns when an account's plan limits change (#203)",
+        "Show an always-visible usage meter in each Claude and Codex row's Agent box (#202)"
+      ]
+    },
+    {
+      "version": "0.44.0",
+      "date": "2026-11-25",
+      "previous": "0.43.0",
+      "summary": {
+        "sv": "Starta en ny underflik direkt från raden, och se hur mycket av 5-timmars- och veckogränsen varje konto har använt.",
+        "en": "Start a new subtab right from its row, and see how much of the 5-hour and weekly limit each account has used."
+      },
+      "features": [],
+      "changes": [
+        "Release summary for v0.44.0 with single-tab start and plan limits",
+        "README: mention starting a tab from its row and the plan-limit warning (#201)",
+        "Add verification screenshots for #200",
+        "Show plan limits in the Agent box dropdown, a warning marker in the closed box and a line in the status popup (#200)",
+        "WIP #200: plan-limit indicator in the Agent box (clips account pills at 1100 px; needs a wider Agent column)",
+        "Show plan limits in the README accounts image and add verification screenshots for #199",
+        "Show 5-hour and weekly plan limits per account in Settings (#199)",
+        "Add verification screenshots for #198",
+        "Start a single never-opened tab from its row, into the open terminal window (#198)",
+        "Show the orchestra install link on the project row only, not on subtabs (#197)"
+      ]
+    },
+    {
+      "version": "0.43.0",
+      "date": "2026-11-25",
+      "previous": "0.42.0",
+      "summary": {
+        "sv": "Ett projekt och dess underflikar visas som en färgad grupp; skapa och ta bort underflikar från radens ⋯-meny.",
+        "en": "A project and its subtabs show as one coloured group; create and remove subtabs from the row's ⋯ menu."
+      },
+      "features": [],
+      "changes": [
+        "Release summary for v0.43.0 with subtab groups and the row menu",
+        "Show a project and its subtabs as one group card with a row menu for creating and removing subtabs (#196)",
+        "Render the accounts preview at the settings images' 920x900 size (#195)",
+        "Show accounts, alias confirmation and unsaved-changes prompt in README and website with new screenshots (#195)"
+      ]
+    },
+    {
+      "version": "0.42.0",
+      "date": "2026-11-24",
+      "previous": "0.41.0",
+      "summary": {
+        "sv": "Agent och konto väljs i en ruta, konton visar om de är inloggade, och standardkontot kan döpas om och logga in.",
+        "en": "Agent and account are chosen in one box, accounts show their login, and the default account can be renamed and log in."
+      },
+      "features": [],
+      "changes": [
+        "Release summary for v0.42.0 with the one-box agent and account",
+        "Add verification screenshots for #194",
+        "Choose agent and account in one Agent box instead of a separate Account row (#194)",
+        "Add verification screenshots for #193",
+        "Give the default account a Log in button that logs in to the agent's own directory (#193)",
+        "Lock the account status state that check continuations update (#192)",
+        "Add verification screenshots for #192",
+        "Show the login identity only in the account's status line (#192)",
+        "Show login status per account and let the default account be renamed (#192)"
+      ]
+    },
+    {
+      "version": "0.41.0",
+      "date": "2026-11-24",
+      "previous": "0.40.0",
+      "summary": {
+        "sv": "Flera Claude- och Codex-konton med val per flik, alias ändras direkt med bekräftelse och osparade val går inte förlorade.",
+        "en": "Several Claude and Codex accounts with a choice per tab, aliases change at once after confirmation, unsaved choices are kept."
+      },
+      "features": [],
+      "changes": [
+        "Clamp run-summary duration at 0 and make the Windows update helper test state-based (#191)",
+        "Give the orchestra refresh settle a generous deadline and date the fresh update stamp a minute back (#190)",
+        "Wait for state instead of fixed short times in load-sensitive tests (#190)",
+        "Add verification screenshots for #186",
+        "Test and document accounts per agent (#186)",
+        "Add accounts per agent and an account choice per tab (#186)",
+        "Refresh the orchestra status of tabs periodically and on window activation (#189)",
+        "Add verification screenshots for #188",
+        "Keep the screenshot window list in dictionary order (#188)",
+        "Never hold up app or OS shutdown with the unsaved-changes question (#188)",
+        "Ask before Done/close drops unsaved compact or WSL memory edits: Save, Discard or Cancel (#188)",
+        "Add verification screenshots for #187",
+        "Describe confirm-on-select for aliases in DETAILS.md (#187)",
+        "Apply an alias when a mode is chosen, after a confirmation, instead of via an Apply button (#187)",
+        "Start the concurrent update test's tabs on dedicated threads (#185)"
+      ]
+    },
+    {
+      "version": "0.40.0",
+      "date": "2026-11-21",
+      "previous": "0.39.1",
+      "summary": {
+        "sv": "YOLO för Codex gäller nu även skript och tmux via config.toml, och WSL kan lämna tillbaka minne till Windows.",
+        "en": "Codex YOLO now also applies to scripts and tmux via config.toml, and WSL can return unused memory to Windows."
+      },
+      "features": [],
+      "changes": [
+        "Document autoMemoryReclaim in DETAILS.md (#184)",
+        "Add verification screenshots for #183",
+        "Recommend and edit autoMemoryReclaim in .wslconfig (#183)",
+        "Add verification screenshot for #182",
+        "Make Codex's config.toml follow the YOLO permission alias (#182)",
+        "Pin Orchestra v0.15.1 in the project policy"
+      ]
+    },
+    {
+      "version": "0.39.1",
+      "date": "2026-11-21",
+      "previous": "0.39.0",
+      "summary": {
+        "sv": "Open Interpreter-flikarnas uppgraderingsmeddelande i terminalen är nu på engelska, som övriga terminalmeddelanden.",
+        "en": "Open Interpreter tabs now show their terminal upgrade notice in English, like BoosterAI's other terminal messages."
+      },
+      "features": [],
+      "changes": [
+        "Write the Open Interpreter upgrade notice in English like other terminal messages (#181)",
+        "Pin Orchestra v0.15.0 in the project policy"
+      ]
+    },
+    {
+      "version": "0.39.0",
+      "date": "2026-11-20",
+      "previous": "0.38.3",
+      "summary": {
+        "sv": "Rådgivarvalet under Claude-projekten visas nu bara när du slår på växlaren Rådgivare uppe till höger.",
+        "en": "The advisor choice under Claude projects now shows only when you turn on the Advisor switch at the top right."
+      },
+      "features": [],
+      "changes": [
+        "Show the Claude advisor row through a switch beside Settings (#180)",
+        "Pin Orchestra v0.14.5 in the project policy"
+      ]
+    },
+    {
+      "version": "0.38.3",
+      "date": "2026-11-19",
+      "previous": "0.38.2",
+      "summary": {
+        "sv": "Länkar kraschar inte utan webbläsare, WSL-reglaget håller sig inom gränserna och decimaler skrivs med komma på svenska.",
+        "en": "Links no longer crash without a browser, the WSL slider stays in range and Swedish decimals use a comma."
+      },
+      "features": [],
+      "changes": [
+        "Document a saved WSL cap outside the slider's limits (#179)",
+        "Bound the wait in the distribution-change setup test (#176)",
+        "Queue one more setup check when an explicit check arrives while one runs (#176)",
+        "Use the Swedish decimal comma in computed sizes (#178)",
+        "Keep the WSL memory slider within its bounds on load (#177)",
+        "Guard every link button against a missing browser (#175)"
+      ]
+    },
+    {
+      "version": "0.38.2",
+      "date": "2026-11-16",
+      "previous": "0.38.1",
+      "summary": {
+        "sv": "Rådgivaren är Av som förval och blockerar även Claudes sparade rådgivare. Valda rådgivarmodeller behålls.",
+        "en": "Advisor is Off by default, including Claude’s saved advisor. Explicitly chosen advisor models are kept."
+      },
+      "features": [],
+      "changes": [
+        "Default the Claude advisor to explicit Off (#174)"
+      ]
+    },
+    {
+      "version": "0.38.1",
+      "date": "2026-11-16",
+      "previous": "0.38.0",
+      "summary": {
+        "sv": "Rådgivare visas vid projektets Agent och Modell, även hopfällt, med tydlig text om vilka flikar valet gäller.",
+        "en": "Advisor appears by the project Agent and Model even when collapsed, with a clear note about its scope."
+      },
+      "features": [],
+      "changes": [
+        "Show advisor with the project choices even when collapsed (#173)"
+      ]
+    },
+    {
+      "version": "0.38.0",
+      "date": "2026-11-16",
+      "previous": "0.37.4",
+      "summary": {
+        "sv": "Claude-projekt kan få en rådgivarmodell (Opus eller Fable) som bara skickas tillsammans med Sonnet eller Haiku.",
+        "en": "Claude projects can get an advisor model (Opus or Fable), sent only together with a Sonnet or Haiku model."
+      },
+      "features": [],
+      "changes": [
+        "Prepare 0.38.0 release summary",
+        "Pin orchestra v0.14.4 and ignore .claude/worktrees",
+        "Add cost rules for the Claude advisor: Opus/Fable only, beside Sonnet or lower (#172)",
+        "Add claude-fable-5-2 to the model list and its context capacity (#171)",
+        "Add a per-project advisor model for Claude tabs (#170)"
+      ]
+    },
+    {
+      "version": "0.37.4",
+      "date": "2026-11-15",
+      "previous": "0.37.3",
+      "summary": {
+        "sv": "Kör en gång med agy erbjuder inte längre en regel för \"1\" när ett nekat kommando innehåller 2>&1.",
+        "en": "Run once with agy no longer offers a rule for \"1\" when a denied command contains 2>&1."
+      },
+      "features": [],
+      "changes": [
+        "Prepare 0.37.4 release summary",
+        "Use Loc.FormatCount for counted nouns and rename .many keys to .other (#169)",
+        "Share one /mnt/<drive> check between StartFolder and ToLocalPath (#168)",
+        "Ignore the & of redirects when finding denied agy programs (#167)",
+        "Pin orchestra v0.14.3 in the project policy"
+      ]
+    },
+    {
+      "version": "0.37.3",
+      "date": "2026-11-13",
+      "previous": "0.37.2",
+      "summary": {
+        "sv": "Agentkontrollen fastnar inte längre när .bashrc startar bakgrundsjobb, och .wslconfig-minne i KB eller B läses rätt.",
+        "en": "The agent check no longer hangs when .bashrc starts background jobs, and .wslconfig memory in KB or B is read correctly."
+      },
+      "features": [],
+      "changes": [
+        "Prepare 0.37.3 release summary",
+        "Bound Prerequisites.Run output read by the limit",
+        "Parse .wslconfig memory in KB/B and reject unknown units and overflow",
+        "Pin orchestra v0.14.2 in the project policy"
+      ]
+    },
+    {
+      "version": "0.37.2",
+      "date": "2026-11-13",
+      "previous": "0.37.1",
+      "summary": {
+        "sv": "Musrörelser räknas inte längre som tangenttryckningar, så Kör /orkester igen och auto-clear fungerar som tänkt.",
+        "en": "Mouse movement no longer counts as typing, so Run /orkester again and auto-clear work as intended."
+      },
+      "features": [],
+      "changes": [
+        "Prepare 0.37.2 release summary",
+        "Isolate corrupt or unreadable session files per tab and write tab.json atomically",
+        "Stop counting terminal replies and mouse motion as typed input",
+        "Pin orchestra v0.14.1 in the project policy"
+      ]
+    },
+    {
+      "version": "0.37.1",
+      "date": "2026-11-13",
+      "previous": "0.37.0",
+      "summary": {
+        "sv": "Licenstexterna för appens typsnitt följer nu med i appen och i release-paketen.",
+        "en": "The licence texts for the app's fonts now ship inside the app and in the release packages."
+      },
+      "features": [],
+      "changes": [
+        "Prepare 0.37.1 release summary",
+        "Embed font licence texts in the exe, add test",
+        "Ship font licences in release archives, add third-party licence note",
+        "Build --screenshot --window names from one list",
+        "Pin orchestra v0.14.0",
+        "Pin orchestra v0.13.1",
+        "Verify Live Peek on an isolated native Windows desktop (#154)"
+      ]
+    },
+    {
+      "version": "0.37.0",
+      "date": "2026-11-11",
+      "previous": "0.36.0",
+      "summary": {
+        "sv": "Tydligare projektlista, enhetliga inställningar och kontextval samt förbättrade agentkort och installation.",
+        "en": "Clearer project rows, consistent settings and context choices, plus improved agent cards and setup."
+      },
+      "features": [],
+      "changes": [
+        "Prepare 0.37.0 release summary",
+        "Refresh settings and main previews and record layout verification (#157)",
+        "Keep keyboard focus visible in both settings side navigations (#157)",
+        "Use the shared corner token for settings selection bars (#157)",
+        "Unify context management choices and preserve legacy combinations (#157)",
+        "Fix orchestra choice link in verification report (#160)",
+        "Preserve unfinished settings page layout and context relocation (#157)",
+        "Update Orchestra pin to reviewed v0.12.0",
+        "Agent overview cards: plain status and permissions, logo plate, Install, filled Interpreter mark (#158)",
+        "Regenerate README screenshots, document row controls and add #156 evidence",
+        "Icons and row controls: folder opens, Byt… changes, Fortsätt link, drawn gear/chevrons/grip, Alt+Up/Down and row menu (#156)",
+        "Regenerate screenshots and docs images for the type scale (#149)",
+        "Sweep MainWindow to the type scale classes (#149)",
+        "Sweep views to the type scale classes, Bold to SemiBold, terminal preview 12/16 (#149)",
+        "Type scale classes display, title, subtitle, body, body-small, caption and scale tests (#149)",
+        "Share the pick-list style with the setup agent list (#159)",
+        "Installation guide: agent status per agent, ticked projects, mono paths, bolt-only header icon (#159)",
+        "Main list: one orchestra choice, hidden empty column, wider status, missing marker, row rhythm, rotating tab colours (#152)",
+        "Drop duplicate WarningIcon and guard against duplicate resource keys (#155)",
+        "Put Local models in three steps and lead model advice with a result card (#155)",
+        "Show errors in a danger banner with recovery actions (#153)",
+        "Make clear what Start opens: live-row checkbox, names, Start tooltip (#151)",
+        "Re-render dark Peek evidence on the integrated build (#154)",
+        "Live Peek: bundled symbol font, opaque popup surface, header with status dot (#154)",
+        "Bind the Start bolt to the button foreground (#148)",
+        "Add button variants and rework the Close all flow (#148)",
+        "Use a neutral project search root in review screenshots",
+        "Regenerate README screenshots with tokens and glossary (#147)",
+        "Add colour, surface and radius tokens (#147)",
+        "Use agent wording in remaining tooltip and DETAILS (#150)",
+        "Unify UI glossary: Agent, Modell, Flik, Underflik (#150)",
+        "Add UX and visual design review evidence (2026-11-11)",
+        "Pin orchestra shared release v0.11.2"
+      ]
+    },
+    {
+      "version": "0.36.0",
+      "date": "2026-11-10",
+      "previous": "0.35.2",
+      "summary": {
+        "sv": "Välj lokala modeller i ett eget fönster med råd för din dator och hämta dem via Ollama.",
+        "en": "Compare local models in a separate window, get hardware-based suggestions and download through Ollama."
+      },
+      "features": [],
+      "changes": [
+        "Prepare 0.36.0 local model management release",
+        "Document and illustrate local model installation verification (#146)",
+        "Release model manager subscriptions and keep initial view at top (#146)",
+        "Add separate local model catalog, hardware suggestions and Ollama downloads (#146)"
+      ]
+    },
+    {
+      "version": "0.35.2",
+      "date": "2026-11-09",
+      "previous": "0.35.1",
+      "summary": {
+        "sv": "Smidigare projektstart och projektsökning, tydligare Auto-clear och bättre återkoppling när flikar stängs.",
+        "en": "Find chosen project folders, open settings without extra projects, and get clearer cleanup and close feedback."
+      },
+      "features": [],
+      "changes": [
+        "Prepare 0.35.2 UX improvements release",
+        "Refresh auto-clear settings preview and verification evidence (#145)",
+        "Clarify idle auto-clear consequences before activation (#145)",
+        "Treat an existing blank search root as default in setup (#144)",
+        "Keep automatic project searches below global home configuration (#144)",
+        "Find projects when the selected folder is the project root (#144)",
+        "Observe manual closure after Close all failures (#143)",
+        "Keep settings navigation separate from adding a first project (#142)"
+      ]
+    },
+    {
+      "version": "0.35.1",
+      "date": "2026-11-09",
+      "previous": "0.35.0",
+      "summary": {
+        "sv": "Råd om lokala modeller före installation, automatisk agentkontroll och en visuell guide till Auto-compact.",
+        "en": "See local model advice before installing agents, automatic version checks and a visual Auto-compact guide."
+      },
+      "features": [],
+      "changes": [
+        "Prepare 0.35.1 UX correction release",
+        "Document and capture visual auto compact guide",
+        "Explain auto compaction with visual conversation and reserve guides",
+        "Capture final missing and installed agent advice states",
+        "Document model planning and advice before installation",
+        "Keep agent navigation visible above model advice",
+        "Keep model advice current when hardware snapshots change",
+        "Preserve shared advice through background agent detection",
+        "Show local model planning advice before agent installation",
+        "Keep current WSL diagnostics separate from cached agent facts (#140)",
+        "Refresh visible agent settings after returning to the window (#140)",
+        "Refresh agent status automatically when opening settings (#140)"
+      ]
+    },
+    {
+      "version": "0.35.0",
+      "date": "2026-11-09",
+      "previous": "0.34.1",
+      "summary": {
+        "sv": "Nya hårdvaruråd för lokala AI-modeller och uppdaterade guider, RAM-bilder och information om alla sex CLI:er.",
+        "en": "Get hardware advice for local AI models, plus refreshed setup docs, RAM previews and all six AI CLIs."
+      },
+      "features": [],
+      "changes": [
+        "Summarize local model advice and documentation updates for v0.35.0",
+        "Document and capture local model advice verification",
+        "Qualify CPU inference advice without a speed measurement",
+        "Add cautious local model hardware advice for issue 139",
+        "Qualify conversation resume and save support by CLI in README (#138)",
+        "Record complete website audit and responsive browser evidence (#137)",
+        "Audit website claims and refresh six-CLI previews (#137)",
+        "Show RAM usage and WSL environment as separate website previews (#135)",
+        "Länka till Dirigenten och orkesterns GitHub Pages-sida (#136)"
+      ]
+    },
+    {
+      "version": "0.34.1",
+      "date": "2026-11-09",
+      "previous": "0.34.0",
+      "summary": {
+        "sv": "Installationshjälpen i README och på webbplatsen visar guiden, uppgradering och avinstallation tydligare.",
+        "en": "Updated README and website guides cover setup, upgrades and uninstalling with your settings kept."
+      },
+      "features": [],
+      "changes": [
+        "Prepare v0.34.1 with the updated installation guides",
+        "Show the signed setup guide on the download page (#134)",
+        "Explain the Windows setup guide, upgrades and uninstall in README (#133)"
+      ]
+    },
+    {
+      "version": "0.34.0",
+      "date": "2026-11-09",
+      "previous": "0.33.0",
+      "summary": {
+        "sv": "Signerad Windows-installationsguide med inställningar och projektsökning; välj även basmapp för sökningen.",
+        "en": "Signed Windows setup with settings and project discovery; choose the base folder for project searches."
+      },
+      "features": [],
+      "changes": [
+        "Prepare the signed setup release v0.34.0",
+        "Keep quiet setup platform checks explicit and retain wizard screenshots (#131)",
+        "Document the verified Windows signing publisher (#130)",
+        "Add a silent --quiet setup mode and lead the website with the setup exe (#131)",
+        "Let the setup wizard search from the Find projects base folder (#131)",
+        "Add a Windows setup wizard and uninstall entry to BoosterAI.exe (#131)",
+        "Add a one-time code-signing setup script (#130)",
+        "Add a base-folder setting for Find projects (#132)",
+        "Sign the Windows release with Azure Artifact Signing when enabled (#130)",
+        "Pin orchestra v0.11.1 in the project policy",
+        "Pin orchestra v0.10.0 and its worktree cleanup in the project policy"
+      ]
+    },
+    {
+      "version": "0.33.0",
+      "date": "2026-11-08",
+      "previous": "0.32.2",
+      "summary": {
+        "sv": "Klicka på en notis från BoosterAI för att visa programfönstret, även när det ligger i systemfältet.",
+        "en": "Click a BoosterAI notification to bring the app window back, even when it is hidden in the system tray."
+      },
+      "features": [],
+      "changes": [
+        "Document clicking a notification to show BoosterAI (#129)",
+        "Prepare 0.33.0 release summary",
+        "Show the main window when a notification is clicked (#129)"
+      ]
+    },
+    {
+      "version": "0.32.2",
+      "date": "2026-11-08",
+      "previous": "0.32.1",
+      "summary": {
+        "sv": "Inställningar: textrutorna för namn och sökväg i projektlistan behåller fokus under statuskontroll.",
+        "en": "Settings: name and path text boxes in the projects list retain focus during status polling."
+      },
+      "features": [],
+      "changes": [
+        "Prepare 0.32.2 release summary",
+        "Keep Settings project items stable across polling (#128)"
+      ]
+    },
+    {
+      "version": "0.32.1",
+      "date": "2026-11-06",
+      "previous": "0.32.0",
+      "summary": {
+        "sv": "Spara till .wslconfig är bara aktiv vid ändrat värde, menyn under Optimering klipps inte och omstart av inaktiva flikar fastnar inte.",
+        "en": "Save to .wslconfig is only enabled after a change, the Optimization menu is no longer clipped and idle tab restarts no longer stall."
+      },
+      "features": [],
+      "changes": [
+        "Prepare 0.32.1 release summary",
+        "Drop the temporary PTY diagnostics workflow (#122)",
+        "Repeat the idle shell's wake HUP until the shell is gone (#122)",
+        "Capture every fixture process and the starter's signal mask on a failed PTY restart (#122)",
+        "WIP: PTY restart diagnostics from the Codex session (#122)",
+        "Keep the wslconfig save test inside the runner's slider bounds (#126)",
+        "Record settings nav verification screenshots (#127)",
+        "Let the Optimization nav column grow to its widest label (#127)",
+        "Enable Save to .wslconfig only when the selected cap differs (#126)"
+      ]
+    },
+    {
+      "version": "0.32.0",
+      "date": "2026-11-06",
+      "previous": "0.31.3",
+      "summary": {
+        "sv": "Hitta projekt börjar urkryssat och visar orkesterns version per projekt. Antigravity får val för Auto och YOLO.",
+        "en": "Find projects starts unticked and shows each project's orchestra version. Antigravity gets Auto and YOLO choices."
+      },
+      "features": [],
+      "changes": [
+        "Prepare 0.32.0 release summary",
+        "Record Find projects verification screenshots (#123)",
+        "Start found projects unticked and show their orchestra version (#123)",
+        "Capture CLI help written to stderr in detection (#125)",
+        "Pin orchestra v0.9.0 in the project policy"
+      ]
+    },
+    {
+      "version": "0.31.3",
+      "date": "2026-11-06",
+      "previous": "0.31.2",
+      "summary": {
+        "sv": "Starta fungerar igen på Windows: flikarna stängdes direkt när Windows Terminal tog bort skriptets citattecken. Saknade AI-agenter visar bara Installera.",
+        "en": "Start works again on Windows: tabs closed at once when Windows Terminal dropped the script's quotes. Missing AI agents show only Install."
+      },
+      "features": [],
+      "changes": [
+        "Prepare 0.31.3 release summary (#124)",
+        "Keep double quotes out of the Windows Terminal tab command (#124)"
+      ]
+    },
+    {
+      "version": "0.31.2",
+      "date": "2026-11-06",
+      "previous": "0.31.1",
+      "summary": {
+        "sv": "AI-agenter som saknas visar bara Installera; behörigheter och kontext visas när agenten är installerad.",
+        "en": "Missing AI agents show only Install; permissions and context appear once the program is installed."
+      },
+      "features": [],
+      "changes": [
+        "Normalize Windows verification artifact permissions",
+        "Record Windows UI verification and prepare 0.31.2 (#121)",
+        "Show only installation for missing AI agents (#121)",
+        "Use automatic updates for normal release delivery (#120)",
+        "Record 0.31.1 release and Windows policy delivery blocker"
+      ]
+    },
+    {
+      "version": "0.31.1",
+      "date": "2026-11-05",
+      "previous": "0.31.0",
+      "summary": {
+        "sv": "Modellistan hålls öppen när flikarnas status uppdateras, så att du hinner välja och spara modell.",
+        "en": "The model list stays open during tab status updates, giving you time to select and save a model."
+      },
+      "features": [],
+      "changes": [
+        "Record Windows popup verification and prepare 0.31.1 release",
+        "Allow separate platform evidence from model popup probe (#119)",
+        "Keep model popup open during status refresh (#119)",
+        "Record published 0.31.0 release and final Windows installation"
+      ]
+    },
+    {
+      "version": "0.31.0",
+      "date": "2026-11-05",
+      "previous": "0.30.0",
+      "summary": {
+        "sv": "Byt AI-agent igen, se tydlig WSL-information och välj mindre textstorlekar: 50, 60 och 70 procent.",
+        "en": "Switch AI agents again, see clearer WSL information and choose smaller text sizes: 50, 60 and 70 percent."
+      },
+      "features": [],
+      "changes": [
+        "Record verified Windows integration installation for 0.31.0",
+        "Record integrated UI verification and prepare 0.31.0 release summary",
+        "Complete shell fixture isolation and clean orphaned close-test trees (#118)",
+        "Isolate PTY test stubs from personal agent overrides (#118)",
+        "Preserve agent selection while refreshing available choices (#115)",
+        "Offer 50, 60 and 70 percent terminal font sizes (#117)",
+        "Show WSL installation facts and remove duplicate environment check (#116)",
+        "Pin Orchestra v0.8.2 after reviewed subtree import (#114)",
+        "Record verified 0.30.0 release and final Windows installation"
+      ]
+    },
+    {
+      "version": "0.30.0",
+      "date": "2026-11-05",
+      "previous": "0.29.0",
+      "summary": {
+        "sv": "Applicera egna alias med en bekräftelse, tydligare miljökontroll och omstart av stängda flikar.",
+        "en": "Apply custom aliases with one confirmation, clearer environment checks and restart recovered closed tabs."
+      },
+      "features": [],
+      "changes": [
+        "Prepare the 0.30.0 release summary",
+        "Verify confirmed alias refresh in an isolated real Terminal (#113)",
+        "Record combined Windows UI delivery for #111 and #113",
+        "Align alias guidance with the confirmation flow (#113)",
+        "Apply custom permission aliases after one confirmation (#113)",
+        "Make status and Live Peek keyboard accessible (#111)",
+        "Record Windows verification and installed environment settings (#112)",
+        "Clarify environment checks and keep aliases under AI agents (#112)",
+        "Record Windows verification and installed onboarding change (#110)",
+        "Treat No alias as complete setup and remove recurring full-auto offer (#110)",
+        "Record combined Windows verification and delivery for #108 and #109",
+        "Protect active project groups and confirm removal (#108)",
+        "Confirm global WSL shutdown before executing it (#109)",
+        "Document systematic UX review and actionable findings (#105)",
+        "Record Windows verification and background install for #106",
+        "Recover ended ordinary tabs for Restart all after app restart (#106)",
+        "Record resumed Windows verification and delivery for #104",
+        "Pin Orchestra v0.8.1 and align scoped chat intake (#107)",
+        "Explain permission aliases and separate actual values from preset previews (#104)"
+      ]
+    },
+    {
+      "version": "0.29.0",
+      "date": "2026-11-05",
+      "previous": "0.28.0",
+      "summary": {
+        "sv": "Agentikoner, en samlad översikt och tydliga underflikar för behörigheter och kontext i Inställningar.",
+        "en": "Agent icons, an overview dashboard and separate settings sections for permissions and context budgets."
+      },
+      "features": [],
+      "changes": [
+        "Record cross-platform verification and background install for #103",
+        "Add agent icons and focused settings sections (#103)"
+      ]
+    },
+    {
+      "version": "0.28.0",
+      "date": "2026-11-05",
+      "previous": "0.27.1",
+      "summary": {
+        "sv": "Snabbval för auto-compact i Optimering: Av, Auto och Manuell. Återställ compact-inställningar per agent.",
+        "en": "Auto-compaction quick modes in Optimization: Off, Auto and Manual, with per-agent restore defaults."
+      },
+      "features": [],
+      "changes": [
+        "Prepare the 0.28.0 release summary",
+        "Record verified global compaction mode delivery",
+        "Add global off auto and manual compaction modes"
+      ]
+    },
+    {
+      "version": "0.27.1",
+      "date": "2026-11-05",
+      "previous": "0.27.0",
+      "summary": {
+        "sv": "AI-agenter har egna underflikar och tydliga inställningsgrupper. Osparade val bevaras när du byter flik.",
+        "en": "AI agents get individual subtabs and clear setting groups. Unsaved choices survive tab navigation."
+      },
+      "features": [],
+      "changes": [
+        "Prepare the 0.27.1 release summary",
+        "Record verified agent subtab delivery and fixture checks",
+        "Isolate and restore converter tests' global language (#101)",
+        "Wait for the complete CLI PID in orchestra PTY tests (#100)",
+        "Separate agent settings into persistent pages and control groups"
+      ]
+    },
+    {
+      "version": "0.27.0",
+      "date": "2026-11-05",
+      "previous": "0.26.0",
+      "summary": {
+        "sv": "Ny agentflik med versioner, behörighetslägen och auto-compact, fler agenter och reload för Claude-orkester.",
+        "en": "Agent settings with versions, permission modes and auto-compaction, more agents and Claude orchestra reload."
+      },
+      "features": [],
+      "changes": [
+        "Prepare the 0.27.0 release summary",
+        "Record verified Windows auto-compaction delivery",
+        "Use Codex string fallback for compact scope across Windows Terminal",
+        "Expose per-model auto-compaction budgets in agent settings",
+        "Add auto-compaction policy, model metadata and launch preferences",
+        "Refresh settings website previews after the agent tab split (#98)",
+        "Record Windows delivery of agent version and permission settings",
+        "Add agent settings tab with CLI versions and managed permission modes",
+        "Record integrated Windows verification for agent support and orchestra reload",
+        "Reload an idle Claude orchestra in its existing CLI session (#95)",
+        "Add Open Interpreter with compatible local model starts (#93)",
+        "Add OpenHands CLI detection, launching and safe lifecycle handling (#94)"
+      ]
+    },
+    {
+      "version": "0.26.0",
+      "date": "2026-11-04",
+      "previous": "0.25.1",
+      "summary": {
+        "sv": "Stöd för kodningsagenten Aider (inkl. Ollama), dynamisk CLI-meny och agent-hubb i Inställningar.",
+        "en": "Support for the Aider coding agent (incl. Ollama), installed-only CLI choices, and agents hub in Settings."
+      },
+      "features": [],
+      "changes": [
+        "Allow more time for concurrent single-instance notifications under test load",
+        "Add support for Aider coding agent (#92)",
+        "Filter tab LLM dropdown to installed CLIs and add agents hub to Settings (#91)",
+        "Replace settings-wsl.png with canonical WSL memory optimization overview and add cache busting",
+        "Remove experimental workflow to restore standard GitHub Pages branch deploy",
+        "Optimize Pages workflow and capture authentic WSL RAM optimization and Settings screenshots",
+        "Streamline README to be concise and refer to the Pages site",
+        "Fix screenshot cut-off and separate Settings and WSL Optimization previews",
+        "Add direct download buttons and SmartScreen notice to landing page",
+        "Add modern GitHub Pages landing page for BoosterAI"
+      ]
+    },
+    {
+      "version": "0.25.1",
+      "date": "2026-11-04",
+      "previous": "0.25.0",
+      "summary": {
+        "sv": "Fönstret stannar öppet när BoosterAI återställs från systemfältet eller startas igen från menyn.",
+        "en": "The window stays visible when restoring BoosterAI from the tray or launching it again from the menu."
+      },
+      "features": [],
+      "changes": [
+        "Record tray restoration delivery and summarize v0.25.1",
+        "Hide a background window only on its first opening (#90)"
+      ]
+    },
+    {
+      "version": "0.25.0",
+      "date": "2026-11-04",
+      "previous": "0.24.1",
+      "summary": {
+        "sv": "BoosterAI kommer ihåg sin egen fönsterstorlek och maximering mellan omstarter och installationer.",
+        "en": "BoosterAI remembers its own window size and maximized state across restarts and installations."
+      },
+      "features": [],
+      "changes": [
+        "Record Windows window-size verification and summarize v0.25.0",
+        "Remember the main window size and maximized state across restarts (#89)"
+      ]
+    },
+    {
+      "version": "0.24.1",
+      "date": "2026-11-04",
+      "previous": "0.24.0",
+      "summary": {
+        "sv": "En programinstans, bevarade fliknamn och automatisk återstart med rätt textstorlek efter installation.",
+        "en": "One app instance, restored tab names and automatic restart with saved terminal font size after installation."
+      },
+      "features": [],
+      "changes": [
+        "Record combined Windows checks and summarize v0.24.1",
+        "Keep one GUI instance and restore it on menu launch (#87)",
+        "Restore managed terminal titles during long-running CLI sessions (#86)",
+        "Run global language changes outside parallel UI tests (#88)",
+        "Record real installation restart and restored terminal metrics (#85)",
+        "Restart Windows installs and restore saved zoom without test side effects (#85)"
+      ]
+    },
+    {
+      "version": "0.24.0",
+      "date": "2026-11-04",
+      "previous": "0.23.0",
+      "summary": {
+        "sv": "Optimering får en vänstermeny och en större RAM-översikt med tydliga värden för användning, historik och tak.",
+        "en": "Optimization gains a sidebar and larger RAM overview with clear usage, history and configured-cap values."
+      },
+      "features": [],
+      "changes": [
+        "Preserve canonical parent summaries during integration waits (#81)",
+        "Adopt owned integration-ready handoffs and Orchestra v0.8.0 (#81)",
+        "Organize optimization pages and clarify WSL memory overview (#84)"
+      ]
+    },
+    {
+      "version": "0.23.0",
+      "date": "2026-11-04",
+      "previous": "0.22.0",
+      "summary": {
+        "sv": "Lägg till undertabbar med egna AI-val och se WSL:s faktiska RAM-användning med 30 minuters statistik.",
+        "en": "Add project subtabs with separate AI choices and see actual WSL RAM usage with 30-minute statistics."
+      },
+      "features": [],
+      "changes": [
+        "Verify grouped tabs and prepare v0.23.0 release",
+        "Guard shared conversation history and verify grouped tab handoff (#82)",
+        "Group extra project tabs with independent choices and stable session identities (#82)",
+        "Show observed WSL RAM usage and rolling memory history (#83)"
+      ]
+    },
+    {
+      "version": "0.22.0",
+      "date": "2026-11-03",
+      "previous": "0.21.0",
+      "summary": {
+        "sv": "Minnesreglaget visar ett vägledande spann och råd för att dela RAM mellan WSL, Windows och Hyper-V.",
+        "en": "The memory slider shows a suggested range and advice for sharing RAM between WSL, Windows and Hyper-V."
+      },
+      "features": [],
+      "changes": [
+        "Prepare release summary for v0.22.0 (#80)",
+        "Guide WSL memory choices with a conservative range (#80)"
+      ]
+    },
+    {
+      "version": "0.21.0",
+      "date": "2026-11-03",
+      "previous": "0.20.0",
+      "summary": {
+        "sv": "WSL-terminalen minns nu skärm, placering och storlek mellan sessioner, även maximering och dockad geometri.",
+        "en": "The WSL terminal now remembers its screen, position and size across sessions, including maximized and docked bounds."
+      },
+      "features": [],
+      "changes": [
+        "Record terminal placement verification and prepare v0.21.0 (#78)",
+        "Retry WSL marker reads without interrupting terminal cleanup (#78)",
+        "Verify maximized terminal placement and tolerate missing helper exit codes (#78)",
+        "Run placement verification on an isolated Windows desktop (#78)",
+        "Match the Windows Terminal host class and trace placement checks (#78)",
+        "Isolate WSL tests that override shared configuration (#79)",
+        "Remember the WSL terminal window placement between sessions (#78)"
+      ]
+    },
+    {
+      "version": "0.20.0",
+      "date": "2026-11-02",
+      "previous": "0.19.0",
+      "summary": {
+        "sv": "Minnesslidern under Inställningar › Optimering visar nu det rekommenderade värdet med ett grönt streck och text.",
+        "en": "The memory slider in Settings › Optimization now marks the recommended value with a green tick and label."
+      },
+      "features": [],
+      "changes": [
+        "Recommendation marker on the WSL memory slider (#77)"
+      ]
+    },
+    {
+      "version": "0.19.0",
+      "date": "2026-11-02",
+      "previous": "0.18.0",
+      "summary": {
+        "sv": "WSL-resursoptimering: ny flik i Inställningar med minnesslider, hårdvarurekommendation och optimeringsnotis.",
+        "en": "WSL resource optimization: new Settings tab with memory slider, hardware recommendations, and main prompt."
+      },
+      "features": [],
+      "changes": [
+        "WSL resource optimization and memory slider (#76)"
+      ]
+    },
+    {
+      "version": "0.18.0",
+      "date": "2026-11-02",
+      "previous": "0.17.0",
+      "summary": {
+        "sv": "Inställningar är nu uppdelat i tre flikar (Projekt, Allmänt, Utseende) med grupperade sektioner och mer utrymme för projektlistan.",
+        "en": "Settings is now structured into three tabs (Projects, General, Appearance) with grouped sections and full room for projects."
+      },
+      "features": [],
+      "changes": [
+        "Structure Settings into tabs and grouped sections (#75)"
+      ]
+    },
+    {
+      "version": "0.17.0",
+      "date": "2026-10-31",
+      "previous": "0.16.0",
+      "summary": {
+        "sv": "BoosterAI hjälper nu till att installera WSL, claude, codex och agy om de saknas, och kan lägga till full-auto-alias.",
+        "en": "BoosterAI now helps install WSL, claude, codex and agy when they are missing, and can add optional full-auto aliases."
+      },
+      "features": [],
+      "changes": [
+        "Show the WSL and AI CLI check in the settings screenshot (#74)",
+        "Help install WSL and the AI CLIs, and offer full-auto aliases (#74)",
+        "Pin Orchestra v0.7.0 and add wait mechanism and delivery mode (#73)"
+      ]
+    },
+    {
+      "version": "0.16.0",
+      "date": "2026-10-31",
+      "previous": "0.15.1",
+      "summary": {
+        "sv": "Fönstret ligger nu kvar öppet efter Starta; välj Låt vara öppet, Minimera eller Stäng under Efter Starta.",
+        "en": "The window now stays open after Start; choose Keep open, Minimize or Close under After Start in Settings."
+      },
+      "features": [],
+      "changes": [
+        "Keep the window open after Start by default, with an After Start setting (#72)"
+      ]
+    },
+    {
+      "version": "0.15.1",
+      "date": "2026-10-31",
+      "previous": "0.15.0",
+      "summary": {
+        "sv": "Auto-clear rensar inte längre claude-flikar som väntar på bakgrundsagenter, bakgrundskommandon eller loopar.",
+        "en": "Auto-clear no longer clears claude tabs that wait for background agents, background commands or loops."
+      },
+      "features": [],
+      "changes": [
+        "Keep auto-clear away from claude tabs with background work (#71)",
+        "Pin orchestra v0.6.1"
+      ]
+    },
+    {
+      "version": "0.15.0",
+      "date": "2026-10-30",
+      "previous": "0.14.0",
+      "summary": {
+        "sv": "Valfri auto-clear skickar /clear till lediga claude-flikar efter vald tid; stängda flikar lämnar inga processer kvar.",
+        "en": "Optional auto-clear sends /clear to idle claude tabs after a set time; closed tabs leave no processes behind."
+      },
+      "features": [],
+      "changes": [
+        "Stop script and the CLI when a tab's terminal hangs up (#70)",
+        "Auto-clear idle claude tabs with /clear after a configurable time (#69)"
+      ]
+    },
+    {
+      "version": "0.14.0",
+      "date": "2026-10-30",
+      "previous": "0.13.2",
+      "summary": {
+        "sv": "Uppdateringsraden visar en kort sammanfattning av vad som är nytt, med en länk till alla ändringar.",
+        "en": "The update bar shows a short summary of what is new, with a link to every change."
+      },
+      "features": [],
+      "changes": [
+        "Release summary for v0.14.0 covers only what is new since v0.13.2",
+        "Add update bar screenshots for #68",
+        "Show a one-line summary of what is new in the update bar (#68)"
+      ]
+    },
+    {
+      "version": "0.13.2",
+      "date": "2026-10-30",
+      "previous": "0.13.1",
+      "summary": {},
+      "features": [],
+      "changes": [
+        "Keep each tab's configured name as its title (#66)",
+        "Reset the terminal before every CLI start so a restarted TUI draws correctly (#67)"
+      ]
+    },
+    {
+      "version": "0.13.1",
+      "date": "2026-10-30",
+      "previous": "0.13.0",
+      "summary": {},
+      "features": [],
+      "changes": [
+        "Keep the test run from opening terminal windows; restart closed tabs in one window (#65)"
+      ]
+    },
+    {
+      "version": "0.13.0",
+      "date": "2026-10-29",
+      "previous": "0.12.1",
+      "summary": {},
+      "features": [],
+      "changes": [
+        "Close and minimize to the tray on Windows by default, with a setting (#64)"
+      ]
+    },
+    {
+      "version": "0.12.1",
+      "date": "2026-10-29",
+      "previous": "0.12.0",
+      "summary": {},
+      "features": [],
+      "changes": [
+        "Stop bs_trim loops from outliving their capture"
+      ]
+    },
+    {
+      "version": "0.12.0",
+      "date": "2026-10-29",
+      "previous": "0.11.2",
+      "summary": {},
+      "features": [],
+      "changes": [
+        "Show the current zoom hint in the settings screenshot",
+        "Deliver an in-place restart queued while the idle shell still starts (#63)",
+        "Give real-PTY tests generous deadlines and wait for the idle shell before restarting (#62)",
+        "Do not promise that open Windows Terminal tabs follow a new zoom (#61)",
+        "Save the zoom choice at once and apply it to open Windows Terminal tabs (#61)",
+        "Update claude, codex and agy before a tab starts them (#60)",
+        "Add Restart all beside Start when two tabs can restart (#59)"
+      ]
+    },
+    {
+      "version": "0.11.2",
+      "date": "2026-10-28",
+      "previous": "0.11.1",
+      "summary": {},
+      "features": [],
+      "changes": [
+        "Match main window action button corners and height (#58)"
+      ]
+    },
+    {
+      "version": "0.11.1",
+      "date": "2026-10-28",
+      "previous": "0.11.0",
+      "summary": {},
+      "features": [],
+      "changes": [
+        "Run tabs without tracking when the session library is unavailable (#57)",
+        "Restart exited CLIs in their tracked terminal tabs (#56)"
+      ]
+    },
+    {
+      "version": "0.11.0",
+      "date": "2026-10-28",
+      "previous": "0.10.0",
+      "summary": {},
+      "features": [],
+      "changes": [
+        "Refresh main screenshot with close-all and continuation controls (#52, #54)",
+        "Close watched shells cleanly and scope Terminal exit behavior (#52)",
+        "Add save-and-close workflow for watched tabs (#52)",
+        "Map restart directories into WSL before queuing the CLI (#55)",
+        "Retire recovered-tab notices when their startup state changes (#53)",
+        "Offer explicit conversation continuation for ended tabs (#54)"
+      ]
+    },
+    {
+      "version": "0.10.0",
+      "date": "2026-10-28",
+      "previous": "0.9.0",
+      "summary": {},
+      "features": [],
+      "changes": [
+        "Hovering a tab's status shows its last 20 lines of terminal text, updated live",
+        "Resume unfinished local work at orchestra startup and discard what another orchestra already delivered to main, per orchestra v0.6.0; import notes for the shadowed vX tags (Fixes #50)",
+        "Questions policy: never ask in chat, overriding a user-level hand-back rule; leftover uncommitted edit from an earlier session, resumed under the new startup rule (Refs #50)"
+      ]
+    },
+    {
+      "version": "0.9.0",
+      "date": "2026-10-28",
+      "previous": "0.8.1",
+      "summary": {},
+      "features": [],
+      "changes": [
+        "Run once with codex/agy: ask the orchestra to keep its idle watch in the foreground",
+        "Run once: show Watching while a finished turn's CLI lives on; bs_stream's formatter logs turn-done/turn-start, the tab shows \"Watching · N min\" (blue) with the last turn's end time in the tooltip, back to Running on new output and Idle on exit (Fixes #48)",
+        "Run once stream formatter: result events print 'turn done', the CLI's exit prints a separate final line with exit code and total time (Fixes #47)"
+      ]
+    },
+    {
+      "version": "0.8.1",
+      "date": "2026-10-28",
+      "previous": "0.8.0",
+      "summary": {},
+      "features": [],
+      "changes": [
+        "Ptyxis: pass --tab-with-profile=default on new window so tab bar stays visible and tabs are not hidden (Fixes #46)",
+        "Correct the Run once lifetime note: claude -p waits for background tasks (62 min measured), codex exec exits at turn end, agy -p stops after 30 minutes (Refs #42)",
+        "Adopt orchestra v0.4.1 and set app version 0.8.0"
+      ]
+    },
+    {
+      "version": "0.8.0",
+      "date": "2026-10-27",
+      "previous": "0.7.1",
+      "summary": {},
+      "features": [],
+      "changes": [
+        "Document Windows .NET SDK setup",
+        "Add tab reordering and terminal activity status",
+        "Update DETAILS.md with Run once 60-minute idle watch verification results (Fixes #42)"
+      ]
+    },
+    {
+      "version": "0.7.1",
+      "date": "2026-10-27",
+      "previous": "0.7.0",
+      "summary": {},
+      "features": [],
+      "changes": [
+        "Ptyxis cold start: turn restore-session off until the tabs are open, so the last run's restored windows (plain shells without a CLI) no longer take the --tab calls and split the tabs over two windows; the first tab opens with --new-window again (Fixes #41)"
+      ]
+    },
+    {
+      "version": "0.7.0",
+      "date": "2026-10-27",
+      "previous": "0.6.0",
+      "summary": {},
+      "features": [],
+      "changes": [
+        "Find tabs that still run after BoosterAI restarts: each tab saves its choices next to its log, live shells are matched by name and directory and watched again; Start opens only the chosen tabs that are not running; sessions with live tabs survive the clean-up (Fixes #40)"
+      ]
+    },
+    {
+      "version": "0.6.1",
+      "date": "2026-10-30",
+      "previous": "0.3.2",
+      "summary": {},
+      "features": [],
+      "changes": [
+        "Release v0.6.1",
+        "Adopt rule suggestions from the Historia-globen field report (Fixes #27)",
+        "Let /orkester run a queue session with a 60-minute idle watch in this repository (Fixes #25)",
+        "Release v0.6.0",
+        "Resume unfinished local work at conductor startup; discard it when it already reached main (Fixes #24)",
+        "Release v0.5.0",
+        "Define the session ID format with host and model (Refs #23)",
+        "Release v0.4.1",
+        "Refresh the bundled Issueflow snapshot to d7c1f56 (Refs #22)",
+        "Anchor the idle-watch deadline to the current session (Fixes #21)",
+        "Release v0.4.0",
+        "Dispatch before intake; review the session when the queue drains (Refs #20)"
+      ]
+    },
+    {
+      "version": "0.6.0",
+      "date": "2026-10-27",
+      "previous": "0.5.0",
+      "summary": {},
+      "features": [],
+      "changes": [
+        "Verification screenshots for #38 (row with a changed model, restart confirmation)",
+        "Restart a running tab in place when its LLM or model changes: queued for tab-lib's bs_next, the CLI's foreground group stopped; a model change on claude/codex keeps the conversation; claude hooks log busy/idle, a confirm dialog warns while it works and can wait for idle (Fixes #38)",
+        "Update check at start, on window activation and every five minutes while the window is active (inactive windows never check); Later hides that version for a day (Fixes #39)",
+        "Version 0.5.0 after the v0.5.0 release; policy: whoever closes the last open work issue releases, in or outside an orchestra session"
+      ]
+    },
+    {
+      "version": "0.5.0",
+      "date": "2026-10-27",
+      "previous": "0.4.2",
+      "summary": {},
+      "features": [],
+      "changes": [
+        "Show the running version in the window title and bottom left under the status line; README screenshot (Fixes #37)"
+      ]
+    },
+    {
+      "version": "0.4.2",
+      "date": "2026-10-27",
+      "previous": "0.4.1",
+      "summary": {},
+      "features": [],
+      "changes": [
+        "Ptyxis: a cold start opens the first tab with --tab, because the session Ptyxis restores becomes the active window and took every later --tab (two windows); each call now waits for the previous one so the tabs keep their order (Refs #21)",
+        "Ptyxis: wait for the instance to own its D-Bus name before the --tab calls, so a cold start no longer opens a second window; --dry-run prints the terminal auto picks (Refs #21)",
+        "Version 0.4.1 after the v0.4.1 release (Run once applies the CLI alias, #34)"
+      ]
+    },
+    {
+      "version": "0.4.1",
+      "date": "2026-10-27",
+      "previous": "0.4.0",
+      "summary": {},
+      "features": [],
+      "changes": [
+        "Policy: release is an explicit, never-skipped step of the session loop when the backlog drains (v0.4.0..main shipped #31–#36 without a release, so installed apps missed the #34 alias fix)",
+        "install-windows.ps1: refuse a dist build older than the sources instead of silently installing the previous version; save as UTF-8 with BOM so Windows PowerShell shows å/ä/ö (Refs #36)",
+        "Project row: the path is a hover tip on the name and the open-folder icon sits right after the name, so the status lines up with the name (Fixes #36)",
+        "DETAILS: zoom applies in a running Windows Terminal via the settings.json reload nudge from #33; the trailing newline is the only change to settings.json (Fixes #35)",
+        "Run once: bs_stream applies the user's alias for the CLI (BASH_ALIASES), which bash skips because the CLI is an argument there; agy='agy --dangerously-skip-permissions' and claude='claude --permission-mode auto' now apply as in interactive tabs (Fixes #34)",
+        "Zoom: make a running Windows Terminal reload its settings (toggle one trailing newline in settings.json) when the fragment changes, since it reads fragments only on reload; Restart and \"Allow and run again\" keep the zoom; agy rules: VAR=$(prog …) yields prog (Fixes #33)",
+        "install-windows.ps1: stop only the installed BoosterAI.exe (and the old BoosterStart install), not copies running from elsewhere such as the desktop or an unpacked release (Fixes #32)",
+        "README: unsigned BoosterAI.exe is blocked by Smart App Control until code signing lands (Refs #30)",
+        "Tab log: tool lines use up to three lines of the current terminal width (min 110) instead of a fixed 110 characters, so a wider window or smaller zoom shows more; the denied command is shown in full (Refs #31)",
+        "Version 0.4.0 after the v0.4.0 release (Find projects, #29)"
+      ]
+    },
+    {
+      "version": "0.4.0",
+      "date": "2026-10-26",
+      "previous": "0.3.0",
+      "summary": {},
+      "features": [],
+      "changes": [
+        "Find projects: scan Documents for git checkouts and AI-instruction folders (AGENTS.md, CLAUDE.md, AI.md, .claude …) and import the ticked ones as tabs; button in the empty start window and in Settings, \"search another folder\", --window import screenshot (Refs #29)",
+        "Run once: detect commands agy denied without asking and offer allow-rules: tab-lib logs the denied command line, the tab shows \"Denied: git, gh\", and a bar adds command(<program>) to agy's settings.json and runs the tabs again (Refs #28)",
+        "Version 0.3.0 after the v0.3.0 release; policy: release without asking when the backlog drains"
+      ]
+    },
+    {
+      "version": "0.3.2",
+      "date": "2026-10-24",
+      "previous": "0.3.1",
+      "summary": {},
+      "features": [],
+      "changes": [
+        "Release v0.3.2",
+        "README around the conductor/orchestra concept with icon; warn about the shared stash (Fixes #19)"
+      ]
+    },
+    {
+      "version": "0.3.1",
+      "date": "2026-10-24",
+      "previous": "0.2.3",
+      "summary": {},
+      "features": [],
+      "changes": [
+        "Release v0.3.1",
+        "Explain the name: dirigenten is the conductor thread, orkestern its workers (Fixes #18)",
+        "Release v0.3.0",
+        "Close device-dependent issues after a best-guess fix (Fixes #17)"
+      ]
+    },
+    {
+      "version": "0.3.0",
+      "date": "2026-10-26",
+      "previous": "0.2.0",
+      "summary": {},
+      "features": [],
+      "changes": [
+        "Fix invisible non-error status messages: ErrorBrush returned null (local null Foreground hid the text), now UnsetValue so the muted style applies; --fake-status screenshot hook; converter test (Refs #26)",
+        "Bounded retry (10 x 500 ms) when the exe is still locked: install-windows.ps1 copy with a clear Swedish error, and the self-update helper's second move (old exe restored only after retries fail)",
+        "Check GitHub for a newer release and update in place: quiet bar with Update / Later / Skip, SHA256SUMS-verified download, hidden helper swaps the exe after exit and relaunches; \"Check for updates\" setting",
+        "Run once: live readable progress for claude -p and agy -p via stream-json formatter in tab-lib.sh; exit code preserved (Refs #23)",
+        "Minimize to the taskbar after Start instead of hiding to the tray; tray icon stays on Windows (Fixes #24)",
+        "Appearance setting Auto/Light/Dark, applied live to all windows; --theme wins over config (Refs #22)",
+        "Linux: all tabs in one window (gnome-terminal/xfce4-terminal single call, Ptyxis support, auto prefers Ptyxis); pure LinuxCommands shared with --dry-run",
+        "Run-once toggle only where the orchestra toggle is, fixed-width status cell, deterministic headless screenshots (Refs #20)",
+        "Run the orchestra once, non-interactively, per project: claude -p, codex exec, agy -p (Fixes #20)"
+      ]
+    },
+    {
+      "version": "0.2.3",
+      "date": "2026-10-23",
+      "previous": "0.2.2",
+      "summary": {},
+      "features": [],
+      "changes": [
+        "Release v0.2.3",
+        "Let the agent install the orchestra from the README (Refs #16)",
+        "Isolate concurrent agents sharing a filesystem (Refs #15)",
+        "Shorten README into a concrete introduction (Refs #14)"
+      ]
+    },
+    {
+      "version": "0.2.2",
+      "date": "2026-10-23",
+      "previous": "0.2.1",
+      "summary": {},
+      "features": [],
+      "changes": [
+        "Release v0.2.2",
+        "Release only once no open issues remain (Refs #13)"
+      ]
+    },
+    {
+      "version": "0.2.1",
+      "date": "2026-10-23",
+      "previous": "0.1.2",
+      "summary": {},
+      "features": [],
+      "changes": [
+        "Keep bounded passes unattended; ask via user question on the issue (Refs #12)",
+        "Release v0.2.0 (Refs #8)",
+        "Run independent issues concurrently up to capacity in queue mode (Refs #8)",
+        "Refresh Issueflow snapshot and assign parent label duties (Refs #9)",
+        "Run a bounded pass when /orkester has no scope (Fixes #11)",
+        "Expose /orkester for self-consumption of the core (Refs #10)"
+      ]
+    },
+    {
+      "version": "0.2.0",
+      "date": "2026-10-26",
+      "previous": "0.1.0",
+      "summary": {},
+      "features": [],
+      "changes": [
+        "Shorter, more selling README with feature list; details moved to docs/ (Fixes #17)",
+        "Verification images for the settings layout (Refs #19)",
+        "Settings window: wrap hints, checkboxes on their own row, no clipping in en/sv (Fixes #19)",
+        "Screenshots without a visible window: render headless in the app (Fixes #18)",
+        "Installer: a locked old BoosterStart folder warns instead of aborting the install (Refs #16)",
+        "Rename BoosterStart to BoosterAI, migrate config, sessions, WT fragment and installs (Refs #16)",
+        "Global CLI zoom in Settings: WT fragment profile, Linux terminal zoom options (Refs #15)",
+        "Watch the tabs: status per tab, restart, tray and notifications (Fixes #13)",
+        "Policy: only the conductor opens real Windows Terminal tabs, once per delivery"
+      ]
+    },
+    {
+      "version": "0.1.2",
+      "date": "2026-10-23",
+      "previous": "0.1.1",
+      "summary": {},
+      "features": [],
+      "changes": [
+        "Release v0.1.2 (Fixes #7)",
+        "docs: fit README diagram labels and visualize phase hooks",
+        "Discover upstream fixes and propose reviewed consumer upgrades (Refs #5)",
+        "docs: add project hooks across orchestra phases",
+        "docs: define task-specific follow-up and completion evidence",
+        "docs: adopt orchestra host policy and direct main delivery",
+        "docs: illustrate orchestra roles and delivery workflow"
+      ]
+    },
+    {
+      "version": "0.1.1",
+      "date": "2026-10-23",
+      "previous": null,
+      "summary": {},
+      "features": [],
+      "changes": [
+        "Make resource conservation explicit across models and runtimes (Fixes #1)",
+        "Introduce provider-independent orchestra and shared Issueflow contract"
+      ]
+    },
+    {
+      "version": "0.1.0",
+      "date": "2026-10-26",
+      "previous": null,
+      "summary": {},
+      "features": [],
+      "changes": [
+        "Release workflow: build, test and publish installers on version tags (Refs #14)",
+        "README: show the English screenshot only in the Language table (Refs #12)",
+        "Swedish and English UI, OS language by default, language picker in Settings (Fixes #12)",
+        "Policy: Windows checks run without popping up windows or stealing focus",
+        "Result images for Windows folders; installer waits for a running copy to exit (Refs #11)",
+        "Windows: projects are Windows folders, translated to WSL paths at launch (Refs #11)",
+        "Add --theme light|dark; light-theme result images (Refs #10)",
+        "Document icon regeneration; use the current install link name in comments (Fixes #9)",
+        "Result images for the open-folder button (Refs #8)",
+        "Open a project's directory in Explorer, Finder or the file manager (Refs #8)",
+        "README: builds, not releases (Refs #7)",
+        "README: rewrite in English as a product page (Refs #7)",
+        "Render the icon from SVG at every size the shells use (Refs #6)",
+        "Shorten the orchestra install link to 'Installera' (Refs #4)",
+        "Redesign start window, separate settings, orchestra column with AI install, colour themes",
+        "Adopt the shared orchestra: project policy, Claude command and Codex skill",
+        "Pick tab directories in the OS folder dialog; add tests",
+        "BoosterStart: start working tabs with an AI CLI, model and /orkester per tab"
+      ]
+    }
+  ]
+}

@@ -87,6 +87,7 @@ public class ConfigMergeTests
             AfterLaunch = "close", MinimizeToTray = false, Notifications = false, SoundEffects = false, QuotaWarn = false, QuotaWarnPercent = 9, ShowAdvisor = true, ZoomPercent = 80, AutoUpdateClis = false, ShowTabLogo = false, CheckForUpdates = false,
             AutoClearIdle = true, AutoClearMinutes = 10, AutoCompactMode = AutoCompactPolicy.Auto,
             SkippedVersion = "9.9.9", LastUpdateCheck = new DateTime(2026, 10, 29, 9, 18, 39, DateTimeKind.Utc),
+            LastRunVersion = "9.9.8", UpdatedFromVersion = "9.9.7",
             DismissedWslOptimization = true, ProjectSearchRoot = "/work/projects",
             AutoCompactSettings = [new AutoCompactSetting { Cli = "codex", Model = "example", Mode = "custom", CustomTokens = 64000 }],
             Accounts = [new AgentAccount { Id = "claude-work", Agent = "claude", Name = "Work", Directory = "~/.claude-work" }],

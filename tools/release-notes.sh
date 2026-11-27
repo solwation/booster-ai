@@ -38,5 +38,9 @@ echo
 range=${prev:+$prev..}$tag
 git log --no-merges --format='%s' "$range" | grep -v -E '^Version [^ ]+ after the v[^ ]+ release$' | sed 's/^/- /' || true
 echo
+if [ "$pre" = 0 ]; then
+  echo "**What's new / Nyheter**: https://solwation.github.io/booster-ai/releases.html${prev:+?from=${prev#v}&to=${tag#v}}"
+  echo
+fi
 [ -n "$prev" ] && echo "**Full Changelog**: https://github.com/solwation/booster-ai/compare/$prev...$tag"
 exit 0

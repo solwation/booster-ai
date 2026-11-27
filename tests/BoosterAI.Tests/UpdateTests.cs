@@ -482,12 +482,62 @@ public class UpdateTests
         Assert.Equal("alert(1) Fast and safe", s);
     }
 
+    private const string Page = "https://solwation.github.io/booster-ai/releases.html";
+
     [Fact]
-    public void MoreUrlComparesFromInstalledVersion()
+    public void MoreUrlOpensTheReleasePageFromTheRunningToTheOfferedVersion()
     {
         var r = new ReleaseInfo("v0.14.0", V("0.14.0"), false, "https://github.com/solwation/booster-ai/releases/tag/v0.14.0", []);
-        Assert.Equal("https://github.com/solwation/booster-ai/compare/v0.13.2...v0.14.0", UpdateLogic.MoreUrl(r, V("0.13.2")));
-        Assert.Equal(r.PageUrl, UpdateLogic.MoreUrl(r, V("0.0.0")));
-        Assert.Equal(r.PageUrl, UpdateLogic.MoreUrl(r, V("0.14.0")));
+        Assert.Equal(Page + "?from=0.13.2&to=0.14.0&lang=sv", UpdateLogic.MoreUrl(r, V("0.13.2"), null, "sv"));
+        Assert.Equal(Page + "?from=0.13.2&to=0.14.0&lang=en", UpdateLogic.MoreUrl(r, V("0.13.2"), V("0.12.0"), "en"));
+        // Several releases skipped: still one range, the page lists every release in it.
+        Assert.Equal(Page + "?from=0.9.0&to=0.14.0&lang=en", UpdateLogic.MoreUrl(r, V("0.9.0"), null, "en"));
+        // An unknown running version (local build) gives just the new release.
+        Assert.Equal(Page + "?to=0.14.0&lang=sv", UpdateLogic.MoreUrl(r, V("0.0.0"), null, "sv"));
+    }
+
+    [Fact]
+    public void MoreUrlWithoutANewerReleaseShowsWhatIsNewSinceTheUpdate()
+    {
+        Assert.Equal(Page + "?from=0.53.1&to=0.54.0&lang=sv", UpdateLogic.MoreUrl(null, V("0.54.0"), V("0.53.1"), "sv"));
+        Assert.Equal(Page + "?to=0.54.0&lang=en", UpdateLogic.MoreUrl(null, V("0.54.0"), null, "en"));
+        // An offered release that is not newer counts as none.
+        var same = new ReleaseInfo("v0.54.0", V("0.54.0"), false, UpdateLogic.ReleasesPage, []);
+        Assert.Equal(Page + "?from=0.52.0&to=0.54.0&lang=en", UpdateLogic.MoreUrl(same, V("0.54.0"), V("0.52.0"), "en"));
+        Assert.Equal(Page + "?lang=en", UpdateLogic.MoreUrl(null, V("0.0.0"), null, "en"));
+    }
+
+    [Theory]
+    [InlineData("0.52.0", "0.54.0", "sv", "?from=0.52.0&to=0.54.0&lang=sv")]
+    [InlineData("0.54.0", "0.54.0", "en", "?to=0.54.0&lang=en")]
+    [InlineData("0.55.0", "0.54.0", "en", "?to=0.54.0&lang=en")]
+    [InlineData(null, null, "sv", "?lang=sv")]
+    [InlineData("0.0.0", "0.0.0", "de", "?lang=en")]
+    [InlineData("0.52.0", null, "sv", "?from=0.52.0&lang=sv")]
+    [InlineData("0.33.0", "0.33.1-rc.2", "en", "?from=0.33.0&to=0.33.1-rc.2&lang=en")]
+    public void ReleaseNotesUrlLeavesOutUnknownAndBackwardsVersions(string? from, string? to, string lang, string query) =>
+        Assert.Equal(Page + query, UpdateLogic.ReleaseNotesUrl(AppVersion.Parse(from), AppVersion.Parse(to), lang));
+
+    [Fact]
+    public void NoteRunRemembersTheVersionUpdatedFrom()
+    {
+        var cfg = new AppConfig();
+        Assert.True(UpdateLogic.NoteRun(cfg, V("0.53.1")));
+        Assert.Equal("0.53.1", cfg.LastRunVersion);
+        Assert.Null(cfg.UpdatedFromVersion);
+        Assert.False(UpdateLogic.NoteRun(cfg, V("0.53.1")));
+
+        Assert.True(UpdateLogic.NoteRun(cfg, V("0.54.0")));
+        Assert.Equal("0.54.0", cfg.LastRunVersion);
+        Assert.Equal("0.53.1", cfg.UpdatedFromVersion);
+        // Later starts of the same version keep it.
+        Assert.False(UpdateLogic.NoteRun(cfg, V("0.54.0")));
+        Assert.Equal("0.53.1", cfg.UpdatedFromVersion);
+
+        // A downgrade has nothing new to show; a local 0.0.0 build changes nothing.
+        Assert.True(UpdateLogic.NoteRun(cfg, V("0.53.0")));
+        Assert.Null(cfg.UpdatedFromVersion);
+        Assert.False(UpdateLogic.NoteRun(cfg, V("0.0.0")));
+        Assert.Equal("0.53.0", cfg.LastRunVersion);
     }
 }

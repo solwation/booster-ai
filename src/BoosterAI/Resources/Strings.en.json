@@ -210,7 +210,7 @@
   "update.install.tip": "Downloads {0}, checks it against SHA256SUMS and restarts BoosterAI. Open tabs keep running but are no longer watched.",
   "update.page": "Open the releases page",
   "update.more": "Show more",
-  "update.more.name": "Show all changes in the new version on GitHub",
+  "update.more.name": "Show what is new in the new version on the release page",
   "update.later": "Later",
   "update.skip": "Skip this version",
   "update.downloading": "Downloading version {0} …",
