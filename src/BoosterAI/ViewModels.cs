@@ -856,7 +856,7 @@ public sealed partial class TabViewModel : Observable
         Llm = Llm, Model = string.IsNullOrWhiteSpace(Model) ? Catalog.StandardModel : Model, Advisor = NormalAdvisor(Advisor),
         Orkester = forLaunch ? Orkester && CanOrkester : Orkester,
         Command = Orkester ? "" : _command,
-        CommandArgs = _commandArgs,
+        CommandArgs = StartCommands.OneLine(_commandArgs),
         // Run once without a command means nothing; it is not saved, so a later command never starts as Run once by surprise.
         NonInteractive = NonInteractive && (Orkester || _command.Length > 0),
         Account = Accounts.Supports(Llm) ? _account : "",
