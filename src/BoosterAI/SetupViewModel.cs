@@ -353,6 +353,7 @@ public sealed partial class MainViewModel
         _setupEnabled = true;
         AccountStatusEnabled = true;
         AccountLimitsEnabled = true;
+        CodexResetsEnabled = true;
         // #234: the last shown levels are kept next to the config, so the first reading of this run is compared with them.
         LimitAnim = new(Path.Combine(Path.GetDirectoryName(ConfigStore.PathOnDisk) ?? "", "limit-levels.json"));
         ArmLimitAnimations();

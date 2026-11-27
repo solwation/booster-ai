@@ -31,6 +31,10 @@ public enum ErrorKind
     SearchRootPicker,
     /// <summary>A project could not be removed (still open or changed meanwhile).</summary>
     ProjectRemoval,
+    /// <summary>Codex did not confirm a reset redemption (#274); retrying repeats the same attempt, never a second reset.</summary>
+    LimitReset,
+    /// <summary>Codex refused a reset redemption (#274): nothing to reset or no reset left.</summary>
+    LimitResetRefused,
 }
 
 /// <summary>One recovery action in the error banner.</summary>
@@ -71,6 +75,8 @@ public sealed class ErrorBannerViewModel : Observable
         ErrorKind.ProjectPicker => [ErrorAction.ProjectSettings],
         ErrorKind.SearchRootPicker => [ErrorAction.ProjectSettings],
         ErrorKind.ProjectRemoval => [ErrorAction.ProjectSettings],
+        ErrorKind.LimitReset => [ErrorAction.Retry, ErrorAction.AgentSettings],
+        ErrorKind.LimitResetRefused => [ErrorAction.AgentSettings],
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
     };
 

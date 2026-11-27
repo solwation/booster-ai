@@ -129,6 +129,14 @@ public partial class SettingsWindow : Window
     private void OnAccountLogin(object? sender, RoutedEventArgs e) => ((sender as Control)?.DataContext as AccountRow)?.Login();
 
     private void OnAccountRemove(object? sender, RoutedEventArgs e) => ((sender as Control)?.DataContext as AccountRow)?.Remove();
+
+    /// <summary>"Använd reset" (#274): the question, then exactly one redemption on yes.</summary>
+    private async void OnAccountUseReset(object? sender, RoutedEventArgs e)
+    {
+        if ((sender as Control)?.DataContext is not AccountRow row) return;
+        try { await row.UseResetAsync((name, n) => ConfirmSetupWindow.UseReset(name, n).ShowDialog<bool>(this)); }
+        catch (Exception ex) when (ex is not OutOfMemoryException) { /* the row and the banner already say what failed */ }
+    }
     private void OnAgentCompactSettings(object? sender, RoutedEventArgs e) { SelectedTabIndex = 2; SelectedOptimizationSectionIndex = 3; }
 
     private void OnShowCompactAgents(object? sender, RoutedEventArgs e) => SelectedTabIndex = 4;

@@ -1,0 +1,42 @@
+{
+  "Language": "sv",
+  "ProjectSearchRoot": "/home/me/Projects",
+  "Accounts": [
+    {
+      "Id": "codex-work",
+      "Agent": "codex",
+      "Name": "Work",
+      "Directory": "~/.codex-work"
+    },
+    {
+      "Id": "codex-lab",
+      "Agent": "codex",
+      "Name": "Lab",
+      "Directory": "~/.codex-lab"
+    },
+    {
+      "Id": "codex-team",
+      "Agent": "codex",
+      "Name": "Team",
+      "Directory": "~/.codex-team"
+    },
+    {
+      "Id": "codex-old",
+      "Agent": "codex",
+      "Name": "Old",
+      "Directory": "~/.codex-old"
+    }
+  ],
+  "Tabs": [
+    {
+      "Name": "Atlas",
+      "Directory": "/srv/atlas",
+      "Llm": "claude"
+    },
+    {
+      "Name": "Boreal",
+      "Directory": "/srv/boreal",
+      "Llm": "codex"
+    }
+  ]
+}

@@ -3,6 +3,9 @@ using Avalonia.Threading;
 
 namespace BoosterAI;
 
+/// <summary>The result of the last reset redemption on an account's row (#274).</summary>
+public sealed record ResetMessage(string Text, bool Failed);
+
 /// <summary>One account on an agent's Accounts page in Settings (#186); the first row is the implicit default account.</summary>
 public sealed class AccountRow : Observable
 {
@@ -53,6 +56,7 @@ public sealed class AccountRow : Observable
     /// <summary>"Logga in" until the account is logged in, then "Logga in igen".</summary>
     public string LoginText => Loc.Get(IsLoggedIn ? "account.login.again" : "account.login");
     public void Login() => _owner.Login(this);
+    internal Task<ResetOutcome?> UseResetAsync(Func<string, int, Task<bool>> confirm) => _owner.UseResetAsync(this, confirm);
     public void Remove() => _owner.Remove(this);
     /// <summary>The account's last read plan limits (#199), with windows that have reset since dropped; Unknown until a read answered.</summary>
     public AccountLimits Limits => _owner.LimitsOf(Key).AsOf(_owner.Now);
@@ -72,10 +76,27 @@ public sealed class AccountRow : Observable
     public string LimitsAge => Limits.At is { } at ? LimitText.Age(at, _owner.Now) : Loc.Get("account.limit.never");
     public string LimitsTip => Loc.Get("account.limit.tip." + _owner.Cli);
 
+    /// <summary>Codex's earned rate-limit resets (#274); null while unknown (not read yet, another agent, or the service did not say).</summary>
+    public ResetCredits? Resets => _owner.ResetsOf(Key);
+    /// <summary>"2 resets kvar" beside the limits; empty while unknown, so nothing is guessed.</summary>
+    public string ResetsText => Resets is { } r ? Loc.FormatCount("account.resets", r.Available) : "";
+    public bool HasResets => ResetsText.Length > 0;
+    /// <summary>The account's usage is used up now: Codex said so, or a known window is at 100 %.</summary>
+    public bool QuotaExhausted => Resets?.Exhausted == true || Limits.Session?.UsedPercent >= 100 || Limits.Week?.UsedPercent >= 100;
+    /// <summary>"Använd reset" shows only when a reset is available, the quota is used up and no redemption runs for the account.</summary>
+    public bool CanUseReset => Resets is { Available: > 0 } && QuotaExhausted && !_owner.IsRedeeming(Key);
+    public string UseResetName => Loc.Format("account.reset.use.name", _name);
+    /// <summary>The last redemption's result on this row (#274); the error banner says the same for a failure.</summary>
+    public string ResetMessage => _owner.ResetMessageOf(Key)?.Text ?? "";
+    public bool HasResetMessage => ResetMessage.Length > 0;
+    public bool ResetFailed => _owner.ResetMessageOf(Key)?.Failed == true;
+
     internal void RefreshLimits()
     {
         foreach (var name in new[] { nameof(Limits), nameof(SessionLabel), nameof(HasSession), nameof(HasWeek), nameof(SessionPercent), nameof(WeekPercent),
-            nameof(SessionText), nameof(WeekText), nameof(CreditsText), nameof(HasCredits), nameof(LimitsAge) }) Raise(name);
+            nameof(SessionText), nameof(WeekText), nameof(CreditsText), nameof(HasCredits), nameof(LimitsAge),
+            nameof(Resets), nameof(ResetsText), nameof(HasResets), nameof(QuotaExhausted), nameof(CanUseReset),
+            nameof(ResetMessage), nameof(HasResetMessage), nameof(ResetFailed) }) Raise(name);
     }
 
     internal void RefreshStatus()
@@ -88,6 +109,7 @@ public sealed class AccountRow : Observable
         Raise(nameof(UsageText));
         Raise(nameof(LoginName));
         Raise(nameof(RemoveName));
+        Raise(nameof(UseResetName));
     }
 }
 
@@ -161,7 +183,108 @@ public sealed class AgentAccountsViewModel : Observable
             lock (_statusLock) start = _reading.Add(row.Key);
             if (start) started.Add(ReadLimitsAsync(row.Account, row.Key));
         }
+        if (Cli == "codex") started.Add(RefreshResetsAsync());
         return Task.WhenAll(started);
+    }
+
+    private readonly Dictionary<string, ResetCredits?> _resets = [];
+    private readonly Dictionary<string, DateTimeOffset> _resetsReadAt = [];
+    private readonly HashSet<string> _resetsBusy = [];
+    private readonly HashSet<string> _redeeming = [];
+    private readonly Dictionary<string, ResetMessage> _resetMessages = [];
+    internal ResetCredits? ResetsOf(string key) { lock (_statusLock) return _resets.GetValueOrDefault(key); }
+    internal bool IsRedeeming(string key) { lock (_statusLock) return _redeeming.Contains(key); }
+    internal ResetMessage? ResetMessageOf(string key) { lock (_statusLock) return _resetMessages.GetValueOrDefault(key); }
+
+    /// <summary>
+    /// Reads Codex's reset count of every account (#274) at most every <see cref="CodexResets.Interval"/>, since each read starts an
+    /// app-server; <paramref name="force"/> (after a redemption) reads at once. Never while a redemption for the account runs.
+    /// </summary>
+    internal Task RefreshResetsAsync(bool force = false)
+    {
+        if (Cli != "codex" || !_owner.AccountLimitsEnabled || !_owner.CodexResetsEnabled) return Task.CompletedTask;
+        var now = Now;
+        var started = new List<Task>();
+        foreach (var row in Rows.ToList())
+        {
+            bool start;
+            lock (_statusLock)
+            {
+                start = !_resetsBusy.Contains(row.Key) && !_redeeming.Contains(row.Key)
+                    && (force || !_resetsReadAt.TryGetValue(row.Key, out var at) || now - at >= CodexResets.Interval);
+                if (start) { _resetsBusy.Add(row.Key); _resetsReadAt[row.Key] = now; }
+            }
+            if (start) started.Add(ReadResetsAsync(row.Account, row.Key));
+        }
+        return Task.WhenAll(started);
+    }
+
+    private async Task ReadResetsAsync(AgentAccount? account, string key)
+    {
+        ResetCredits? result;
+        try { result = await _owner.ReadCodexResetsAsync(account?.Directory); }
+        catch (Exception e) when (e is not OutOfMemoryException) { result = null; }
+        var keep = key == "" || Rows.Any(r => r.Key == key);
+        lock (_statusLock)
+        {
+            _resetsBusy.Remove(key);
+            if (keep) _resets[key] = result;
+        }
+        foreach (var row in Rows) row.RefreshLimits();
+    }
+
+    /// <summary>
+    /// "Använd reset" (#274): asks <paramref name="confirm"/> ("Kontot har N resets kvar. Vill du använda en nu?") and, on yes, redeems
+    /// exactly one with a new idempotency key. No changes nothing. Success reads the count and limits again and says in the status
+    /// line that a stopped Codex tab continues when the user types <c>continue</c> in it; BoosterAI cannot tell which Codex tab
+    /// stopped or whether it is idle, so it never types into one. A failure shows on the row and in the error banner, whose
+    /// "Försök igen" retries the same attempt (same key, so never a second reset). Returns the outcome; null when nothing was sent.
+    /// </summary>
+    internal async Task<ResetOutcome?> UseResetAsync(AccountRow row, Func<string, int, Task<bool>> confirm)
+    {
+        if (!row.CanUseReset || row.Resets is not { } resets) return null;
+        if (!await confirm(row.Name, resets.Available)) return null;
+        return await RedeemAsync(row.Account, row.Key, row.Name, Guid.NewGuid());
+    }
+
+    private async Task<ResetOutcome?> RedeemAsync(AgentAccount? account, string key, string name, Guid attempt)
+    {
+        lock (_statusLock)
+        {
+            if (!_redeeming.Add(key)) return null;
+            _resetMessages.Remove(key);
+        }
+        foreach (var r in Rows) r.RefreshLimits();
+        ResetOutcome outcome;
+        try { outcome = await _owner.ConsumeCodexResetAsync(account?.Directory, attempt); }
+        catch (Exception e) when (e is not OutOfMemoryException) { outcome = ResetOutcome.Failed; }
+        var ok = CodexResets.Succeeded(outcome);
+        var text = Loc.Format(outcome switch
+        {
+            ResetOutcome.Reset or ResetOutcome.AlreadyRedeemed => "account.reset.done",
+            ResetOutcome.NothingToReset => "account.reset.nothing",
+            ResetOutcome.NoCredit => "account.reset.noCredit",
+            _ => "account.reset.failed",
+        }, name);
+        lock (_statusLock)
+        {
+            _redeeming.Remove(key);
+            _resetMessages[key] = new ResetMessage(text, !ok);
+            if (ok) _resetsReadAt.Remove(key);
+        }
+        foreach (var r in Rows) r.RefreshLimits();
+        _owner.ResetRedeemed(Cli, outcome, text, () => _ = RedeemAsync(account, key, name, attempt));
+        if (ok) await Task.WhenAll(RefreshResetsAsync(force: true), RefreshLimitsAsync());
+        return outcome;
+    }
+
+    /// <summary>Screenshots (--fake-limits): invented reset counts beside the invented limits; the maxed account can use one.</summary>
+    private void ShowSampleResets()
+    {
+        if (Cli != "codex") return;
+        lock (_statusLock)
+            for (var i = 0; i < Rows.Count; i++)
+                _resets[Rows[i].Key] = (i % 6) switch { 0 => new ResetCredits(2, false), 4 => new ResetCredits(1, true), 3 => new ResetCredits(0, false), _ => null };
     }
 
     private async Task ReadLimitsAsync(AgentAccount? account, string key)
@@ -202,6 +325,7 @@ public sealed class AgentAccountsViewModel : Observable
             new(new LimitWindow(97, hour.AddHours(-2), 300), new LimitWindow(70, hour.AddHours(-1), 10080), null, hour.AddDays(-2)),
         ];
         lock (_statusLock) for (var i = 0; i < Rows.Count; i++) _limits[Rows[i].Key] = cycle[i % cycle.Length];
+        ShowSampleResets();
         foreach (var row in Rows) row.RefreshLimits();
         _owner.AccountLimitsChanged(Cli);
     }
@@ -277,7 +401,7 @@ public sealed class AgentAccountsViewModel : Observable
         if (row.Account is not { } account) return;
         _owner.RemoveAccount(account);
         Rows.Remove(row);
-        lock (_statusLock) { _status.Remove(row.Key); _limits.Remove(row.Key); }
+        lock (_statusLock) { _status.Remove(row.Key); _limits.Remove(row.Key); _resets.Remove(row.Key); _resetsReadAt.Remove(row.Key); _resetMessages.Remove(row.Key); }
         Raise(nameof(Summary));
         RefreshUsage();
     }
@@ -366,6 +490,35 @@ public sealed partial class MainViewModel
     internal Func<string, string, string?, Task<AccountLimits>> ReadAccountLimits { get; set; } =
         (distro, llm, directory) => Task.Run(() => AccountLimitsProbe.Read(distro, llm, directory));
     internal ClaudeFableUsage FableUsage { get; set; } = new();
+
+    /// <summary>Off until the real app starts its background checks (#274): each read starts a Codex app-server, which tests never do.</summary>
+    internal bool CodexResetsEnabled { get; set; }
+
+    /// <summary>Reads a Codex account's resets through its app-server (#274); tests replace it, and it only runs with <see cref="CodexResetsEnabled"/>.</summary>
+    internal Func<string, string?, Task<ResetCredits?>> ReadCodexResets { get; set; } =
+        (distro, directory) => Task.Run(() => CodexResets.Read(distro, directory));
+
+    /// <summary>Redeems one Codex reset with an idempotency key (#274); tests replace it so no reset is ever used.</summary>
+    internal Func<string, string?, Guid, Task<ResetOutcome>> ConsumeCodexReset { get; set; } =
+        (distro, directory, key) => Task.Run(() => CodexResets.Consume(distro, directory, key));
+
+    internal Task<ResetCredits?> ReadCodexResetsAsync(string? directory) =>
+        directory is not null && !Accounts.IsValidDirectory(directory) ? Task.FromResult<ResetCredits?>(null) : ReadCodexResets(_cfg.WslDistro, directory);
+
+    internal Task<ResetOutcome> ConsumeCodexResetAsync(string? directory, Guid key) =>
+        directory is not null && !Accounts.IsValidDirectory(directory) ? Task.FromResult(ResetOutcome.Failed) : ConsumeCodexReset(_cfg.WslDistro, directory, key);
+
+    /// <summary>
+    /// A redemption answered (#274), possibly off the UI thread: success in the status line, a failure in the error banner. A failure
+    /// whose outcome is unknown offers "Försök igen" (<paramref name="retry"/>, the same attempt); a refusal only the agent settings.
+    /// </summary>
+    internal void ResetRedeemed(string cli, ResetOutcome outcome, string text, Action retry) => Dispatcher.UIThread.Post(() =>
+    {
+        if (CodexResets.Succeeded(outcome)) ShowStatus(text + " " + Loc.Get("account.reset.continue"));
+        else if (outcome == ResetOutcome.Failed) ShowError(ErrorKind.LimitReset, text, retry);
+        else ShowError(ErrorKind.LimitResetRefused, text);
+        AccountLimitsChanged(cli);
+    });
 
     internal Task<AccountLimits> ReadAccountLimitsAsync(string llm, string? directory) =>
         directory is not null && !Accounts.IsValidDirectory(directory) ? Task.FromResult(AccountLimits.Unknown)

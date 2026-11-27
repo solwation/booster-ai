@@ -8,7 +8,7 @@ using Avalonia.Threading;
 namespace BoosterAI;
 
 /// <summary>
-/// <c>--screenshot file.png [--window main|local-model|local-models|close|settings|install|import|restart|remove-project|close-tab|alias|wsl-shutdown|memory-reclaim|agent-yolo|wsl|unsaved|setup|releases|uninstall] [--theme light|dark] [--config file.json] [--fake-update [manual:]0.3.0] [--fake-status [error:]text] [--fake-denied] [--fake-changed] [--fake-restartable N] [--fake-peek [N]] [--fake-setup [cli|wsl|alias]] [--fake-long-status] [--check-clipping] [--fake-agent-list [N]] [--fake-command-list [N]] [--fake-new-subtab] [--fake-row-menu [N]] [--fake-rename [N]] [--fake-memory-reclaim gradual|dropcache|disabled|other|old|unknown] [--fake-limits] [--fake-limit-change [seconds]] [--fake-quota] [--fake-dots] [--fake-channel status|question|answered|stale] [--fake-save-notice]</c>:
+/// <c>--screenshot file.png [--window main|local-model|local-models|close|settings|install|import|restart|remove-project|close-tab|alias|wsl-shutdown|limit-reset|memory-reclaim|agent-yolo|wsl|unsaved|setup|releases|uninstall] [--theme light|dark] [--config file.json] [--fake-update [manual:]0.3.0] [--fake-status [error:]text] [--fake-denied] [--fake-changed] [--fake-restartable N] [--fake-peek [N]] [--fake-setup [cli|wsl|alias]] [--fake-long-status] [--check-clipping] [--fake-agent-list [N]] [--fake-command-list [N]] [--fake-new-subtab] [--fake-row-menu [N]] [--fake-rename [N]] [--fake-memory-reclaim gradual|dropcache|disabled|other|old|unknown] [--fake-limits] [--fake-limit-change [seconds]] [--fake-quota] [--fake-dots] [--fake-channel status|question|answered|stale] [--fake-save-notice]</c>:
 /// renders a window with Avalonia's headless Skia platform. Nothing is shown on the desktop and no
 /// focus changes. The window frame (title bar) is not drawn; only the client area.
 /// </summary>
@@ -190,6 +190,7 @@ internal static class Screenshot
             ["close-tab"] = (o, vm, app) => new ConfirmCloseTabWindow(CloseTabQuestion.For(vm.Tabs.First(t => t.IsActiveForClose), vm.Tabs)),
             ["alias"] = (o, vm, app) => ConfirmSetupWindow.Aliases(["claude", "codex"]),
             ["wsl-shutdown"] = (o, vm, app) => ConfirmSetupWindow.ShutdownWsl(),
+            ["limit-reset"] = (o, vm, app) => ConfirmSetupWindow.UseReset("Work", 2),
             ["memory-reclaim"] = (o, vm, app) => SampleMemoryReclaim(vm, o.FakeMemoryReclaim),
             ["agent-yolo"] = (o, vm, app) => ConfirmSetupWindow.AgentMode(SampleYolo()),
             ["wsl"] = (o, vm, app) => ConfirmSetupWindow.Wsl(),

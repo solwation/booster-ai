@@ -54,6 +54,15 @@ public partial class ConfirmSetupWindow : Window
                 : agent.CodexConfig is { HasBackup: true } ? "\n\n" + Loc.Get("agents.codexConfig.confirm.restore") : ""),
         Loc.Get("agents.mode.apply"), Loc.Get("cancel"));
 
+    /// <summary>
+    /// The question before a Codex reset is used (#274): "Kontot har N resets kvar. Vill du använda en nu?", what BoosterAI asks Codex,
+    /// and that a stopped tab continues only when the user types continue in it. "Nej" is the default button.
+    /// </summary>
+    public static ConfirmSetupWindow UseReset(string account, int available) => new(
+        Loc.Get("account.reset.confirm.heading"), Loc.Format("account.reset.confirm.body", account, Loc.FormatCount("account.resets", available)),
+        Loc.Get("account.reset.confirm.code"), "codex app-server → account/rateLimitResetCredit/consume", Loc.Get("account.reset.confirm.detail"),
+        Loc.Get("account.reset.use"), Loc.Get("account.reset.confirm.no"));
+
     /// <summary>The uninstall confirmation (#131): what goes, and that the config stays.</summary>
     public static ConfirmSetupWindow Uninstall(InstallPlan plan) => new(Loc.Get("uninstall.heading"), Loc.Get("uninstall.body"),
         Loc.Get("uninstall.code"), string.Join("\n", [plan.InstallDir, .. plan.Shortcuts.Select(s => s.Path), "HKCU\\" + plan.UninstallKey]),

@@ -727,7 +727,7 @@
                                       <TextBlock Grid.Row="2" Grid.ColumnSpan="3" Margin="0,4,0,0" Text="{Binding StatusText}" Classes="caption" TextWrapping="Wrap"
                                                  Classes.success="{Binding IsLoggedIn}" />
                                       <!-- Plan limits (#199): a bar only for a known window; Okänd otherwise, never a guessed 0 %. -->
-                                      <Grid Grid.Row="3" Grid.ColumnSpan="3" Margin="0,8,0,0" ColumnDefinitions="Auto,120,*" RowDefinitions="Auto,Auto,Auto"
+                                      <Grid Grid.Row="3" Grid.ColumnSpan="3" Margin="0,8,0,0" ColumnDefinitions="Auto,120,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto"
                                             Background="Transparent" ToolTip.Tip="{Binding LimitsTip}">
                                         <TextBlock Text="{Binding SessionLabel}" Classes="muted caption" Margin="0,0,10,0" VerticalAlignment="Center" />
                                         <ProgressBar Grid.Column="1" Value="{Binding SessionPercent}" Minimum="0" Maximum="100" Height="4" MinHeight="4" MinWidth="0"
@@ -739,8 +739,16 @@
                                         <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding WeekText}" Classes="caption" Margin="10,4,0,0" TextWrapping="Wrap" VerticalAlignment="Center" />
                                         <WrapPanel Grid.Row="2" Grid.ColumnSpan="3" Margin="0,4,0,0">
                                           <TextBlock Text="{Binding CreditsText}" Classes="caption" Margin="0,0,12,0" IsVisible="{Binding HasCredits}" />
+                                          <!-- Codex's earned resets (#274): the count when known, and "Använd reset" while the quota is used up. -->
+                                          <TextBlock Text="{Binding ResetsText}" Classes="caption" Margin="0,0,12,0" IsVisible="{Binding HasResets}" />
                                           <TextBlock Text="{Binding LimitsAge}" Classes="muted caption" />
                                         </WrapPanel>
+                                        <StackPanel Grid.Row="3" Grid.ColumnSpan="3" Margin="0,8,0,0" Spacing="6" IsVisible="{Binding CanUseReset}">
+                                          <Button Classes="secondary" HorizontalAlignment="Left" Content="{local:T account.reset.use}" Click="OnAccountUseReset"
+                                                  ToolTip.Tip="{local:T account.reset.use.tip}" AutomationProperties.Name="{Binding UseResetName}" />
+                                        </StackPanel>
+                                        <TextBlock Grid.Row="4" Grid.ColumnSpan="3" Margin="0,6,0,0" Text="{Binding ResetMessage}" Classes="caption" TextWrapping="Wrap"
+                                                   IsVisible="{Binding HasResetMessage}" Classes.error="{Binding ResetFailed}" Classes.success="{Binding !ResetFailed}" />
                                       </Grid>
                                     </Grid>
                                   </Border>
