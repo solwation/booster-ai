@@ -1416,7 +1416,8 @@ public sealed partial class MainViewModel : Observable
     {
         tab.Name = name;
         Save();
-        // An open terminal tab gets the new title at the next status poll (TabTitles, within a few seconds).
+        // A closed tab gets the new name at its next start. An open Windows Terminal tab keeps its launch title (--suppressApplicationTitle
+        // ignores TabTitles' escapes, #261) and TerminalOrder still finds it by LaunchedAs; Linux terminals take it at the next status poll.
         ShowStatus(Loc.Format(tab.IsSubTab ? "rename.done.subtab" : "rename.done", old.Trim(), name));
     }
 
