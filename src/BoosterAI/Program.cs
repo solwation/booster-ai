@@ -117,6 +117,20 @@ internal static class Program
             for (var i = 0; i < tabs.Count; i++)
                 Console.WriteLine($"show tab {tabs[i].Name}: " + (TerminalFocus.Build("BoosterAI-<session>", TerminalFocus.Index(tracks[i]!.Id, tracks.Select(t => t!.Id)), windows: true) is { } show
                     ? TerminalFocus.Describe(show) : "(unavailable)"));
+            // Tabs follow the row order (#254): a tab opened later is moved into place, and so are reordered rows.
+            if (tabs.Count >= 2)
+            {
+                var ids = tracks.Select(t => t!.Id).ToList();
+                var again = "tab" + (tabs.Count + 1);
+                var restarted = TerminalOrder.Arrange([.. ids.Skip(1), again], [again, .. ids.Skip(1)]);
+                Console.WriteLine($"terminal order, {tabs[0].Name} reopened as {again} (appended last, belongs first): "
+                    + TerminalFocus.Describe(TerminalOrder.Build("BoosterAI-<session>", restarted, 0)!));
+                var swapped = TerminalOrder.Arrange(ids.Cast<string?>().ToList(), [ids[1], ids[0], .. ids.Skip(2)]);
+                Console.WriteLine($"terminal order, {tabs[0].Name} and {tabs[1].Name} swapped: "
+                    + TerminalFocus.Describe(TerminalOrder.Build("BoosterAI-<session>", swapped, null)!));
+            }
+            Console.WriteLine("terminal order: Windows only; reads the window's tab titles by UI Automation (hidden powershell.exe) when BoosterAI owns the window, "
+                + "else uses <session>/window-order; off when Windows Terminal's newTabPosition is afterCurrentTab; Linux terminals keep their own order");
             if (!OperatingSystem.IsWindows())
                 Console.WriteLine($"linux terminal: {cfg.LinuxTerminal} -> " + (cfg.LinuxTerminal != "auto" ? cfg.LinuxTerminal
                     : Launcher.LinuxTerminals.Skip(1).FirstOrDefault(Launcher.OnPath) ?? "(none found)"));

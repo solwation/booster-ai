@@ -5,10 +5,10 @@ namespace BoosterAI;
 
 /// <summary>
 /// "Show the tab in the terminal" (#213): switches Windows Terminal to the tab a BoosterAI row opened.
-/// Every tab of a session opens in the session's named window (<see cref="TabSession.WindowName"/>) in start order, so the
-/// tab's position is its rank among the session's tabs that still have a terminal tab. Windows Terminal's CLI can only
-/// address a tab by index (<c>focus-tab -t</c>), never by title, so a tab the user dragged to another position, or a
-/// non-BoosterAI tab the user opened in that window, makes the index wrong; the focus then lands on a neighbour.
+/// Every tab of a session opens in the session's named window (<see cref="TabSession.WindowName"/>); the tab's position is
+/// where <see cref="TerminalOrder"/> last arranged or saw it (#254), start order for tabs it has no position for.
+/// Windows Terminal's CLI can only address a tab by index (<c>focus-tab -t</c>), never by title, so a tab the user dragged
+/// or opened by hand since then makes the index wrong; the focus then lands on a neighbour.
 /// Linux terminals have no way to select one tab from outside (windows are only addressable by their active tab's title), so
 /// the action is not offered there.
 /// </summary>

@@ -137,6 +137,7 @@ internal static class TerminalOrder
     /// </summary>
     internal static string SnapshotScript(long hwnd) => """
         $ErrorActionPreference = 'Stop'
+        $ProgressPreference = 'SilentlyContinue'
         Add-Type -AssemblyName UIAutomationClient
         Add-Type -AssemblyName UIAutomationTypes
         $w = [Windows.Automation.AutomationElement]::FromHandle([IntPtr]
