@@ -1,0 +1,16 @@
+{
+  "passed": true,
+  "privateDesktop": true,
+  "foregroundUnchanged": true,
+  "scriptHasSemicolon": false,
+  "commandExit": "0",
+  "mcpServerName": "boosterai",
+  "commandOnPath": "\u003Csession\u003E/bin/boosterai-tab",
+  "eventsVariable": "\u003Csession\u003E/tab1.events",
+  "protocol": "1",
+  "statusReadByBoosterAI": {
+    "state": "Done",
+    "text": "Windows Terminal check"
+  },
+  "terminalClosed": true
+}
