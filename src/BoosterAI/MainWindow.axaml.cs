@@ -292,7 +292,8 @@ public partial class MainWindow : Window
     private void OnRowKeyDown(object? sender, KeyEventArgs e)
     {
         if (e.Handled || (sender as Control)?.DataContext is not TabViewModel tab) return;
-        if (e.Key == Key.F2 && e.KeyModifiers == KeyModifiers.None && !tab.IsRenaming)
+        // F2 typed into a text box on the row (a subtab's name, the start command's arguments) stays there (#263).
+        if (e.Key == Key.F2 && e.KeyModifiers == KeyModifiers.None && !tab.IsRenaming && e.Source is not TextBox)
         {
             e.Handled = true;
             BeginRename(tab);

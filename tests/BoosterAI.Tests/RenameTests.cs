@@ -141,6 +141,21 @@ public sealed class RenameTests : IDisposable
         Assert.Equal("New name for the subtab Atlas-api", vm.Tabs[1].RenameBoxName);
     }
 
+    [Fact]
+    public void F2InATextBoxOnTheRowStartsNoRename()
+    {
+        var result = Run((window, vm) =>
+        {
+            var sub = vm.Tabs[1];
+            var name = window.GetVisualDescendants().OfType<TextBox>().First(b => b.Classes.Contains("name") && !b.Classes.Contains("rename") && b.DataContext == sub);
+            name.Focus(NavigationMethod.Tab);
+            Press(window, Key.F2, PhysicalKey.F2);
+            Dispatcher.UIThread.RunJobs();
+            return (sub.IsRenaming, name.IsFocused);
+        });
+        Assert.Equal((false, true), result);
+    }
+
     private static T Run<T>(Func<MainWindow, MainViewModel, T> work) => UiSession.Run(() =>
     {
         Loc.Use("sv");
