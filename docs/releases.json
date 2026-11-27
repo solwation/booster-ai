@@ -118,6 +118,7 @@
         }
       ],
       "changes": [
+        "Keep release selection tests on the releases up to 0.54.0 so a new release does not break them (#264)",
         "One row per tab: Run once and Arguments move from the extra line to the row menu, with a marker on the row (#260)",
         "F2 in a text box on a row no longer starts a rename (#263)",
         "Website: describe clicking a live row instead of the removed terminal icon, refresh screenshot cache keys (#262)",
