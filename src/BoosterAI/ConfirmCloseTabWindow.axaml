@@ -1,0 +1,24 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="using:BoosterAI"
+        x:Class="BoosterAI.ConfirmCloseTabWindow"
+        x:DataType="local:CloseTabQuestion"
+        Title="{local:T closeTab.title}"
+        Icon="avares://BoosterAI/Assets/boosterai.ico"
+        Width="520" SizeToContent="Height" CanResize="False"
+        WindowStartupLocation="CenterOwner">
+  <StackPanel Margin="28,24,28,22" Spacing="14">
+    <TextBlock Classes="title" Text="{Binding Heading}" TextWrapping="Wrap" />
+    <TextBlock Text="{Binding Body}" TextWrapping="Wrap" LineHeight="21" />
+    <TextBlock Classes="muted" Text="{Binding Scope}" IsVisible="{Binding HasScope}" TextWrapping="Wrap" LineHeight="20" />
+    <!-- The button system (#148), as in Close all: the dangerous path stands apart on the left; cancelling is the default. -->
+    <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,6,0,0">
+      <Button x:Name="ForceClose" Grid.Column="0" Classes="danger" Content="{local:T close.force}" Click="OnForce"
+              IsVisible="{Binding CanSave}" Padding="18,8" />
+      <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10">
+        <Button x:Name="CancelClose" Classes="secondary" Content="{local:T cancel}" Click="OnCancel" IsCancel="True" IsDefault="True" Padding="18,8" />
+        <Button x:Name="ConfirmClose" Classes="primary" Content="{Binding Confirm}" Click="OnConfirm" Padding="18,8" />
+      </StackPanel>
+    </Grid>
+  </StackPanel>
+</Window>

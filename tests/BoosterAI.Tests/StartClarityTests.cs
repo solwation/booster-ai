@@ -48,14 +48,14 @@ public class StartClarityTests : IDisposable
     }
 
     [Fact]
-    public void CheckboxNameSaysWhatTickingMeansOrWhyARunningRowIsLeftAlone()
+    public void CheckboxNameSaysWhatTickingMeansOrThatUntickingARunningRowClosesIt()
     {
         var vm = Build("Cirrus");
         var tab = vm.Tabs[0];
         Assert.Equal("Ta med Cirrus vid Starta", tab.OpenTip);
         Assert.True(tab.WillStart);
         tab.SetState(TabState.Running, null, activity: Activity.Busy);
-        Assert.Equal("Cirrus körs redan och startas inte om. Ingår vid nästa start när fliken är stängd.", tab.OpenTip);
+        Assert.Equal("Cirrus körs. Kryssa ur för att stänga fliken: en agent sparar, committar och pushar först, och arbetar fliken frågar BoosterAI innan.", tab.OpenTip);
         Assert.False(tab.WillStart);
         tab.SetState(TabState.Closed, null, activity: Activity.Unknown);
         Assert.Equal("Ta med Cirrus vid Starta", tab.OpenTip);
@@ -77,7 +77,7 @@ public class StartClarityTests : IDisposable
     {
         var src = Path.Combine(RepoRoot(), "src", "BoosterAI");
         var check = XDocument.Load(Path.Combine(src, "MainWindow.axaml")).Descendants()
-            .Single(e => e.Name.LocalName == "CheckBox" && (string?)e.Attribute("IsChecked") == "{Binding Enabled}");
+            .Single(e => e.Name.LocalName == "CheckBox" && (string?)e.Attribute("IsChecked") == "{Binding Enabled, Mode=OneWay}");
         Assert.Equal("{Binding OpenTip}", (string?)check.Attribute("AutomationProperties.Name"));
         Assert.Equal("{Binding OpenTip}", (string?)check.Attribute("ToolTip.Tip"));
         Assert.Equal("{Binding IsAlive}", (string?)check.Attribute("Classes.alive"));

@@ -2,7 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="using:BoosterAI"
         x:Class="BoosterAI.CloseAllWindow" x:DataType="local:CloseAllOperation"
-        Title="{local:T close.title}" Icon="avares://BoosterAI/Assets/boosterai.ico"
+        Title="{Binding Title}" Icon="avares://BoosterAI/Assets/boosterai.ico"
         Width="620" Height="450" MinHeight="320" CanResize="True" WindowStartupLocation="CenterOwner">
   <Window.Styles>
     <!-- Row status (#148): saving/closing spins in the info colour, a failure is a danger dot, the rest neutral. -->
@@ -31,7 +31,7 @@
     </Style>
   </Window.Styles>
   <Grid Margin="28,24,28,22" RowDefinitions="Auto,Auto,*,Auto">
-    <TextBlock Classes="title" Text="{local:T close.title}" />
+    <TextBlock Classes="title" Text="{Binding Title}" />
     <TextBlock Grid.Row="1" Text="{Binding Message}" TextWrapping="Wrap" LineHeight="21" Margin="0,14,0,16" />
     <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Disabled">
       <ItemsControl ItemsSource="{Binding Tabs}">

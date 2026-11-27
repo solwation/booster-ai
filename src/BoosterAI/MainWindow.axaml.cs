@@ -100,6 +100,8 @@ public partial class MainWindow : Window
         Closed += (_, _) => StopStatusPeek();
         vm.InstallOrkesterRequested += ConfirmInstallOrkester;
         Closed += (_, _) => vm.InstallOrkesterRequested -= ConfirmInstallOrkester;
+        vm.TabCloseNeedsAttention += ShowTabClose;
+        Closed += (_, _) => vm.TabCloseNeedsAttention -= ShowTabClose;
         ActualThemeVariantChanged += (_, _) => _vm.RaiseThemeBrushes();
         PropertyChanged += OnStatusWindowVisibilityChanged;
         Resized += (_, _) => ApplyAllProjectColumns();
@@ -567,6 +569,29 @@ public partial class MainWindow : Window
     {
         if (!_vm.IsClosingAll && (sender as Control)?.DataContext is TabViewModel tab) _vm.Restart(tab, resume: true);
     }
+
+    /// <summary>
+    /// The row's checkbox (#272), bound one way so that only this decides: ticking includes the tab at Start; unticking a running
+    /// tab closes it, after a question when it is not resting. Cancel restores the tick without touching the config.
+    /// </summary>
+    private async void OnEnabledClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not CheckBox box || box.DataContext is not TabViewModel tab) return;
+        if (box.IsChecked == true) { tab.Enabled = true; return; }
+        if (tab.RequestUntick() != UntickOutcome.Confirm) return;
+        switch (await new ConfirmCloseTabWindow(CloseTabQuestion.For(tab, _vm.Tabs)).ShowDialog<CloseTabChoice>(this))
+        {
+            case CloseTabChoice.Save: tab.ConfirmUntick(force: false); break;
+            case CloseTabChoice.Force: tab.ConfirmUntick(force: true); break;
+            default: tab.CancelUntick(); break;
+        }
+    }
+
+    /// <summary>An unticked tab could not close (or took too long): its progress dialog offers Force close and Cancel.</summary>
+    private void ShowTabClose(CloseAllOperation operation) => Avalonia.Threading.Dispatcher.UIThread.Post(async () =>
+    {
+        if (operation.Active && IsVisible) await new CloseAllWindow(operation).ShowDialog(this);
+    });
 
     private async void OnCloseAll(object? sender, RoutedEventArgs e)
     {

@@ -229,7 +229,7 @@
                     <Path Data="{StaticResource GripIcon}" />
                   </Border>
 
-                  <CheckBox Grid.Column="2" IsChecked="{Binding Enabled}" Classes.alive="{Binding IsAlive}" AutomationProperties.Name="{Binding OpenTip}"
+                  <CheckBox Grid.Column="2" IsChecked="{Binding Enabled, Mode=OneWay}" Click="OnEnabledClick" Classes.alive="{Binding IsAlive}" AutomationProperties.Name="{Binding OpenTip}"
                             VerticalAlignment="Center" MinWidth="0" ToolTip.Tip="{Binding OpenTip}" />
 
                   <!-- No indent (#196): every name starts at the same x. The project has its name as text and the folder; a

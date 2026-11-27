@@ -173,7 +173,7 @@ public sealed partial class TabViewModel : Observable
         return true;
     }
 
-    /// <summary>Tooltip and accessible name of the row's Start checkbox: what ticking it means, or why a running row is left alone (#151).</summary>
+    /// <summary>Tooltip and accessible name of the row's Start checkbox: what ticking it means, or that unticking a running row closes it (#151, #272).</summary>
     public string OpenTip => Loc.Format(IsAlive ? "tab.open.alive" : "tab.open.tip", Name);
 
     /// <summary>A ticked row that is not running is the only kind Start opens; this is the one the accent fill marks.</summary>
@@ -405,6 +405,36 @@ public sealed partial class TabViewModel : Observable
             _owner.TabsChanged();
         }
     }
+
+    /// <summary>
+    /// Not resting (#272): starting, its CLI on a turn (or a one-shot run), or its agent reporting that it works. Unticking such a
+    /// running tab asks first; a resting one closes at once.
+    /// </summary>
+    internal bool IsActiveForClose => _state is TabState.Starting
+        || IsRunning && (Activity is Activity.Working or Activity.Busy || _channel.Status is { State: AgentState.Working });
+
+    /// <summary>
+    /// The user unticked the row's checkbox (#272). A row that is not running only leaves Start; a running row closes through
+    /// Close all's save-and-close path, at once when it rests. An active one returns <see cref="UntickOutcome.Confirm"/> and keeps
+    /// <see cref="Enabled"/> until <see cref="ConfirmUntick"/> or <see cref="CancelUntick"/>, so cancelling changes no config.
+    /// </summary>
+    public UntickOutcome RequestUntick()
+    {
+        if (!IsAlive || IsClosing || _owner.IsClosingAll) { Enabled = false; return UntickOutcome.Unticked; }
+        if (IsActiveForClose) return UntickOutcome.Confirm;
+        ConfirmUntick(force: false);
+        return UntickOutcome.Closing;
+    }
+
+    /// <summary>The question was confirmed: untick and close, saving first unless <paramref name="force"/>.</summary>
+    public void ConfirmUntick(bool force)
+    {
+        Enabled = false;
+        _owner.CloseTab(this, force);
+    }
+
+    /// <summary>The question was cancelled: the box shows <see cref="Enabled"/> (still ticked) again and the tab runs on.</summary>
+    public void CancelUntick() => Raise(nameof(Enabled));
 
     /// <summary>Unticked tabs stay editable but recede.</summary>
     public double RowOpacity => _enabled ? 1 : 0.45;

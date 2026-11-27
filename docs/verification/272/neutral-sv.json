@@ -1,0 +1,36 @@
+{
+ "Language": "sv",
+ "Tabs": [
+  {
+   "Name": "Atlas",
+   "Directory": "/srv/atlas",
+   "Llm": "claude",
+   "Orkester": true,
+   "SubTabs": [
+    {
+     "Name": "Atlas-api",
+     "Llm": "codex",
+     "Command": "$release-notes"
+    }
+   ]
+  },
+  {
+   "Name": "Boreal",
+   "Directory": "/srv/boreal",
+   "Llm": "claude",
+   "Command": "/review",
+   "CommandArgs": "#42",
+   "NonInteractive": true
+  },
+  {
+   "Name": "Cirrus",
+   "Directory": "/srv/cirrus",
+   "Llm": "agy"
+  },
+  {
+   "Name": "Delta",
+   "Directory": "/srv/delta",
+   "Llm": "claude"
+  }
+ ]
+}

@@ -5,6 +5,9 @@ namespace BoosterAI;
 
 public enum ClosePhase { Waiting, Saving, Closing, Closed, Failed }
 
+/// <summary>What unticking a row did (#272): only left Start, began closing its running tab, or needs the user's confirmation first.</summary>
+public enum UntickOutcome { Unticked, Closing, Confirm }
+
 /// <summary>Decisions use an explicit save-turn token, never the previous CLI's exit or the output idle heuristic.</summary>
 public static class CloseAllLogic
 {
@@ -15,6 +18,29 @@ public static class CloseAllLogic
     public static bool SaveTurnDone(TabLog log, string token) =>
         log.CloseSaveToken == token && (log.CliExit is not null || log.WatchingSince is not null);
     public static bool HasTimedOut(DateTime began, DateTime now) => now - began >= Timeout;
+}
+
+/// <summary>
+/// The question before an active running tab closes on untick (#272): why it is asked, what closes (only this row: a project's
+/// running subtabs, or a subtab's project, keep running) and whether a save turn and Force close apply (not for a shell).
+/// </summary>
+public sealed record CloseTabQuestion(string Heading, string Body, string Scope, bool CanSave)
+{
+    public bool HasScope => Scope != "";
+    public string Confirm => Loc.Get(CanSave ? "close.start" : "closeTab.close");
+
+    public static CloseTabQuestion For(TabViewModel tab, IEnumerable<TabViewModel> rows)
+    {
+        var name = tab.Name.Trim();
+        var shell = (tab.LaunchedAs?.Llm ?? tab.Llm) == Catalog.ShellOnly;
+        var body = Loc.Get(shell ? "closeTab.shell" : tab.IsRunning ? "closeTab.working" : "closeTab.starting");
+        var scope = "";
+        if (tab.Parent is { } parent) scope = Loc.Format("closeTab.subtab", name, parent.Name.Trim());
+        else if (rows.Where(t => t.Parent == tab && t.IsAlive).Select(t => t.Name.Trim()).ToList() is { Count: > 0 } running)
+            scope = Loc.Format("closeTab.subtabs." + (running.Count == 1 ? "one" : "other"), name, string.Join(", ", running));
+        if (!shell) scope = scope == "" ? Loc.Get("closeTab.force") : scope + "\n" + Loc.Get("closeTab.force");
+        return new(Loc.Format("closeTab.heading", name), body, scope, !shell);
+    }
 }
 
 public sealed class ClosingTab : Observable
@@ -54,7 +80,8 @@ public sealed class CloseAllOperation : Observable
     private readonly Action _changed;
     private readonly string? _wslHome;
     private readonly Func<Func<int, long?>?> _liveness;
-    private bool _active, _started, _timedOut, _force, _busy, _sample;
+    private readonly Func<TabViewModel, IEnumerable<TabConfig>>? _others;
+    private bool _active, _started, _timedOut, _force, _busy, _sample, _attention;
     private DateTime _began;
     private readonly object _controlGate = new();
     private readonly DispatcherTimer _timer;
@@ -63,10 +90,20 @@ public sealed class CloseAllOperation : Observable
     public bool NotStarted => !Started;
     public bool Active { get => _active; private set { Set(ref _active, value); Raise(nameof(CanForce)); } }
     public bool CanForce => Active;
+    /// <summary>Closing one unticked tab (#272) rather than all of them.</summary>
+    public bool Single { get; }
+    public string Title => Loc.Get(Single ? "closeTab.title" : "close.title");
+    internal bool Forced => _force;
+    /// <summary>Raised once when a tab fails to close or the timeout passes, so a background single close can show its dialog.</summary>
+    internal event Action? Attention;
     public string Message => _timedOut ? Loc.Get("close.timeout") : Loc.Get(Active ? "close.waiting" : Started ? "close.finished" : "close.confirm");
 
-    internal CloseAllOperation(IEnumerable<TabViewModel> tabs, string distro, Action changed, string? wslHome = null, Func<Func<int, long?>?>? liveness = null)
+    /// <param name="others">The launch configs of the other open tabs (not in this operation) that a save turn must not be confused with.</param>
+    internal CloseAllOperation(IEnumerable<TabViewModel> tabs, string distro, Action changed, string? wslHome = null, Func<Func<int, long?>?>? liveness = null,
+        Func<TabViewModel, IEnumerable<TabConfig>>? others = null, bool single = false)
     {
+        _others = others;
+        Single = single;
         Tabs = new(tabs.Select(t => new ClosingTab(t)));
         _distro = distro;
         _wslHome = wslHome;
@@ -77,6 +114,13 @@ public sealed class CloseAllOperation : Observable
     }
 
     public void Start() => _ = StartAsync();
+
+    /// <summary>Starts closing without a save turn, as Force close does (#272: the confirmation's Force close).</summary>
+    internal Task StartForcedAsync()
+    {
+        _force = true;
+        return StartAsync();
+    }
 
     internal async Task StartAsync()
     {
@@ -131,6 +175,8 @@ public sealed class CloseAllOperation : Observable
             }
             if (Tabs.All(t => t.Phase == ClosePhase.Closed))
             { Active = false; _timer.Stop(); _changed(); Raise(nameof(Message)); }
+            else if (!_attention && (_timedOut || Tabs.Any(t => t.IsFailed)))
+            { _attention = true; Attention?.Invoke(); }
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.ComponentModel.Win32Exception)
         {
@@ -206,8 +252,9 @@ public sealed class CloseAllOperation : Observable
             if (!Launcher.CanSaveAndClose(tab))
             { item.Fail(Loc.Get("close.manualSave")); return; }
             // --continue/--last is per directory, so never choose between two open conversations implicitly.
-            if (Tabs.Count(t => t.Tab.LaunchedAs is { } other && other.Llm == tab.Llm
-                && t.Phase != ClosePhase.Closed && SameDirectory(other.Directory, tab.Directory)) > 1)
+            var others = Tabs.Where(t => t != item && t.Phase != ClosePhase.Closed).Select(t => t.Tab.LaunchedAs).OfType<TabConfig>()
+                .Concat(_others?.Invoke(item.Tab) ?? []);
+            if (others.Any(other => other.Llm == tab.Llm && SameDirectory(other.Directory, tab.Directory)))
             { item.Fail(Loc.Get("close.ambiguous")); return; }
             var validation = Launcher.Validate([tab]);
             if (validation != "") { item.Fail(validation); return; }
@@ -282,9 +329,38 @@ public sealed partial class MainViewModel
     /// <param name="sample">Screenshots: the sample tabs, shown mid-closing unless <paramref name="confirm"/> keeps the confirmation step.</param>
     public CloseAllOperation PrepareCloseAll(bool sample = false, bool confirm = false)
     {
-        ClosingAll = new CloseAllOperation(Tabs.Where(t => sample ? t.HasStatus : t.HasOpenTerminal), _cfg.WslDistro,
-            () => { Raise(nameof(IsClosingAll)); TabsChanged(); }, _wslHome);
+        // A tab an untick is already closing (#272) stays with that operation; another save turn would repeat its work.
+        var closing = _tabCloses.Where(o => o.Active || !o.Started).SelectMany(o => o.Tabs).Select(t => t.Tab).ToHashSet();
+        ClosingAll = new CloseAllOperation(Tabs.Where(t => sample ? t.HasStatus : t.HasOpenTerminal && !closing.Contains(t)), _cfg.WslDistro,
+            () => { Raise(nameof(IsClosingAll)); TabsChanged(); }, _wslHome,
+            others: _ => closing.Where(t => t.HasOpenTerminal).Select(t => t.LaunchedAs).OfType<TabConfig>());
         if (sample && !confirm) ClosingAll.ShowSample();
         return ClosingAll;
+    }
+
+    private readonly List<CloseAllOperation> _tabCloses = [];
+    /// <summary>The single-tab closes that unticking started (#272) and that have not finished or been cancelled.</summary>
+    internal IReadOnlyList<CloseAllOperation> TabCloses => _tabCloses;
+    /// <summary>A background single close needs the user: a tab could not close or the timeout passed. The main window shows its dialog.</summary>
+    internal event Action<CloseAllOperation>? TabCloseNeedsAttention;
+
+    /// <summary>
+    /// Closes one running tab the user unticked (#272) through Close all's path: an agent saves, commits, pushes and exits, a
+    /// shell closes directly; <paramref name="force"/> skips the save turn. Null when the tab is not running or already closing.
+    /// </summary>
+    internal CloseAllOperation? CloseTab(TabViewModel tab, bool force)
+    {
+        if (IsClosingAll || tab.IsClosing || !tab.IsAlive) return null;
+        CloseAllOperation? operation = null;
+        operation = new CloseAllOperation([tab], _cfg.WslDistro, () =>
+        {
+            if (operation is { Active: false }) _tabCloses.Remove(operation);
+            TabsChanged();
+        }, _wslHome, others: t => Tabs.Where(o => o != t && o.HasOpenTerminal).Select(o => o.LaunchedAs).OfType<TabConfig>(), single: true);
+        operation.Attention += () => TabCloseNeedsAttention?.Invoke(operation);
+        _tabCloses.Add(operation);
+        tab.SetCloseProgress(Loc.Get("close.phase.Waiting"));
+        _ = force ? operation.StartForcedAsync() : operation.StartAsync();
+        return operation;
     }
 }
