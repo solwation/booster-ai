@@ -199,6 +199,8 @@ public sealed class TabSession
 # BoosterAI tab status log, sourced by the tab's shell: . tab-lib.sh <dir> <tab-id>
 bs_log="$1/$2.log"
 bs_timing="$1/$2.timing"
+# Log times are wall-clock epoch-ms (also a step of it, #280): BoosterAI and the CLI's hooks read and compare them across
+# processes (and on Windows across the WSL boundary), which no monotonic clock spans. Intervals use bs_uptime (#280).
 bs_ev() { printf '%s %s\n' "$(date +%s%3N)" "$*" >> "$bs_log" 2>/dev/null; }
 bs_input="$1/$2.input"
 bs_ev start pid=$$ starttime=$(cut -d' ' -f22 /proc/$$/stat)
@@ -306,13 +308,19 @@ bs_run() {
 # and size reports), focus reports and mouse motion/wheel are not keys; anything else, a click, a paste or an unrecognized or
 # unfinished sequence (a lone ESC is the Escape key) is. Only the classification keeps an unfinished sequence's tail (bounded,
 # at most 0.5 s): bytes are forwarded at once. input-typed is logged at most once a second, with the last key's time.
+# Clocks (#280): every interval and age here (the 0.5 s tail, the once-a-second log and poll, the 0.3 s Enter, how long the
+# output has been quiet and how old a request can be) is measured on time.monotonic(), which a step of the wall clock (WSL
+# steps it by about 13 s every few seconds on some machines, #278) does not move. The wall clock (time.time()) is only
+# used for times other processes compare: the log's event times and the key times compared with a request's since,
+# which both come from the tab log that the hooks and BoosterAI write with their own wall clocks.
 # No TIOCSTI (disabled on current kernels), no window. TERM, INT and
 # QUIT are passed on; a hangup of the tab stops the command with HUP and TERM (script ignores a hangup it does not see
 # on its own terminal) instead of leaving it behind. Logs input-ready protocol=2 while it accepts requests.
 bs_pty() {
-  BS_INPUT="$bs_input" BS_LOG="$bs_log" BS_TIMING="$bs_timing" python3 -c 'import os, sys, pty, tty, termios, fcntl, signal, select, time, base64, json, re
+  BS_INPUT="$bs_input" BS_LOG="$bs_log" python3 -c 'import os, sys, pty, tty, termios, fcntl, signal, select, time, base64, json, re
 cmd = sys.argv[1:]
 req = os.environ["BS_INPUT"]
+# Each log line starts with wall-clock epoch-ms: BoosterAI and the hooks (date +%s%3N) write and compare the same log.
 def ev(s, at=None):
     try:
         with open(os.environ["BS_LOG"], "a") as f:
@@ -359,12 +367,10 @@ def put(b):
 def fresh(expected, before_text=False):
     if expected is None:
         return True
-    if before_text and expected.get("kind") == "orkester":
-        try:
-            if time.time() - os.path.getmtime(os.environ["BS_TIMING"]) < 2:
-                return False
-        except (OSError, KeyError):
-            return False
+    # A reload is typed only after two quiet seconds: output this process forwarded itself, timed on the monotonic clock
+    # (the mtime of the timing file against the wall clock made output look old after a step forward, #280).
+    if before_text and expected.get("kind") == "orkester" and time.monotonic() - out_at < 2:
+        return False
     state = None
     ready = idle = busy = None
     try:
@@ -406,13 +412,17 @@ def keys(s):
         else:
             typed, i = True, i + 1
     return typed, b""
+# key(at): a key at wall-clock time at (seconds), compared with the since of a request (a tab log time) and logged as input-typed.
 def key(at):
     global typed, unlogged
     typed, unlogged = max(typed, at), max(unlogged, at)
-typed = logged = unlogged = held_at = 0.0
+# typed, unlogged, held_wall: wall clock (see key); held_at, logged, checked, out_at and the times in due: monotonic.
+typed = unlogged = held_wall = 0.0
+held_at = logged = out_at = -1e9
 held = b""
 due = []
-checked = 0.0
+# The request file was deleted (drop) or looked for at checked, so a request found later is at most now - checked old.
+checked = time.monotonic()
 fds = [0, master]
 ev("input-ready protocol=2")
 try:
@@ -426,6 +436,7 @@ try:
                 b = b""
             if not b:
                 break
+            out_at = time.monotonic()
             o = memoryview(b)
             try:
                 while o:
@@ -443,13 +454,13 @@ try:
             else:
                 put(b)
                 if not held:
-                    held_at = time.time()
+                    held_at, held_wall = time.monotonic(), time.time()
                 t, held = keys(held + b)
                 if t:
                     key(time.time())
-        now = time.time()
+        now = time.monotonic()
         if held and now - held_at >= 0.5:
-            key(held_at)
+            key(held_wall)
             held = b""
         if unlogged and now - logged >= 1:
             ev("input-typed", unlogged)
@@ -464,7 +475,7 @@ try:
                 put(data)
                 ev("input-sent" + label)
         if now - checked >= 1:
-            checked = now
+            age, checked = now - checked, now
             try:
                 with open(req) as f:
                     text = f.read()
@@ -480,14 +491,16 @@ try:
                         since = int(expected["since"]) / 1000
                         data = expected["text"].encode()
                         label = " kind=%s idle=%s" % (expected["kind"], expected["idle"])
-                        if now * 1000 - expected["created"] > 10000:
+                        # At most 10 s old. Measured here, not as our wall clock minus "created" (the clock of BoosterAI,
+                        # which on Windows is not the WSL clock, and either may step, #280); BoosterAI still writes created.
+                        if age > 10:
                             data = b""
                     else:
                         since, data = text.split()
                         since = int(since) / 1000
                         data = base64.b64decode(data, validate=True)
                 except (ValueError, KeyError, TypeError):
-                    since, data = now, b""
+                    since, data = 0, b""
                 if not data:
                     ev("input-skipped reason=invalid" + label)
                 elif due or not fresh(expected, before_text=True):
@@ -551,7 +564,8 @@ bs_up_net=20
 bs_up_limit=300
 bs_up_ver() { "$@" --version </dev/null 2>/dev/null | grep -oE '[0-9]+(\.[0-9]+)+([-+][0-9A-Za-z.]+)?' | head -n 1; }
 # A stamp more than bs_up_skew seconds ahead of the clock means the clock was reset, so a check is due; a smaller lead is
-# WSL stepping its clock back a few seconds (#190, #229) and keeps the stamp fresh.
+# WSL stepping its clock back a few seconds (#190, #229) and keeps the stamp fresh. The wall clock on purpose (#280): the
+# stamp is shared by all tabs and outlives a reboot, and a step of a few seconds hardly matters against hours.
 bs_up_skew=300
 bs_up_due() {
   local t n
@@ -627,12 +641,15 @@ bs_update() (
 # progress, and return the CLI's own exit code (not the formatter's). The CLI is an argument
 # here, so bash does not expand the user's alias for it (agy='agy --dangerously-skip-permissions'):
 # apply it explicitly, as a typed command would.
-# bs_dur <t0>: whole seconds since $SECONDS was t0, never negative (bash's SECONDS follows the wall clock, which can step back).
-bs_dur() { local d=$((SECONDS - $1)); [ "$d" -lt 0 ] && d=0; echo "$d"; }
+# bs_uptime: whole seconds since boot from /proc/uptime, a clock that wall-clock steps do not move (bash's SECONDS follows the
+# wall clock, which WSL steps by seconds, #278, #280). bs_dur <t0>: whole seconds since bs_uptime was t0, never negative.
+bs_uptime() { local u _; read -r u _ 2>/dev/null </proc/uptime && echo "${u%.*}" || echo "$SECONDS"; }
+bs_dur() { local d=$(($(bs_uptime) - $1)); [ "$d" -lt 0 ] && d=0; echo "$d"; }
 bs_stream() {
   bs_refresh_aliases "$1"
   if [ -n "${BASH_ALIASES[$1]+x}" ]; then eval "set -- ${BASH_ALIASES[$1]}"' "${@:2}"'; fi
-  local t0=$SECONDS rc
+  local t0 rc
+  t0=$(bs_uptime)
   # The group runs in this shell (rc stays set). bs_fg: see there.
   { bs_fg bs_pipe "$@"; rc=$?; echo "== exit $rc, total $(bs_dur "$t0") s"; }
   return "$rc"; }
@@ -662,6 +679,7 @@ def args(d):
             return one(d[k])
     return one(next(iter(d.values())))
 def ev(s):
+    # Wall-clock epoch-ms, like every log line: BoosterAI compares them across processes (#280).
     try:
         with open(os.environ["BS_LOG"], "a") as f:
             f.write("%d %s\n" % (time.time() * 1000, s))
@@ -966,6 +984,8 @@ for line in sys.stdin:
         object Hook(string command) => new[] { new { hooks = new[] { new { type = "command", command } } } };
         // #233: logging is only a hint. A log that cannot be written (e.g. /mnt/c failing with an I/O error) must not print or
         // fail: Claude feeds a Stop hook's error back to the agent, which then starts turn after turn.
+        // The hooks date their lines with the wall clock (date +%s%3N), like every tab log line: BoosterAI and bs_pty compare
+        // these times across processes, which no monotonic clock spans (#280).
         var settings = new Dictionary<string, object>
         {
             ["hooks"] = new Dictionary<string, object>
@@ -1023,6 +1043,8 @@ for line in sys.stdin:
         var temporary = path + "." + Guid.NewGuid().ToString("N");
         try
         {
+            // created (our wall clock) is only read by the bs_pty of tabs started before #280; a current one times the
+            // request's age itself, since our clock and the tab's can be seconds apart (#278, #280).
             File.WriteAllText(temporary, JsonSerializer.Serialize(new
             {
                 since = sinceMs, text, idle = expected.IdleAt, busy = expected.BusyAt,

@@ -457,6 +457,7 @@ def save():
             snap[key] = {'used_percentage': w['used_percentage'], 'resets_at': w['resets_at']}
     if not snap: return
     path = os.path.join(home, 'boosterai-limits.json')
+    # Wall clock on purpose (#280): captured_at and resets_at are read by BoosterAI and later status line runs.
     now = int(time.time())
     try:
         with open(path, 'rb') as f: old = json.loads(f.read(65536))
@@ -546,6 +547,7 @@ def parse_reset(bucket, now):
 def save():
     quota = data.get('quota')
     if not isinstance(quota, dict) or not os.path.isdir(home): return
+    # Wall clock on purpose (#280): captured_at and resets_at are read by BoosterAI and later status line runs.
     now = int(time.time())
     snap = {}
     for bid, b in quota.items():

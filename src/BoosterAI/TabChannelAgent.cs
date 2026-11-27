@@ -225,14 +225,16 @@ def ask(question, options=None, allow_free_text=None, timeout=None, cancelled=No
     at = now_ms()
     append({"kind": "question", "id": qid, "text": question, "options": opts, "free": free, "expires_at": at + timeout * 1000}, at)
     path = os.path.join(answers, qid)
-    until = at / 1000.0 + timeout
+    # The wait is timed on the monotonic clock, which a step of the wall clock does not move (#280); expires_at above stays
+    # wall-clock epoch-ms, since BoosterAI compares it with its own clock.
+    until = time.monotonic() + timeout
     while True:
         text = read_answer(path, qid, at)
         if text is not None:
             return True, text
         if cancelled is not None and cancelled.is_set():
             return False, "The question was cancelled."
-        if time.time() >= until:
+        if time.monotonic() >= until:
             minutes = timeout // 60
             return False, ("No answer from the user within %s. BoosterAI marks the question as expired and a later answer is not read: "
                            "continue with other work, or ask again later." % (("%d min" % minutes) if minutes else ("%d s" % timeout)))

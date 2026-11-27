@@ -170,8 +170,10 @@ public static class Launcher
     {
         if (!resume || tab.Llm is not ("claude" or "codex" or "agy" or "aider")) return LaunchOnce(tab, prompt, track, resume);
         var again = track is null ? "" : Hook("bs_reset") + " && " + Hook("bs_cli") + " && ";
-        return "{ bs_t=$SECONDS\n" + LaunchOnce(tab, prompt, track, true) + " || {\nbs_rc=$?\n"
-            + "if [ $bs_rc -lt 128 ] && [ $((SECONDS - bs_t)) -lt " + ResumeGraceSeconds + " ]\nthen "
+        // Timed on /proc/uptime, not bash's SECONDS: that follows the wall clock, which WSL steps by about 13 s every few
+        // seconds on some machines (#278, #280), so a quick failure could look slow or a session that ran look quick.
+        return "{ bs_t=$(cut -d. -f1 /proc/uptime)\n" + LaunchOnce(tab, prompt, track, true) + " || {\nbs_rc=$?\n"
+            + "if [ $bs_rc -lt 128 ] && [ $(($(cut -d. -f1 /proc/uptime) - bs_t)) -lt " + ResumeGraceSeconds + " ]\nthen "
             + again + LaunchOnce(tab, prompt, track, false) + "\nelse (exit $bs_rc)\nfi\n}\n}";
     }
 

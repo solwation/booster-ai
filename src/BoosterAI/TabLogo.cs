@@ -184,7 +184,9 @@ bs_logo_plain() {
 # all, setup included) on a slow machine. Narrower tabs get the wordmark or one line, very narrow ones nothing; NO_COLOR
 # or a terminal without 256 colours gets it still and plain for a moment; nothing without a terminal. The cursor is
 # hidden meanwhile and the screen and cursor restored however it ends; keys typed meanwhile reach the CLI. Runs in a
-# subshell: nothing stays behind.
+# subshell: nothing stays behind. The deadlines read the wall clock (EPOCHREALTIME, injectable in tests, #278) on
+# purpose: every loop is a fixed number of frames, so a step of the clock (#280) only drops frames (forward) or keeps
+# them all (back), never lengthens the splash beyond its frames.
 bs_logo() (
   [ -t 1 ] || exit 0
   case ${TERM-} in ''|dumb) exit 0 ;; esac

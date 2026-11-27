@@ -157,7 +157,9 @@ public class OrchestraReloadPtyTests
         var session = new TabSession(root, DateTime.UtcNow);
         var track = session.NewTrack()!; // No auto-clear: orchestra alone enables the PTY input channel.
         var tab = new TabConfig { Name = "reload-pty-" + Guid.NewGuid().ToString("N"), Llm = "claude", Directory = session.Directory, Orkester = true };
-        var body = "claude() { printf '%s\\n' \"$BASHPID\" > cli-pid; while IFS= read -r l; do printf '%s\\n' \"$l\" >> received; done; }\nexport -f claude\n"
+        // In "output" mode the CLI keeps drawing (a dot every 0.1 s, as a busy TUI redraws) until the test stops it.
+        var draw = mode == "output" ? "( while [ ! -f stop-output ] && printf .; do sleep 0.1; done ) & " : "";
+        var body = "claude() { printf '%s\\n' \"$BASHPID\" > cli-pid; " + draw + "while IFS= read -r l; do printf '%s\\n' \"$l\" >> received; done; }\nexport -f claude\n"
             + Launcher.TabScript(tab, track: track);
         var psi = new ProcessStartInfo("script") { RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true };
         psi.ArgumentList.Add("-qefc");
@@ -188,10 +190,8 @@ public class OrchestraReloadPtyTests
             var expected = session.ReadLog(track.Id)!;
             var shellPid = expected.Pid!.Value;
             var shellStart = expected.StartTime!.Value;
-            File.SetLastWriteTimeUtc(Path.Combine(session.Directory, track.Id + ".timing"), DateTime.UtcNow.AddSeconds(-3));
-            // Output "now" is dated a minute ahead: the tab compares the record's age with its wall clock, which this WSL steps
-            // by up to ±13 s every few seconds under load (#190, #278); a step forward must not make fresh output look old.
-            if (mode == "output") File.SetLastWriteTimeUtc(Path.Combine(session.Directory, track.Id + ".timing"), DateTime.UtcNow.AddMinutes(1));
+            // The tab times the output it forwards itself, on its monotonic clock (#280): "output" waits until it has seen some.
+            if (mode == "output") Assert.True(SpinWait.SpinUntil(() => OutputBytes(Path.Combine(session.Directory, track.Id + ".timing")) > 0, 30000));
             if (mode == "busy") File.AppendAllText(logPath, $"{idle + 1} busy\n");
             if (mode == "generation") File.AppendAllText(logPath, $"{idle + 1} input-ready protocol=2\n");
             var since = idle - 1;
@@ -206,22 +206,12 @@ public class OrchestraReloadPtyTests
             }
             int Count(Func<string, bool> line) => File.ReadAllLines(logPath).Count(line);
             static bool Invalid(string l) => l.Contains(" input-skipped reason=invalid", StringComparison.Ordinal);
-            // The tab drops a request it reads more than 10 s after it was written (its wall clock against ours): after such a
-            // clock step (#278) the same request is written again, a few times at most; any other answer is the test's.
+            // The tab times a request's age itself (#280), so a step of either wall clock never makes it invalid.
             void Request(string command, string kind, Func<string, bool> answer)
             {
-                for (var attempt = 1; ; attempt++)
-                {
-                    var invalid = Count(Invalid);
-                    Assert.True(session.TryRequestInput(track.Id, since, command, expected, kind));
-                    Assert.True(SpinWait.SpinUntil(() =>
-                    {
-                        // Output keeps arriving until the tab has answered, so a late check under load still sees a busy terminal.
-                        if (mode == "output") File.SetLastWriteTimeUtc(Path.Combine(session.Directory, track.Id + ".timing"), DateTime.UtcNow.AddMinutes(1));
-                        return Count(answer) > 0 || Count(Invalid) > invalid;
-                    }, 30000), File.ReadAllText(logPath));
-                    if (Count(answer) > 0 || attempt == 3) return;
-                }
+                Assert.True(session.TryRequestInput(track.Id, since, command, expected, kind));
+                Assert.True(SpinWait.SpinUntil(() => Count(answer) > 0 || Count(Invalid) > 0, 30000), File.ReadAllText(logPath));
+                Assert.Equal(0, Count(Invalid));
             }
             if (mode == "valid")
             {
@@ -231,11 +221,10 @@ public class OrchestraReloadPtyTests
                 Assert.True(SpinWait.SpinUntil(() => Lines() == "/clear\n", 30000));
                 Assert.True(SpinWait.SpinUntil(() => session.ReadLog(track.Id)!.InputKind == "clear", 30000));
                 // Reload requires two quiet seconds after the clear redraw. Wait until the terminal's output record holds the
-                // whole echoed "/clear" line (under load it can be written after the CLI already read the line), then date
-                // that output back like the setup above, instead of sleeping a fixed time: the tab compares the record's
-                // age with the wall clock, which this WSL steps back by seconds now and then (#190).
+                // whole echoed "/clear" line (under load it can be written after the CLI already read the line), then for
+                // two quiet seconds; the tab times them on its monotonic clock (#280), as Task.Delay does.
                 Assert.True(SpinWait.SpinUntil(() => OutputBytes(timing) >= before + "/clear\r\n".Length, 30000));
-                File.SetLastWriteTimeUtc(timing, DateTime.UtcNow.AddMinutes(-1));
+                await Task.Delay(2100);
             }
             Request(OrchestraReload.Command, "orkester",
                 l => mode == "valid" ? l.Contains(" input-sent kind=orkester", StringComparison.Ordinal) : l.Contains(" input-skipped", StringComparison.Ordinal) && !Invalid(l));
@@ -255,6 +244,7 @@ public class OrchestraReloadPtyTests
             Assert.Equal(1, File.ReadAllText(logPath).Split('\n').Count(l => l.EndsWith(" cli-start", StringComparison.Ordinal)));
             Assert.False(File.Exists(Path.Combine(session.Directory, track.Id + ".next")));
             Assert.Empty(TestTerminal.For(tab.Name));
+            File.WriteAllText(Path.Combine(session.Directory, "stop-output"), "");
             Launcher.RunTabControl(Launcher.CloseTabScript(shellPid, shellStart), "Ubuntu");
             Assert.True(process.WaitForExit(30000));
             Assert.True(SpinWait.SpinUntil(() => InDirectory(session.Directory).Length == 0, 10000));
