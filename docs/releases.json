@@ -1,6 +1,131 @@
 {
   "releases": [
     {
+      "version": "0.56.0",
+      "date": "2026-11-27",
+      "previous": "0.55.0",
+      "summary": {
+        "sv": "Byt till en modell med kvot kvar, Codex-resets, sparmeddelande vid 1 % kvar och tydligare agentstatus.",
+        "en": "Switch to a model with quota left, Codex resets, a save notice at 1 % left and clearer agent status."
+      },
+      "features": [
+        {
+          "issue": 279,
+          "title": {
+            "sv": "Byt till en likvärdig modell när kvoten är slut",
+            "en": "Switch to an equivalent model when the quota runs out"
+          },
+          "howto": {
+            "sv": "När kontots kvot är slut, inga resets finns och återställningen är långt borta erbjuder BoosterAI en likvärdig modell med kvot kvar. Fliken byter när den är ledig och fortsätter där den förra agenten slutade. Automatiskt byte finns under Inställningar → Allmänt → Experimentella funktioner.",
+            "en": "When an account's quota is used up, no resets are left and the reset is far away, BoosterAI offers an equivalent model with quota left. The tab switches once it is idle and carries on where the previous agent stopped. Automatic switching is under Settings → General → Experimental features."
+          },
+          "docs": "DETAILS.md#accounts-per-agent",
+          "image": {
+            "sv": "verification/279/switch-sv-light.png",
+            "en": "verification/279/switch-en-light.png"
+          }
+        },
+        {
+          "issue": 275,
+          "title": {
+            "sv": "Agenterna sparar innan kvoten tar slut",
+            "en": "Agents save before the quota runs out"
+          },
+          "howto": {
+            "sv": "Vid cirka 1 % kvar ber BoosterAI körande Claude- och Codex-flikar att spara sitt arbete. Agenten bestämmer själv vad den gör. Gränsen ställer du in under Inställningar → Allmänt.",
+            "en": "At about 1 % left, BoosterAI asks running Claude and Codex tabs to save their work. The agent decides what to do. Set the threshold under Settings → General."
+          },
+          "docs": "DETAILS.md#tab-status-channel",
+          "topic": "status-channel",
+          "image": {
+            "sv": "verification/275/peek-sv-light.png",
+            "en": "verification/275/peek-en-light.png"
+          }
+        },
+        {
+          "issue": 274,
+          "title": {
+            "sv": "Codex-resets på Konton",
+            "en": "Codex resets under Accounts"
+          },
+          "howto": {
+            "sv": "Konton visar hur många resets ett Codex-konto har kvar. När kvoten är slut använder du en med Använd reset, efter en fråga.",
+            "en": "Accounts shows how many resets a Codex account has left. When the quota is used up, use one with Use reset, after a question."
+          },
+          "docs": "DETAILS.md#accounts-per-agent",
+          "image": {
+            "sv": "verification/274/accounts-sv-light.png",
+            "en": "verification/274/accounts-en-light.png"
+          }
+        },
+        {
+          "issue": 268,
+          "title": {
+            "sv": "Tydligare agentstatus under fliken",
+            "en": "Clearer agent status under the tab"
+          },
+          "howto": {
+            "sv": "Agentens status står i ett eget block i flikens färg, uppdateras vid varje steg, döljs en minut efter att du sett den och ger en notis när BoosterAI inte har fokus.",
+            "en": "The agent's status sits in its own block in the tab's colour, updates at every step, hides a minute after you have seen it and notifies you when BoosterAI is not focused."
+          },
+          "docs": "DETAILS.md#tab-status-channel",
+          "topic": "status-channel",
+          "image": {
+            "sv": "verification/268/main-sv-light.png",
+            "en": "verification/268/main-en-light.png"
+          }
+        },
+        {
+          "issue": 272,
+          "title": {
+            "sv": "Kryssa ur en flik för att stänga den",
+            "en": "Untick a tab to close it"
+          },
+          "howto": {
+            "sv": "Kryssa ur en körande flik så stängs den. Arbetar agenten frågar BoosterAI först, och agenten sparar innan fliken stängs.",
+            "en": "Untick a running tab and it closes. If the agent is working, BoosterAI asks first, and the agent saves before the tab closes."
+          },
+          "docs": "DETAILS.md#multiple-tabs-for-one-project",
+          "image": {
+            "sv": "verification/272/close-tab-sv-light.png",
+            "en": "verification/272/close-tab-en-light.png"
+          }
+        },
+        {
+          "issue": 265,
+          "title": {
+            "sv": "Nya modeller dyker upp av sig själva",
+            "en": "New models appear by themselves"
+          },
+          "howto": {
+            "sv": "BoosterAI läser modellerna från agy och Codex vid start och sedan dagligen, så nya modeller som Gemini 4 Neon syns i modellvalet utan ny version.",
+            "en": "BoosterAI reads the models from agy and Codex at start and then daily, so new models such as Gemini 4 Neon show in the model list without a new version."
+          },
+          "docs": "DETAILS.md#multiple-tabs-for-one-project"
+        }
+      ],
+      "changes": [
+        "Time bs_pty's intervals on the monotonic clock so wall-clock steps neither split replies nor type into output (#280)",
+        "Wait for the thread-pool stop in the model switch restart test (#279)",
+        "Keep ReleaseNotesTests in English and let a hook close its input early (#278)",
+        "Separate the CPU test's two steps and keep language switches serial (#278)",
+        "Make the pty and CPU tests independent of load and WSL clock steps (#278)",
+        "Offer switching a tab to an equivalent model when its account's quota is used up, with an experimental automatic switch (#279)",
+        "Show Codex resets per account and use one from Accounts after asking (#274)",
+        "Ask running agents to save their state when an account's quota is nearly used up (#275)",
+        "Ask agents for a running status at every new step and make boosterai_status say so (#273)",
+        "Close a running tab when its checkbox is unticked, asking first while it works (#272)",
+        "Hide a seen agent status after 60 s of focus; new text shows it again (#271)",
+        "Give the agent status line its own block tinted with the tab colour (#268)",
+        "Notify a changed agent status text when the window is unfocused, at most once a minute per tab (#270)",
+        "Keep tests away from the real toast and the boosterai: registration (#269)",
+        "Offer the orchestra install and Read more in the start command list instead of a lone link (#267)",
+        "Check model lists every 6 h without overlapping fetches and test that tabs keep their model (#265)",
+        "Fetch agent model ids from agy and the Codex cache and merge them with the built-in lists (#265)",
+        "Show only the latest release behind the version link, with a Show all button (#266)"
+      ]
+    },
+    {
       "version": "0.55.0",
       "date": "2026-11-27",
       "previous": "0.54.0",
