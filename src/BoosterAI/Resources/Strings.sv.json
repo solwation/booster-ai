@@ -196,6 +196,7 @@
   "notify.question": "{0} har en fråga",
   "notify.agent.done": "{0} är klar",
   "notify.agent.blocked": "{0} är blockerad",
+  "notify.agent.status": "{0} har ny status",
   "agent.state.done": "Klar",
   "agent.state.blocked": "Blockerad",
   "agent.state.working": "Arbetar",

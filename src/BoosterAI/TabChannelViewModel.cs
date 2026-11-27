@@ -215,6 +215,39 @@ public sealed partial class MainViewModel
     /// <summary>How a channel notification is shown (title, body, opens the question); tests and screenshots replace it.</summary>
     internal Action<string, string, bool> ShowNotification { get; set; } = Notifier.Show;
     private readonly HashSet<string> _channelNotified = [];
+    /// <summary>True while the BoosterAI main window has focus: a changed status then is seen and never notifies (#270).</summary>
+    internal bool MainWindowFocused { get; set; }
+    /// <summary>The clock of the status-text throttle; tests replace it.</summary>
+    internal Func<DateTimeOffset> Clock { get; set; } = () => DateTimeOffset.UtcNow;
+    internal static readonly TimeSpan StatusNotifyInterval = TimeSpan.FromMinutes(1);
+    private sealed class StatusNotifyState { public string? Seen; public string? Pending; public DateTimeOffset LastNotified = DateTimeOffset.MinValue; }
+    private readonly Dictionary<string, StatusNotifyState> _statusNotify = [];
+
+    /// <summary>The window got or lost focus; text that changed while it was unfocused but is still throttled is dropped on focus, as the user sees it now.</summary>
+    internal void SetMainWindowFocused(bool focused)
+    {
+        MainWindowFocused = focused;
+        if (focused) foreach (var st in _statusNotify.Values) st.Pending = null;
+    }
+
+    /// <summary>
+    /// A new status text while the window is unfocused notifies at most once a minute per tab with the latest text; a change
+    /// seen while focused, a text from before this start and a repeated text never notify (#270).
+    /// </summary>
+    private void NotifyStatusText(TabViewModel row, string key, AgentStatus? status)
+    {
+        if (!_statusNotify.TryGetValue(key, out var st)) _statusNotify[key] = st = new();
+        var now = Clock();
+        if (status is { Text: var raw } && status.At >= ChannelNotifyAfter && raw.Trim() is { Length: > 0 } text && text != st.Seen)
+        {
+            st.Seen = text;
+            st.Pending = MainWindowFocused || status.State is AgentState.Done or AgentState.Blocked ? null : text;
+        }
+        if (st.Pending is not { } pending || MainWindowFocused || now - st.LastNotified < StatusNotifyInterval) return;
+        st.Pending = null;
+        st.LastNotified = now;
+        if (_cfg.Notifications) ShowNotification(Loc.Format("notify.agent.status", row.Name.Trim()), pending, false);
+    }
     /// <summary>The tab whose question was notified last; a click on a notification opens its questions.</summary>
     private TabViewModel? _latestQuestionTab;
 
@@ -229,6 +262,7 @@ public sealed partial class MainViewModel
         row.SetChannel(state);
         if (!_cfg.TabStatusChannel || row.TrackId is not { } id) return;
         var key = (row.Session?.Directory ?? "") + "/" + id;
+        NotifyStatusText(row, key, state.Status);
         foreach (var q in state.Open)
         {
             if (q.At < ChannelNotifyAfter || !_channelNotified.Add($"{key}/q/{q.Id}/{q.At}")) continue;

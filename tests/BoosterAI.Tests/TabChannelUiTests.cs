@@ -231,9 +231,11 @@ public sealed class TabChannelUiTests : IDisposable
     public void NewQuestionsAndDoneOrBlockedNotifyOnceAndOpenTheQuestion()
     {
         var (vm, _, sub, session) = Setup();
+        vm.SetMainWindowFocused(true);
         Write(session, sub, Status(Now - 3000, "working", "Building"));
         Poll(vm, session, sub);
         Assert.Empty(_notified);
+        vm.SetMainWindowFocused(false);
 
         Write(session, sub, Question(Now - 2000, "q1", "Which branch?", ["main"], true));
         Poll(vm, session, sub);
@@ -269,6 +271,82 @@ public sealed class TabChannelUiTests : IDisposable
         Poll(later, laterSession, laterSub);
         Assert.Empty(_notified);
         Assert.True(laterSub.HasQuestionBadge);
+    }
+
+    [Fact]
+    public void ChangedStatusTextNotifiesOnceWhileUnfocusedAndNotOnRepoll()
+    {
+        var (vm, _, sub, session) = Setup();
+        Write(session, sub, Status(Now - 1000, "working", "Step 1"));
+        Poll(vm, session, sub);
+        Poll(vm, session, sub);
+        Assert.Single(_notified);
+        Assert.Equal(("Atlas-api has a new status", "Step 1", false), _notified[0]);
+    }
+
+    [Fact]
+    public void StatusTextFromBeforeStartNeverNotifies()
+    {
+        var (vm, _, sub, session) = Setup();
+        vm.ChannelNotifyAfter = Now;
+        Write(session, sub, Status(Now - 5000, "working", "Old"));
+        Poll(vm, session, sub);
+        Assert.Empty(_notified);
+    }
+
+    [Fact]
+    public void StatusTextChangedWhileFocusedNeverNotifiesAfterwards()
+    {
+        var (vm, _, sub, session) = Setup();
+        var clock = DateTimeOffset.UtcNow;
+        vm.Clock = () => clock;
+        vm.SetMainWindowFocused(true);
+        Write(session, sub, Status(Now - 1000, "working", "Seen"));
+        Poll(vm, session, sub);
+        vm.SetMainWindowFocused(false);
+        clock = clock.AddMinutes(5);
+        Poll(vm, session, sub);
+        Assert.Empty(_notified);
+    }
+
+    [Fact]
+    public void StatusTextIsThrottledToOneNotificationAMinuteWithTheLatestText()
+    {
+        var (vm, _, sub, session) = Setup();
+        var clock = DateTimeOffset.UtcNow;
+        vm.Clock = () => clock;
+        Write(session, sub, Status(Now - 3000, "working", "A"));
+        Poll(vm, session, sub);
+        clock = clock.AddSeconds(20);
+        Write(session, sub, Status(Now - 2000, "working", "B"));
+        Poll(vm, session, sub);
+        clock = clock.AddSeconds(20);
+        Write(session, sub, Status(Now - 1000, "working", "C"));
+        Poll(vm, session, sub);
+        Assert.Equal(["A"], _notified.Select(n => n.Body));
+        clock = clock.AddSeconds(25);
+        Poll(vm, session, sub);
+        Assert.Equal(["A", "C"], _notified.Select(n => n.Body));
+        Poll(vm, session, sub);
+        Assert.Equal(2, _notified.Count);
+    }
+
+    [Fact]
+    public void DoneIsImmediateAndNotDoubledByTheStatusTextNotification()
+    {
+        var (vm, _, sub, session) = Setup();
+        var clock = DateTimeOffset.UtcNow;
+        vm.Clock = () => clock;
+        Write(session, sub, Status(Now - 3000, "working", "A"));
+        Poll(vm, session, sub);
+        clock = clock.AddSeconds(5);
+        Write(session, sub, Status(Now - 1000, "done", "All done"));
+        Poll(vm, session, sub);
+        Poll(vm, session, sub);
+        clock = clock.AddMinutes(5);
+        Poll(vm, session, sub);
+        Assert.Equal(["A", "All done"], _notified.Select(n => n.Body));
+        Assert.Equal("Atlas-api is done", _notified[1].Title);
     }
 
     [Fact]

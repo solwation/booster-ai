@@ -120,7 +120,7 @@ public partial class MainWindow : Window
             if (e.Property == WindowStateProperty && WindowState == WindowState.Minimized
                 && TrayPolicy.HideOnMinimize(_vm.MinimizeToTray, TrayAvailable())) Hide();
         };
-        Activated += (_, _) => { _vm.Update.WindowActive(true); _vm.SetupWindowActive(); _vm.RefreshOrkester(); _vm.RefreshCommands(); _vm.ArmLimitAnimations(); _ = _vm.RefreshAccountLimitsAsync(); };
+        Activated += (_, _) => { _vm.SetMainWindowFocused(true); _vm.Update.WindowActive(true); _vm.SetupWindowActive(); _vm.RefreshOrkester(); _vm.RefreshCommands(); _vm.ArmLimitAnimations(); _ = _vm.RefreshAccountLimitsAsync(); };
         // Pick up an orchestra installed or removed outside the app (#189); idle while hidden or minimized.
         var orchestraTimer = new Avalonia.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(45) };
         orchestraTimer.Tick += (_, _) => { if (IsVisible && WindowState != WindowState.Minimized) _vm.RefreshOrkester(); };
@@ -131,7 +131,7 @@ public partial class MainWindow : Window
         limitsTimer.Tick += (_, _) => { if (IsVisible && WindowState != WindowState.Minimized) _ = _vm.RefreshAccountLimitsAsync(force: true); };
         limitsTimer.Start();
         Closed += (_, _) => limitsTimer.Stop();
-        Deactivated += (_, _) => _vm.Update.WindowActive(false);
+        Deactivated += (_, _) => { _vm.SetMainWindowFocused(false); _vm.Update.WindowActive(false); };
     }
 
     private void OnBackgroundOpened(object? sender, EventArgs e)

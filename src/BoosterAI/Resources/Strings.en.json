@@ -196,6 +196,7 @@
   "notify.question": "{0} has a question",
   "notify.agent.done": "{0} is done",
   "notify.agent.blocked": "{0} is blocked",
+  "notify.agent.status": "{0} has a new status",
   "agent.state.done": "Done",
   "agent.state.blocked": "Blocked",
   "agent.state.working": "Working",
