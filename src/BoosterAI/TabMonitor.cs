@@ -795,6 +795,31 @@ for line in sys.stdin:
 
     public static TabSession Open(string directory) => new(directory);
 
+    /// <summary>
+    /// The session window's tabs as BoosterAI last arranged or saw them (#254): own tab ids and null for tabs it does
+    /// not own, left to right; see <see cref="TerminalOrder"/>. Empty for a new session or one from before #254.
+    /// </summary>
+    public IReadOnlyList<string?> WindowOrder
+    {
+        get
+        {
+            try { return TerminalOrder.Parse(File.ReadAllText(Path.Combine(Directory, "window-order"))); }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return []; }
+        }
+        set
+        {
+            var path = Path.Combine(Directory, "window-order");
+            var temporary = path + "." + Guid.NewGuid().ToString("N");
+            try
+            {
+                File.WriteAllText(temporary, TerminalOrder.Format(value));
+                File.Move(temporary, path, overwrite: true);
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException) { /* the next arrange starts from start order */ }
+            finally { try { File.Delete(temporary); } catch (Exception e) when (e is IOException or UnauthorizedAccessException) { } }
+        }
+    }
+
     /// <summary>The paths the tab's shell uses for <paramref name="id"/>.</summary>
     public TabTrack Track(string id)
     {

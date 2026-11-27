@@ -1276,6 +1276,7 @@ public sealed partial class MainViewModel : Observable
             for (var i = 0; i < order.Count; i++) Tabs.Move(Tabs.IndexOf(order[i]), i);
         }
         Save();
+        ScheduleArrange(reorder: true);
     }
 
     /// <summary>
@@ -1322,6 +1323,7 @@ public sealed partial class MainViewModel : Observable
             var order = projects.SelectMany(p => Tabs.Where(t => t == p || t.Parent == p).ToList()).ToList();
             for (var i = 0; i < order.Count; i++) Tabs.Move(Tabs.IndexOf(order[i]), i);
             Save();
+            ScheduleArrange(reorder: true);
         }
     }
 
@@ -1827,12 +1829,15 @@ public sealed partial class MainViewModel : Observable
 
     private TabSession? _session;
 
-    /// <summary>The command that shows <paramref name="tab"/>'s terminal tab (#213): its rank among this session's tabs that still have one.</summary>
+    /// <summary>
+    /// The command that shows <paramref name="tab"/>'s terminal tab (#213): its position in the session window as BoosterAI
+    /// last arranged or saw it (#254), among the tabs that still have one; tabs it has no position for count by start order.
+    /// </summary>
     internal TerminalFocus.Command? FocusCommand(TabViewModel tab)
     {
         if (tab.Session is not { } session || tab.TrackId is not { } id) return null;
-        var live = Tabs.Where(t => t.CanShowTerminalState && t.Session?.WindowName == session.WindowName && t.TrackId is not null).Select(t => t.TrackId!);
-        return TerminalFocus.Build(session.WindowName, TerminalFocus.Index(id, live), OperatingSystem.IsWindows());
+        var at = BelievedWindow(session).IndexOf(id);
+        return TerminalFocus.Build(session.WindowName, at >= 0 ? at : null, OperatingSystem.IsWindows());
     }
 
     /// <summary>Switches to the tab's terminal tab; false when no command could be built.</summary>
@@ -1854,7 +1859,10 @@ public sealed partial class MainViewModel : Observable
         try { _session ??= new TabSession(TabSession.DefaultRoot, DateTime.Now, TabSession.Liveness(_cfg.WslDistro)); }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException) { _session = null; }
         var tracks = rows.ToDictionary(r => r.Tab, r => _session?.NewTrack(_cfg.AutoUpdateClis, _cfg.AutoClearIdle, _cfg.ShowTabLogo, _cfg.TabStatusChannel));
-        var error = Launcher.Launch(cfg, track: t => tracks.GetValueOrDefault(t), window: window ?? _session?.WindowName ?? "new", resume: resume);
+        var target = window ?? _session?.WindowName ?? "new";
+        // The window's tabs before this launch (#254): the new ones are appended after them.
+        var before = _session is { } current && target == current.WindowName ? LiveRows(current).Select(t => t.TrackId!).ToList() : null;
+        var error = Launcher.Launch(cfg, track: t => tracks.GetValueOrDefault(t), window: target, resume: resume);
         if (error != "")
         {
             if (_cfg.Notifications) Notifier.Show("BoosterAI", error);
@@ -1874,6 +1882,8 @@ public sealed partial class MainViewModel : Observable
             row.RaiseRestartTip();
             row.SetState(TabState.Starting, null);
         }
+        if (before is not null && TerminalOrder.Supported)
+            TabsAppended(_session!, before, TabGroups.Flatten(cfg.Tabs).Where(t => t.Enabled).Select(t => tracks.GetValueOrDefault(t)?.Id).OfType<string>().ToList());
         StartPolling();
         TabsChanged();
         return "";

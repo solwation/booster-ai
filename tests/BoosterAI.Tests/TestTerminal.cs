@@ -29,6 +29,10 @@ internal static class TestTerminal
         };
         TabTitles.Restore = (_, _) => { };
         TerminalFocus.Run = _ => { };
+        // Arranging tabs (#254) never reads or moves the developer's real Windows Terminal tabs.
+        TerminalOrder.Run = _ => { };
+        TerminalOrder.Read = _ => null;
+        TerminalOrder.Appends = () => true;
         Launcher.RequestZoom = (percent, restore) => ZoomRequests.Enqueue((percent, restore));
         TabSession.DefaultRoot = SessionRoot;
         AppDomain.CurrentDomain.ProcessExit += (_, _) =>
