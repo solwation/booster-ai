@@ -1,3 +1,3 @@
-version: 0.53.0
-sv: Flikarna visar en animerad BoosterAI-logotyp vid start, och Claude och Codex skriver inga recaps som kostar tokens.
-en: Tabs show an animated BoosterAI logo on start, and Claude and Codex no longer write token-costing recaps.
+version: 0.53.1
+sv: Den animerade logotypen visas nu också när man startar om flikar som öppnades före uppgraderingen.
+en: The animated logo now also shows when restarting tabs that were opened before the upgrade.
