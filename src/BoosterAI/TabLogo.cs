@@ -7,6 +7,12 @@ namespace BoosterAI;
 /// </summary>
 public static class TabLogo
 {
+    /// <summary>
+    /// The logo script on its own in the session directory: a restart in a shell that sourced an older tab-lib.sh, which
+    /// has no bs_logo, loads it from here (#243).
+    /// </summary>
+    public const string ScriptFile = "tab-logo.sh";
+
     /// <summary>The mark, 16 × 16 pixels: '#' the gradient tile, '@' the white bolt, '.' nothing.</summary>
     internal static readonly string[] Mark =
     [

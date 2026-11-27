@@ -765,6 +765,8 @@ for line in sys.stdin:
         File.WriteAllText(Path.Combine(Directory, "tab-lib.sh"), Lib.Replace("\r\n", "\n"));
         try { File.WriteAllText(Path.Combine(Directory, ClaudeStatusLine.ScriptFile), ClaudeStatusLine.Script.Replace("\r\n", "\n") + "\n"); }
         catch (IOException) { /* no plan limits from this session's claude tabs */ }
+        try { File.WriteAllText(Path.Combine(Directory, TabLogo.ScriptFile), TabLogo.Script.Replace("\r\n", "\n")); }
+        catch (IOException) { /* restarts of older tabs show no logo */ }
         try { File.WriteAllText(Path.Combine(Directory, AgyStatusLine.ScriptFile), AgyStatusLine.Script.Replace("\r\n", "\n") + "\n"); }
         catch (IOException) { /* no plan limits from this session's agy tabs */ }
         _next = System.IO.Directory.GetFiles(Directory, "tab*.log")

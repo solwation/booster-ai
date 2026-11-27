@@ -57,8 +57,8 @@ public static class Launcher
     /// variable an earlier run exported there and then exports the new choice (#186).
     /// </summary>
     public static string RestartScript(TabConfig tab, TabTrack track, bool resume) =>
-        tab.Llm == Catalog.ShellOnly ? $"{Cd(InWsl(tab))} || true && {Hook("bs_reset")} && {LogoHook(tab, null, false, track)}{Accounts.ResetCommand}"
-            : $"{Cd(InWsl(tab))} && {Hook("bs_reset")} && {LogoHook(tab, null, resume, track)}{UpdateHook(tab, track)}{Accounts.ResetCommand} && {Accounts.ExportCommand(InWsl(tab))}{Hook("bs_cli")} && {LaunchCommand(tab, null, track, resume)} && {Hook("bs_done 0")} || {Hook("bs_done $?")}";
+        tab.Llm == Catalog.ShellOnly ? $"{Cd(InWsl(tab))} || true && {Hook("bs_reset")} && {RestartLogoHook(tab, resume: false, track)}{Accounts.ResetCommand}"
+            : $"{Cd(InWsl(tab))} && {Hook("bs_reset")} && {RestartLogoHook(tab, resume, track)}{UpdateHook(tab, track)}{Accounts.ResetCommand} && {Accounts.ExportCommand(InWsl(tab))}{Hook("bs_cli")} && {LaunchCommand(tab, null, track, resume)} && {Hook("bs_done 0")} || {Hook("bs_done $?")}";
 
     /// <summary>
     /// The step that shows BoosterAI's logo after the terminal reset of a start, restart or continuation (tab-lib.sh's bs_logo, #242),
@@ -67,6 +67,16 @@ public static class Launcher
     /// </summary>
     private static string LogoHook(TabConfig tab, string? prompt, bool resume, TabTrack track) =>
         track.Logo && !IsOneShot(tab, prompt, resume) ? Hook("bs_logo") + " && " : "";
+
+    /// <summary>
+    /// The logo step of an in-place restart. The restart runs in the tab's own shell, which sourced tab-lib.sh when the tab
+    /// started, possibly from an older BoosterAI without bs_logo; such a shell first loads the session's current logo
+    /// script (#243). No ';' (see TabScript): the group ends with a newline.
+    /// </summary>
+    private static string RestartLogoHook(TabConfig tab, bool resume, TabTrack track) =>
+        LogoHook(tab, null, resume, track) is { Length: > 0 } hook
+            ? "{ type bs_logo >/dev/null 2>&1 || . " + Quote(track.Dir + "/" + TabLogo.ScriptFile) + " 2>/dev/null || true\n} && " + hook
+            : "";
 
     /// <summary>Run once: the orchestra command without a prompt, not continued, runs once and exits (see CliCommand).</summary>
     internal static bool IsOneShot(TabConfig tab, string? prompt, bool resume) =>

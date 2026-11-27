@@ -56,18 +56,20 @@ public class TabLogoTests
     public void InteractiveStartsContinuationsAndRestartsShowTheLogoOnce(string llm)
     {
         var tab = new TabConfig { Name = "Demo", Directory = "~/demo", Llm = llm, Orkester = true };
-        foreach (var script in new[]
+        foreach (var (script, restart) in new[]
         {
-            Launcher.TabScript(tab, null, Track()),
-            Launcher.TabScript(tab, null, Track(), resume: true),
-            Launcher.TabScript(tab, Launcher.InstallOrkesterPrompt, Track()),
-            Launcher.RestartScript(tab, Track(), resume: false),
-            Launcher.RestartScript(tab, Track(), resume: true),
+            (Launcher.TabScript(tab, null, Track()), false),
+            (Launcher.TabScript(tab, null, Track(), resume: true), false),
+            (Launcher.TabScript(tab, Launcher.InstallOrkesterPrompt, Track()), false),
+            (Launcher.RestartScript(tab, Track(), resume: false), true),
+            (Launcher.RestartScript(tab, Track(), resume: true), true),
         })
         {
             // After the terminal reset, before the update and the CLI; the resume fallback's fresh start does not repeat it.
-            Assert.Contains("(bs_reset 2>/dev/null || true) && " + Logo, script);
-            Assert.Equal(1, Count(script, "bs_logo"));
+            // A restart first loads the session's logo script into a shell from an older build (#243).
+            var load = restart ? "{ type bs_logo >/dev/null 2>&1 || . '/s/" + TabLogo.ScriptFile + "' 2>/dev/null || true\n} && " : "";
+            Assert.Contains("(bs_reset 2>/dev/null || true) && " + load + Logo, script);
+            Assert.Equal(1, Count(script, Logo));
             Assert.DoesNotContain(';', script);
         }
     }
@@ -203,6 +205,68 @@ public class TabLogoTests
     }
 
     private static int Count(string s, string part) => (s.Length - s.Replace(part, "").Length) / part.Length;
+
+    [Theory]
+    [InlineData("claude")]
+    [InlineData("agy")]
+    [InlineData(Catalog.ShellOnly)]
+    public async Task RestartInAShellFromAnOlderBuildLoadsTheSessionsLogo(string llm)
+    {
+        if (!CanRunScript) return;
+        var root = Directory.CreateTempSubdirectory("booster-logo").FullName;
+        try
+        {
+            File.WriteAllText(Path.Combine(root, TabLogo.ScriptFile), TabLogo.Script);
+            var track = new TabTrack(root + "/tab-lib.sh", root, "tab1");
+            var restart = Launcher.RestartScript(new TabConfig { Llm = llm, Directory = root }, track, resume: false);
+            Assert.DoesNotContain(';', restart);
+            // The tab's shell has no bs_logo, as after sourcing an older tab-lib.sh; the restart is eval'd like bs_next does.
+            File.WriteAllText(Path.Combine(root, "next"), restart);
+            var older = await InPty(root, "unset -f bs_logo && eval \"$(cat next)\"")
+                .ConfigureAwait(false);
+            Assert.Contains("█", older);
+            Assert.Contains("\e[?25h", older);
+            // A shell that has bs_logo keeps its own and loads nothing.
+            File.WriteAllText(Path.Combine(root, TabLogo.ScriptFile), "bs_logo() { echo reloaded\n}\n");
+            var current = await InPty(root, "bs_logo() { echo current\n}\neval \"$(cat next)\"");
+            Assert.Contains("current", current);
+            Assert.DoesNotContain("reloaded", current);
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public void RestartLoadsNothingWithTheLogoOffOrInRunOnce()
+    {
+        var track = new TabTrack("/s/tab-lib.sh", "/s", "tab1");
+        Assert.DoesNotContain(TabLogo.ScriptFile, Launcher.RestartScript(new TabConfig { Llm = "claude" }, track with { Logo = false }, resume: false));
+        Assert.DoesNotContain(TabLogo.ScriptFile, Launcher.RestartScript(new TabConfig { Llm = "claude", Orkester = true, NonInteractive = true }, track, resume: false));
+        Assert.Contains("/s/" + TabLogo.ScriptFile, Launcher.RestartScript(new TabConfig { Llm = "claude" }, track, resume: true));
+    }
+
+    [Fact]
+    public void EverySessionWritesTheLogoScript()
+    {
+        var root = Directory.CreateTempSubdirectory("booster-logo").FullName;
+        try
+        {
+            var session = new TabSession(root, DateTime.Now);
+            Assert.Equal(TabLogo.Script.Replace("\r\n", "\n"), File.ReadAllText(Path.Combine(session.Directory, TabLogo.ScriptFile)));
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    /// <summary>Runs a bash <paramref name="body"/> in <paramref name="root"/> on an 120 × 30 pseudo-terminal; returns its output.</summary>
+    private static async Task<string> InPty(string root, string body)
+    {
+        File.WriteAllText(Path.Combine(root, "body.sh"), "stty cols 120 rows 30\n" + body + "\nprintf ok\n");
+        var psi = new ProcessStartInfo("script") { RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true, WorkingDirectory = root };
+        psi.ArgumentList.Add("-qec");
+        psi.ArgumentList.Add("bash --noprofile --norc body.sh");
+        psi.ArgumentList.Add("/dev/null");
+        Environment(psi, root, "COLORTERM=truecolor TERM=xterm-256color");
+        return (await Run(psi, root)).Replace("\r\n", "\n");
+    }
 
     /// <summary>Runs <paramref name="command"/> after sourcing the logo script, with stdout a pipe.</summary>
     private static async Task<string> Bash(string command, string env = "")

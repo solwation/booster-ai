@@ -18,7 +18,8 @@ public class CliUpdateTests
         {
             // An in-place restart also takes back an earlier run's account variable just before the CLI starts (#186).
             Assert.Contains($"~/'proj' && (bs_reset 2>/dev/null || true) && (bs_logo 2>/dev/null || true) && (bs_update {llm} 2>/dev/null || true) && (bs_cli 2>/dev/null || true) && ",
-                script.Replace(@"'\''", "'").Replace(Accounts.ResetCommand + " && ", ""));
+                script.Replace(@"'\''", "'").Replace(Accounts.ResetCommand + " && ", "")
+                    .Replace("{ type bs_logo >/dev/null 2>&1 || . '" + Track.Dir + "/" + TabLogo.ScriptFile + "' 2>/dev/null || true\n} && ", "")); // #243
             Assert.DoesNotContain(';', script);
         }
     }
