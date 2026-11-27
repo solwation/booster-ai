@@ -164,30 +164,44 @@ public class TabLogoTests
     [Theory]
     [InlineData(100, "COLORTERM=truecolor", "\e[38;2;")]
     [InlineData(70, "TERM=xterm-256color", "\e[38;5;")]
-    public async Task AnimatesInColourAndRestoresTheCursor(int columns, string env, string colour)
+    public async Task SplashIsCentredFadesOutAndRestoresTheScreen(int columns, string env, string colour)
     {
         if (!CanRunScript) return;
-        var (output, ms) = await InTerminal(columns, 30, env);
-        Assert.Contains("\e[?25l", output);
-        Assert.EndsWith("\e[0m\e[?25hok", output); // The cursor is shown again last.
+        const int lines = 30;
+        var (output, ms) = await InTerminal(columns, lines, env);
+        var art = TabLogo.Cells(columns >= TabLogo.FullColumns ? TabLogo.Full() : TabLogo.Wordmark());
+        // On the alternate screen with the cursor hidden; left again, cleared and the cursor shown last (#244).
+        Assert.StartsWith("\e[?1049h\e[?25l\e[2J", output);
+        Assert.EndsWith("\e[0m\e[2J\e[?1049l\e[?25hok", output);
         Assert.Contains(colour, output);
-        Assert.Contains(columns >= TabLogo.FullColumns ? "\e[8A" : "\e[4A", output); // Frames redraw in place.
-        // Bounded, not a speed test: frames stop 0.8 s after bs_logo starts, but a slow CI runner draws each frame slowly
-        // (1.5 s was measured there); an animation that ignored its deadline would run for several seconds.
-        Assert.InRange(ms, 0, 3000);
+        // Every row in the middle of the tab, horizontally and vertically.
+        var top = (lines - art.Length) / 2 + 1;
+        var left = (columns - art[0].Length) / 2 + 1;
+        Assert.Contains($"\e[{top};{left}H", output);
+        Assert.Contains($"\e[{top + art.Length - 1};{left}H", output);
+        Assert.DoesNotContain("\n", output.Replace("ok", ""));
+        // The fade ends near the dark background.
+        Assert.Contains(colour.Contains(";2;") ? "\e[38;2;12;12;12m" : "\e[38;5;16m", output);
+        // Bounded, not a speed test: the splash stops 1.5 s after bs_logo starts, but a slow CI runner draws each frame
+        // slowly; a splash that ignored its deadlines would run for several seconds.
+        Assert.InRange(ms, 900, 4000);
         Assert.Contains("█", output);
     }
 
     [Theory]
     [InlineData("NO_COLOR=1 COLORTERM=truecolor")]
     [InlineData("TERM=vt100")]
-    public async Task PlainTerminalsGetItStill(string env)
+    public async Task PlainTerminalsGetItStillAndCentred(string env)
     {
         if (!CanRunScript) return;
         var (output, _) = await InTerminal(100, 30, env);
-        Assert.DoesNotContain('\e', output);
-        Assert.Contains("█", output);
-        Assert.Equal(8, output.Split('\n').Count(l => l.Contains('▀') || l.Contains('▄') || l.Contains('█')));
+        Assert.DoesNotContain("\e[38", output);
+        Assert.DoesNotContain("\e[?25l", output);
+        var rows = output.Split('\n').Where(l => l.Contains('▀') || l.Contains('▄') || l.Contains('█')).ToArray();
+        Assert.Equal(8, rows.Length);
+        // Centred: the widest row starts after half the spare columns (tput's clear may come first).
+        var left = (100 - TabLogo.Cells(TabLogo.Full())[0].Length) / 2;
+        Assert.Equal(left, rows.Select(r => r[(r.LastIndexOf('\e') + 1)..]).Select(r => r.TrimStart('[', 'H', 'J', '2', '3')).Min(r => r.Length - r.TrimStart(' ').Length));
     }
 
     [Theory]
@@ -199,9 +213,9 @@ public class TabLogoTests
         if (!CanRunScript) return;
         var (output, _) = await InTerminal(columns, 30, env);
         Assert.DoesNotContain("█", output);
-        Assert.DoesNotContain("\e[?25l", output);
-        if (line) Assert.Contains(env.StartsWith("NO_COLOR") ? "BoosterAI" : "\e[1;38;2;", output);
-        else Assert.Equal("ok", output.Trim());
+        if (!line) { Assert.Equal("ok", output.Trim()); return; }
+        if (env.StartsWith("NO_COLOR")) Assert.Contains(new string(' ', (columns - 9) / 2) + "BoosterAI", output);
+        else Assert.Contains($"\e[15;{(columns - 9) / 2 + 1}H\e[1;38;2;", output);
     }
 
     private static int Count(string s, string part) => (s.Length - s.Replace(part, "").Length) / part.Length;
