@@ -15,6 +15,14 @@ public class ScreenshotTests
     }
 
     [Fact]
+    public void ParseReadsFakeRename()
+    {
+        Assert.Null(Screenshot.Parse(["--screenshot", "out.png"])!.FakeRename);
+        Assert.Equal(0, Screenshot.Parse(["--screenshot", "out.png", "--fake-rename"])!.FakeRename);
+        Assert.Equal(2, Screenshot.Parse(["--screenshot", "out.png", "--fake-rename", "2"])!.FakeRename);
+    }
+
+    [Fact]
     public void ParseReadsNewSubtabAndRowMenu()
     {
         var plain = Screenshot.Parse(["--screenshot", "out.png"])!;

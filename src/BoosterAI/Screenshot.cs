@@ -8,7 +8,7 @@ using Avalonia.Threading;
 namespace BoosterAI;
 
 /// <summary>
-/// <c>--screenshot file.png [--window main|local-model|local-models|close|settings|install|import|restart|remove-project|alias|wsl-shutdown|memory-reclaim|agent-yolo|wsl|unsaved|setup|releases|uninstall] [--theme light|dark] [--config file.json] [--fake-update [manual:]0.3.0] [--fake-status [error:]text] [--fake-denied] [--fake-changed] [--fake-restartable N] [--fake-peek [N]] [--fake-setup [cli|wsl|alias]] [--fake-long-status] [--check-clipping] [--fake-agent-list [N]] [--fake-command-list [N]] [--fake-new-subtab] [--fake-row-menu [N]] [--fake-memory-reclaim gradual|dropcache|disabled|other|old|unknown] [--fake-limits] [--fake-limit-change [seconds]] [--fake-quota] [--fake-dots] [--fake-channel status|question|answered|stale]</c>:
+/// <c>--screenshot file.png [--window main|local-model|local-models|close|settings|install|import|restart|remove-project|alias|wsl-shutdown|memory-reclaim|agent-yolo|wsl|unsaved|setup|releases|uninstall] [--theme light|dark] [--config file.json] [--fake-update [manual:]0.3.0] [--fake-status [error:]text] [--fake-denied] [--fake-changed] [--fake-restartable N] [--fake-peek [N]] [--fake-setup [cli|wsl|alias]] [--fake-long-status] [--check-clipping] [--fake-agent-list [N]] [--fake-command-list [N]] [--fake-new-subtab] [--fake-row-menu [N]] [--fake-rename [N]] [--fake-memory-reclaim gradual|dropcache|disabled|other|old|unknown] [--fake-limits] [--fake-limit-change [seconds]] [--fake-quota] [--fake-dots] [--fake-channel status|question|answered|stale]</c>:
 /// renders a window with Avalonia's headless Skia platform. Nothing is shown on the desktop and no
 /// focus changes. The window frame (title bar) is not drawn; only the client area.
 /// </summary>
@@ -17,7 +17,7 @@ internal sealed record ScreenshotOptions(string File, string Window, string? Fak
     string? Section = null, string? FakeMemoryState = null, int? Width = null, int? Height = null, bool FakeOrchestraIdle = false, int? FakeMemorySaved = null,
     bool FakeLongStatus = false, bool CheckClipping = false, string? FakeMemoryReclaim = null, int? FakeAgentList = null, int? FakeCommandList = null,
     bool FakeNewSubTab = false, int? FakeRowMenu = null, bool FakeLimits = false, bool FakeQuota = false, bool FakeDots = false, bool FakeLimitChange = false,
-    string? FakeChannel = null);
+    string? FakeChannel = null, int? FakeRename = null);
 
 internal static class Screenshot
 {
@@ -45,7 +45,8 @@ internal static class Screenshot
             args.Contains("--fake-new-subtab"),
             !args.Contains("--fake-row-menu") ? null : int.TryParse(Value(args, "--fake-row-menu"), out var menu) ? menu : -1,
             args.Contains("--fake-limits"), args.Contains("--fake-quota"), args.Contains("--fake-dots"), args.Contains("--fake-limit-change"),
-            !args.Contains("--fake-channel") ? null : Value(args, "--fake-channel") is "question" or "answered" or "stale" ? Value(args, "--fake-channel") : "status");
+            !args.Contains("--fake-channel") ? null : Value(args, "--fake-channel") is "question" or "answered" or "stale" ? Value(args, "--fake-channel") : "status",
+            !args.Contains("--fake-rename") ? null : int.TryParse(Value(args, "--fake-rename"), out var rename) ? rename : 0);
     }
 
     /// <summary>--fake-peek [N]: the status popup of the Nth running or failed sample tab (0: the first).</summary>
@@ -313,6 +314,9 @@ internal static class Screenshot
         if (o.FakeDots) vm.ShowSampleDots();
         // --fake-new-subtab: the first group's last subtab never opened, as if created while the others run (#198).
         var newSubTab = o.FakeNewSubTab ? vm.ShowSampleNewSubTab() : null;
+        // --fake-rename [N]: the Nth visible row in rename mode (#258), its name selected, as after Rename… or F2. Nothing is saved.
+        if (o.FakeRename is { } renameRow && window is MainWindow renameWindow && vm.VisibleTabs.ElementAtOrDefault(renameRow) is { } renaming)
+            renameWindow.BeginRename(renaming);
         // --fake-channel status|question|answered|stale (#249): invented agent statuses and questions in a temporary session, the
         // question panel open (question), after the answer was written (answered), or a closed tab's stale question (stale).
         string? channelRoot = null;

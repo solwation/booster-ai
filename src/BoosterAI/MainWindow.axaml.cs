@@ -193,6 +193,64 @@ public partial class MainWindow : Window
         Dispatcher.UIThread.Post(() => FocusSubTabName(child), DispatcherPriority.Loaded);
     }
 
+    /// <summary>The row menu's Rename… and F2 (#258): the name cell turns into a box with the name selected.</summary>
+    private void OnRenameRow(object? sender, RoutedEventArgs e)
+    {
+        if ((sender as Control)?.DataContext is TabViewModel tab) BeginRename(tab);
+    }
+
+    internal bool BeginRename(TabViewModel tab)
+    {
+        if (_vm.IsClosingAll) return false;
+        tab.BeginRename();
+        // Posted after the menu has closed and given its focus back, so the box keeps the focus.
+        Dispatcher.UIThread.Post(() => FocusRenameBox(tab), DispatcherPriority.Input);
+        return true;
+    }
+
+    private bool FocusRenameBox(TabViewModel tab)
+    {
+        if (!tab.IsRenaming || RenameBox(tab) is not { } box) return false;
+        box.BringIntoView();
+        if (!box.Focus(NavigationMethod.Tab)) return false;
+        box.SelectAll();
+        return true;
+    }
+
+    private TextBox? RenameBox(TabViewModel tab) =>
+        this.GetVisualDescendants().OfType<TextBox>().FirstOrDefault(b => b.Classes.Contains("rename") && b.DataContext == tab);
+
+    /// <summary>Enter saves (an invalid name keeps the box open with the reason), Esc cancels; focus then returns to the row.</summary>
+    private void OnRenameKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (sender is not TextBox { DataContext: TabViewModel tab } box || e.KeyModifiers != KeyModifiers.None) return;
+        if (e.Key == Key.Enter)
+        {
+            e.Handled = true;
+            if (tab.CommitRename()) FocusRowGrip(box);
+        }
+        else if (e.Key == Key.Escape)
+        {
+            e.Handled = true;
+            tab.EndRename();
+            FocusRowGrip(box);
+        }
+    }
+
+    /// <summary>Leaving the box saves a valid name; an invalid one is dropped (the reason goes to the status line), so a
+    /// half-typed name never stays open or reaches the config.</summary>
+    private void OnRenameLostFocus(object? sender, RoutedEventArgs e)
+    {
+        if ((sender as Control)?.DataContext is not TabViewModel { IsRenaming: true } tab) return;
+        if (!tab.CommitRename()) tab.EndRename();
+    }
+
+    private static void FocusRowGrip(Control from)
+    {
+        var row = from.GetVisualAncestors().OfType<Border>().FirstOrDefault(b => b.Classes.Contains("row"));
+        row?.GetVisualDescendants().OfType<Border>().FirstOrDefault(b => b.Classes.Contains("grip"))?.Focus(NavigationMethod.Tab);
+    }
+
     internal bool FocusSubTabName(TabViewModel tab)
     {
         if (this.GetVisualDescendants().OfType<TextBox>().FirstOrDefault(b => b.Classes.Contains("name") && b.DataContext == tab) is not { } box) return false;
@@ -234,6 +292,12 @@ public partial class MainWindow : Window
     private void OnRowKeyDown(object? sender, KeyEventArgs e)
     {
         if (e.Handled || (sender as Control)?.DataContext is not TabViewModel tab) return;
+        if (e.Key == Key.F2 && e.KeyModifiers == KeyModifiers.None && !tab.IsRenaming)
+        {
+            e.Handled = true;
+            BeginRename(tab);
+            return;
+        }
         if (e.Key == Key.Enter && e.KeyModifiers == KeyModifiers.None && e.Source is not TextBox && tab.CanShowTerminal)
         {
             e.Handled = true;

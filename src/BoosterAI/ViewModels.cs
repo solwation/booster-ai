@@ -126,6 +126,53 @@ public sealed partial class TabViewModel : Observable
         }
     }
 
+    // Rename from the row menu or F2 (#258): the name is edited in a box that replaces the name cell until Enter or focus loss
+    // saves it or Escape cancels it. The row's own Name keeps its old value until the new one is valid, so nothing half-typed
+    // is saved, shown in the terminal title or used by another row.
+    private bool _renaming;
+    private string _renameText = "";
+    private string _renameError = "";
+    public bool IsRenaming => _renaming;
+    public bool ShowProjectName => IsProject && !_renaming;
+    public bool ShowSubTabName => IsSubTab && !_renaming;
+    public string RenameText { get => _renameText; set { if (Set(ref _renameText, value) && _renameError != "") RenameError = ""; } }
+    public string RenameError
+    {
+        get => _renameError;
+        private set { if (Set(ref _renameError, value)) { Raise(nameof(HasRenameError)); Raise(nameof(RenameHelp)); } }
+    }
+    public bool HasRenameError => _renameError != "";
+    public string RenameBoxName => Loc.Format(IsSubTab ? "rename.box.subtab" : "rename.box.tab", Name);
+    public string RenameHelp => _renameError != "" ? _renameError : Loc.Get("rename.help");
+
+    internal void BeginRename()
+    {
+        _renameText = Name;
+        _renameError = "";
+        _renaming = true;
+        foreach (var n in new[] { nameof(RenameText), nameof(RenameError), nameof(HasRenameError), nameof(RenameHelp), nameof(RenameBoxName), nameof(IsRenaming), nameof(ShowProjectName), nameof(ShowSubTabName) }) Raise(n);
+    }
+
+    internal void EndRename()
+    {
+        _renaming = false;
+        _renameError = "";
+        foreach (var n in new[] { nameof(RenameError), nameof(HasRenameError), nameof(RenameHelp), nameof(IsRenaming), nameof(ShowProjectName), nameof(ShowSubTabName) }) Raise(n);
+    }
+
+    /// <summary>Saves the typed name when it is valid (true; also when unchanged), otherwise keeps the box open with the reason.</summary>
+    internal bool CommitRename()
+    {
+        if (!_renaming) return true;
+        var error = _owner.RenameProblem(this, _renameText);
+        if (error != "") { RenameError = error; _owner.ShowStatus(error); return false; }
+        var trimmed = _renameText.Trim();
+        var old = Name;
+        EndRename();
+        if (trimmed != old.Trim()) _owner.ApplyRename(this, old, trimmed);
+        return true;
+    }
+
     /// <summary>Tooltip and accessible name of the row's Start checkbox: what ticking it means, or why a running row is left alone (#151).</summary>
     public string OpenTip => Loc.Format(IsAlive ? "tab.open.alive" : "tab.open.tip", Name);
 
@@ -1348,6 +1395,29 @@ public sealed partial class MainViewModel : Observable
             Save();
             ScheduleArrange(reorder: true);
         }
+    }
+
+    /// <summary>
+    /// Why <paramref name="name"/> cannot be <paramref name="tab"/>'s name (#258), or "": empty, containing ';' (the launch
+    /// validation) or taken, ignoring case and surrounding spaces, by another project (for a project) or another subtab of the
+    /// same project (for a subtab).
+    /// </summary>
+    internal string RenameProblem(TabViewModel tab, string name)
+    {
+        var trimmed = name.Trim();
+        if (trimmed == "") return Loc.Get("rename.err.empty");
+        if (trimmed.Contains(';')) return Loc.Format("err.name", trimmed);
+        if (Tabs.Any(t => t != tab && t.Parent == tab.Parent && string.Equals(t.Name.Trim(), trimmed, StringComparison.CurrentCultureIgnoreCase)))
+            return Loc.Format(tab.IsSubTab ? "rename.err.duplicate.subtab" : "rename.err.duplicate", trimmed);
+        return "";
+    }
+
+    internal void ApplyRename(TabViewModel tab, string old, string name)
+    {
+        tab.Name = name;
+        Save();
+        // An open terminal tab gets the new title at the next status poll (TabTitles, within a few seconds).
+        ShowStatus(Loc.Format(tab.IsSubTab ? "rename.done.subtab" : "rename.done", old.Trim(), name));
     }
 
     public TabViewModel AddSubTab(TabViewModel project)

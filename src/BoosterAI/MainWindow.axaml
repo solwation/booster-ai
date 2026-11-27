@@ -199,6 +199,7 @@
                 <Border.ContextMenu>
                   <ContextMenu Closed="OnRowMenuClosed">
                     <MenuItem Header="{local:T subtab.create}" Click="OnAddSubTab" />
+                    <MenuItem Header="{local:T row.menu.rename}" Click="OnRenameRow" InputGesture="F2" />
                     <Separator />
                     <MenuItem Header="{local:T row.menu.up}" Click="OnRowMoveUp" IsEnabled="{Binding CanMoveUp}" />
                     <MenuItem Header="{local:T row.menu.down}" Click="OnRowMoveDown" IsEnabled="{Binding CanMoveDown}" />
@@ -230,11 +231,16 @@
                        subtab has an editable name and × in the folder's place. Only the name dims on an unticked row; the
                        icon buttons keep full opacity (#156). -->
                   <Grid Grid.Column="3" ColumnDefinitions="*,Auto,Auto" VerticalAlignment="Center" Margin="0,0,10,0">
-                    <TextBlock Grid.Column="0" Classes="name" Text="{Binding Name}" IsVisible="{Binding IsProject}" Opacity="{Binding RowOpacity}"
+                    <TextBlock Grid.Column="0" Classes="name" Text="{Binding Name}" IsVisible="{Binding ShowProjectName}" Opacity="{Binding RowOpacity}"
                                VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Directory}" />
-                    <TextBox Grid.Column="0" Classes="inline name" Text="{Binding Name}" IsVisible="{Binding IsSubTab}" Opacity="{Binding RowOpacity}"
+                    <TextBox Grid.Column="0" Classes="inline name" Text="{Binding Name}" IsVisible="{Binding ShowSubTabName}" Opacity="{Binding RowOpacity}"
                              Watermark="{local:T col.tabname}" ToolTip.Tip="{Binding Directory}" MinWidth="30"
                              AutomationProperties.HelpText="{Binding SubTabOfName}" />
+                    <!-- Rename from the row menu or F2 (#258): replaces the name until Enter or focus loss saves, Esc cancels. -->
+                    <TextBox Grid.Column="0" Classes="inline name rename" Classes.invalid="{Binding HasRenameError}" Text="{Binding RenameText}"
+                             IsVisible="{Binding IsRenaming}" MinWidth="30" KeyDown="OnRenameKeyDown" LostFocus="OnRenameLostFocus"
+                             ToolTip.Tip="{Binding RenameHelp}" AutomationProperties.Name="{Binding RenameBoxName}"
+                             AutomationProperties.HelpText="{Binding RenameHelp}" />
                     <!-- The question badge (#249): the agent asks something; on a project also its subtabs' questions. A click,
                          Enter or Space opens the questions; muted when every question behind it is stale. -->
                     <Button Grid.Column="1" Classes="question-badge" Classes.stale="{Binding QuestionBadgeStale}" Click="OnQuestionBadge"

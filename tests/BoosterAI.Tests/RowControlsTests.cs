@@ -283,10 +283,10 @@ public sealed class RowControlsTests : IDisposable
         });
         // Show in terminal (#253) is offered only where the terminal can switch tabs (Windows), inactive without a terminal tab.
         string[] show = TerminalFocus.Supported ? ["Visa i terminalen"] : [];
-        Assert.Equal(["Skapa underflik", "Flytta upp", "Flytta ned", .. show, "Starta", "Starta om", "Fortsätt samtal", TabViewModel.OpenFolderName], headers);
+        Assert.Equal(["Skapa underflik", "Byt namn …", "Flytta upp", "Flytta ned", .. show, "Starta", "Starta om", "Fortsätt samtal", TabViewModel.OpenFolderName], headers);
         // The first row cannot move up; a never-started tab can start alone (#198) but has nothing to restart or continue.
         bool[] showOn = TerminalFocus.Supported ? [false] : [];
-        Assert.Equal([true, false, true, .. showOn, true, false, false, true], enabled);
+        Assert.Equal([true, true, false, true, .. showOn, true, false, false, true], enabled);
         Assert.Equal("Flytta Atlas", gripName);
         Assert.True(gripFocusable);
     }
