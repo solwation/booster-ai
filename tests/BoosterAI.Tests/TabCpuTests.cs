@@ -208,9 +208,9 @@ public class TabCpuTests(Xunit.Abstractions.ITestOutputHelper output)
         var session = new TabSession(root, DateTime.UtcNow);
         var track = session.NewTrack()!;
         var tab = new TabConfig { Llm = "codex", Directory = session.Directory };
-        var go = Path.Combine(session.Directory, "go");
-        // Each line read from the fifo moves the fake CLI on: quiet wait, yes, then a quiet sleep.
-        var body = "codex() {\n mkfifo go && touch quiet && read -r _ < go\n yes > /dev/null &\n y=$!\n read -r _ < go\n kill $y\n sleep 300\n}\n"
+        // A line in each fifo moves the fake CLI on: quiet wait, yes, then a quiet sleep. Two fifos, as a second open of
+        // one fifo while the first writer still holds it open reads its end at once and stopped yes at once (#278).
+        var body = "codex() {\n mkfifo go1 go2 && touch quiet && read -r _ < go1\n yes > /dev/null &\n y=$!\n read -r _ < go2\n kill $y\n sleep 300\n}\n"
             + "export -f codex\n" + Launcher.TabScript(tab, track: track);
         var psi = new System.Diagnostics.ProcessStartInfo("script") { RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true };
         psi.ArgumentList.Add("-qefc");
@@ -228,7 +228,12 @@ public class TabCpuTests(Xunit.Abstractions.ITestOutputHelper output)
             var idleBefore = IdleTicks();
             var idleCores = 0.0;
             // Opening the fifo blocks until the fake CLI reads it; never wait forever for a CLI that died.
-            void Next() => Assert.True(Task.Run(() => File.AppendAllText(go, "\n")).Wait(15000), "the fake CLI stopped reading");
+            var step = 0;
+            void Next()
+            {
+                var go = Path.Combine(session.Directory, "go" + ++step);
+                Assert.True(Task.Run(() => File.AppendAllText(go, "\n")).Wait(15000), "the fake CLI stopped reading");
+            }
             bool Step()
             {
                 Thread.Sleep(1000);

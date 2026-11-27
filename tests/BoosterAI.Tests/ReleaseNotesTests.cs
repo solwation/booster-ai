@@ -9,6 +9,7 @@ using Xunit;
 namespace BoosterAI.Tests;
 
 /// <summary>#252: What's new inside BoosterAI, from docs/releases.json with the release page's selection and grouping (#245, #250).</summary>
+[Collection(ConfigFileCollection.Name)] // switches Loc's global language; parallel tests read it (#278)
 public sealed class ReleaseNotesTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "bs-releasenotes-" + Guid.NewGuid().ToString("N"));
