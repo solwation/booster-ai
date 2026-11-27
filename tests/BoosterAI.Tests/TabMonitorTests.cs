@@ -861,8 +861,9 @@ public class InPlaceRestartTests
                     using var p = System.Diagnostics.Process.Start(psi)!;
                     try
                     {
-                        p.StandardInput.Write("{\"background_tasks\":[]}");
-                        p.StandardInput.Close();
+                        // A hook that ends without reading its input closes the pipe first under load (#278): not an error.
+                        try { p.StandardInput.BaseStream.Write("{\"background_tasks\":[]}"u8); } catch (IOException) { }
+                        try { p.StandardInput.Close(); } catch (IOException) { }
                         var error = p.StandardError.ReadToEnd();
                         p.StandardOutput.ReadToEnd();
                         Assert.True(p.WaitForExit(10_000));

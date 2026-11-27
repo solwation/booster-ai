@@ -15,7 +15,11 @@ public sealed class ReleaseNotesTests : IDisposable
     private readonly string _root = Path.Combine(Path.GetTempPath(), "bs-releasenotes-" + Guid.NewGuid().ToString("N"));
     private readonly string _language = Loc.Language;
 
-    public ReleaseNotesTests() => Directory.CreateDirectory(_root);
+    public ReleaseNotesTests()
+    {
+        Directory.CreateDirectory(_root);
+        Loc.Use("en"); // The tests expect English; an earlier test in the serial collection may have left Swedish on.
+    }
 
     public void Dispose()
     {
