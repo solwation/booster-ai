@@ -348,6 +348,28 @@ public sealed class ReleaseNotesTests : IDisposable
     }
 
     [Fact]
+    public void ByDefaultOnlyTheLatestReleaseShowsAndShowAllYieldsEveryRelease()
+    {
+        Loc.Use("sv");
+        // Up to date (updated from an older version) and with a newer release on offer: the same rule.
+        var upToDate = new ReleaseNotesViewModel(new FakeSource(Embedded, null), new ReleaseRange(V("0.50.0"), V("0.54.0")), latestOnly: true);
+        Assert.Equal(["0.54.0"], Versions(upToDate.Releases.Select(r => Embedded.Single(e => e.Version.CompareTo(r.Version) == 0))));
+        Assert.True(upToDate.LatestOnly);
+        Assert.False(upToDate.HasOverview);
+
+        var offered = new ReleaseInfo("v9.0.0", V("9.0.0"), false, UpdateLogic.ReleasesPage, [], "Nytt", "New");
+        var newer = new ReleaseNotesViewModel(new FakeSource(Embedded, null), UpdateLogic.MoreRange(offered, V("0.50.0"), null), offered, latestOnly: true);
+        Assert.Equal("9.0.0", newer.Releases.Single().Version.ToString());
+
+        upToDate.ShowAll();
+        Assert.False(upToDate.LatestOnly);
+        Assert.Equal(Embedded.Count, upToDate.Releases.Count);
+        Assert.Equal(ReleaseRange.All, upToDate.Range);
+        newer.ShowAll();
+        Assert.True(newer.Releases.Count > 1);
+    }
+
+    [Fact]
     public void TheOfferedReleaseShowsEvenBeforeTheDataHasIt()
     {
         var offered = new ReleaseInfo("v9.0.0", V("9.0.0"), false, UpdateLogic.ReleasesPage, [], "Nytt", "New");

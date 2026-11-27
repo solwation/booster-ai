@@ -130,11 +130,13 @@ public sealed class ReleaseNotesViewModel : Observable
     private IReadOnlyList<ReleaseEntry> _data = [];
     private ReleaseRange _range;
     private bool _stale;
+    private bool _latestOnly;
     private readonly Dictionary<string, Bitmap?> _images = new(StringComparer.Ordinal);
 
-    public ReleaseNotesViewModel(IReleaseNotesSource source, ReleaseRange range, ReleaseInfo? offered = null)
+    public ReleaseNotesViewModel(IReleaseNotesSource source, ReleaseRange range, ReleaseInfo? offered = null, bool latestOnly = false)
     {
         _source = source;
+        _latestOnly = latestOnly;
         _range = range;
         _offered = offered;
         _data = source.Local();
@@ -142,6 +144,9 @@ public sealed class ReleaseNotesViewModel : Observable
     }
 
     public ReleaseRange Range => _range;
+
+    /// <summary>True while only the newest release of the range is shown (#266); "Show all releases" lifts it.</summary>
+    public bool LatestOnly => _latestOnly;
     public string Title { get; private set; } = "";
     public string Subtitle { get; private set; } = "";
     public IReadOnlyList<string> Notices { get; private set; } = [];
@@ -181,6 +186,7 @@ public sealed class ReleaseNotesViewModel : Observable
     public void ShowAll()
     {
         _range = ReleaseRange.All;
+        _latestOnly = false;
         Build();
     }
 
@@ -218,6 +224,7 @@ public sealed class ReleaseNotesViewModel : Observable
         var data = ReleaseNotes.WithOffered(_data, _offered);
         var fromOffer = data.Count != _data.Count;
         var sel = ReleaseNotes.Select(data, _range.From, _range.To);
+        if (_latestOnly && sel.Shown.Count > 0) sel = sel with { Shown = [sel.Shown.MaxBy(r => r.Version)!], Cards = null };
         Selection = sel;
         var notices = sel.Notices.Select(n => n.Kind switch
         {
@@ -230,9 +237,9 @@ public sealed class ReleaseNotesViewModel : Observable
         if (_stale) notices.Add(Loc.Get("news.offline"));
         Notices = notices;
 
-        Title = sel.From is { } f ? Loc.Format("news.h1Range", f) : Loc.Get("news.h1");
+        Title = _latestOnly ? Loc.Get("news.h1Latest") : sel.From is { } f ? Loc.Format("news.h1Range", f) : Loc.Get("news.h1");
         var count = Loc.FormatCount("news.count", sel.Shown.Count);
-        Subtitle = sel.From is not null || sel.To is not null
+        Subtitle = _latestOnly ? Loc.Get("news.latestOnly") : sel.From is not null || sel.To is not null
             ? (sel.From is { } from && sel.To is { } to ? Loc.Format("news.range", from, to)
                 : sel.From is { } a ? Loc.Format("news.rangeFrom", a) : Loc.Format("news.rangeTo", sel.To!)) + " · " + count
             : Loc.FormatCount("news.allIntro", sel.Shown.Count);
@@ -263,7 +270,7 @@ public sealed class ReleaseNotesViewModel : Observable
         }
         Releases = sections;
         foreach (var name in new[] { nameof(Range), nameof(Title), nameof(Subtitle), nameof(Notices), nameof(HasNotices), nameof(Overview), nameof(HasOverview),
-                     nameof(OverviewIntro), nameof(Releases), nameof(IsEmpty), nameof(EmptyText), nameof(Selection) })
+                     nameof(OverviewIntro), nameof(Releases), nameof(IsEmpty), nameof(EmptyText), nameof(Selection), nameof(LatestOnly) })
             Raise(name);
     }
 }

@@ -153,11 +153,13 @@ internal static class Screenshot
     /// <summary>
     /// --window releases [--section FROM..TO|VERSION|all]: What's new (#252) for that range from the built-in release data,
     /// with the screenshots read from the repository's docs/ folder; no network. FROM..TO (either side may be empty) as the
-    /// update bar passes it, VERSION alone as the range from the release before it; default all releases.
+    /// update bar passes it, VERSION alone as the range from the release before it; default all releases. latest or latest:FROM..TO shows only the newest release of the range, as the version link does (#266).
     /// </summary>
     private static ReleaseNotesWindow SampleReleaseNotes(string? section)
     {
         var range = ReleaseRange.All;
+        var latest = section is not null && section.StartsWith("latest", StringComparison.Ordinal);
+        if (latest) section = section.Length > 7 && section[6] == ':' ? section[7..] : null;
         if (section is { Length: > 0 } and not "all")
         {
             var parts = section.Split("..");
@@ -165,7 +167,7 @@ internal static class Screenshot
                 : AppVersion.Parse(section) is { } only ? new ReleaseRange(only, only)
                 : throw new ArgumentException($"Unknown --section '{section}' for --window releases (FROM..TO, VERSION or all)");
         }
-        var vm = new ReleaseNotesViewModel(OfflineReleaseNotesSource.ForScreenshot(), range);
+        var vm = new ReleaseNotesViewModel(OfflineReleaseNotesSource.ForScreenshot(), range, latestOnly: latest);
         vm.LoadImagesAsync().GetAwaiter().GetResult();
         return new ReleaseNotesWindow(vm);
     }

@@ -517,14 +517,14 @@ public partial class MainWindow : Window
     private async void OnUpdateMore(object? sender, RoutedEventArgs e)
     {
         var range = _vm.Update.MoreRange;
-        if (_news is { } open && open.ViewModel.Range == range)
+        if (_news is { } open && open.ViewModel.LatestOnly && open.ViewModel.Range == range)
         {
             if (open.WindowState == WindowState.Minimized) open.WindowState = WindowState.Normal;
             open.Activate();
             return;
         }
         _news?.Close();
-        var news = new ReleaseNotesWindow(new ReleaseNotesViewModel(NewsSource(), range, _vm.Update.OfferedRelease));
+        var news = new ReleaseNotesWindow(new ReleaseNotesViewModel(NewsSource(), range, _vm.Update.OfferedRelease, latestOnly: true));
         _news = news;
         news.Closed += (_, _) => { if (_news == news) _news = null; };
         news.Show(this);
