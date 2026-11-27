@@ -86,6 +86,62 @@ public sealed class RenameTests : IDisposable
         Assert.False(atlas.HasRenameError);
     }
 
+    /// <summary>
+    /// #281: renaming a running project or subtab reaches its open terminal tab. The next status poll sends the new name
+    /// to the tab's PTY (not the launch name) and rewrites the tab's title file, which its shell reads from then on.
+    /// </summary>
+    [Fact]
+    public async Task TheStatusPollRetitlesARenamedRunningTabAndSubtab()
+    {
+        if (!OperatingSystem.IsLinux()) return;
+        var tag = Guid.NewGuid().ToString("N")[..8];
+        var vm = new MainViewModel(new AppConfig { Tabs = [
+            new() { Name = "Atlas-" + tag, Directory = "/srv/atlas", SubTabs = [new() { Name = "Atlas-api-" + tag }] }] });
+        var session = new TabSession(Path.Combine(_root, "sessions"), DateTime.UtcNow);
+        // The test process stands in for both tabs' live shells: nothing is started, and nothing is written to it.
+        var pid = Environment.ProcessId;
+        var start = TabStatus.ParseProcStartTime(File.ReadAllText($"/proc/{pid}/stat"))!.Value;
+        foreach (var row in vm.Tabs)
+        {
+            row.Session = session;
+            row.Track = session.NewTrack()!;
+            row.LaunchedAs = row.ToConfig(forLaunch: true);
+            row.LaunchedAt = DateTime.UtcNow;
+            File.WriteAllText(Path.Combine(session.Directory, row.Track.Id + ".log"), $"1 start pid={pid} starttime={start}\n2 cli-start\n");
+            row.SetState(TabState.Running, null);
+        }
+        var (project, sub) = (vm.Tabs[0], vm.Tabs[1]);
+        string Title(TabViewModel row) => File.ReadAllText(Path.Combine(session.Directory, row.TrackId + ".title"));
+        var seen = 0;
+        async Task<List<string>> Poll()
+        {
+            vm.Poll();
+            await vm.PollTask;
+            // Tests run in parallel; only this test's tabs carry the tag.
+            var sent = TestTerminal.TitleRestores.Where(t => t.Name.Contains(tag) && t.Pid == pid && t.StartTime == start).Select(t => t.Name).ToList();
+            var fresh = sent.Skip(seen).ToList();
+            seen = sent.Count;
+            return fresh;
+        }
+
+        Assert.Equal(["Atlas-" + tag, "Atlas-api-" + tag], await Poll());
+        Assert.Equal("Atlas-" + tag, Title(project));
+
+        project.BeginRename();
+        project.RenameText = "Boreal-" + tag;
+        Assert.True(project.CommitRename());
+        sub.BeginRename();
+        sub.RenameText = "Boreal-web-" + tag;
+        Assert.True(sub.CommitRename());
+        Assert.Equal("Atlas-" + tag, project.LaunchedAs!.Name);
+
+        Assert.Equal(["Boreal-" + tag, "Boreal-web-" + tag], await Poll());
+        Assert.Equal("Boreal-" + tag, Title(project));
+        Assert.Equal("Boreal-web-" + tag, Title(sub));
+        // Later polls keep sending the new name, also after the terminal or the CLI replaced it.
+        Assert.Equal(["Boreal-" + tag, "Boreal-web-" + tag], await Poll());
+    }
+
     [Fact]
     public void SubtabNamesOnlyClashWithinTheirProject()
     {

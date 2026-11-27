@@ -102,7 +102,9 @@ internal static class TerminalOrder
 
     /// <summary>
     /// The window's slots from its tab <paramref name="titles"/> (left to right): each title takes the first own tab with that
-    /// title that is not taken yet, in <paramref name="own"/>'s (believed) order; other titles are foreign (null).
+    /// title that is not taken yet, in <paramref name="own"/>'s (believed) order; other titles are foreign (null). An id may
+    /// be listed with several titles (a renamed tab shows its launch name until the status poll retitles it, #281); it
+    /// takes one slot.
     /// </summary>
     internal static List<string?> Match(IReadOnlyList<string> titles, IReadOnlyList<(string Id, string Title)> own)
     {
@@ -112,8 +114,9 @@ internal static class TerminalOrder
         {
             var at = free.FindIndex(o => o.Title == title);
             if (at < 0) { slots.Add(null); continue; }
-            slots.Add(free[at].Id);
-            free.RemoveAt(at);
+            var id = free[at].Id;
+            slots.Add(id);
+            free.RemoveAll(o => o.Id == id);
         }
         return slots;
     }
@@ -248,12 +251,13 @@ internal static class TerminalOrder
     /// <paramref name="focusId"/> is shown, otherwise the tab that was selected before. Runs off the UI thread.
     /// </summary>
     internal static Outcome ArrangeWindow(string window, IReadOnlyList<string?> believed, IReadOnlyList<string> desired,
-        IReadOnlyDictionary<string, string> titles, IReadOnlyCollection<string> mustSee, string? focusId, Action<TimeSpan> sleep)
+        IReadOnlyDictionary<string, IReadOnlyList<string>> titles, IReadOnlyCollection<string> mustSee, string? focusId, Action<TimeSpan> sleep)
     {
         if (!Appends()) return new(null, false);
         IReadOnlyList<string?> slots = believed;
         int? selected = null;
-        var own = believed.OfType<string>().Concat(desired).Distinct().Where(titles.ContainsKey).Select(id => (id, titles[id])).ToList();
+        var own = believed.OfType<string>().Concat(desired).Distinct().Where(titles.ContainsKey)
+            .SelectMany(id => titles[id].Select(title => (id, title))).ToList();
         for (var attempt = 0; ; attempt++)
         {
             if (Read(window) is not { } snapshot) break;

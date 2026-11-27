@@ -571,6 +571,7 @@ public sealed partial class TabViewModel : Observable
         set
         {
             if (!Set(ref _track, value)) return;
+            TitleWritten = null;
             // A new track is a new events file (#249): the old tab's status and questions are gone with it.
             SetChannel(TabChannelState.Empty);
             SaveNotice = null;
@@ -579,6 +580,8 @@ public sealed partial class TabViewModel : Observable
         }
     }
     internal string? TrackId => Track?.Id;
+    /// <summary>The name last written to the track's title file (#281); the status poll rewrites it after a rename.</summary>
+    internal string? TitleWritten { get; set; }
     internal DateTime LaunchedAt { get; set; }
     /// <summary>The tab's shell, from its log; what an in-place restart stops the foreground of.</summary>
     internal int? ShellPid { get; set; }
@@ -1456,8 +1459,8 @@ public sealed partial class MainViewModel : Observable
     {
         tab.Name = name;
         Save();
-        // A closed tab gets the new name at its next start. An open Windows Terminal tab keeps its launch title (--suppressApplicationTitle
-        // ignores TabTitles' escapes, #261) and TerminalOrder still finds it by LaunchedAs; Linux terminals take it at the next status poll.
+        // A closed tab gets the new name at its next start. An open tab takes it at the next status poll (#281): the poll rewrites
+        // its title file and sends the new name to its PTY. TerminalOrder finds it by the launch name or the new one.
         ShowStatus(Loc.Format(tab.IsSubTab ? "rename.done.subtab" : "rename.done", old.Trim(), name));
     }
 
@@ -2108,18 +2111,25 @@ public sealed partial class MainViewModel : Observable
             : t.Id == running.Id));
 
     /// <summary>Reads the logs and checks liveness off the UI thread (UNC reads can take a few hundred ms).</summary>
-    private void Poll()
+    /// <summary>The last status poll, continuation included; tests wait for it.</summary>
+    internal Task PollTask { get; private set; } = Task.CompletedTask;
+
+    internal void Poll()
     {
         var watched = Tabs.Where(t => t.TrackId is not null && t.Session is not null)
             .Select(t => (Row: t, Id: t.TrackId!, t.LaunchedAt, Session: t.Session!, Name: t.Name)).ToList();
         if (_polling || watched.Count == 0) return;
         _polling = true;
+        // A renamed tab's shell sets the new name from now on (#281); written once per name, not every poll.
+        var renamed = watched.Where(w => w.Row.TitleWritten != w.Name).Select(w => (w.Session, w.Id, w.Name)).ToList();
+        foreach (var w in watched) w.Row.TitleWritten = w.Name;
         var distro = _cfg.WslDistro;
         var settingsPath = AgySettingsFile;
         var previousProcs = _procs;
         var channelOn = _cfg.TabStatusChannel;
-        Task.Run(() =>
+        PollTask = Task.Run(() =>
         {
+            foreach (var (session, id, name) in renamed) session.WriteTitle(id, name);
             var live = TabSession.Liveness(distro);
             var results = watched.Select(w =>
             {
@@ -2176,7 +2186,7 @@ public sealed partial class MainViewModel : Observable
             // A tab that closed can be started again: the Start button counts it.
             TabsChanged();
             OfferRules(settings);
-        }, TaskScheduler.FromCurrentSynchronizationContext());
+        }, SynchronizationContext.Current is not null ? TaskScheduler.FromCurrentSynchronizationContext() : TaskScheduler.Default);
     }
 
     /// <summary>Queues one prompt to the existing PTY; it never calls Start, Restart or process-control methods.</summary>

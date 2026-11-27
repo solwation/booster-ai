@@ -21,7 +21,8 @@ public class TabTitleTests
         Assert.Equal(["--tab-with-profile=default", "--new-window", "-T", "Mitt projekt"],
             Launcher.LinuxCommands([Tab], "ptyxis", null, tracks, 0)[0].Args.Take(4));
         Assert.Contains("--title", Launcher.WindowsTerminalArgs([Tab], "Ubuntu"));
-        Assert.Contains("--suppressApplicationTitle", Launcher.WindowsTerminalArgs([Tab], "Ubuntu"));
+        // #281: suppressing application titles would also block the new name the status poll sends after a rename.
+        Assert.DoesNotContain("--suppressApplicationTitle", Launcher.WindowsTerminalArgs([Tab], "Ubuntu"));
     }
 
     /// <summary>
@@ -62,6 +63,46 @@ public class TabTitleTests
                 Assert.Contains("LEADER=bash OFF=1", output);
             }
             finally { if (!p.HasExited) p.Kill(entireProcessTree: true); }
+        }
+        finally { TestShell.StopLeftovers(root); if (Directory.Exists(root)) Directory.Delete(root, recursive: true); }
+    }
+
+    /// <summary>
+    /// #281: after BoosterAI rewrites the tab's title file for a rename, the tab's shell sets the new name at the next CLI
+    /// start or exit and at its prompt, in a real pty, instead of the name it was started with.
+    /// </summary>
+    [Fact]
+    public void ShellTakesTheRenamedTitleFromTheTitleFile()
+    {
+        if (!OperatingSystem.IsLinux() || !File.Exists("/usr/bin/script")) return;
+        var root = Path.Combine(Path.GetTempPath(), "bs-retitle-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var session = new TabSession(root, DateTime.UtcNow);
+            var dir = session.Directory;
+            // Started as "Atlas", renamed in BoosterAI while running; the prompt is printed as bash would show it.
+            var chain = ". ./tab-lib.sh . tab1 Atlas && bs_title && touch started && while [ ! -f renamed ]; do sleep .05; done"
+                + " && bs_title && printf 'PROMPT[%s]' \"${BS_PS1_TITLE@P}\" && exit";
+            var psi = new ProcessStartInfo("script") { RedirectStandardOutput = true, WorkingDirectory = dir };
+            TestShell.Configure(psi, root);
+            foreach (var a in new[] { "-qec", $"bash --norc --noprofile -c '{chain.Replace("'", "'\\''")}'", "/dev/null" }) psi.ArgumentList.Add(a);
+            using var p = Process.Start(psi)!;
+            try
+            {
+                var output = p.StandardOutput.ReadToEndAsync();
+                Assert.True(SpinWait.SpinUntil(() => File.Exists(Path.Combine(dir, "started")), 20000));
+                Assert.Equal("Atlas", File.ReadAllText(Path.Combine(dir, "tab1.title")));
+                session.WriteTitle("tab1", "Boreal $(touch marker) `id`\u0007");
+                File.WriteAllText(Path.Combine(dir, "renamed"), "");
+                Assert.True(p.WaitForExit(20000));
+                var text = output.Result;
+                Assert.Equal(1, text.Split("\x1b]0;Atlas\a").Length - 1);
+                // Once from bs_title, once in the prompt.
+                Assert.Equal(2, text.Split("\x1b]0;Boreal $(touch marker) `id`\a").Length - 1);
+                Assert.Contains("PROMPT[\x1b]0;Boreal $(touch marker) `id`\a]", text);
+                Assert.False(File.Exists(Path.Combine(dir, "marker")));
+            }
+            finally { if (!p.HasExited) p.Kill(entireProcessTree: true); p.WaitForExit(); }
         }
         finally { TestShell.StopLeftovers(root); if (Directory.Exists(root)) Directory.Delete(root, recursive: true); }
     }

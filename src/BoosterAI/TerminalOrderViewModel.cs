@@ -63,7 +63,9 @@ public sealed partial class MainViewModel
             if (rows.Count < 2) continue;
             var believed = BelievedWindow(session);
             var desired = rows.Select(r => r.TrackId!).ToList();
-            var titles = rows.ToDictionary(r => r.TrackId!, r => TerminalOrder.Title((r.LaunchedAs?.Name ?? r.Name)));
+            // A renamed tab shows its launch name until the status poll retitles it (#281), then its current name.
+            var titles = rows.ToDictionary(r => r.TrackId!, r => (IReadOnlyList<string>)new[] { r.Name, r.LaunchedAs?.Name ?? r.Name }
+                .Select(TerminalOrder.Title).Distinct().ToList());
             var fresh = launched.Where(desired.Contains).ToList();
             var window = session.WindowName;
             work.Add((session, () => TerminalOrder.ArrangeWindow(window, believed, desired, titles, fresh, fresh.FirstOrDefault(), Thread.Sleep)));

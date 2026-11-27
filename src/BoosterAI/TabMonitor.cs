@@ -221,16 +221,32 @@ bs_ev close-ready
 # The tab's configured name (third argument, #66), without control characters. bs_title sets it as the terminal title
 # whenever a CLI starts or exits, and the idle shell's prompt repeats it, so a title an application set is replaced.
 # Claude Code does not set titles in these tabs; codex and agy may, until the next start, exit or prompt.
+# The name lives in tabN.title, which BoosterAI rewrites when the tab is renamed (#281), so both read the current name.
 bs_name=${3//[$'\001'-$'\037'$'\177']/}
+bs_titlef="$1/$2.title"
+[[ $bs_titlef = /* ]] || bs_titlef="$PWD/$bs_titlef"
 if [ -n "$bs_name" ]; then
   export CLAUDE_CODE_DISABLE_TERMINAL_TITLE="${CLAUDE_CODE_DISABLE_TERMINAL_TITLE:-1}"
-  bs_t=${bs_name//\\/\\\\}
-  bs_t=${bs_t//\$/\\\$}
-  bs_t=${bs_t//\`/\\\`}
-  export BS_PS1_TITLE="\[\e]0;$bs_t\a\]"
-  unset bs_t
+  # A rename BoosterAI wrote before this shell got here is kept; track ids are not reused within a session.
+  [ -e "$bs_titlef" ] || printf '%s' "$bs_name" > "$bs_titlef" 2>/dev/null
+  if [ -r "$bs_titlef" ]; then
+    # The prompt expands the command substitution each time; its output (the name) is not expanded again.
+    export BS_TITLE_FILE="$bs_titlef"
+    export BS_PS1_TITLE='\[\e]0;$(cat "$BS_TITLE_FILE" 2>/dev/null)\a\]'
+  else
+    bs_t=${bs_name//\\/\\\\}
+    bs_t=${bs_t//\$/\\\$}
+    bs_t=${bs_t//\`/\\\`}
+    export BS_PS1_TITLE="\[\e]0;$bs_t\a\]"
+    unset bs_t
+  fi
 fi
-bs_title() { [ -n "$bs_name" ] && [ -t 1 ] || return 0; printf '\033]0;%s\007' "$bs_name"; }
+bs_title() {
+  [ -n "$bs_name" ] && [ -t 1 ] || return 0
+  local n
+  n=$(cat "$bs_titlef" 2>/dev/null) || n=
+  n=${n//[$'\001'-$'\037'$'\177']/}
+  printf '\033]0;%s\007' "${n:-$bs_name}"; }
 bs_cli() { : > "$bs_timing" 2>/dev/null || true; bs_rm_out; bs_ev cli-start; bs_title; }
 bs_done() { bs_ev cli-exit rc=$1; bs_title; }
 # bs_fg <command>: run it with a bash as the leader of the terminal's foreground process group. Ptyxis appends the
@@ -843,6 +859,24 @@ for line in sys.stdin:
     {
         var dir = OperatingSystem.IsWindows() ? PathMapping.ToWslPath(Directory) : Directory;
         return new TabTrack(dir + "/tab-lib.sh", dir, id);
+    }
+
+    /// <summary>
+    /// The name tab <paramref name="id"/>'s shell sets as its title from now on (#281): tab-lib.sh's bs_title and the idle
+    /// prompt read <c>tabN.title</c>, so a rename is not undone at the next CLI start or exit, prompt or in-place restart.
+    /// Control characters are dropped, as in <see cref="TabTitles"/>.
+    /// </summary>
+    public void WriteTitle(string id, string name)
+    {
+        var path = Path.Combine(Directory, id + ".title");
+        var temporary = path + "." + Guid.NewGuid().ToString("N");
+        try
+        {
+            File.WriteAllText(temporary, new string(name.Where(c => !char.IsControl(c)).ToArray()));
+            File.Move(temporary, path, overwrite: true);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { /* the status poll still restores the title */ }
+        finally { try { File.Delete(temporary); } catch (Exception e) when (e is IOException or UnauthorizedAccessException) { } }
     }
 
     /// <summary>Remembers what tab <paramref name="id"/> was started with, so a later BoosterAI can find it again (FindRunning).</summary>

@@ -14,6 +14,8 @@ internal static class TestTerminal
     /// <summary>A start with a tab named like this fails as if the terminal did not open.</summary>
     public const string FailPrefix = "fail-terminal-";
     public static readonly ConcurrentQueue<(int Percent, bool Restore)> ZoomRequests = new();
+    /// <summary>Every title the status poll would write to a tab's PTY (#86, #281); none reaches a real terminal.</summary>
+    public static readonly ConcurrentQueue<TabTitles.Target> TitleRestores = new();
 
     /// <summary>Every notification of the run (#269): none reaches the real toast or the HKCU protocol registration.</summary>
     public static readonly ConcurrentQueue<(string Title, string Body, bool OpenQuestion)> Notifications = new();
@@ -30,7 +32,7 @@ internal static class TestTerminal
                 throw new InvalidOperationException("synthetic terminal failure");
             Requests.Enqueue(r);
         };
-        TabTitles.Restore = (_, _) => { };
+        TabTitles.Restore = (targets, _) => { foreach (var t in targets) TitleRestores.Enqueue(t); };
         Notifier.Post = (title, body, openQuestion) => Notifications.Enqueue((title, body, openQuestion));
         TerminalFocus.Run = _ => { };
         // Arranging tabs (#254) never reads or moves the developer's real Windows Terminal tabs.

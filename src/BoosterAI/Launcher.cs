@@ -536,7 +536,9 @@ fi
             var t = tabs[i];
             if (a.Count > 2) a.Add(";");
             // A raw '"' anywhere in the wt.exe command line breaks every later argument (#124); the title shows a typographic one.
-            a.AddRange(["new-tab", .. profile, "--title", t.Name.Replace('"', '\u201D'), "--tabColor", string.IsNullOrWhiteSpace(t.Color) ? Catalog.Themes[0].Colors[0] : t.Color, "--suppressApplicationTitle",
+            // No --suppressApplicationTitle (#281): it also blocks the title BoosterAI sets after a rename. The tab script and the
+            // status poll keep the name instead (#66, #86), and Claude Code is told not to set titles.
+            a.AddRange(["new-tab", .. profile, "--title", t.Name.Replace('"', '\u201D'), "--tabColor", string.IsNullOrWhiteSpace(t.Color) ? Catalog.Themes[0].Colors[0] : t.Color,
                 "wsl.exe", "-d", distro, "--exec", "bash", "-lic", TabScript(InWsl(t), prompt, tracks?[i], resume)]);
         }
         a.AddRange([";", "focus-tab", "-t", "0"]);

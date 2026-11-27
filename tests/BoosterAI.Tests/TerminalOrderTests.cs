@@ -111,6 +111,16 @@ public sealed class TerminalOrderTests : IDisposable
     }
 
     [Fact]
+    public void ARenamedTabMatchesByItsLaunchOrItsNewNameOnce()
+    {
+        // #281: tab2 was renamed from Atlas to Borealis; its terminal tab shows either until the status poll retitles it.
+        (string, string)[] own = [("tab1", "Cirrus"), ("tab2", "Borealis"), ("tab2", "Atlas")];
+        Assert.Equal(["tab1", "tab2"], TerminalOrder.Match(["Cirrus", "Atlas"], own));
+        Assert.Equal(["tab2", "tab1"], TerminalOrder.Match(["Borealis", "Cirrus"], own));
+        Assert.Equal(["tab2", null], TerminalOrder.Match(["Atlas", "Borealis"], own));
+    }
+
+    [Fact]
     public void CommandFocusesAndMovesEachTabThenShowsTheChosenOne()
     {
         var plan = TerminalOrder.Arrange(["tab1", "tab2", "tab3", "tab4"], ["tab1", "tab4", "tab2", "tab3"]);
@@ -156,7 +166,8 @@ public sealed class TerminalOrderTests : IDisposable
         Assert.Empty(_ran);
     }
 
-    private static Dictionary<string, string> Titles(params (string Id, string Title)[] t) => t.ToDictionary(x => x.Id, x => x.Title);
+    private static Dictionary<string, IReadOnlyList<string>> Titles(params (string Id, string Title)[] t) =>
+        t.ToDictionary(x => x.Id, x => (IReadOnlyList<string>)[x.Title]);
 
     [Fact]
     public void SnapshotRevealsUserDragsAndForeignTabs()
