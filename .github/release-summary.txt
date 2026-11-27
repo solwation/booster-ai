@@ -1,3 +1,65 @@
-version: 0.54.0
-sv: BoosterAI-logotypen visas nu som en centrerad splash i varje flik och tonar ut innan AI-CLI:t startar.
-en: The BoosterAI logo is now a centred splash in every tab that fades out before the AI CLI starts.
+version: 0.55.0
+sv: Agenternas status och frågor i huvudfönstret, egna startkommandon, flikar i rätt ordning och nyheterna i appen.
+en: Agent status and questions in the main window, your own start commands, tabs kept in order and what's new in the app.
+
+feature: 249
+title.sv: Agentens status och frågor i huvudfönstret
+title.en: Agent status and questions in the main window
+howto.sv: Slå på statuskanalen under Inställningar → Allmänt. Claude och Codex rapporterar då vad de gör, och när en agent frågar något svarar du direkt i BoosterAI utan att byta flik.
+howto.en: Turn on the status channel under Settings → General. Claude and Codex then report what they are doing, and when an agent asks something you answer right in BoosterAI without switching tabs.
+image.sv: verification/249/question-sv-light.png
+image.en: verification/249/question-en-light.png
+docs: DETAILS.md#tab-status-channel
+topic: status-channel
+
+feature: 255
+title.sv: Startkommando per flik
+title.en: Start command per tab
+howto.sv: Välj i kolumnen Startkommando vilket slash-kommando fliken ska starta med: /orkester eller projektets, dina egna och pluginernas kommandon. Kör en gång och Argument … finns i radens meny.
+howto.en: Pick in the Start command column which slash command the tab starts with: /orkester or the project's, your own and plugins' commands. Run once and Arguments… are in the row menu.
+image.sv: verification/255/start-command-list-sv-light.png
+image.en: verification/255/start-command-list-en-light.png
+docs: DETAILS.md#the-start-command
+topic: start-command
+
+feature: 254
+title.sv: Terminalflikarna följer ordningen i BoosterAI
+title.en: Terminal tabs follow BoosterAI's order
+howto.sv: Starta en flik mitt i listan eller flytta rader (dra eller Alt+Upp/Ned): de öppna flikarna i Windows Terminal flyttas till samma ordning.
+howto.en: Start a tab in the middle of the list or move rows (drag or Alt+Up/Down): the open tabs in Windows Terminal move to the same order.
+docs: DETAILS.md#terminal-tab-order
+
+feature: 253
+title.sv: Klicka på en rad för att visa dess flik
+title.en: Click a row to show its tab
+howto.sv: Klicka på en aktiv rad, eller tryck Enter på den, så visas fliken i Windows Terminal.
+howto.en: Click a live row, or press Enter on it, and Windows Terminal shows its tab.
+image.sv: verification/253/main-sv-light.png
+image.en: verification/253/main-sv-light.png
+docs: DETAILS.md#show-the-tab-in-the-terminal
+
+feature: 258
+title.sv: Byt namn direkt i listan
+title.en: Rename right in the list
+howto.sv: Högerklicka på en rad och välj Byt namn …, eller tryck F2. Enter sparar och Esc avbryter.
+howto.en: Right-click a row and choose Rename…, or press F2. Enter saves and Esc cancels.
+image.sv: verification/258/rename-sv-light.png
+image.en: verification/258/row-menu-en-light.png
+docs: DETAILS.md#multiple-tabs-for-one-project
+
+feature: 257
+title.sv: Fliken minns modellen per agent
+title.en: Tabs remember the model per agent
+howto.sv: Byt agent på en flik och byt tillbaka: modellen du senast använde med den agenten väljs igen, även per konto.
+howto.en: Switch a tab's agent and switch back: the model you last used with that agent comes back, also per account.
+docs: DETAILS.md#multiple-tabs-for-one-project
+
+feature: 252
+title.sv: Nyheterna i ett eget fönster i BoosterAI
+title.en: What's new in its own BoosterAI window
+howto.sv: Klicka Visa mer i uppdateringsfältet eller på versionen nere till vänster. Nyheterna visas i appen, även utan nätverk, och kan öppnas i webbläsaren.
+howto.en: Click Show more in the update bar or the version in the bottom-left corner. What's new shows in the app, even offline, and can be opened in the browser.
+image.sv: verification/252/range-sv-light.png
+image.en: verification/252/range-en-light.png
+docs: DEVELOPMENT.md#release-page
+topic: release-page
