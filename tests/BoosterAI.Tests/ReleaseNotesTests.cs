@@ -24,7 +24,13 @@ public sealed class ReleaseNotesTests : IDisposable
 
     private static AppVersion V(string s) => AppVersion.Parse(s) ?? throw new ArgumentException(s);
 
-    private static IReadOnlyList<ReleaseEntry> Embedded => ReleaseNotes.Parse(ReleaseNotes.EmbeddedJson())!;
+    private static IReadOnlyList<ReleaseEntry> EmbeddedAll => ReleaseNotes.Parse(ReleaseNotes.EmbeddedJson())!;
+
+    /// <summary>
+    /// The embedded releases up to and including 0.54.0: past releases never change, so selection tests stay valid when a new
+    /// release is added to docs/releases.json (#264). Tests about the source itself compare with <see cref="EmbeddedAll"/>.
+    /// </summary>
+    private static IReadOnlyList<ReleaseEntry> Embedded => EmbeddedAll.Where(r => r.Version.CompareTo(V("0.54.0")) <= 0).ToList();
 
     private static string[] Versions(IEnumerable<ReleaseEntry> list) => [.. list.Select(r => r.Version.ToString())];
 
@@ -221,7 +227,7 @@ public sealed class ReleaseNotesTests : IDisposable
     {
         var source = Source(Offline());
         Assert.Null(await source.FetchAsync(CancellationToken.None));
-        Assert.Equal(Versions(Embedded), Versions(source.Local()));
+        Assert.Equal(Versions(EmbeddedAll), Versions(source.Local()));
         Assert.Null(await source.ImageAsync("releases/0.53.0/tab-logo.png", CancellationToken.None));
         Assert.False(Directory.Exists(Path.Combine(_root, "cache")));
     }
@@ -252,9 +258,9 @@ public sealed class ReleaseNotesTests : IDisposable
     {
         Directory.CreateDirectory(Path.Combine(_root, "cache"));
         File.WriteAllText(Path.Combine(_root, "cache", "releases.json"), Json(("0.1.0", [])));
-        Assert.Equal(Versions(Embedded), Versions(Source(Offline()).Local()));
+        Assert.Equal(Versions(EmbeddedAll), Versions(Source(Offline()).Local()));
         File.WriteAllText(Path.Combine(_root, "cache", "releases.json"), "{broken");
-        Assert.Equal(Versions(Embedded), Versions(Source(Offline()).Local()));
+        Assert.Equal(Versions(EmbeddedAll), Versions(Source(Offline()).Local()));
     }
 
     [Fact]
