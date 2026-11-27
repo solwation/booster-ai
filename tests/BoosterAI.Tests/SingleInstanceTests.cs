@@ -39,6 +39,31 @@ public sealed class SingleInstanceTests
     }
 
     [Fact]
+    public void QuestionLaunchActivatesAndOpensTheQuestion()
+    {
+        using var owner = new Owner();
+        var activated = new ManualResetEventSlim();
+        var question = new ManualResetEventSlim();
+        owner.Instance.RegisterActivation(activated.Set);
+        owner.Instance.RegisterQuestion(question.Set);
+        using var second = SingleInstance.Enter(true, owner.Key, question: true);
+        Assert.Null(second);
+        Assert.True(activated.Wait(TimeSpan.FromSeconds(3)));
+        Assert.True(question.Wait(TimeSpan.FromSeconds(3)));
+
+        // A plain launch only activates; an early question waits for the window.
+        using var plainOwner = new Owner();
+        var opened = 0;
+        plainOwner.Instance.RegisterQuestion(() => Interlocked.Increment(ref opened));
+        using (SingleInstance.Enter(true, plainOwner.Key)) { }
+        Assert.Equal(0, opened);
+        using var earlyOwner = new Owner();
+        using (SingleInstance.Enter(true, earlyOwner.Key, question: true)) { }
+        earlyOwner.Instance.RegisterQuestion(() => Interlocked.Increment(ref opened));
+        Assert.Equal(1, opened);
+    }
+
+    [Fact]
     public void OwnerExitReleasesGuardAndStopsListener()
     {
         var key = Guid.NewGuid().ToString("N");

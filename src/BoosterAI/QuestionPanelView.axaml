@@ -1,0 +1,53 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="using:BoosterAI"
+             x:Class="BoosterAI.QuestionPanelView" x:DataType="local:TabViewModel">
+  <!-- The agents' open questions behind a tab's question badge (#249): the options as buttons, free text when the question
+       allows it, and stale questions (closed tab, or the agent stopped waiting) without answer controls. -->
+  <Border Classes="peek-surface">
+  <ScrollViewer x:Name="QuestionScroll" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+    <ItemsControl ItemsSource="{Binding GroupQuestions}" Width="430">
+      <ItemsControl.ItemsPanel>
+        <ItemsPanelTemplate><StackPanel Spacing="16" /></ItemsPanelTemplate>
+      </ItemsControl.ItemsPanel>
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="local:QuestionViewModel">
+          <StackPanel Spacing="8" AutomationProperties.Name="{Binding PanelName}">
+            <Grid ColumnDefinitions="Auto,*">
+              <Border Classes="question-mark" Classes.stale="{Binding IsStale}" VerticalAlignment="Center">
+                <TextBlock Text="?" />
+              </Border>
+              <TextBlock Grid.Column="1" Classes="peek-header" Text="{Binding Header}" TextTrimming="CharacterEllipsis"
+                         VerticalAlignment="Center" Margin="7,0,0,0" />
+            </Grid>
+            <SelectableTextBlock Text="{Binding Text}" TextWrapping="Wrap" Classes.muted="{Binding IsStale}" />
+            <TextBlock Classes="caption question-stale" Text="{Binding StaleText}" IsVisible="{Binding IsStale}" TextWrapping="Wrap" />
+            <ItemsControl ItemsSource="{Binding Options}" IsVisible="{Binding HasOptions}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><WrapPanel ItemSpacing="6" LineSpacing="6" /></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="local:QuestionOption">
+                  <Button Classes="question-option" Content="{Binding Text}" Click="OnOption" IsEnabled="{Binding CanAnswer}"
+                          AutomationProperties.Name="{Binding Name}" ToolTip.Tip="{Binding Text}" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding Free}">
+              <TextBox Grid.Column="0" Text="{Binding FreeText}" Watermark="{local:T question.free.watermark}" IsEnabled="{Binding CanAnswer}"
+                       MaxLength="4000" KeyDown="OnFreeTextKeyDown" AutomationProperties.Name="{Binding FreeTextName}" />
+              <Button Grid.Column="1" Classes="primary" Content="{local:T question.send}" Click="OnSend" IsEnabled="{Binding CanSend}"
+                      Margin="8,0,0,0" Padding="12,6" VerticalAlignment="Center" AutomationProperties.Name="{Binding SendName}" />
+            </Grid>
+            <TextBlock Classes="caption error" Text="{Binding Message}" IsVisible="{Binding HasMessage}" TextWrapping="Wrap" />
+            <Button Classes="link" Click="OnDismiss" IsVisible="{Binding IsStale}" HorizontalAlignment="Left" Padding="0,2"
+                    AutomationProperties.Name="{Binding DismissName}">
+              <TextBlock Classes="caption" Text="{local:T question.dismiss}" />
+            </Button>
+          </StackPanel>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+  </ScrollViewer>
+  </Border>
+</UserControl>

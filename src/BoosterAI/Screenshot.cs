@@ -8,7 +8,7 @@ using Avalonia.Threading;
 namespace BoosterAI;
 
 /// <summary>
-/// <c>--screenshot file.png [--window main|local-model|local-models|close|settings|install|import|restart|remove-project|alias|wsl-shutdown|memory-reclaim|agent-yolo|wsl|unsaved|setup|uninstall] [--theme light|dark] [--config file.json] [--fake-update [manual:]0.3.0] [--fake-status [error:]text] [--fake-denied] [--fake-changed] [--fake-restartable N] [--fake-peek [N]] [--fake-setup [cli|wsl|alias]] [--fake-long-status] [--check-clipping] [--fake-agent-list [N]] [--fake-new-subtab] [--fake-row-menu [N]] [--fake-memory-reclaim gradual|dropcache|disabled|other|old|unknown] [--fake-limits] [--fake-limit-change [seconds]] [--fake-quota] [--fake-dots]</c>:
+/// <c>--screenshot file.png [--window main|local-model|local-models|close|settings|install|import|restart|remove-project|alias|wsl-shutdown|memory-reclaim|agent-yolo|wsl|unsaved|setup|uninstall] [--theme light|dark] [--config file.json] [--fake-update [manual:]0.3.0] [--fake-status [error:]text] [--fake-denied] [--fake-changed] [--fake-restartable N] [--fake-peek [N]] [--fake-setup [cli|wsl|alias]] [--fake-long-status] [--check-clipping] [--fake-agent-list [N]] [--fake-new-subtab] [--fake-row-menu [N]] [--fake-memory-reclaim gradual|dropcache|disabled|other|old|unknown] [--fake-limits] [--fake-limit-change [seconds]] [--fake-quota] [--fake-dots] [--fake-channel status|question|answered|stale]</c>:
 /// renders a window with Avalonia's headless Skia platform. Nothing is shown on the desktop and no
 /// focus changes. The window frame (title bar) is not drawn; only the client area.
 /// </summary>
@@ -16,7 +16,8 @@ internal sealed record ScreenshotOptions(string File, string Window, string? Fak
     int? FakePeek = null, int FakeRestartable = 0, string? FakeSetup = null, string? Tab = null, bool FakeOptimization = false, int? FakeMemoryCap = null,
     string? Section = null, string? FakeMemoryState = null, int? Width = null, int? Height = null, bool FakeOrchestraIdle = false, int? FakeMemorySaved = null,
     bool FakeLongStatus = false, bool CheckClipping = false, string? FakeMemoryReclaim = null, int? FakeAgentList = null,
-    bool FakeNewSubTab = false, int? FakeRowMenu = null, bool FakeLimits = false, bool FakeQuota = false, bool FakeDots = false, bool FakeLimitChange = false);
+    bool FakeNewSubTab = false, int? FakeRowMenu = null, bool FakeLimits = false, bool FakeQuota = false, bool FakeDots = false, bool FakeLimitChange = false,
+    string? FakeChannel = null);
 
 internal static class Screenshot
 {
@@ -42,7 +43,8 @@ internal static class Screenshot
             !args.Contains("--fake-agent-list") ? null : int.TryParse(Value(args, "--fake-agent-list"), out var list) ? list : 0,
             args.Contains("--fake-new-subtab"),
             !args.Contains("--fake-row-menu") ? null : int.TryParse(Value(args, "--fake-row-menu"), out var menu) ? menu : -1,
-            args.Contains("--fake-limits"), args.Contains("--fake-quota"), args.Contains("--fake-dots"), args.Contains("--fake-limit-change"));
+            args.Contains("--fake-limits"), args.Contains("--fake-quota"), args.Contains("--fake-dots"), args.Contains("--fake-limit-change"),
+            !args.Contains("--fake-channel") ? null : Value(args, "--fake-channel") is "question" or "answered" or "stale" ? Value(args, "--fake-channel") : "status");
     }
 
     /// <summary>--fake-peek [N]: the status popup of the Nth running or failed sample tab (0: the first).</summary>
@@ -287,6 +289,13 @@ internal static class Screenshot
         if (o.FakeDots) vm.ShowSampleDots();
         // --fake-new-subtab: the first group's last subtab never opened, as if created while the others run (#198).
         var newSubTab = o.FakeNewSubTab ? vm.ShowSampleNewSubTab() : null;
+        // --fake-channel status|question|answered|stale (#249): invented agent statuses and questions in a temporary session, the
+        // question panel open (question), after the answer was written (answered), or a closed tab's stale question (stale).
+        string? channelRoot = null;
+        TabViewModel? questionRow = null;
+        if (o.FakeChannel is { } channel) (channelRoot, questionRow) = vm.ShowSampleChannel(channel);
+        try
+        {
         Dispatcher.UIThread.RunJobs();
         for (var i = 0; i < 3; i++)
         {
@@ -299,6 +308,7 @@ internal static class Screenshot
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(o.File))!);
         // --fake-peek [N]: a tab's status popup open over the window.
         if (o.FakePeek is { } n && vm.ShowSamplePeek(n) is { } tab) WithStatusPopup(window, frame, tab).Save(o.File);
+        else if (questionRow is not null && window is MainWindow main) WithQuestionPanel(main, frame, questionRow).Save(o.File);
         // --fake-agent-list [N]: the Nth row's Agent box open, with its agent and account entries (#194).
         else if (o.FakeAgentList is { } row) WithAgentList(window, frame, row).Save(o.File);
         // --fake-row-menu [N]: the Nth visible row's ⋯ menu open (default: the --fake-new-subtab row, else the first).
@@ -329,6 +339,41 @@ internal static class Screenshot
             if (clipped.Count > 0) return 3;
         }
         return 0;
+        }
+        finally
+        {
+            if (channelRoot is not null) try { Directory.Delete(channelRoot, true); } catch (IOException) { }
+        }
+    }
+
+    /// <summary>Opens the question panel of <paramref name="tab"/>'s badge (#249) and draws it onto the window frame below the badge.</summary>
+    private static Bitmap WithQuestionPanel(MainWindow window, Bitmap frame, TabViewModel tab)
+    {
+        var badge = window.QuestionBadge(tab) ?? throw new InvalidOperationException("The row has no question badge");
+        window.ShowQuestions(badge, tab);
+        for (var i = 0; i < 3; i++)
+        {
+            Thread.Sleep(30);
+            Dispatcher.UIThread.RunJobs();
+            AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+        }
+        var panel = window.QuestionPanel ?? throw new InvalidOperationException("The question panel did not open");
+        panel.UpdateLayout();
+        var size = panel.Bounds.Size;
+        if (size.Width <= 0) throw new InvalidOperationException("The question panel did not open");
+        var panelFrame = new RenderTargetBitmap(new PixelSize((int)Math.Ceiling(size.Width), (int)Math.Ceiling(size.Height)), frame.Dpi);
+        panelFrame.Render(panel);
+        var corner = badge.TranslatePoint(new Point(0, badge.Bounds.Height), window) ?? default;
+        // The panel's surface has a 16 px margin for its shadow; line its edge up with the badge.
+        var x = Math.Max(8, Math.Min(corner.X - 16, window.ClientSize.Width - size.Width - 8));
+        var y = Math.Max(8, Math.Min(corner.Y - 10, window.ClientSize.Height - size.Height - 8));
+        var result = new RenderTargetBitmap(frame.PixelSize, frame.Dpi);
+        using (var ctx = result.CreateDrawingContext())
+        {
+            ctx.DrawImage(frame, new Rect(frame.Size));
+            ctx.DrawImage(panelFrame, new Rect(new Point(x, y), size));
+        }
+        return result;
     }
 
     /// <summary>Opens row <paramref name="row"/>'s menu as its ⋯ does and draws it onto the window frame below the button.</summary>

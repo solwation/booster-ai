@@ -225,18 +225,25 @@
                   <!-- No indent (#196): every name starts at the same x. The project has its name as text and the folder; a
                        subtab has an editable name and × in the folder's place. Only the name dims on an unticked row; the
                        icon buttons keep full opacity (#156). -->
-                  <Grid Grid.Column="3" ColumnDefinitions="*,Auto" VerticalAlignment="Center" Margin="0,0,10,0">
+                  <Grid Grid.Column="3" ColumnDefinitions="*,Auto,Auto" VerticalAlignment="Center" Margin="0,0,10,0">
                     <TextBlock Grid.Column="0" Classes="name" Text="{Binding Name}" IsVisible="{Binding IsProject}" Opacity="{Binding RowOpacity}"
                                VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Directory}" />
                     <TextBox Grid.Column="0" Classes="inline name" Text="{Binding Name}" IsVisible="{Binding IsSubTab}" Opacity="{Binding RowOpacity}"
                              Watermark="{local:T col.tabname}" ToolTip.Tip="{Binding Directory}" MinWidth="30"
                              AutomationProperties.HelpText="{Binding SubTabOfName}" />
-                    <Button Grid.Column="1" Classes="icon" Click="OnOpenFolder" Margin="4,-6,0,-6" IsVisible="{Binding IsProject}"
+                    <!-- The question badge (#249): the agent asks something; on a project also its subtabs' questions. A click,
+                         Enter or Space opens the questions; muted when every question behind it is stale. -->
+                    <Button Grid.Column="1" Classes="question-badge" Classes.stale="{Binding QuestionBadgeStale}" Click="OnQuestionBadge"
+                            IsVisible="{Binding HasQuestionBadge}" Margin="6,0,0,0" Cursor="Hand"
+                            ToolTip.Tip="{Binding QuestionBadgeTip}" AutomationProperties.Name="{Binding QuestionBadgeName}">
+                      <TextBlock Text="{Binding QuestionBadgeText}" />
+                    </Button>
+                    <Button Grid.Column="2" Classes="icon" Click="OnOpenFolder" Margin="4,-6,0,-6" IsVisible="{Binding IsProject}"
                             ToolTip.Tip="{x:Static local:TabViewModel.OpenFolderName}" AutomationProperties.Name="{x:Static local:TabViewModel.OpenFolderName}">
                       <Path Data="{StaticResource FolderIcon}" />
                     </Button>
                     <!-- Inactive with its reason while the subtab's terminal tab is open (#196). -->
-                    <Button Grid.Column="1" Classes="icon" Click="OnRemoveSubTab" IsVisible="{Binding IsSubTab}"
+                    <Button Grid.Column="2" Classes="icon" Click="OnRemoveSubTab" IsVisible="{Binding IsSubTab}"
                             IsEnabled="{Binding CanRemoveSubTab}" Margin="4,-6,0,-6"
                             ToolTip.Tip="{Binding RemoveSubTabTip}" ToolTip.ShowOnDisabled="True" AutomationProperties.Name="{Binding RemoveSubTabName}">
                       <Path Data="{StaticResource CloseIcon}" />
@@ -385,6 +392,22 @@
                           ToolTip.Tip="{local:T row.more.tip}" AutomationProperties.Name="{Binding MoreName}">
                     <Path Data="{StaticResource MoreIcon}" StrokeThickness="2.5" />
                   </Button>
+                </Grid>
+                <!-- The agent's latest status from the tab status channel (#249): one line under the row, cut with "…"; the
+                     tooltip has the whole text and when it was reported. Only while the CLI runs and the setting is on. -->
+                <Grid Classes="project-columns" Loaded="OnProjectGridLoaded" ColumnDefinitions="4,20,46,*,160,200,195,168,32"
+                      IsVisible="{Binding HasAgentStatus}" Margin="0,-2,0,2">
+                  <Grid Grid.Column="3" Grid.ColumnSpan="5" ColumnDefinitions="Auto,*" Classes="agent-status" Background="Transparent" Margin="0,0,12,0"
+                        Focusable="True" ToolTip.Tip="{Binding AgentStatusTip}" AutomationProperties.Name="{Binding AgentStatusName}">
+                    <Panel Grid.Column="0" Width="12" Height="12" VerticalAlignment="Center" Margin="0,0,6,0">
+                      <Path Classes="agent-done" Data="{StaticResource CheckIcon}" IsVisible="{Binding AgentDone}" />
+                      <Path Classes="agent-blocked" Data="{StaticResource WarningIcon}" IsVisible="{Binding AgentBlocked}" />
+                      <Ellipse Classes="agent-working" IsVisible="{Binding AgentWorking}" />
+                      <Ellipse Classes="agent-idle" IsVisible="{Binding AgentIdle}" />
+                    </Panel>
+                    <TextBlock Grid.Column="1" Classes="caption agent-status-text" Classes.blocked="{Binding AgentBlocked}"
+                               Text="{Binding AgentStatusText}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                  </Grid>
                 </Grid>
                 <!-- Advisor belongs to the project choices (#173). -->
                 <Panel IsVisible="{Binding IsProject}">

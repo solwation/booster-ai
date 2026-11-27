@@ -17,7 +17,8 @@ internal sealed class SingleInstance : IDisposable
     private readonly Task _listener;
     private readonly object _gate = new();
     private Action? _activate;
-    private bool _pending;
+    private Action? _openQuestion;
+    private bool _pending, _pendingQuestion;
 
     // A stable user identity lets portable and installed copies share one GUI instance.
     internal static string UserKey { get; } = CreateUserKey();
@@ -45,14 +46,15 @@ internal sealed class SingleInstance : IDisposable
     }
 
     /// <summary>Null means another GUI received the request. Only the owning thread may dispose the result.</summary>
-    internal static SingleInstance? Enter(bool activate, string? testKey = null)
+    /// <param name="question">A status channel notification's click (#249): the running GUI also opens the open question.</param>
+    internal static SingleInstance? Enter(bool activate, string? testKey = null, bool question = false)
     {
         var name = "BoosterAI.GUI." + (testKey ?? UserKey);
         var mutex = new Mutex(false, MutexName(name));
         try
         {
             if (TryOwn(mutex)) return new SingleInstance(mutex, name);
-            try { Notify(name, activate).GetAwaiter().GetResult(); }
+            try { Notify(name, activate, question).GetAwaiter().GetResult(); }
             catch (Exception e) when (e is IOException or SocketException or OperationCanceledException or TimeoutException)
             {
                 // If startup crashed, the abandoned mutex permits a fresh owner. Never open a second GUI
@@ -84,16 +86,35 @@ internal sealed class SingleInstance : IDisposable
         if (pending) activate();
     }
 
-    /// <summary>Shows the main window now, or once it has opened.</summary>
-    internal void RequestActivation()
+    /// <summary>What a notification click asks for after activation (#249): open the agent's question.</summary>
+    internal void RegisterQuestion(Action openQuestion)
     {
-        Action? activate;
+        bool pending;
+        lock (_gate)
+        {
+            _openQuestion = openQuestion;
+            pending = _pendingQuestion;
+            _pendingQuestion = false;
+        }
+        if (pending) openQuestion();
+    }
+
+    /// <summary>Shows the main window now, or once it has opened.</summary>
+    internal void RequestActivation(bool question = false)
+    {
+        Action? activate, open = null;
         lock (_gate)
         {
             activate = _activate;
             if (activate is null) _pending = true;
+            if (question)
+            {
+                open = _openQuestion;
+                if (open is null) _pendingQuestion = true;
+            }
         }
         activate?.Invoke();
+        open?.Invoke();
     }
 
     private async Task Listen()
@@ -112,9 +133,10 @@ internal sealed class SingleInstance : IDisposable
                 await pipe.WriteAsync(pid, clientTimeout.Token);
                 var request = new byte[1];
                 await pipe.ReadExactlyAsync(request, clientTimeout.Token);
-                if (request[0] == 1) RequestActivation();
+                // 1 activates, 2 also opens the agent's open question (#249).
+                if (request[0] is 1 or 2) RequestActivation(question: request[0] == 2);
                 // Acknowledge accepted requests; incomplete or unknown clients cannot keep the server occupied.
-                if (request[0] <= 1) await pipe.WriteAsync(new byte[] { 1 }, clientTimeout.Token);
+                if (request[0] <= 2) await pipe.WriteAsync(new byte[] { 1 }, clientTimeout.Token);
             }
             catch (OperationCanceledException) { }
             // A client that vanishes mid-exchange surfaces as IOException, but on Unix a failed pipe Send can arrive as a
@@ -127,7 +149,7 @@ internal sealed class SingleInstance : IDisposable
         }
     }
 
-    private static async Task Notify(string name, bool activate)
+    private static async Task Notify(string name, bool activate, bool question = false)
     {
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(15));
         while (true)
@@ -143,7 +165,7 @@ internal sealed class SingleInstance : IDisposable
                 // The menu-launched process can transfer its foreground permission to the existing GUI.
                 if (activate && OperatingSystem.IsWindows())
                     AllowSetForegroundWindow(BinaryPrimitives.ReadInt32LittleEndian(pid));
-                await pipe.WriteAsync(new byte[] { activate ? (byte)1 : (byte)0 }, timeout.Token);
+                await pipe.WriteAsync(new byte[] { activate ? question ? (byte)2 : (byte)1 : (byte)0 }, timeout.Token);
                 var ack = new byte[1];
                 await pipe.ReadExactlyAsync(ack, timeout.Token);
                 if (ack[0] != 1) throw new IOException("Invalid BoosterAI activation response.");

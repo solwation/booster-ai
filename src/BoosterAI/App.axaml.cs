@@ -62,8 +62,12 @@ public partial class App : Application
             main.RememberSize();
             desktop.MainWindow = main;
             // Queue early requests until the window has opened, including the initial background hide.
-            main.Opened += (_, _) => Program.Instance?.RegisterActivation(() =>
-                Avalonia.Threading.Dispatcher.UIThread.Post(() => Restore(main)));
+            main.Opened += (_, _) =>
+            {
+                Program.Instance?.RegisterActivation(() => Avalonia.Threading.Dispatcher.UIThread.Post(() => Restore(main)));
+                // A status channel notification's click (#249) opens the question after the window is shown.
+                Program.Instance?.RegisterQuestion(() => Avalonia.Threading.Dispatcher.UIThread.Post(main.OpenLatestQuestion));
+            };
             Launcher.RestoreZoomOnStartup(_config.ZoomPercent);
             if (OperatingSystem.IsWindows()) Installer.RefreshUninstallEntry();
             vm.Update.Start();

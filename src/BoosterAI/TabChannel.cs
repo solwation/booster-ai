@@ -10,8 +10,11 @@ public enum AgentState { Idle, Working, Blocked, Done }
 /// <summary>The latest "status" event since the CLI started; <paramref name="At"/> is its epoch-ms.</summary>
 public sealed record AgentStatus(AgentState State, string Text, long At);
 
-/// <summary>A "question" event: <paramref name="Free"/> allows a free-text answer besides <paramref name="Options"/>.</summary>
-public sealed record TabQuestion(string Id, string Text, IReadOnlyList<string> Options, bool Free, long At);
+/// <summary>
+/// A "question" event: <paramref name="Free"/> allows a free-text answer besides <paramref name="Options"/>;
+/// <paramref name="ExpiresAt"/> (optional "expires_at", epoch-ms) is when the asker stops waiting for the answer (#249).
+/// </summary>
+public sealed record TabQuestion(string Id, string Text, IReadOnlyList<string> Options, bool Free, long At, long? ExpiresAt = null);
 
 /// <summary>An answer file in tabN.answers/: the question (by id and its event's epoch-ms) it answers, and the answer.</summary>
 public sealed record TabAnswer(string Id, long QuestionAt, string Text, long At);
@@ -107,7 +110,7 @@ public static class TabChannel
                         // A question nobody can answer is not a question.
                         if (options.Count == 0 && !free) continue;
                         questions.Remove(id);
-                        questions[id] = new TabQuestion(id, Cap(q, MaxTextLength), options, free, at);
+                        questions[id] = new TabQuestion(id, Cap(q, MaxTextLength), options, free, at, Long(e, "expires_at") is { } exp && exp > at ? exp : null);
                         break;
                 }
             }

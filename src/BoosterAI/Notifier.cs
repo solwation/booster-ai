@@ -22,20 +22,26 @@ public static class Notifier
     /// <summary>The argument a toast click starts BoosterAI with; any GUI launch activates the running window.</summary>
     public const string ShowUri = Protocol + ":show";
 
+    /// <summary>A status channel notification's click (#249): shows the main window with the agent's open question.</summary>
+    public const string QuestionUri = Protocol + ":question";
+
     private static bool? _linuxActions;
 
-    public static void Show(string title, string body)
+    public static void Show(string title, string body) => Show(title, body, openQuestion: false);
+
+    /// <param name="openQuestion">A click opens the open question of the tab that asked (#249), not only the window.</param>
+    public static void Show(string title, string body, bool openQuestion)
     {
         try
         {
             if (OperatingSystem.IsWindows())
             {
                 Register();
-                Run("powershell.exe", ToastArgs(title, body));
+                Run("powershell.exe", ToastArgs(title, body, openQuestion));
             }
             else if (Launcher.OnPath("notify-send"))
             {
-                if (_linuxActions ??= NotifySendHasActions()) ShowLinuxClickable(title, body);
+                if (_linuxActions ??= NotifySendHasActions()) ShowLinuxClickable(title, body, openQuestion);
                 else Run("notify-send", ["-a", "BoosterAI", title, body]);
             }
         }
@@ -46,13 +52,13 @@ public static class Notifier
     }
 
     /// <summary>The powershell.exe arguments that show the toast (the script is passed encoded).</summary>
-    public static string[] ToastArgs(string title, string body) =>
+    public static string[] ToastArgs(string title, string body, bool openQuestion = false) =>
         ["-NoProfile", "-NonInteractive", "-WindowStyle", "Hidden", "-EncodedCommand",
-            Convert.ToBase64String(Encoding.Unicode.GetBytes(ToastScript(title, body)))];
+            Convert.ToBase64String(Encoding.Unicode.GetBytes(ToastScript(title, body, openQuestion)))];
 
-    public static string ToastScript(string title, string body)
+    public static string ToastScript(string title, string body, bool openQuestion = false)
     {
-        var xml = $"<toast activationType=\"protocol\" launch=\"{ShowUri}\"><visual><binding template=\"ToastGeneric\"><text>{SecurityElement.Escape(title)}</text>" +
+        var xml = $"<toast activationType=\"protocol\" launch=\"{(openQuestion ? QuestionUri : ShowUri)}\"><visual><binding template=\"ToastGeneric\"><text>{SecurityElement.Escape(title)}</text>" +
                   $"<text>{SecurityElement.Escape(body)}</text></binding></visual></toast>";
         return string.Join('\n',
             "[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] > $null",
@@ -123,7 +129,7 @@ public static class Notifier
         catch (Exception) { return false; }
     }
 
-    private static void ShowLinuxClickable(string title, string body)
+    private static void ShowLinuxClickable(string title, string body, bool openQuestion)
     {
         var psi = new ProcessStartInfo("notify-send") { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true };
         foreach (var a in LinuxClickableArgs(title, body)) psi.ArgumentList.Add(a);
@@ -138,7 +144,7 @@ public static class Notifier
                 {
                     var action = await p.StandardOutput.ReadToEndAsync();
                     await p.WaitForExitAsync();
-                    if (action.Trim() == "default") Program.Instance?.RequestActivation();
+                    if (action.Trim() == "default") Program.Instance?.RequestActivation(openQuestion);
                 }
                 catch (Exception) { }
             }

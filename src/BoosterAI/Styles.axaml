@@ -271,6 +271,86 @@
     <Setter Property="BorderThickness" Value="0" />
   </Style>
 
+  <!-- The tab status channel (#249): the question badge on a row, its mark in the question panel and the agent's status line.
+       The badge and the mark are circles (radius half their 22 px height), like the numbered step circles. -->
+  <Style Selector="Button.question-badge">
+    <Setter Property="Background" Value="{DynamicResource PrimaryFillBrush}" />
+    <Setter Property="Foreground" Value="White" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="2" />
+    <Setter Property="CornerRadius" Value="11" />
+    <Setter Property="MinWidth" Value="22" />
+    <Setter Property="Height" Value="22" />
+    <Setter Property="Padding" Value="5,0" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.question-badge:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource PrimaryFillHoverBrush}" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+  <Style Selector="Button.question-badge:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource PrimaryFillPressedBrush}" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+  <Style Selector="Button.question-badge:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="BorderBrush" Value="{DynamicResource LinkBrush}" />
+  </Style>
+  <Style Selector="Button.question-badge.stale">
+    <Setter Property="Background" Value="{DynamicResource SurfaceStrongBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource MutedBrush}" />
+  </Style>
+  <Style Selector="Button.question-badge.stale:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SurfaceStrongBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+  </Style>
+  <Style Selector="Border.question-mark">
+    <Setter Property="Background" Value="{DynamicResource PrimaryFillBrush}" />
+    <Setter Property="CornerRadius" Value="11" />
+    <Setter Property="Width" Value="22" />
+    <Setter Property="Height" Value="22" />
+  </Style>
+  <Style Selector="Border.question-mark > TextBlock">
+    <Setter Property="Foreground" Value="White" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.question-mark.stale"><Setter Property="Background" Value="{DynamicResource SurfaceStrongBrush}" /></Style>
+  <Style Selector="Border.question-mark.stale > TextBlock"><Setter Property="Foreground" Value="{DynamicResource MutedBrush}" /></Style>
+  <Style Selector="TextBlock.question-stale"><Setter Property="Foreground" Value="{DynamicResource WarningBrush}" /></Style>
+  <Style Selector="Button.question-option">
+    <Setter Property="Padding" Value="12,5" />
+    <Setter Property="MaxWidth" Value="420" />
+  </Style>
+  <Style Selector="Grid.agent-status:focus-visible">
+    <Setter Property="Background" Value="{DynamicResource RowHoverBrush}" />
+  </Style>
+  <Style Selector="Grid.agent-status Path">
+    <Setter Property="Width" Value="12" />
+    <Setter Property="Height" Value="12" />
+    <Setter Property="Stretch" Value="Uniform" />
+    <Setter Property="StrokeThickness" Value="1.75" />
+    <Setter Property="StrokeLineCap" Value="Round" />
+    <Setter Property="StrokeJoin" Value="Round" />
+  </Style>
+  <Style Selector="Path.agent-done"><Setter Property="Stroke" Value="{DynamicResource SuccessBrush}" /></Style>
+  <Style Selector="Path.agent-blocked"><Setter Property="Stroke" Value="{DynamicResource WarningBrush}" /></Style>
+  <Style Selector="Ellipse.agent-working, Ellipse.agent-idle">
+    <Setter Property="Width" Value="8" />
+    <Setter Property="Height" Value="8" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Ellipse.agent-working"><Setter Property="Fill" Value="{DynamicResource InfoDotBrush}" /></Style>
+  <Style Selector="Ellipse.agent-idle"><Setter Property="Stroke" Value="{DynamicResource NeutralStatusBrush}" /><Setter Property="StrokeThickness" Value="1.5" /></Style>
+  <Style Selector="TextBlock.agent-status-text"><Setter Property="Foreground" Value="{DynamicResource MutedBrush}" /></Style>
+  <Style Selector="TextBlock.agent-status-text.blocked"><Setter Property="Foreground" Value="{DynamicResource WarningBrush}" /></Style>
+
   <!-- Small secondary text (the 12/16 step of the type scale); pair with muted for captions beside controls. -->
   <Style Selector="TextBlock.caption">
     <Setter Property="FontSize" Value="12" />

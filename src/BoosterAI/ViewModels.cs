@@ -24,7 +24,7 @@ public abstract class Observable : INotifyPropertyChanged
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 }
 
-public sealed class TabViewModel : Observable
+public sealed partial class TabViewModel : Observable
 {
     private readonly MainViewModel _owner;
     public string Id { get; }
@@ -116,6 +116,7 @@ public sealed class TabViewModel : Observable
             Raise(nameof(ReorderName));
             Raise(nameof(MoreName));
             Raise(nameof(RemoveSubTabName));
+            RaiseChannel();
             foreach (var child in _owner.Tabs.Where(t => t.Parent == this)) child.Raise(nameof(SubTabOfName));
             _owner.RaiseLaunchTip();
         }
@@ -474,6 +475,8 @@ public sealed class TabViewModel : Observable
         set
         {
             if (!Set(ref _track, value)) return;
+            // A new track is a new events file (#249): the old tab's status and questions are gone with it.
+            SetChannel(TabChannelState.Empty);
             RaiseRemoveSubTab();
             (Parent ?? this).GroupChanged();
         }
@@ -821,6 +824,8 @@ public sealed class TabViewModel : Observable
         RaiseRemoveSubTab();
         RaiseRestart();
         (Parent ?? this).GroupChanged();
+        // A closed tab's questions turn stale and its agent status is hidden (#249).
+        if (stateChanged) RaiseChannel();
         if (stateChanged) _owner.RecoveredTabChanged(this);
         return stateChanged;
     }
@@ -1103,7 +1108,7 @@ public sealed partial class MainViewModel : Observable
     }
     public bool AutoUpdateClis { get => _cfg.AutoUpdateClis; set { _cfg.AutoUpdateClis = value; Raise(); } }
     public bool ShowTabLogo { get => _cfg.ShowTabLogo; set { _cfg.ShowTabLogo = value; Raise(); } }
-    public bool TabStatusChannel { get => _cfg.TabStatusChannel; set { _cfg.TabStatusChannel = value; Raise(); } }
+    public bool TabStatusChannel { get => _cfg.TabStatusChannel; set { _cfg.TabStatusChannel = value; Raise(); RaiseChannels(); } }
     public bool AutoClearIdle { get => _cfg.AutoClearIdle; set { _cfg.AutoClearIdle = value; Raise(); RefreshContextMode(); } }
     /// <summary>The auto-clear minutes for the number box (decimal? is what it binds); an empty box keeps the last value.</summary>
     public decimal? AutoClearMinutes
@@ -1470,6 +1475,7 @@ public sealed partial class MainViewModel : Observable
             Raise(name);
         foreach (var t in Tabs) t.RaiseColor();
         foreach (var p in Projects) p.RaiseAdvisorVisible();
+        RaiseChannels();
         (Avalonia.Application.Current as App)?.ApplyTheme();
     }
 
@@ -1947,6 +1953,7 @@ public sealed partial class MainViewModel : Observable
         var distro = _cfg.WslDistro;
         var settingsPath = AgySettingsFile;
         var previousProcs = _procs;
+        var channelOn = _cfg.TabStatusChannel;
         Task.Run(() =>
         {
             var live = TabSession.Liveness(distro);
@@ -1970,12 +1977,14 @@ public sealed partial class MainViewModel : Observable
             var procs = results.Any(r => r.State == TabState.Running) ? ProcSnapshot.Read(ProcSnapshot.Root(distro)) : null;
             var cpu = results.Select(r => procs is not null && r is { State: TabState.Running, Log.Pid: { } shell }
                 ? TabCpu.Measure(previousProcs, procs, shell, r.Log.StartTime) : null).ToList();
-            return (results, settings, procs, cpu);
+            // The status channel (#249): what each tab's agent reported; nothing is read while the setting is off.
+            var channels = watched.Select(w => channelOn ? w.Session.ReadChannel(w.Id) : TabChannelState.Empty).ToList();
+            return (results, settings, procs, cpu, channels);
         }).ContinueWith(t =>
         {
             _polling = false;
             if (!t.IsCompletedSuccessfully) return;
-            var (results, settings, procs, cpu) = t.Result;
+            var (results, settings, procs, cpu, channels) = t.Result;
             _procs = procs;
             var anyActivityChanged = false;
             foreach (var ((row, id, state, rc, denied, pid, hookActivity, watchingSince, log, lastOutput), sample) in results.Zip(cpu))
@@ -1997,6 +2006,8 @@ public sealed partial class MainViewModel : Observable
                     PlaySound(SoundEffect.Finished);
                 }
             }
+            foreach (var ((row, id, _, _, _, _, _, _, _, _), channel) in results.Zip(channels))
+                if (row.TrackId == id) UpdateChannel(row, channel);
             if (anyActivityChanged) _ = RefreshAccountLimitsAsync();
             // A tab that closed can be started again: the Start button counts it.
             TabsChanged();
