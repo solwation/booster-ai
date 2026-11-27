@@ -171,7 +171,7 @@ bs_logo_plain() {
 bs_logo() (
   [ -t 1 ] || exit 0
   case ${TERM-} in ''|dumb) exit 0 ;; esac
-  local size cols lines e=$'\e' i n w band t t0 text=BoosterAI out=' '
+  local size cols lines e=$'\e' i n w band t t0=${EPOCHREALTIME/[.,]/} text=BoosterAI out=' '
   read -r lines cols < <(stty size 2>/dev/null </dev/tty)
   [ "${cols:-0}" -gt 0 ] 2>/dev/null || cols=${COLUMNS:-$(tput cols 2>/dev/null || echo 80)}
   [ "${lines:-0}" -gt 0 ] 2>/dev/null || lines=${LINES:-$(tput lines 2>/dev/null || echo 24)}
@@ -194,8 +194,9 @@ bs_logo() (
   trap 'printf "\033[0m\033[?25h"' EXIT
   trap 'exit 130' INT TERM HUP
   printf '\033[?25l'
-  band=$((w / 4)) t0=${EPOCHREALTIME/[.,]/}
+  band=$((w / 4))
   for ((i = 0; i <= w + band; i += (w + band) / 12 + 1)); do
+    # Frames stop 0.8 s after bs_logo began (setup included); the settled logo follows at once.
     [ -z "$t0" ] || [ $((${EPOCHREALTIME/[.,]/} - t0)) -lt 800000 ] || break
     bs_logo_frame "$i" "$band"
     printf '%s\033[%dA' "$bs_logo_out" "$n"

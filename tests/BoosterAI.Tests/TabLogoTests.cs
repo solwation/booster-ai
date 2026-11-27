@@ -170,7 +170,9 @@ public class TabLogoTests
         Assert.EndsWith("\e[0m\e[?25hok", output); // The cursor is shown again last.
         Assert.Contains(colour, output);
         Assert.Contains(columns >= TabLogo.FullColumns ? "\e[8A" : "\e[4A", output); // Frames redraw in place.
-        Assert.InRange(ms, 0, 1500);
+        // Bounded, not a speed test: frames stop 0.8 s after bs_logo starts, but a slow CI runner draws each frame slowly
+        // (1.5 s was measured there); an animation that ignored its deadline would run for several seconds.
+        Assert.InRange(ms, 0, 3000);
         Assert.Contains("█", output);
     }
 
