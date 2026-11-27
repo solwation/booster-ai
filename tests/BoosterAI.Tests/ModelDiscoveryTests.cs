@@ -1,4 +1,6 @@
 using BoosterAI;
+using BoosterAI.Tests;
+using Avalonia.Controls;
 using Xunit;
 
 /// <summary>Model lists found from the agent CLIs are merged with the built-in ones (#265).</summary>
@@ -72,5 +74,61 @@ public sealed class ModelDiscoveryTests : IDisposable
             Assert.Null(ModelDiscovery.LoadCache(path));
         }
         finally { if (Directory.Exists(dir)) Directory.Delete(dir, true); }
+    }
+}
+
+/// <summary>A tab keeps its model when the list under the editable model box changes (#265).</summary>
+[Collection(ConfigFileCollection.Name)]
+public sealed class ModelListChangeUiTests : IDisposable
+{
+    private readonly string _root = Path.Combine(Path.GetTempPath(), "bs-modellist-" + Guid.NewGuid().ToString("N"));
+
+    public ModelListChangeUiTests()
+    {
+        Directory.CreateDirectory(_root);
+        ConfigStore.UseFile(Path.Combine(_root, "config.json"));
+    }
+
+    public void Dispose()
+    {
+        Catalog.SetDiscovered(new Dictionary<string, string[]>());
+        Directory.Delete(_root, recursive: true);
+    }
+
+    [Fact]
+    public void TabsAndSubTabsKeepTheirModelWhenTheListChanges()
+    {
+        var result = UiSession.Run(() =>
+        {
+            var vm = new MainViewModel(new AppConfig
+            {
+                Tabs =
+                [
+                    new TabConfig
+                    {
+                        Name = "Atlas", Directory = "/srv/atlas", Enabled = true, Llm = "codex", Model = "gpt-6-sol",
+                        SubTabs = [new TabConfig { Name = "Sub", Llm = "codex", Model = "my-own-model", Enabled = true }],
+                    },
+                    new TabConfig { Name = "Boreal", Directory = "/srv/boreal", Enabled = true, Llm = "codex", Model = "typed-id-9" },
+                ],
+            });
+            var window = new MainWindow(vm);
+            window.Show();
+            Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+            try
+            {
+                Assert.Equal(3, vm.Tabs.Count); // sub-tabs are in the list, so RaiseModels reaches them
+                Catalog.SetDiscovered(new Dictionary<string, string[]> { ["codex"] = ["gpt-9-new"] });
+                foreach (var t in vm.Tabs) t.RaiseModels();
+                Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+                var combos = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(window).OfType<Avalonia.Controls.ComboBox>()
+                    .Where(c => c.IsEditable && c.ItemsSource is IReadOnlyList<string> l && l.Contains("gpt-9-new")).ToList();
+                return (vm.Tabs.Select(t => t.Model).ToList(), combos.Select(c => c.Text).ToList());
+            }
+            finally { window.Close(); }
+        });
+        Assert.Equal(["gpt-6-sol", "my-own-model", "typed-id-9"], result.Item1.Order());
+        Assert.NotEmpty(result.Item2);
+        Assert.All(result.Item2, text => Assert.Contains(text, new[] { "gpt-6-sol", "my-own-model", "typed-id-9" }));
     }
 }

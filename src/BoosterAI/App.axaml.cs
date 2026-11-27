@@ -59,7 +59,12 @@ public partial class App : Application
             desktop.ShutdownMode = ShutdownMode.OnMainWindowClose;
             var vm = new MainViewModel(_config) { Sound = new SystemSoundPlayer() };
             // Model lists from the agent CLIs (#265): cached, refreshed at most daily, never blocks the UI.
-            _ = ModelDiscovery.RefreshAsync(_config.WslDistro, () => Avalonia.Threading.Dispatcher.UIThread.Post(() => { foreach (var t in vm.Tabs) t.RaiseModels(); }));
+            void RefreshModels() => _ = ModelDiscovery.RefreshAsync(_config.WslDistro, () => Avalonia.Threading.Dispatcher.UIThread.Post(() => { foreach (var t in vm.Tabs) t.RaiseModels(); }));
+            RefreshModels();
+            // The app may run for days (tray): check again every 6 h; RefreshAsync itself keeps to 24 h.
+            var modelTimer = new Avalonia.Threading.DispatcherTimer { Interval = TimeSpan.FromHours(6) };
+            modelTimer.Tick += (_, _) => RefreshModels();
+            modelTimer.Start();
             var main = new MainWindow(vm, background: desktop.Args?.Contains("--background") == true);
             main.RememberSize();
             desktop.MainWindow = main;

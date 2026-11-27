@@ -97,10 +97,24 @@ public static class ModelDiscovery
     /// </summary>
     public static Task RefreshAsync(string distro, Action? changed = null)
     {
+        // A fetch that is still running is not started twice.
+        if (Interlocked.CompareExchange(ref _running, 1, 0) != 0) return Task.CompletedTask;
+        try { return Start(distro, changed); }
+        catch { Volatile.Write(ref _running, 0); throw; }
+    }
+
+    private static int _running;
+
+    private static Task Start(string distro, Action? changed)
+    {
         var path = CachePath;
         var cache = LoadCache(path);
         if (cache is { } c && c.Models.Count > 0) { Catalog.SetDiscovered(c.Models); changed?.Invoke(); }
-        if (cache is { } fresh && DateTime.UtcNow - fresh.Fetched < MaxAge && DateTime.UtcNow >= fresh.Fetched) return Task.CompletedTask;
+        if (cache is { } fresh && DateTime.UtcNow - fresh.Fetched < MaxAge && DateTime.UtcNow >= fresh.Fetched)
+        {
+            Volatile.Write(ref _running, 0);
+            return Task.CompletedTask;
+        }
         return Task.Run(() =>
         {
             try
@@ -119,6 +133,7 @@ public static class ModelDiscovery
             {
                 // Silent: the last cache or the built-in list stays.
             }
+            finally { Volatile.Write(ref _running, 0); }
         });
     }
 
