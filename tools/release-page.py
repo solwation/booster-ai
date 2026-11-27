@@ -16,6 +16,12 @@ the JSON are kept when the summary file has none, so hand-written backfills surv
   howto.sv: / howto.en:             how to use it, one line each
   image: releases/0.55.0/page.png   screenshot, relative to docs/ (image.sv: / image.en: per language)
   docs: DETAILS.md#updates          docs/ file and anchor with more detail
+  topic: tab-splash                 optional id that groups features about the same thing across releases
+  topictitle.sv: / topictitle.en:   optional heading of the merged card of that topic
+
+A feature without a topic in the summary file keeps the topic (and topicTitle) of the feature with the same
+issue already in the JSON, so a rebuild does not drop hand-written grouping. How the page merges topics is
+described under "Release page" in docs/DEVELOPMENT.md.
 """
 import datetime
 import json
@@ -28,7 +34,9 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.join(ROOT, "docs", "releases.json")
 SUMMARY = os.environ.get("SUMMARY_FILE") or os.path.join(ROOT, ".github", "release-summary.txt")
 SKIP = re.compile(r"^(Version \S+ after the v\S+ release|Release summary for v\S+|Squashed '[^']+' (changes from|content from) .*)$")
-FEATURE_KEYS = ("title.sv", "title.en", "howto.sv", "howto.en", "image", "image.sv", "image.en", "docs")
+FEATURE_KEYS = ("title.sv", "title.en", "howto.sv", "howto.en", "image", "image.sv", "image.en", "docs",
+                "topic", "topictitle.sv", "topictitle.en")
+TOPIC = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 
 
 def git(*args, check=True):
@@ -81,6 +89,10 @@ def parse_summary(text):
         en_img = img.get("en") or img.get("*") or img.get("sv")
         if sv_img:
             f["image"] = {"sv": sv_img, "en": en_img}
+        if "topictitle" in f:
+            f["topicTitle"] = f.pop("topictitle")
+        if "topic" in f and not TOPIC.match(f["topic"]):
+            fail(f"topic {f['topic']!r} must be lower-case letters, digits and dashes", SUMMARY)
     for v in summary.values():
         if "-->" in v or "<!--" in v:
             fail("the summary must not contain comment markers", SUMMARY)
@@ -106,6 +118,8 @@ def build_entry(tag, prev=None, summary_text=None, old=None):
     date = git("log", "-1", "--format=%cs", ref).strip() if tagged else datetime.date.today().isoformat()
     sv, summary, features = parse_summary(summary_text)
     old = old or {}
+    if sv == version and features:
+        inherit_topics(features, old.get("features", []))
     entry = {
         "version": version,
         "date": date,
@@ -115,6 +129,17 @@ def build_entry(tag, prev=None, summary_text=None, old=None):
         "changes": subjects,
     }
     return entry
+
+
+def inherit_topics(features, old_features):
+    """Give a feature without a topic the topic of the old feature with the same issue."""
+    by_issue = {f["issue"]: f for f in old_features if "issue" in f and f.get("topic")}
+    for f in features:
+        o = by_issue.get(f.get("issue"))
+        if o and "topic" not in f:
+            f["topic"] = o["topic"]
+            if "topicTitle" in o and "topicTitle" not in f:
+                f["topicTitle"] = o["topicTitle"]
 
 
 def load():

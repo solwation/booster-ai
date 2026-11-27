@@ -23,7 +23,12 @@
             "sv": "verification/244/splash-settled.png",
             "en": "verification/244/splash-settled.png"
           },
-          "docs": "DETAILS.md#watching-the-tabs"
+          "docs": "DETAILS.md#watching-the-tabs",
+          "topic": "tab-splash",
+          "topicTitle": {
+            "sv": "Animerad BoosterAI-splash i flikarna",
+            "en": "Animated BoosterAI splash in tabs"
+          }
         }
       ],
       "changes": [
@@ -53,7 +58,8 @@
             "sv": "releases/0.53.0/tab-logo.png",
             "en": "releases/0.53.0/tab-logo.png"
           },
-          "docs": "DETAILS.md#watching-the-tabs"
+          "docs": "DETAILS.md#watching-the-tabs",
+          "topic": "tab-splash"
         }
       ],
       "changes": [
@@ -83,7 +89,8 @@
             "sv": "releases/0.53.0/tab-logo.png",
             "en": "releases/0.53.0/tab-logo.png"
           },
-          "docs": "DETAILS.md#watching-the-tabs"
+          "docs": "DETAILS.md#watching-the-tabs",
+          "topic": "tab-splash"
         },
         {
           "issue": 241,

@@ -170,6 +170,14 @@
     details.changes li { margin: 3px 0; overflow-wrap: anywhere; }
     details.changes li a { color: var(--link); }
     .release-foot { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+    .overview { border-color: rgba(56, 189, 248, 0.28); }
+    .feature { scroll-margin-top: 84px; }
+    .versions { font-size: 0.85rem; font-weight: 600; color: var(--text-dim); margin-bottom: 10px; font-variant-numeric: tabular-nums; }
+    .versions a { color: var(--link); }
+    .versions a:hover, .refs a:hover { text-decoration: underline; text-underline-offset: 3px; }
+    .refs { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: -6px 0 16px; color: var(--text-dim); font-size: 0.95rem; }
+    .refs a { color: var(--link); font-weight: 600; }
+    .toc a.overview-link { color: var(--cyan); border-color: rgba(56, 189, 248, 0.4); }
 
     .empty, .loading { text-align: center; color: var(--text-muted); padding: 48px 0; }
 
@@ -259,7 +267,9 @@
         failed: 'Det gick inte att läsa in releaserna just nu.', open: 'Öppna releaserna på GitHub',
         fallback: 'Några releaser hämtades direkt från GitHub och saknar skärmbilder.',
         footer: 'BoosterAI — MIT-licens', all: 'Alla releaser', downloads: 'Nedladdningar',
-        tocLabel: 'Releaser på sidan', imgAlt: 'Skärmbild: {t}'
+        tocLabel: 'Releaser på sidan', imgAlt: 'Skärmbild: {t}',
+        overview: 'Nyheterna i korthet', overviewIntro: 'Det viktigaste från {n} releaser, samlat per funktion med den senaste skärmbilden och beskrivningen.',
+        toc: 'Översikt', version1: 'Version {v}', versionN: 'Versioner {v}', newsIn: 'Nyheter:'
       },
       en: {
         title: "BoosterAI — What's new and releases", 'nav.home': 'Home', 'nav.docs': 'Documentation',
@@ -277,7 +287,9 @@
         failed: 'The releases could not be loaded right now.', open: 'Open the releases on GitHub',
         fallback: 'Some releases were loaded straight from GitHub and have no screenshots.',
         footer: 'BoosterAI — MIT License', all: 'All releases', downloads: 'Downloads',
-        tocLabel: 'Releases on this page', imgAlt: 'Screenshot: {t}'
+        tocLabel: 'Releases on this page', imgAlt: 'Screenshot: {t}',
+        overview: 'Highlights', overviewIntro: 'The main news from {n} releases, one card per feature with its latest screenshot and description.',
+        toc: 'Overview', version1: 'Version {v}', versionN: 'Versions {v}', newsIn: 'New:'
       }
     };
 
@@ -335,22 +347,71 @@
       return p ? GH + '/blob/main/docs/' + p : null;
     }
 
+    function pick(o) { return (o && (o[lang] || o.en || o.sv)) || ''; }
+
+    // The overview of a multi-release page (#250): the features of the shown releases (newest first) grouped by
+    // topic. A feature without a topic is a card of its own. Per field the newest feature that has it wins
+    // (title, howto, image, docs; a card of two or more features takes the newest topicTitle as its title);
+    // the card links every issue and names every version. Cards of two or more features come first, then the
+    // rest, each in order of their newest version. Also described under "Release page" in docs/DEVELOPMENT.md.
+    function group(releases) {
+      var cards = [], byTopic = {};
+      releases.forEach(function (r) {
+        (r.features || []).forEach(function (f) {
+          if (!f || !(f.title || f.howto)) return;
+          var topic = typeof f.topic === 'string' && f.topic ? f.topic : null;
+          var c = topic && byTopic[topic];
+          if (!c) {
+            c = { id: 'f-' + (topic || r.version.replace(/\./g, '-') + '-' + cards.length), parts: [], versions: [], issues: [] };
+            cards.push(c);
+            if (topic) byTopic[topic] = c;
+          }
+          c.parts.push(f);
+          if (c.versions.indexOf(r.version) < 0) c.versions.push(r.version);
+          if (typeof f.issue === 'number' && c.issues.indexOf(f.issue) < 0) c.issues.push(f.issue);
+        });
+      });
+      var out = cards.map(function (c) {
+        function newest(key) { for (var i = 0; i < c.parts.length; i++) if (c.parts[i][key]) return c.parts[i][key]; return null; }
+        return { id: c.id, parts: c.parts, merged: c.parts.length > 1, title: (c.parts.length > 1 && newest('topicTitle')) || newest('title'),
+          howto: newest('howto'), image: newest('image'), docs: newest('docs'),
+          issues: c.issues.sort(function (a, b) { return a - b; }),
+          versions: c.versions.sort(function (a, b) { return cmp(parse(a), parse(b)); }) };
+      });
+      return out.filter(function (c) { return c.merged; }).concat(out.filter(function (c) { return !c.merged; }));
+    }
+
+    // A feature card; in the overview (card from group) it also names its versions and links all its issues.
     function feature(f) {
-      var title = (f.title && (f.title[lang] || f.title.en || f.title.sv)) || '';
-      var howto = (f.howto && (f.howto[lang] || f.howto.en || f.howto.sv)) || '';
-      var img = safePath(f.image && (f.image[lang] || f.image.en || f.image.sv));
+      var title = pick(f.title), howto = pick(f.howto);
+      var img = safePath(pick(f.image));
+      var issues = f.issues || (typeof f.issue === 'number' ? [f.issue] : []);
       var links = el('div', { class: 'links' });
-      if (typeof f.issue === 'number') links.appendChild(ext(GH + '/issues/' + f.issue, t('issue', { n: f.issue })));
+      issues.forEach(function (n) { links.appendChild(ext(GH + '/issues/' + n, t('issue', { n: n }))); });
       if (docsUrl(f.docs)) links.appendChild(ext(docsUrl(f.docs), t('docs')));
+      // "Versions 0.53.0, 0.53.1, 0.54.0", each version a link to its section further down.
+      var versions = null;
+      if (f.versions) {
+        var parts = t(f.versions.length === 1 ? 'version1' : 'versionN').split('{v}');
+        versions = el('div', { class: 'versions' }, [parts[0]]);
+        f.versions.forEach(function (v, i) {
+          if (i) versions.appendChild(document.createTextNode(', '));
+          versions.appendChild(el('a', { href: '#v' + v, text: v }));
+        });
+        if (parts[1]) versions.appendChild(document.createTextNode(parts[1]));
+      }
       var text = el('div', null, [
         el('h3', { text: title }),
+        versions,
         howto ? el('div', { class: 'howto-label', text: t('howto') }) : null,
         howto ? el('p', { text: howto }) : null,
         links.childNodes.length ? links : null
       ]);
       var fig = img ? el('figure', null, [el('a', { href: img, target: '_blank', rel: 'noopener' }, [
         el('img', { src: img, alt: t('imgAlt', { t: title }), loading: 'lazy', decoding: 'async' })])]) : null;
-      return el('article', { class: 'feature' + (img ? '' : ' no-image') }, [fig, text]);
+      var a = el('article', { class: 'feature' + (img ? '' : ' no-image') }, [fig, text]);
+      if (f.id) a.id = f.id;
+      return a;
     }
 
     function release(r, i, ctx) {
@@ -365,14 +426,22 @@
       var changes = r.changes || [];
       var det = el('details', { class: 'changes' }, [el('summary', { text: t('changes', { n: changes.length }) }),
         changes.length ? el('ul', null, changes.map(subject)) : el('p', { text: t('noChanges') })]);
-      // Open the list where there is no feature section to read instead, and on short pages.
-      if (ctx.count <= 3 || (!feats.length && i < 10)) det.open = true;
+      // One release: its feature cards and the open list. Several: the cards are in the overview above, so the
+      // release links its cards there and keeps the full list collapsed.
+      var refs = null;
+      if (ctx.cards) {
+        var mine = ctx.cards.filter(function (c) { return feats.some(function (f) { return c.parts.indexOf(f) >= 0; }); });
+        if (mine.length) {
+          refs = el('p', { class: 'refs' }, [el('span', { text: t('newsIn') })]);
+          mine.forEach(function (c) { refs.appendChild(el('a', { href: '#' + c.id, text: pick(c.title) })); });
+        }
+      } else if (ctx.count <= 3 || (!feats.length && i < 10)) det.open = true;
       var foot = el('div', { class: 'release-foot' }, [
         ext(GH + '/releases/tag/' + tag, t('release')),
         r.previous ? ext(GH + '/compare/v' + r.previous + '...' + tag, t('compare')) : null
       ]);
       return el('section', { class: 'release', id: tag }, [head, sum ? el('p', { class: 'summary', text: sum }) : null,
-        feats.length ? el('div', { class: 'features' }, feats.map(feature)) : null, det, foot]);
+        refs, !ctx.cards && feats.length ? el('div', { class: 'features' }, feats.map(feature)) : null, det, foot]);
     }
 
     function render() {
@@ -433,10 +502,17 @@
         list.appendChild(el('p', { class: 'empty' }, [t('empty'), ' ', el('a', { href: 'releases.html?lang=' + lang, text: t('showAll') })]));
         return;
       }
+      var cards = shown.length > 1 ? group(shown) : null;
+      if (cards && !cards.length) cards = null;
+      if (cards) toc.appendChild(el('a', { href: '#overview', class: 'overview-link', text: t('toc') }));
       if (shown.length > 1 && shown.length <= 40) shown.forEach(function (r) {
         toc.appendChild(el('a', { href: '#v' + r.version, text: r.version }));
       });
-      var ctx = { from: from, to: to, newest: data[0], count: shown.length };
+      var ctx = { from: from, to: to, newest: data[0], count: shown.length, cards: cards };
+      if (cards) list.appendChild(el('section', { class: 'release overview', id: 'overview' }, [
+        el('div', { class: 'release-head' }, [el('h2', null, [el('a', { href: '#overview', text: t('overview') })])]),
+        el('p', { class: 'summary', text: t('overviewIntro', { n: shown.length }) }),
+        el('div', { class: 'features' }, cards.map(feature))]));
       shown.forEach(function (r, i) { list.appendChild(release(r, i, ctx)); });
       if (location.hash && document.getElementById(location.hash.slice(1))) document.getElementById(location.hash.slice(1)).scrollIntoView();
     }
