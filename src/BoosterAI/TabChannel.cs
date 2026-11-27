@@ -24,8 +24,12 @@ public sealed record AnsweredQuestion(TabQuestion Question, TabAnswer Answer);
 
 public enum AnswerResult { Answered, AlreadyAnswered, UnknownQuestion, Invalid, Failed }
 
-/// <summary>What tabN.events says since the CLI's latest cli-start: the latest status, open and answered questions.</summary>
-public sealed record TabChannelState(AgentStatus? Status, IReadOnlyList<TabQuestion> Open, IReadOnlyList<AnsweredQuestion> Answered)
+/// <summary>
+/// What tabN.events says since the CLI's latest cli-start: the latest status, open and answered questions, and the latest
+/// "notice-read" event (#275): the id of a notice the agent's side took from tabN.notice and when.
+/// </summary>
+public sealed record TabChannelState(AgentStatus? Status, IReadOnlyList<TabQuestion> Open, IReadOnlyList<AnsweredQuestion> Answered,
+    string? NoticeRead = null, long? NoticeReadAt = null)
 {
     public static readonly TabChannelState Empty = new(null, [], []);
 }
@@ -57,6 +61,11 @@ public static class TabChannel
 
     public static string EventsFile(string id) => id + ".events";
     public static string AnswersDirectory(string id) => id + ".answers";
+    /// <summary>
+    /// A notice from BoosterAI to the tab's agent (#275): one JSON object that the agent's side takes (renames away) at its next
+    /// tool call and adds to that call's result. It sits beside tabN.events, so the agent's side finds it without a new variable.
+    /// </summary>
+    public static string NoticeFile(string id) => id + ".notice";
 
     /// <summary>The channel's variables for a tab; empty when the channel is off, so the tab starts as without it.</summary>
     public static IReadOnlyDictionary<string, string> Environment(TabTrack track) => track.StatusChannel
@@ -81,6 +90,8 @@ public static class TabChannel
     public static TabChannelState Parse(string text, long? sinceMs, Func<string, TabAnswer?>? answer = null)
     {
         AgentStatus? status = null;
+        string? noticeRead = null;
+        long? noticeReadAt = null;
         var questions = new Dictionary<string, TabQuestion>(StringComparer.Ordinal);
         var end = text.LastIndexOf('\n');
         if (end < 0) return TabChannelState.Empty;
@@ -112,6 +123,9 @@ public static class TabChannel
                         questions.Remove(id);
                         questions[id] = new TabQuestion(id, Cap(q, MaxTextLength), options, free, at, Long(e, "expires_at") is { } exp && exp > at ? exp : null);
                         break;
+                    case "notice-read" when Str(e, "id") is { } nid && IsValidId(nid):
+                        (noticeRead, noticeReadAt) = (nid, at);
+                        break;
                 }
             }
             catch (JsonException) { }
@@ -123,7 +137,7 @@ public static class TabChannel
             if (answer?.Invoke(q.Id) is { } a && a.QuestionAt == q.At) answered.Add(new AnsweredQuestion(q, a));
             else open.Add(q);
         }
-        return new TabChannelState(status, open, answered);
+        return new TabChannelState(status, open, answered, noticeRead, noticeReadAt);
     }
 
     /// <summary>Reads at most the last <see cref="MaxReadBytes"/> of a file being appended to, from the first whole line.</summary>
@@ -173,6 +187,42 @@ public static class TabChannel
             w.WriteEndObject();
         }
         return Encoding.UTF8.GetString(stream.ToArray()) + "\n";
+    }
+
+    public static string NoticeJson(string id, string text, long atMs)
+    {
+        using var stream = new MemoryStream();
+        using (var w = new Utf8JsonWriter(stream))
+        {
+            w.WriteStartObject();
+            w.WriteNumber("v", Version);
+            w.WriteString("id", id);
+            w.WriteString("text", Cap(text, MaxAnswerLength));
+            w.WriteNumber("at", atMs);
+            w.WriteEndObject();
+        }
+        return Encoding.UTF8.GetString(stream.ToArray()) + "\n";
+    }
+
+    /// <summary>
+    /// Leaves a notice for the agent in <paramref name="path"/> (tabN.notice, #275): written to a temporary file and renamed, so
+    /// the agent's side never reads half of it. A notice it has not taken yet is replaced. False when it could not be written.
+    /// </summary>
+    public static bool WriteNotice(string path, string id, string text, long nowMs)
+    {
+        if (!IsValidId(id) || text.Trim().Length == 0) return false;
+        var temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        try
+        {
+            File.WriteAllText(temporary, NoticeJson(id, text.Trim(), nowMs));
+            File.Move(temporary, path, overwrite: true);
+            return true;
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return false; }
+        finally
+        {
+            try { File.Delete(temporary); } catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }
+        }
     }
 
     /// <summary>A lock left by a writer that died is taken over after this long.</summary>

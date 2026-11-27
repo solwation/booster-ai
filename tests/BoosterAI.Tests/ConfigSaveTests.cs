@@ -84,7 +84,7 @@ public class ConfigMergeTests
         var disk = new AppConfig
         {
             WslDistro = "Debian", LinuxTerminal = "kitty", ColorTheme = "Other", Language = "en", AppTheme = "dark",
-            AfterLaunch = "close", MinimizeToTray = false, Notifications = false, SoundEffects = false, QuotaWarn = false, QuotaWarnPercent = 9, ShowAdvisor = true, ZoomPercent = 80, AutoUpdateClis = false, ShowTabLogo = false, TabStatusChannel = false, CheckForUpdates = false,
+            AfterLaunch = "close", MinimizeToTray = false, Notifications = false, SoundEffects = false, QuotaWarn = false, QuotaWarnPercent = 9, QuotaSaveNotice = false, QuotaSaveNoticePercent = 3, ShowAdvisor = true, ZoomPercent = 80, AutoUpdateClis = false, ShowTabLogo = false, TabStatusChannel = false, CheckForUpdates = false,
             AutoClearIdle = true, AutoClearMinutes = 10, AutoCompactMode = AutoCompactPolicy.Auto,
             SkippedVersion = "9.9.9", LastUpdateCheck = new DateTime(2026, 10, 29, 9, 18, 39, DateTimeKind.Utc),
             LastRunVersion = "9.9.8", UpdatedFromVersion = "9.9.7",

@@ -133,6 +133,14 @@
                                  AutomationProperties.Name="{local:T settings.quotaWarn.name}" Margin="0,0,8,0" />
                   <TextBlock Text="{local:T settings.quotaWarn.percent}" VerticalAlignment="Center" />
                 </WrapPanel>
+                <!-- Save notice to running agents: AppConfig.QuotaSaveNotice (#275). -->
+                <WrapPanel Orientation="Horizontal" ToolTip.Tip="{local:T settings.quotaSaveNotice.tip}">
+                  <CheckBox IsChecked="{Binding QuotaSaveNotice}" Content="{local:T settings.quotaSaveNotice}" Margin="0,0,8,0" />
+                  <NumericUpDown Value="{Binding QuotaSaveNoticePercent}" Minimum="1" Maximum="50" Increment="1" FormatString="0"
+                                 Width="110" IsEnabled="{Binding QuotaSaveNotice}" VerticalAlignment="Center"
+                                 AutomationProperties.Name="{local:T settings.quotaSaveNotice.name}" Margin="0,0,8,0" />
+                  <TextBlock Text="{local:T settings.quotaWarn.percent}" VerticalAlignment="Center" />
+                </WrapPanel>
                 <!-- Tab status channel: AppConfig.TabStatusChannel (#247). -->
                 <CheckBox IsChecked="{Binding TabStatusChannel}" Content="{local:T settings.tabStatusChannel}"
                           ToolTip.Tip="{local:T settings.tabStatusChannel.tip}" />

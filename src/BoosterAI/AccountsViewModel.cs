@@ -420,7 +420,10 @@ public sealed partial class MainViewModel
     /// </summary>
     internal void CheckQuota(string cli, string key, string? accountName, AccountLimits limits)
     {
-        if (QuotaWatched(cli, key)) WarnQuota(cli, key, accountName, limits);
+        // The save notice to running agents (#275, CheckSaveNotice) has its own setting and threshold.
+        if (!QuotaWatched(cli, key)) return;
+        WarnQuota(cli, key, accountName, limits);
+        CheckSaveNotice(cli, key, accountName, limits);
     }
 
     /// <summary>Sends a system notification (#239); tests replace it so no real notification is shown.</summary>

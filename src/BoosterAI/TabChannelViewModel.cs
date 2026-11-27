@@ -21,6 +21,7 @@ public sealed partial class TabViewModel
     internal void SetChannel(TabChannelState state)
     {
         var statusChanged = _channel.Status != state.Status;
+        var noticeChanged = _channel.NoticeReadAt != state.NoticeReadAt;
         _channel = state;
         var open = new List<QuestionViewModel>();
         foreach (var q in state.Open)
@@ -33,6 +34,7 @@ public sealed partial class TabViewModel
         var changed = !open.SequenceEqual(_questions);
         _questions = open;
         if (statusChanged) RaiseAgentStatus();
+        if (noticeChanged && SaveNotice is not null) RaiseStatusTexts();
         if (changed) RaiseQuestions();
         UpdateStatusSeen();
     }

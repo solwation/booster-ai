@@ -239,6 +239,48 @@ def ask(question, options=None, allow_free_text=None, timeout=None, cancelled=No
         time.sleep(POLL)
 
 
+def take_notice():
+    """A notice BoosterAI left beside the events file (tabN.notice, #275), taken once: renamed away first, so a second
+    reader finds nothing, then read, removed and recorded as a notice-read event. None when there is none."""
+    try:
+        events, _ = channel()
+    except ChannelError:
+        return None
+    if not events.endswith(".events"):
+        return None
+    path = events[:-len(".events")] + ".notice"
+    taken = "%s.%d.taken" % (path, os.getpid())
+    try:
+        os.rename(path, taken)
+    except OSError:
+        return None
+    try:
+        with open(taken, encoding="utf-8") as f:
+            n = json.load(f)
+    except (OSError, ValueError):
+        n = None
+    finally:
+        try:
+            os.remove(taken)
+        except OSError:
+            pass
+    if not isinstance(n, dict) or not isinstance(n.get("v"), int) or not 1 <= n["v"] <= VERSION:
+        return None
+    nid, text = n.get("id"), clean(n.get("text"), MAX_TEXT * 2, lines=True)
+    if not isinstance(nid, str) or not text:
+        return None
+    try:
+        append({"kind": "notice-read", "id": nid})
+    except ChannelError:
+        pass
+    return text
+
+
+def with_notice(text):
+    notice = take_notice()
+    return text if notice is None else text + "\n\nMessage from BoosterAI (the app that runs this tab, not the user): " + notice
+
+
 TOOLS = [
     {
         "name": "boosterai_status",
@@ -317,7 +359,7 @@ class Server:
             else:
                 self.reply(mid, error=(-32602, "Unknown tool: %s" % name))
                 return
-            self.reply(mid, {"content": [{"type": "text", "text": text}], "isError": False})
+            self.reply(mid, {"content": [{"type": "text", "text": with_notice(text)}], "isError": False})
         except ChannelError as e:
             self.reply(mid, {"content": [{"type": "text", "text": str(e)}], "isError": True})
         finally:

@@ -298,6 +298,42 @@ public class TabChannelAgentTests
         finally { TestShell.StopLeftovers(root); Directory.Delete(root, recursive: true); }
     }
 
+    /// <summary>#275: a notice BoosterAI leaves in tabN.notice comes with the next tool result once, and is recorded as read.</summary>
+    [Fact]
+    public void ANoticeComesWithTheNextToolResultOnce()
+    {
+        if (!Available) return;
+        var root = Directory.CreateTempSubdirectory("bs-agent-notice").FullName;
+        try
+        {
+            var session = TabSession.Open(Path.Combine(root, "s"));
+            var track = session.NewTrack(statusChannel: true)!;
+            using var client = new McpClient(session, track, root);
+            client.Request("initialize", """{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"test","version":"1"}}""");
+            client.Read();
+            client.Request("tools/call", """{"name":"boosterai_status","arguments":{"state":"working","text":"Reading"}}""");
+            Assert.Equal("BoosterAI shows the status working: Reading", ToolText(client.Read()));
+
+            Assert.True(session.SendNotice(track.Id, "quota-session-1", "Please consider saving your state."));
+            Assert.False(File.Exists(Path.Combine(session.Directory, TabChannel.NoticeFile(track.Id) + ".tmp")));
+            client.Request("tools/call", """{"name":"boosterai_status","arguments":{"state":"working","text":"Building"}}""");
+            var text = ToolText(client.Read());
+            Assert.StartsWith("BoosterAI shows the status working: Building", text);
+            Assert.EndsWith("Message from BoosterAI (the app that runs this tab, not the user): Please consider saving your state.", text);
+            Assert.False(File.Exists(Path.Combine(session.Directory, TabChannel.NoticeFile(track.Id))));
+            var state = session.ReadChannel(track.Id);
+            Assert.Equal("quota-session-1", state.NoticeRead);
+            Assert.NotNull(state.NoticeReadAt);
+            Assert.Equal("Building", state.Status!.Text);
+
+            // Taken once: the next call has no notice.
+            client.Request("tools/call", """{"name":"boosterai_status","arguments":{"state":"done","text":"Saved"}}""");
+            Assert.Equal("BoosterAI shows the status done: Saved", ToolText(client.Read()));
+            Assert.Empty(Directory.GetFiles(session.Directory, "*.taken"));
+        }
+        finally { TestShell.StopLeftovers(root); Directory.Delete(root, recursive: true); }
+    }
+
     [Fact]
     public void ACancelledAskStopsWaiting()
     {

@@ -38,8 +38,14 @@ public sealed record QuotaChanges(IReadOnlyList<QuotaWarning> Warnings, IReadOnl
 /// A window that has warned and then shows a reading at or above the threshold has recovered (#239), reported once; a clock-only reset
 /// (an expired window) never counts until a reading confirms it.
 /// </summary>
-public sealed class QuotaWarnings
+public sealed class QuotaWarnings(bool atThreshold = false)
 {
+    /// <summary>
+    /// <paramref name="atThreshold"/>: a share left equal to the threshold already counts as below it (the save notice of #275 at
+    /// "about 1 %", where readings in whole percent would otherwise jump from 1 % straight to 0 %).
+    /// </summary>
+    private readonly bool _atThreshold = atThreshold;
+
     public const int MinPercent = 1;
     public const int MaxPercent = 50;
     public const int DefaultPercent = 5;
@@ -79,7 +85,7 @@ public sealed class QuotaWarnings
         var remaining = LimitPercent.Remaining(window.UsedPercent);
         lock (_lock)
         {
-            if (remaining >= threshold)
+            if (_atThreshold ? remaining > threshold : remaining >= threshold)
             {
                 if (_warned.Remove(key)) back.Add(new QuotaRecovery(agent, account, label, remaining));
                 return;

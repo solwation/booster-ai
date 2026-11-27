@@ -92,6 +92,13 @@ public sealed class AppConfig
     public bool QuotaWarn { get; set; } = true;
     /// <summary>The remaining share (percent) under which <see cref="QuotaWarn"/> warns; clamped to QuotaWarnings.MinPercent..MaxPercent.</summary>
     public int QuotaWarnPercent { get; set; } = QuotaWarnings.DefaultPercent;
+    /// <summary>
+    /// Ask the running agents of an account to save their state when a plan window (5 h or week) has <see cref="QuotaSaveNoticePercent"/> %
+    /// or less left (#275): a short note through the tab status channel, once per account and window. On by default.
+    /// </summary>
+    public bool QuotaSaveNotice { get; set; } = true;
+    /// <summary>The remaining share (percent) at or under which <see cref="QuotaSaveNotice"/> sends; clamped to QuotaWarnings.MinPercent..MaxPercent.</summary>
+    public int QuotaSaveNoticePercent { get; set; } = QuotaSaveNotices.DefaultPercent;
     /// <summary>Main window: show the Advisor row under Claude projects (#180). Only display; launches never read it.</summary>
     public bool ShowAdvisor { get; set; }
     /// <summary>Global CLI zoom in percent of the terminal's default font size; 0 = terminal default (nothing is changed).</summary>
@@ -255,6 +262,8 @@ public static class ConfigMerge
         S(c => c.SoundEffects, (c, v) => c.SoundEffects = v),
         S(c => c.QuotaWarn, (c, v) => c.QuotaWarn = v),
         S(c => c.QuotaWarnPercent, (c, v) => c.QuotaWarnPercent = v),
+        S(c => c.QuotaSaveNotice, (c, v) => c.QuotaSaveNotice = v),
+        S(c => c.QuotaSaveNoticePercent, (c, v) => c.QuotaSaveNoticePercent = v),
         S(c => c.ShowAdvisor, (c, v) => c.ShowAdvisor = v),
         S(c => c.ZoomPercent, (c, v) => c.ZoomPercent = v),
         S(c => c.ProjectSearchRoot, (c, v) => c.ProjectSearchRoot = v),

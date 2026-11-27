@@ -573,6 +573,7 @@ public sealed partial class TabViewModel : Observable
             if (!Set(ref _track, value)) return;
             // A new track is a new events file (#249): the old tab's status and questions are gone with it.
             SetChannel(TabChannelState.Empty);
+            SaveNotice = null;
             RaiseRemoveSubTab();
             (Parent ?? this).GroupChanged();
         }
@@ -865,8 +866,9 @@ public sealed partial class TabViewModel : Observable
         TabState.Denied => Loc.Format("tabstate.Denied", _denied.Count > 0 ? string.Join(", ", _denied) : "?"),
         var s => Loc.Get("tabstate." + s),
     });
-    /// <summary>The status tooltip: what Watching means and when the last turn ended; otherwise the status itself.</summary>
-    public string StatusTip => _state is TabState.Running && Activity == Activity.Watching && _watchingSince is { } since
+    /// <summary>The status tooltip: what Watching means and when the last turn ended; otherwise the status itself. A save notice (#275) adds its line.</summary>
+    public string StatusTip => SaveNoticeLine is { Length: > 0 } notice ? BaseStatusTip + "\n" + notice : BaseStatusTip;
+    private string BaseStatusTip => _state is TabState.Running && Activity == Activity.Watching && _watchingSince is { } since
         ? Loc.Format("tabstate.watching.tip", DayTime(since))
         : _state is TabState.Running && Activity == Activity.Idle && _clearedAt is { } cleared && _closeProgress is null
         ? Loc.Format("tabstate.idleCleared.tip", DayTime(cleared))
@@ -1185,6 +1187,13 @@ public sealed partial class MainViewModel : Observable
     {
         get => QuotaWarnings.Normalize(_cfg.QuotaWarnPercent);
         set { if (value is { } v) _cfg.QuotaWarnPercent = QuotaWarnings.Normalize((int)Math.Round(v)); Raise(); }
+    }
+    /// <summary>Settings → General (#275): ask running agents to save their state when an account's quota is nearly used up.</summary>
+    public bool QuotaSaveNotice { get => _cfg.QuotaSaveNotice; set { _cfg.QuotaSaveNotice = value; Raise(); } }
+    public decimal? QuotaSaveNoticePercent
+    {
+        get => QuotaWarnings.Normalize(_cfg.QuotaSaveNoticePercent);
+        set { if (value is { } v) _cfg.QuotaSaveNoticePercent = QuotaWarnings.Normalize((int)Math.Round(v)); Raise(); }
     }
     /// <summary>The main window's Advisor switch (#180): shows the Advisor row under every Claude project.</summary>
     public bool ShowAdvisor
@@ -1600,7 +1609,7 @@ public sealed partial class MainViewModel : Observable
         foreach (var editor in _compactEditors.Values) editor.UpdateSettings(_cfg.AutoCompactSettings);
         RefreshCompactMode();
         foreach (var name in new[] { nameof(WslDistro), nameof(LinuxTerminal), nameof(ProjectSearchRoot), nameof(CanResetProjectSearchRoot), nameof(Theme), nameof(SelectedTheme), nameof(SelectedLanguage),
-            nameof(SelectedAppearance), nameof(SelectedAfterLaunch), nameof(MinimizeToTray), nameof(Notifications), nameof(SoundEffects), nameof(QuotaWarn), nameof(QuotaWarnPercent), nameof(ShowAdvisor), nameof(SelectedZoom), nameof(AutoUpdateClis), nameof(ShowTabLogo), nameof(TabStatusChannel), nameof(AutoClearIdle), nameof(AutoClearMinutes), nameof(CheckForUpdates) })
+            nameof(SelectedAppearance), nameof(SelectedAfterLaunch), nameof(MinimizeToTray), nameof(Notifications), nameof(SoundEffects), nameof(QuotaWarn), nameof(QuotaWarnPercent), nameof(QuotaSaveNotice), nameof(QuotaSaveNoticePercent), nameof(ShowAdvisor), nameof(SelectedZoom), nameof(AutoUpdateClis), nameof(ShowTabLogo), nameof(TabStatusChannel), nameof(AutoClearIdle), nameof(AutoClearMinutes), nameof(CheckForUpdates) })
             Raise(name);
         foreach (var t in Tabs) t.RaiseColor();
         foreach (var p in Projects) p.RaiseAdvisorVisible();

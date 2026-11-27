@@ -1078,6 +1078,13 @@ for line in sys.stdin:
             DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
     }
 
+    /// <summary>
+    /// Leaves a notice for tab <paramref name="id"/>'s agent (#275, TabChannel.WriteNotice); its MCP server adds it to the
+    /// result of the agent's next boosterai_status or boosterai_ask call and then records a "notice-read" event.
+    /// </summary>
+    public bool SendNotice(string id, string noticeId, string text) =>
+        TabChannel.WriteNotice(Path.Combine(Directory, TabChannel.NoticeFile(id)), noticeId, text, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+
     /// <summary>Uses explicit CLI hooks when available, otherwise the last terminal output time.</summary>
     public Activity ReadActivity(string id, TabLog? log, DateTime nowUtc)
     {
