@@ -231,7 +231,9 @@ public sealed class ModelSwitchTests : IDisposable
         Assert.Contains("codex -c tui.auto_recap=false --model", next);
         Assert.Contains("Continue where the previous agent left off. Read the repository state, recent commits and any notes or issue comments it left before changing anything.", next);
         Assert.DoesNotContain("resume --last", next);
-        Assert.Equal([pid], _stopped);
+        // RestartChanged stops the old CLI on the thread pool (Task.Run), so under a full, parallel run it may not have run yet.
+        Assert.True(SpinWait.SpinUntil(() => { lock (_stopped) return _stopped.Count > 0; }, TimeSpan.FromSeconds(10)));
+        lock (_stopped) Assert.Equal([pid], _stopped);
         Assert.Equal("Atlas restarts with codex / gpt-6.2-sol and continues where the previous agent left off.", vm.Status);
         Assert.Null(atlas.SwitchPrompt);
         Assert.False(atlas.IsChanged);
