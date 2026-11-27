@@ -165,7 +165,9 @@ public class TabChannelAgentTests
             var session = TabSession.Open(Path.Combine(root, "s"));
             var command = Path.Combine(session.Directory, "bin", TabChannelAgent.CommandName);
             Assert.Equal(TabChannelAgent.Script + "\n", File.ReadAllText(command));
-            Assert.Equal(TabChannelAgent.McpConfigJson(session.Directory), File.ReadAllText(Path.Combine(session.Directory, TabChannelAgent.McpConfigFile)));
+            // The configuration names the folder as the tab sees it: on Windows the tab runs in WSL (#259).
+            var seen = OperatingSystem.IsWindows() ? PathMapping.ToWslPath(session.Directory) : session.Directory;
+            Assert.Equal(TabChannelAgent.McpConfigJson(seen), File.ReadAllText(Path.Combine(session.Directory, TabChannelAgent.McpConfigFile)));
             Assert.Single(Directory.GetFileSystemEntries(Path.Combine(session.Directory, "bin")));
             if (OperatingSystem.IsLinux()) Assert.True(File.GetUnixFileMode(command).HasFlag(UnixFileMode.UserExecute));
             // Nothing of a tab's channel exists before its agent writes.
