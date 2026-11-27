@@ -32,9 +32,9 @@ public static class TabChannelAgent
     /// --append-system-prompt, Codex as developer_instructions. No ';' (Windows Terminal), no quote (TOML literal string).
     /// </summary>
     public const string Instruction =
-        "You run in a BoosterAI tab. Call boosterai_status with state done when you have finished and have nothing left to do, "
-        + "blocked with the reason when you cannot continue, and working when you start a new task. "
-        + "Use boosterai_ask only for questions that only the user can answer.";
+        "First load boosterai_status with ToolSearch if deferred. Keep the user informed: before each new step (reading, planning, building, testing, waiting) "
+        + "call it with state working and one short line in the language of the user, not after every tool call. "
+        + "Finish with state done, or blocked with the reason. Use boosterai_ask only for questions the user alone can answer.";
 
     public static string CommandPath(string dir) => $"{dir}/{BinDirectory}/{CommandName}";
     public static string McpConfigPath(string dir) => $"{dir}/{McpConfigFile}";
@@ -242,13 +242,14 @@ def ask(question, options=None, allow_free_text=None, timeout=None, cancelled=No
 TOOLS = [
     {
         "name": "boosterai_status",
-        "description": "Tell BoosterAI, which runs this terminal tab, what you are doing: done (finished, nothing left to do), "
-                       "blocked (cannot continue without help), working (started a new task) or idle. Returns at once.",
+        "description": "Tell BoosterAI, which runs this terminal tab, what you are doing. Call it with working and a short line in the language of the user each time you start a new step "
+                       "(reading, planning, building, testing, waiting), not after every tool call. Also: done (finished, nothing left to do), "
+                       "blocked (cannot continue without help) or idle. Returns at once.",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "state": {"type": "string", "enum": list(STATES)},
-                "text": {"type": "string", "description": "One short line for the user, e.g. what is done or why you are blocked."},
+                "text": {"type": "string", "description": "One short line for the user: what you are doing now, what is done or why you are blocked."},
             },
             "required": ["state"],
         },
