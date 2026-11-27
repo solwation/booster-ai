@@ -195,7 +195,7 @@ internal static class Program
             return;
         }
         SingleInstance? instance;
-        try { instance = SingleInstance.Enter(activate: !args.Contains("--background"), question: args.Contains(Notifier.QuestionUri)); }
+        try { instance = SingleInstance.Enter(activate: !args.Contains("--background"), question: Notifier.IsQuestionLaunch(args)); }
         catch (IOException e)
         {
             Console.Error.WriteLine(e.Message);

@@ -15,6 +15,9 @@ internal static class TestTerminal
     public const string FailPrefix = "fail-terminal-";
     public static readonly ConcurrentQueue<(int Percent, bool Restore)> ZoomRequests = new();
 
+    /// <summary>Every notification of the run (#269): none reaches the real toast or the HKCU protocol registration.</summary>
+    public static readonly ConcurrentQueue<(string Title, string Body, bool OpenQuestion)> Notifications = new();
+
     public static readonly string SessionRoot =
         Path.Combine(Path.GetTempPath(), "boosterai-test-sessions-" + Environment.ProcessId);
 
@@ -28,6 +31,7 @@ internal static class TestTerminal
             Requests.Enqueue(r);
         };
         TabTitles.Restore = (_, _) => { };
+        Notifier.Post = (title, body, openQuestion) => Notifications.Enqueue((title, body, openQuestion));
         TerminalFocus.Run = _ => { };
         // Arranging tabs (#254) never reads or moves the developer's real Windows Terminal tabs.
         TerminalOrder.Run = _ => { };

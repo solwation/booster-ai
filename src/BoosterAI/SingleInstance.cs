@@ -162,7 +162,10 @@ internal sealed class SingleInstance : IDisposable
                 await pipe.ConnectAsync(timeout.Token);
                 var pid = new byte[4];
                 await pipe.ReadExactlyAsync(pid, timeout.Token);
-                // The menu-launched process can transfer its foreground permission to the existing GUI.
+                // The launched process (Start menu, or the shell's protocol launch for a toast click, #269) may set the
+                // foreground window under Windows' foreground lock; it passes that right to the GUI, whose Restore then
+                // shows and activates the window even when it is minimized or hidden in the tray. Without it Windows only
+                // flashes the taskbar button.
                 if (activate && OperatingSystem.IsWindows())
                     AllowSetForegroundWindow(BinaryPrimitives.ReadInt32LittleEndian(pid));
                 await pipe.WriteAsync(new byte[] { activate ? question ? (byte)2 : (byte)1 : (byte)0 }, timeout.Token);

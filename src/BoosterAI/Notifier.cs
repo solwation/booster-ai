@@ -27,28 +27,40 @@ public static class Notifier
 
     private static bool? _linuxActions;
 
+    /// <summary>
+    /// Where <see cref="Show(string, string, bool)"/> sends a notification; the system notification by default.
+    /// Tests replace it with a recording fake, so a test run never writes the user's HKCU registration and never
+    /// shows a real toast (#269: a Windows test run once pointed the boosterai: protocol at testhost.exe).
+    /// </summary>
+    internal static Action<string, string, bool> Post { get; set; } = (title, body, openQuestion) => ShowOnSystem(title, body, openQuestion);
+
     public static void Show(string title, string body) => Show(title, body, openQuestion: false);
 
     /// <param name="openQuestion">A click opens the open question of the tab that asked (#249), not only the window.</param>
     public static void Show(string title, string body, bool openQuestion)
     {
-        try
-        {
-            if (OperatingSystem.IsWindows())
-            {
-                Register();
-                Run("powershell.exe", ToastArgs(title, body, openQuestion));
-            }
-            else if (Launcher.OnPath("notify-send"))
-            {
-                if (_linuxActions ??= NotifySendHasActions()) ShowLinuxClickable(title, body, openQuestion);
-                else Run("notify-send", ["-a", "BoosterAI", title, body]);
-            }
-        }
+        try { Post(title, body, openQuestion); }
         catch (Exception)
         {
             // A notification is a courtesy; the status column still shows what happened.
         }
+    }
+
+    /// <summary>The real toast or notify-send; false when this process is not BoosterAI itself and nothing is shown.</summary>
+    internal static bool ShowOnSystem(string title, string body, bool openQuestion)
+    {
+        // Only BoosterAI shows notifications: a test host or another tool that reaches this code neither toasts nor registers.
+        if (!IsAppProcess(Environment.ProcessPath, EntryAssemblyPath())) return false;
+        if (OperatingSystem.IsWindows())
+        {
+            Register();
+            Run("powershell.exe", ToastArgs(title, body, openQuestion));
+            return true;
+        }
+        if (!Launcher.OnPath("notify-send")) return false;
+        if (_linuxActions ??= NotifySendHasActions()) ShowLinuxClickable(title, body, openQuestion);
+        else Run("notify-send", ["-a", "BoosterAI", title, body]);
+        return true;
     }
 
     /// <summary>The powershell.exe arguments that show the toast (the script is passed encoded).</summary>
@@ -68,10 +80,15 @@ public static class Notifier
             $"[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('{AppId}').Show([Windows.UI.Notifications.ToastNotification]::new($x))");
     }
 
-    /// <summary>An unpackaged app needs its AppUserModelID registered for toasts to show its name and icon.</summary>
-    private static void Register()
+    /// <summary>
+    /// An unpackaged app needs its AppUserModelID registered for toasts to show its name and icon, and the
+    /// <c>boosterai:</c> protocol registered for a click to start BoosterAI. Writes nothing (false) unless
+    /// <see cref="RegistrationCommand"/> accepts this process; the decision is documented there.
+    /// </summary>
+    internal static bool Register()
     {
-        if (!OperatingSystem.IsWindows()) return;
+        if (!OperatingSystem.IsWindows()) return false;
+        if (RegistrationCommand(Environment.ProcessPath, EntryAssemblyPath(), InstalledExe(), File.Exists) is not { } command) return false;
         Microsoft.Win32.Registry.CurrentUser.DeleteSubKeyTree(@"Software\Classes\AppUserModelId\" + LegacyNames.OldAppId, throwOnMissingSubKey: false);
         using var key = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(@"Software\Classes\AppUserModelId\" + AppId);
         key.SetValue("DisplayName", "BoosterAI");
@@ -85,14 +102,50 @@ public static class Notifier
             src.CopyTo(dst);
         }
         key.SetValue("IconUri", icon);
-        if (LaunchCommand() is { } command)
-        {
-            using var proto = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(@"Software\Classes\" + Protocol);
-            proto.SetValue("", "URL:BoosterAI");
-            proto.SetValue("URL Protocol", "");
-            using var open = proto.CreateSubKey(@"shell\open\command");
-            open.SetValue("", command);
-        }
+        using var proto = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(@"Software\Classes\" + Protocol);
+        proto.SetValue("", "URL:BoosterAI");
+        proto.SetValue("URL Protocol", "");
+        using var open = proto.CreateSubKey(@"shell\open\command");
+        if (open.GetValue("") as string != command) open.SetValue("", command);
+        return true;
+    }
+
+    /// <summary>
+    /// The protocol command to register, or null to leave the registry alone. The decision (#269):
+    /// only a real BoosterAI run registers (<see cref="IsAppProcess"/>), never testhost, a setup copy
+    /// (BoosterAI-Setup*.exe) or another tool that reaches this code. The installed copy takes precedence when
+    /// it exists, also over a development or portable build: a build folder can be cleaned or moved, and any copy
+    /// hands the click to the running GUI through <see cref="SingleInstance"/>, so the installed one reaches a
+    /// running development build as well. Without an installed copy this copy is registered.
+    /// </summary>
+    public static string? RegistrationCommand(string? processPath, string? entryAssembly, string? installedExe, Func<string, bool> exists)
+    {
+        if (!IsAppProcess(processPath, entryAssembly)) return null;
+        if (!string.IsNullOrEmpty(installedExe) && exists(installedExe)) return LaunchCommand(installedExe);
+        return LaunchCommand(processPath, entryAssembly);
+    }
+
+    /// <summary>True for BoosterAI(.exe) itself or <c>dotnet BoosterAI.dll</c>; false for any other host or name.</summary>
+    public static bool IsAppProcess(string? processPath, string? entryAssembly)
+    {
+        var exe = FileName(processPath);
+        if (exe.Equals("dotnet", StringComparison.OrdinalIgnoreCase) || exe.Equals("dotnet.exe", StringComparison.OrdinalIgnoreCase))
+            return FileName(entryAssembly).Equals(Installer.AppName + ".dll", StringComparison.OrdinalIgnoreCase);
+        return exe.Equals(Installer.AppName, StringComparison.OrdinalIgnoreCase) || exe.Equals(Installer.AppName + ".exe", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>True when the start arguments carry the click that asks for the open question (#249); a trailing slash is tolerated.</summary>
+    public static bool IsQuestionLaunch(IEnumerable<string> args) =>
+        args.Any(a => a.TrimEnd('/').Equals(QuestionUri, StringComparison.OrdinalIgnoreCase));
+
+    private static string FileName(string? path) => string.IsNullOrEmpty(path) ? "" : path[(path.LastIndexOfAny(['/', '\\']) + 1)..];
+
+    private static string? EntryAssemblyPath() => System.Reflection.Assembly.GetEntryAssembly()?.Location;
+
+    private static string? InstalledExe()
+    {
+        try { return Installer.CurrentPlan().Exe; }
+        catch (Exception) { return null; }
     }
 
     /// <summary>The protocol's open command for this copy of BoosterAI, or null when the executable is unknown.</summary>

@@ -240,6 +240,106 @@ public class NotifierTests
         Assert.Null(Notifier.LaunchCommand(""));
     }
 
+    [Theory]
+    [InlineData(@"C:\Users\me\AppData\Local\Programs\BoosterAI\BoosterAI.exe", null, true)]
+    [InlineData("/home/me/src/booster-ai/src/BoosterAI/bin/Release/net10.0/BoosterAI", null, true)]
+    [InlineData(@"C:\dotnet\dotnet.exe", @"C:\src\BoosterAI.dll", true)]
+    [InlineData("/usr/bin/dotnet", "/src/BoosterAI.dll", true)]
+    [InlineData(@"C:\src\tests\BoosterAI.Tests\bin\Debug\net10.0\testhost.exe", null, false)]
+    [InlineData("/src/tests/BoosterAI.Tests/bin/Debug/net10.0/testhost", null, false)]
+    [InlineData(@"C:\dotnet\dotnet.exe", @"C:\src\testhost.dll", false)]
+    [InlineData(@"C:\dotnet\dotnet.exe", null, false)]
+    [InlineData(@"C:\Users\me\Downloads\BoosterAI-Setup-0.55.0-win-x64.exe", null, false)]
+    [InlineData(@"C:\Tools\powershell.exe", null, false)]
+    [InlineData(null, null, false)]
+    public void OnlyBoosterAiItselfCountsAsTheApp(string? processPath, string? entryAssembly, bool app) =>
+        Assert.Equal(app, Notifier.IsAppProcess(processPath, entryAssembly));
+
+    [Fact]
+    public void TesthostAndToolsNeverRegisterTheProtocol()
+    {
+        const string installed = @"C:\Users\me\AppData\Local\Programs\BoosterAI\BoosterAI.exe";
+        Assert.Null(Notifier.RegistrationCommand(@"C:\src\bin\testhost.exe", null, installed, _ => true));
+        Assert.Null(Notifier.RegistrationCommand(@"C:\dotnet\dotnet.exe", @"C:\src\testhost.dll", installed, _ => true));
+        Assert.Null(Notifier.RegistrationCommand(@"C:\Downloads\BoosterAI-Setup-1.0.0-win-x64.exe", null, installed, _ => true));
+    }
+
+    [Fact]
+    public void TheInstalledCopyIsRegisteredWhenItExistsElseThisCopy()
+    {
+        const string installed = @"C:\Users\me\AppData\Local\Programs\BoosterAI\BoosterAI.exe";
+        const string dev = @"C:\src\booster-ai\src\BoosterAI\bin\Release\net10.0\BoosterAI.exe";
+        Assert.Equal($"\"{installed}\" \"%1\"", Notifier.RegistrationCommand(dev, null, installed, p => p == installed));
+        Assert.Equal($"\"{installed}\" \"%1\"", Notifier.RegistrationCommand(installed, null, installed, p => p == installed));
+        Assert.Equal($"\"{dev}\" \"%1\"", Notifier.RegistrationCommand(dev, null, installed, _ => false));
+        Assert.Equal($"\"{dev}\" \"%1\"", Notifier.RegistrationCommand(dev, null, null, _ => true));
+        Assert.Equal("\"C:\\dotnet\\dotnet.exe\" \"C:\\src\\BoosterAI.dll\" \"%1\"",
+            Notifier.RegistrationCommand(@"C:\dotnet\dotnet.exe", @"C:\src\BoosterAI.dll", installed, _ => false));
+    }
+
+    [Theory]
+    [InlineData(new[] { "boosterai:question" }, true)]
+    [InlineData(new[] { "boosterai:question/" }, true)]
+    [InlineData(new[] { "BOOSTERAI:Question" }, true)]
+    [InlineData(new[] { "boosterai:show" }, false)]
+    [InlineData(new string[0], false)]
+    public void TheQuestionClickIsRecognisedInTheStartArguments(string[] args, bool question) =>
+        Assert.Equal(question, Notifier.IsQuestionLaunch(args));
+
+    [Fact]
+    public void TheTestRunSendsNotificationsToTheFakeAndLeavesTheRegistrationAlone()
+    {
+        // #269: a Windows test run once pointed HKCU\Software\Classes\boosterai at testhost.exe.
+        var before = RegistrySnapshot();
+        var title = "T-" + Guid.NewGuid().ToString("N");
+        Notifier.Show(title, "B", openQuestion: true);
+        Assert.Contains(TestTerminal.Notifications, n => n.Title == title && n.OpenQuestion);
+        // Even the real path refuses in this process: testhost is not BoosterAI, so nothing is shown or registered.
+        Assert.False(Notifier.IsAppProcess(Environment.ProcessPath, System.Reflection.Assembly.GetEntryAssembly()?.Location));
+        Assert.False(Notifier.ShowOnSystem(title, "B", openQuestion: false));
+        Assert.False(Notifier.Register());
+        Assert.Equal(before, RegistrySnapshot());
+    }
+
+    [Fact]
+    public void AViewModelErrorNotificationReachesTheFake()
+    {
+        // ViewModels' failed-start toast (#269 reached Notifier.Show this way) goes to the test fake.
+        var name = TestTerminal.FailPrefix + Guid.NewGuid().ToString("N");
+        var vm = new MainViewModel(new AppConfig { Notifications = true, SoundEffects = false, Tabs = [new() { Name = name, Directory = "~/alpha" }] });
+        Assert.False(vm.Launch());
+        Assert.Contains(TestTerminal.Notifications, n => n.Body.Contains("synthetic terminal failure"));
+    }
+
+    [Fact]
+    public void TheDefaultQuotaAndChannelNotificationsReachTheFake()
+    {
+        // A Windows run showed real quota toasts from test data; the view model's own defaults are Notifier.Show.
+        var vm = new MainViewModel(new AppConfig { Notifications = true });
+        var quota = "Q-" + Guid.NewGuid().ToString("N");
+        var channel = "C-" + Guid.NewGuid().ToString("N");
+        vm.QuotaNotify("BoosterAI", quota);
+        vm.ShowNotification("BoosterAI", channel, true);
+        Assert.Contains(TestTerminal.Notifications, n => n.Body == quota && !n.OpenQuestion);
+        Assert.Contains(TestTerminal.Notifications, n => n.Body == channel && n.OpenQuestion);
+    }
+
+    /// <summary>The protocol and AppUserModelID registrations as text; empty off Windows, where there is no registry.</summary>
+    private static string RegistrySnapshot()
+    {
+        if (!OperatingSystem.IsWindows()) return "";
+        var text = new StringBuilder();
+        foreach (var path in new[] { @"Software\Classes\" + Notifier.Protocol, @"Software\Classes\" + Notifier.Protocol + @"\shell\open\command",
+                     @"Software\Classes\AppUserModelId\" + Notifier.AppId })
+        {
+            using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(path);
+            text.Append(path).Append(key is null ? " (none)" : "").Append('\n');
+            if (key is null) continue;
+            foreach (var name in key.GetValueNames().Order()) text.Append(name).Append('=').Append(key.GetValue(name)).Append('\n');
+        }
+        return text.ToString();
+    }
+
     [Fact]
     public void LinuxNotificationWaitsForItsDefaultAction()
     {
