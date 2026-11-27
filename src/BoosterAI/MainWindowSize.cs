@@ -15,7 +15,7 @@ internal sealed record MainWindowSize(double Width = 1100, double Height = 560, 
         return next.Valid ? next : this;
     }
 
-    internal static string StateFile => Path.Combine(Path.GetDirectoryName(ConfigStore.PathOnDisk)!, "main-window.json");
+    internal static string StateFile => ConfigStore.FileNextToConfig("main-window.json");
 
     internal static MainWindowSize Read(string file)
     {

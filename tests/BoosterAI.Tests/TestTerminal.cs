@@ -26,6 +26,7 @@ internal static class TestTerminal
     [ModuleInitializer]
     internal static void Install()
     {
+        TestConfig.Install();
         Launcher.OpenTerminal = r =>
         {
             if (r.Tabs.Any(t => t.Name.StartsWith(FailPrefix, StringComparison.Ordinal)))

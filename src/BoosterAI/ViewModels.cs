@@ -2559,7 +2559,7 @@ public sealed class UpdateViewModel : Observable
             var target = InstalledPath;
             var staged = target + ".new";
             var work = Path.Combine(Path.GetTempPath(), "BoosterAI-update-" + release.Version);
-            var log = Path.Combine(Path.GetDirectoryName(ConfigStore.PathOnDisk)!, "update.log");
+            var log = ConfigStore.FileNextToConfig("update.log");
             _client ??= new UpdateClient(UpdateClient.CreateHttp());
             var client = _client;
             await Task.Run(() => client.StageAsync(release, asset, _windows, work, staged));

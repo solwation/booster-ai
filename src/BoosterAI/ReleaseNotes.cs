@@ -231,7 +231,7 @@ public sealed class ReleaseNotesSource(HttpClient http, string cacheDir, Func<st
 
     /// <summary>The app's source: the cache next to config.json, the built-in copy and the update check's HTTP client settings.</summary>
     public static ReleaseNotesSource ForApp() =>
-        new(SharedHttp.Value, Path.Combine(Path.GetDirectoryName(ConfigStore.PathOnDisk)!, "releases-cache"), ReleaseNotes.EmbeddedJson, DefaultTimeout);
+        new(SharedHttp.Value, ConfigStore.FileNextToConfig("releases-cache"), ReleaseNotes.EmbeddedJson, DefaultTimeout);
 
     private static readonly Lazy<HttpClient> SharedHttp = new(UpdateClient.CreateHttp);
 

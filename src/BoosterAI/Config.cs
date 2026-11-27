@@ -148,15 +148,42 @@ internal partial class ConfigJsonContext : JsonSerializerContext;
 
 public static class ConfigStore
 {
-    /// <summary>%APPDATA%\BoosterAI on Windows, ~/.config/BoosterAI on Linux.</summary>
-    public static string PathOnDisk { get; private set; } = System.IO.Path.Combine(
+    /// <summary>The user's real config: %APPDATA%\BoosterAI\config.json on Windows, ~/.config/BoosterAI/config.json on Linux.</summary>
+    public static string RealPath { get; } = System.IO.Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "BoosterAI", "config.json");
+
+    /// <summary>The config in use: <see cref="RealPath"/> unless <see cref="UseFile"/> chose another file.</summary>
+    public static string PathOnDisk { get; private set; } = RealPath;
 
     /// <summary>Reads (and saves) this file instead of the real config; used by <c>--config</c> for screenshots.</summary>
     public static void UseFile(string path)
     {
-        PathOnDisk = System.IO.Path.GetFullPath(path);
+        PathOnDisk = Guard(System.IO.Path.GetFullPath(path));
         _customFile = true;
+    }
+
+    /// <summary>A file of BoosterAI's own next to the config in use (main-window.json, models-cache.json, logs, ...).</summary>
+    public static string FileNextToConfig(string name) =>
+        Guard(System.IO.Path.Combine(System.IO.Path.GetDirectoryName(PathOnDisk)!, name));
+
+    /// <summary>
+    /// A folder no config file may be read or written in; the test assembly sets it to the real config folder (#282),
+    /// so a test that forgets its own config fails instead of overwriting the user's tabs and accounts.
+    /// </summary>
+    internal static string? ForbiddenFolder { get; set; }
+
+    /// <summary>Returns <paramref name="path"/>, or throws when it lies in <see cref="ForbiddenFolder"/>.</summary>
+    internal static string Guard(string path)
+    {
+        if (ForbiddenFolder is { } forbidden)
+        {
+            var full = System.IO.Path.GetFullPath(path);
+            var folder = System.IO.Path.TrimEndingDirectorySeparator(System.IO.Path.GetFullPath(forbidden));
+            var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+            if (full.Equals(folder, comparison) || full.StartsWith(folder + System.IO.Path.DirectorySeparatorChar, comparison))
+                throw new InvalidOperationException("Access to the real BoosterAI config folder is blocked: " + full);
+        }
+        return path;
     }
 
     // A --config file is never filled from the user's old BoosterStart config.
@@ -164,6 +191,7 @@ public static class ConfigStore
 
     public static AppConfig Load()
     {
+        Guard(PathOnDisk);
         if (!_customFile) LegacyNames.MigrateConfig(LegacyNames.OldConfigPath, PathOnDisk);
         try
         {
@@ -212,6 +240,7 @@ public static class ConfigStore
     /// <summary>The config as it is on disk now, or null when there is none or it cannot be read; never migrates.</summary>
     public static AppConfig? TryRead()
     {
+        Guard(PathOnDisk);
         try
         {
             return File.Exists(PathOnDisk) ? Parse(File.ReadAllText(PathOnDisk)) : null;
@@ -225,6 +254,7 @@ public static class ConfigStore
 
     public static void Save(AppConfig cfg)
     {
+        Guard(PathOnDisk);
         System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(PathOnDisk)!);
         var tmp = PathOnDisk + ".tmp";
         File.WriteAllText(tmp, JsonSerializer.Serialize(cfg, ConfigJsonContext.Default.AppConfig));

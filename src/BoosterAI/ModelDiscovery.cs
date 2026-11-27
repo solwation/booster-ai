@@ -49,7 +49,7 @@ public static class ModelDiscovery
         catch (JsonException) { return []; }
     }
 
-    private static string CachePath => Path.Combine(Path.GetDirectoryName(ConfigStore.PathOnDisk) ?? ".", "models-cache.json");
+    private static string CachePath => ConfigStore.FileNextToConfig("models-cache.json");
 
     /// <summary>Writes the cache; the time is passed in for tests.</summary>
     public static void SaveCache(string path, DateTime fetchedUtc, IReadOnlyDictionary<string, string[]> models)

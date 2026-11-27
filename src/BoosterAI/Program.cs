@@ -224,7 +224,7 @@ internal static class Program
         return Installer.RunQuiet(Setup,
             () => Installer.Install(plan, null, [], null, new Progress<string>()),
             () => Installer.Uninstall(plan),
-            Path.Combine(Path.GetDirectoryName(ConfigStore.PathOnDisk)!, Installer.LogName));
+            ConfigStore.FileNextToConfig(Installer.LogName));
     }
 
     /// <summary>The setup check and the install and alias commands it can offer (#74); nothing is run.</summary>

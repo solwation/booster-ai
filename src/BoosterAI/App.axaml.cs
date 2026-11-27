@@ -112,7 +112,7 @@ public partial class App : Application
             if (!confirm.Confirmed || !OperatingSystem.IsWindows()) return;
             var problems = Installer.Uninstall(plan);
             if (problems.Count == 0) return;
-            try { File.AppendAllText(Path.Combine(Path.GetDirectoryName(ConfigStore.PathOnDisk)!, "uninstall.log"),
+            try { File.AppendAllText(ConfigStore.FileNextToConfig("uninstall.log"),
                 DateTime.Now.ToString("o") + " " + string.Join("; ", problems) + Environment.NewLine); }
             catch (Exception) { }
         };

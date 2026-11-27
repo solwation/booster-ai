@@ -341,6 +341,7 @@ public static class Installer
     /// </summary>
     public static void WriteConfig(string path, SetupSettings? settings, IReadOnlyList<FoundProject> projects, string? searchRoot = null)
     {
+        ConfigStore.Guard(path);
         AppConfig? existing = null;
         if (File.Exists(path))
         {
