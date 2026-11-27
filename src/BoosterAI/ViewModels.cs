@@ -94,6 +94,7 @@ public sealed partial class TabViewModel : Observable
         _orkester = c.Orkester;
         _nonInteractive = c.NonInteractive;
         _account = c.Account ?? "";
+        _modelMemory = c.ModelMemory is null ? [] : new Dictionary<string, string>(c.ModelMemory);
         PropertyChanged += (_, e) =>
         {
             if (e.PropertyName is nameof(Name) or nameof(Llm) or nameof(StatusText) or nameof(Account)) Raise(nameof(PeekHeader));
@@ -209,6 +210,29 @@ public sealed partial class TabViewModel : Observable
     }
     public bool HasAdvisorWarning => AdvisorWarning is not null;
     internal void RaiseAdvisorWarning() { Raise(nameof(AdvisorWarning)); Raise(nameof(HasAdvisorWarning)); }
+    // The model last used per agent and account on this tab (#257); see TabConfig.ModelMemory.
+    private readonly Dictionary<string, string> _modelMemory;
+    private bool _applyingMemory;
+
+    private static string MemoryKey(string llm, string account) => account == "" || !Accounts.Supports(llm) ? llm : llm + "/" + account;
+
+    /// <summary>Remembers the current model for the current agent and account, unless it is not one the agent offers.</summary>
+    private void RememberModel()
+    {
+        if (Catalog.ModelsFor(_llm).Contains(_model)) _modelMemory[MemoryKey(_llm, _account)] = _model;
+    }
+
+    /// <summary>The model remembered for the agent and account when the agent still offers it; otherwise null (use the default).</summary>
+    private string? RecalledModel(string llm, string account) =>
+        _modelMemory.TryGetValue(MemoryKey(llm, account), out var m) && Catalog.ModelsFor(llm).Contains(m) ? m : null;
+
+    private void ApplyRecalledModel(string model)
+    {
+        _applyingMemory = true;
+        try { Model = model; }
+        finally { _applyingMemory = false; }
+    }
+
     public string Model
     {
         get => _model;
@@ -216,6 +240,7 @@ public sealed partial class TabViewModel : Observable
         {
             var usedFableQuota = UsesFableQuota;
             if (!Set(ref _model, value?.Trim() ?? "")) return;
+            if (!_applyingMemory) RememberModel();
             AdvisorInputsChanged();
             if (usedFableQuota != UsesFableQuota) AccountQuotaChoiceChanged();
             ChoiceChanged();
@@ -242,7 +267,9 @@ public sealed partial class TabViewModel : Observable
         get => _account;
         set
         {
+            RememberModel();
             if (!Set(ref _account, value ?? "")) return;
+            if (RecalledModel(_llm, _account) is { } recalled) ApplyRecalledModel(recalled);
             Raise(nameof(SelectedAgentChoice));
             Raise(nameof(AccountLabel));
             Raise(nameof(HasAccount));
@@ -424,7 +451,9 @@ public sealed partial class TabViewModel : Observable
         get => _llm;
         set
         {
-            if (value is null || !Set(ref _llm, value)) return;
+            if (value is null || value == _llm) return;
+            RememberModel();
+            if (!Set(ref _llm, value)) return;
             // Replacing ItemsSource during ComboBox selection re-enters its binding and restores the old item.
             // Refresh after the selection commits, including removal of a previously selected missing CLI.
             Dispatcher.UIThread.Post(RaiseLlms);
@@ -440,8 +469,10 @@ public sealed partial class TabViewModel : Observable
             _owner.OrchestraColumnChanged();
             _owner.SetupRowsChanged();
             // Another CLI's model id rarely fits; fall back to its default. An account belongs to one agent (#186).
-            if (!Catalog.ModelsFor(value).Contains(Model)) Model = Catalog.StandardModel;
+            // The model last used with the new agent comes back (#257); without one, keep a model it offers or use the default.
             if (_account != "" && _owner.AccountsFor(value).All(a => a.Id != _account)) Account = "";
+            if (RecalledModel(value, _account) is { } recalled) ApplyRecalledModel(recalled);
+            else if (!Catalog.ModelsFor(value).Contains(Model)) ApplyRecalledModel(Catalog.StandardModel);
             AccountsChanged();
             ChoiceChanged();
         }
@@ -839,6 +870,7 @@ public sealed partial class TabViewModel : Observable
         Orkester = forLaunch ? Orkester && CanOrkester : Orkester,
         NonInteractive = NonInteractive,
         Account = Accounts.Supports(Llm) ? _account : "",
+        ModelMemory = _modelMemory.Count == 0 ? null : new Dictionary<string, string>(_modelMemory),
         AccountDirectory = forLaunch ? AccountDirectory : null,
         CompactTokens = forLaunch ? _owner.CompactTokens(Llm, Model, Orkester && CanOrkester, AccountDirectory) : null,
     };

@@ -33,6 +33,13 @@ public sealed class TabConfig
     /// <summary>The tab's account (<see cref="AgentAccount.Id"/>, #186); empty for the agent's default account.</summary>
     public string Account { get; set; } = "";
     /// <summary>
+    /// The model last used on this tab per agent (#257), key <c>agent</c> or <c>agent/accountId</c> for a non-default account, so
+    /// switching the agent back restores it. Includes a level in the model id. Null until the tab has switched agent or account.
+    /// Entries the agent no longer offers are ignored when read.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public Dictionary<string, string>? ModelMemory { get; set; }
+    /// <summary>
     /// The account's configuration directory, resolved per launch like <see cref="CompactTokens"/>; null for the default
     /// account. Never written to config.json (the project's copy is null), only into a launched tab's session metadata,
     /// so a recovered tab restarts with the directory it ran with.
