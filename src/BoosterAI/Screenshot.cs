@@ -8,14 +8,14 @@ using Avalonia.Threading;
 namespace BoosterAI;
 
 /// <summary>
-/// <c>--screenshot file.png [--window main|local-model|local-models|close|settings|install|import|restart|remove-project|alias|wsl-shutdown|memory-reclaim|agent-yolo|wsl|unsaved|setup|releases|uninstall] [--theme light|dark] [--config file.json] [--fake-update [manual:]0.3.0] [--fake-status [error:]text] [--fake-denied] [--fake-changed] [--fake-restartable N] [--fake-peek [N]] [--fake-setup [cli|wsl|alias]] [--fake-long-status] [--check-clipping] [--fake-agent-list [N]] [--fake-new-subtab] [--fake-row-menu [N]] [--fake-memory-reclaim gradual|dropcache|disabled|other|old|unknown] [--fake-limits] [--fake-limit-change [seconds]] [--fake-quota] [--fake-dots] [--fake-channel status|question|answered|stale]</c>:
+/// <c>--screenshot file.png [--window main|local-model|local-models|close|settings|install|import|restart|remove-project|alias|wsl-shutdown|memory-reclaim|agent-yolo|wsl|unsaved|setup|releases|uninstall] [--theme light|dark] [--config file.json] [--fake-update [manual:]0.3.0] [--fake-status [error:]text] [--fake-denied] [--fake-changed] [--fake-restartable N] [--fake-peek [N]] [--fake-setup [cli|wsl|alias]] [--fake-long-status] [--check-clipping] [--fake-agent-list [N]] [--fake-command-list [N]] [--fake-new-subtab] [--fake-row-menu [N]] [--fake-memory-reclaim gradual|dropcache|disabled|other|old|unknown] [--fake-limits] [--fake-limit-change [seconds]] [--fake-quota] [--fake-dots] [--fake-channel status|question|answered|stale]</c>:
 /// renders a window with Avalonia's headless Skia platform. Nothing is shown on the desktop and no
 /// focus changes. The window frame (title bar) is not drawn; only the client area.
 /// </summary>
 internal sealed record ScreenshotOptions(string File, string Window, string? FakeUpdate, string? FakeStatus, bool FakeDenied, bool FakeChanged,
     int? FakePeek = null, int FakeRestartable = 0, string? FakeSetup = null, string? Tab = null, bool FakeOptimization = false, int? FakeMemoryCap = null,
     string? Section = null, string? FakeMemoryState = null, int? Width = null, int? Height = null, bool FakeOrchestraIdle = false, int? FakeMemorySaved = null,
-    bool FakeLongStatus = false, bool CheckClipping = false, string? FakeMemoryReclaim = null, int? FakeAgentList = null,
+    bool FakeLongStatus = false, bool CheckClipping = false, string? FakeMemoryReclaim = null, int? FakeAgentList = null, int? FakeCommandList = null,
     bool FakeNewSubTab = false, int? FakeRowMenu = null, bool FakeLimits = false, bool FakeQuota = false, bool FakeDots = false, bool FakeLimitChange = false,
     string? FakeChannel = null);
 
@@ -41,6 +41,7 @@ internal static class Screenshot
             int.TryParse(Value(args, "--fake-memory-saved"), out var saved) ? saved : null,
             args.Contains("--fake-long-status"), args.Contains("--check-clipping"), Value(args, "--fake-memory-reclaim"),
             !args.Contains("--fake-agent-list") ? null : int.TryParse(Value(args, "--fake-agent-list"), out var list) ? list : 0,
+            !args.Contains("--fake-command-list") ? null : int.TryParse(Value(args, "--fake-command-list"), out var commandRow) ? commandRow : 0,
             args.Contains("--fake-new-subtab"),
             !args.Contains("--fake-row-menu") ? null : int.TryParse(Value(args, "--fake-row-menu"), out var menu) ? menu : -1,
             args.Contains("--fake-limits"), args.Contains("--fake-quota"), args.Contains("--fake-dots"), args.Contains("--fake-limit-change"),
@@ -304,6 +305,8 @@ internal static class Screenshot
             Thread.Sleep(50);
         }
         if (o.FakeOrchestraIdle) vm.ShowSampleOrchestraIdle();
+        // --fake-command-list [N]: invented start commands (#255) for every row, no discovery runs.
+        if (o.FakeCommandList is not null) vm.ShowSampleCommands();
         // --fake-long-status: the longest fixed status texts, with the orchestra column shown (#152).
         if (o.FakeLongStatus) vm.ShowSampleLongStatus();
         // --fake-dots: one row per status dot shape (#222): working, busy, waiting, watching, starting, failed, closed.
@@ -332,6 +335,9 @@ internal static class Screenshot
         else if (questionRow is not null && window is MainWindow main) WithQuestionPanel(main, frame, questionRow).Save(o.File);
         // --fake-agent-list [N]: the Nth row's Agent box open, with its agent and account entries (#194).
         else if (o.FakeAgentList is { } row) WithAgentList(window, frame, row).Save(o.File);
+        // --fake-command-list [N]: the Nth row's start command list open (#255).
+        else if (o.FakeCommandList is { } commandRow)
+            WithOpenList(window, frame, window.GetVisualDescendants().OfType<ComboBox>().Where(c => c.Classes.Contains("start-command") && c.IsEffectivelyVisible).ElementAt(commandRow), "start command list").Save(o.File);
         // --fake-row-menu [N]: the Nth visible row's ⋯ menu open (default: the --fake-new-subtab row, else the first).
         else if (o.FakeRowMenu is { } menuRow)
             WithRowMenu(window, frame, menuRow >= 0 ? menuRow : newSubTab is not null ? vm.VisibleTabs.ToList().IndexOf(newSubTab) : 0).Save(o.File);
@@ -430,9 +436,12 @@ internal static class Screenshot
     }
 
     /// <summary>Opens the Agent box of row <paramref name="row"/> and draws its list onto the window frame below the box.</summary>
-    private static Bitmap WithAgentList(Window window, Bitmap frame, int row)
+    private static Bitmap WithAgentList(Window window, Bitmap frame, int row) =>
+        WithOpenList(window, frame, window.GetVisualDescendants().OfType<ComboBox>().Where(c => c.ItemsSource is IReadOnlyList<AgentChoice>).ElementAt(row), "agent list");
+
+    /// <summary>Opens <paramref name="box"/> and draws its list onto the window frame below the box.</summary>
+    private static Bitmap WithOpenList(Window window, Bitmap frame, ComboBox box, string what)
     {
-        var box = window.GetVisualDescendants().OfType<ComboBox>().Where(c => c.ItemsSource is IReadOnlyList<AgentChoice>).ElementAt(row);
         box.IsDropDownOpen = true;
         for (var i = 0; i < 3; i++)
         {
@@ -441,10 +450,10 @@ internal static class Screenshot
             AvaloniaHeadlessPlatform.ForceRenderTimerTick();
         }
         var list = box.GetVisualDescendants().OfType<Avalonia.Controls.Primitives.Popup>().FirstOrDefault()?.Child
-            ?? throw new InvalidOperationException("The agent list did not open");
+            ?? throw new InvalidOperationException($"The {what} did not open");
         list.UpdateLayout();
         var size = list.Bounds.Size;
-        if (size.Width <= 0) throw new InvalidOperationException("The agent list did not open");
+        if (size.Width <= 0) throw new InvalidOperationException($"The {what} did not open");
         var listFrame = new RenderTargetBitmap(new PixelSize((int)Math.Ceiling(size.Width), (int)Math.Ceiling(size.Height)), frame.Dpi);
         listFrame.Render(list);
         var cell = box.TranslatePoint(new Point(0, box.Bounds.Height), window) ?? default;
