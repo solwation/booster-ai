@@ -169,12 +169,7 @@ public partial class MainWindow : Window
 
     private async void OnFindProjects(object? sender, RoutedEventArgs e) => await ImportProjectsWindow.FindProjects(this, _vm);
 
-    private void OnInstallOrkester(object? sender, RoutedEventArgs e)
-    {
-        if ((sender as Control)?.DataContext is TabViewModel tab) ConfirmInstallOrkester(tab);
-    }
-
-    /// <summary>The install link and the start command list's install entry (#255) ask the same question.</summary>
+    /// <summary>The start command list's install entry (#255) asks before an AI installs the orchestra.</summary>
     private async void ConfirmInstallOrkester(TabViewModel tab)
     {
         if (await new ConfirmInstallWindow(tab).ShowDialog<bool>(this)) _vm.InstallOrkester(tab);

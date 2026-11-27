@@ -2,7 +2,7 @@ using Avalonia.Threading;
 
 namespace BoosterAI;
 
-public enum StartChoiceKind { None, Orkester, InstallOrkester, Header, Command, Missing }
+public enum StartChoiceKind { None, Orkester, InstallOrkester, ReadMoreOrkester, Header, Command, Missing }
 
 /// <summary>
 /// One entry of a row's start command list (#255): no command, /orkester (or its install offer), a group header
@@ -50,10 +50,7 @@ public sealed partial class TabViewModel
     public bool HasStartCommand => IsAi && (_orkester && CanOrkester || !_orkester && _command.Length > 0);
 
     /// <summary>The list shows where there is something to choose: the orchestra, a found command or a saved one.</summary>
-    public bool ShowStartCommands => IsAi && (CanOrkester || _command.Length > 0 || Commands.Count > 0);
-
-    /// <summary>Today's install link (#152) where the list would only offer it: no orchestra here and no other command.</summary>
-    public bool ShowInstallLink => CanInstallOrkester && !ShowStartCommands;
+    public bool ShowStartCommands => IsAi && (CanOrkester || CanInstallOrkester || _command.Length > 0 || Commands.Count > 0);
 
     /// <summary>Run once (#255) for the chosen command; shown with the arguments only while a command is chosen.</summary>
     public bool RunOnce
@@ -127,7 +124,10 @@ public sealed partial class TabViewModel
             if (CanOrkester || _orkester && IsAi && _hasOrkester is null)
                 list.Add(new(StartChoiceKind.Orkester, StartCommands.Orkester, StartCommands.Orkester, Loc.Get("command.orkester.description")));
             else if (CanInstallOrkester)
+            {
                 list.Add(new(StartChoiceKind.InstallOrkester, StartCommands.Orkester, Loc.Get("command.install"), Loc.Get("install.tip")));
+                list.Add(new(StartChoiceKind.ReadMoreOrkester, "", Loc.Get("command.readmore"), Loc.Get("command.readmore.tip")));
+            }
             var commands = Commands;
             foreach (var group in commands.GroupBy(c => c.Source).OrderBy(g => g.Key))
             {
@@ -171,6 +171,9 @@ public sealed partial class TabViewModel
                     // The entry opens the same confirmation as the install link; the choice itself stays as it was.
                     _owner.RequestInstallOrkester(this);
                     break;
+                case StartChoiceKind.ReadMoreOrkester:
+                    _owner.OpenOrchestraInfo();
+                    break;
             }
             // A header or the install entry leaves the choice; show the saved one again after the selection commits.
             Dispatcher.UIThread.Post(() => Raise(nameof(SelectedStartChoice)));
@@ -181,7 +184,7 @@ public sealed partial class TabViewModel
     internal void StartCommandChanged()
     {
         foreach (var n in new[] { nameof(Orkester), nameof(Command), nameof(NonInteractive), nameof(RunOnce), nameof(HasStartCommand),
-                     nameof(ShowStartCommands), nameof(ShowInstallLink), nameof(StartCommandTip),
+                     nameof(ShowStartCommands), nameof(StartCommandTip),
                      nameof(ArgumentsMenu), nameof(ArgumentsTip), nameof(CommandBadge), nameof(HasCommandBadge) }) Raise(n);
         // Replacing the box's items while it commits a selection re-enters it (see Llm); refresh them afterwards.
         Dispatcher.UIThread.Post(() => { Raise(nameof(StartChoices)); Raise(nameof(SelectedStartChoice)); });
@@ -195,7 +198,7 @@ public sealed partial class TabViewModel
         Raise(nameof(Commands));
         Raise(nameof(StartChoices));
         Raise(nameof(SelectedStartChoice));
-        foreach (var n in new[] { nameof(ShowStartCommands), nameof(ShowInstallLink), nameof(StartCommandTip), nameof(CommandBadge), nameof(HasCommandBadge) }) Raise(n);
+        foreach (var n in new[] { nameof(ShowStartCommands), nameof(StartCommandTip), nameof(CommandBadge), nameof(HasCommandBadge) }) Raise(n);
         _owner.OrchestraColumnChanged();
     }
 }
@@ -218,6 +221,17 @@ public sealed partial class MainViewModel
     /// <summary>Asks the window to offer the orchestra install for <paramref name="tab"/> (the list's install entry, #255).</summary>
     public event Action<TabViewModel>? InstallOrkesterRequested;
     internal void RequestInstallOrkester(TabViewModel tab) => InstallOrkesterRequested?.Invoke(tab);
+
+    /// <summary>Where the start command list's Read more entry (#267) leads.</summary>
+    public const string OrchestraInfoUrl = "https://solwation.github.io/dirigenten-och-orkestern/";
+
+    /// <summary>Opens the link; tests replace it so no browser starts.</summary>
+    internal Func<string, bool> OpenLink { get; set; } = ExternalLink.Open;
+
+    internal void OpenOrchestraInfo()
+    {
+        if (!OpenLink(OrchestraInfoUrl)) ShowError(ErrorKind.Link, Loc.Format("status.openFailed", OrchestraInfoUrl), OpenOrchestraInfo);
+    }
 
     /// <summary>What to discover for the row; null for an agent without command files.</summary>
     internal StartCommandRequest? CommandRequest(TabViewModel tab)

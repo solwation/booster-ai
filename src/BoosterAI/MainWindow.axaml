@@ -386,7 +386,7 @@
                             Margin="0,0,12,0" ToolTip.Tip="{local:T model.tip}" />
 
                   <!-- The start command (#255): no command, /orkester at the top, then the commands found for the agent and folder,
-                       grouped by source. Where the list would only offer the orchestra's install, the install link stays (#152). -->
+                       grouped by source. Without the orchestra the list offers its install and Read more (#267). -->
                   <Grid Grid.Column="7" VerticalAlignment="Center" Opacity="{Binding RowOpacity}" ColumnDefinitions="*,Auto">
                     <ComboBox Classes="field words start-command" ItemsSource="{Binding StartChoices}" SelectedItem="{Binding SelectedStartChoice}"
                               IsVisible="{Binding ShowStartCommands}" Margin="0,0,12,0"
@@ -415,11 +415,6 @@
                     <TextBlock Grid.Column="1" Classes="caption muted command-badge" Text="{Binding CommandBadge}" IsVisible="{Binding HasCommandBadge}"
                                VerticalAlignment="Center" Margin="-6,0,12,0" Focusable="True" ToolTip.Tip="{Binding StartCommandTip}"
                                AutomationProperties.Name="{Binding StartCommandTip}" />
-                    <Button Grid.ColumnSpan="2" Classes="link" IsVisible="{Binding ShowInstallLink}" Click="OnInstallOrkester"
-                            AutomationProperties.Name="{local:T install.name}"
-                            ToolTip.Tip="{local:T install.tip}">
-                      <TextBlock Text="{local:T install.link}" />
-                    </Button>
                   </Grid>
 
                   <!-- More options (#196): the row menu (Create subtab first) for mouse, keyboard and screen readers. -->

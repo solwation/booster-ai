@@ -1,0 +1,44 @@
+{
+  "Language": "sv",
+  "ProjectSearchRoot": "/home/me/Projects",
+  "DefaultAccountNames": {
+    "claude": "Privat"
+  },
+  "Accounts": [
+    {
+      "Id": "claude-work",
+      "Agent": "claude",
+      "Name": "Work",
+      "Directory": "~/.claude-work"
+    },
+    {
+      "Id": "claude-lab",
+      "Agent": "claude",
+      "Name": "Lab",
+      "Directory": "~/.claude-lab"
+    },
+    {
+      "Id": "claude-team",
+      "Agent": "claude",
+      "Name": "Team",
+      "Directory": "~/.claude-team"
+    }
+  ],
+  "Tabs": [
+    {
+      "Name": "Atlas",
+      "Directory": "/tmp/claude-1000/sc/atlas",
+      "Llm": "claude"
+    },
+    {
+      "Name": "Boreal",
+      "Directory": "/tmp/claude-1000/sc/boreal",
+      "Llm": "claude"
+    },
+    {
+      "Name": "Cirrus",
+      "Directory": "/tmp/claude-1000/sc/cirrus",
+      "Llm": "claude"
+    }
+  ]
+}

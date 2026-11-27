@@ -534,12 +534,10 @@ public class RunOnceToggleTests
     public void ListShowsWhereTheOrchestraOrACommandIs()
     {
         Assert.True(Tab(false, false, true).ShowStartCommands);
-        Assert.False(Tab(false, false, false).ShowStartCommands);
-        Assert.True(Tab(false, false, false).ShowInstallLink);
+        Assert.True(Tab(false, false, false).ShowStartCommands); // the list offers the install instead of a lone link (#267)
         var t = Tab(false, false, false);
         t.Command = "/review";
         Assert.True(t.ShowStartCommands);
-        Assert.False(t.ShowInstallLink);
     }
 
     [Fact]

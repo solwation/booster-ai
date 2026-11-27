@@ -94,6 +94,33 @@ public sealed class MainListTests : IDisposable
     }
 
     [Fact]
+    public void WithoutTheOrchestraTheListOffersInstallAndReadMoreAndKeepsTheChoice()
+    {
+        var vm = new MainViewModel(new AppConfig { Tabs = [new() { Name = "A", Llm = "claude", Directory = "~/proj" }] });
+        var tab = vm.Tabs[0];
+        tab.HasOrkester = false;
+        TabViewModel? asked = null;
+        vm.InstallOrkesterRequested += t => asked = t;
+        string? opened = null;
+        vm.OpenLink = url => { opened = url; return true; };
+        Assert.True(tab.ShowStartCommands);
+        Assert.Equal([StartChoiceKind.None, StartChoiceKind.InstallOrkester, StartChoiceKind.ReadMoreOrkester], tab.StartChoices.Select(c => c.Kind));
+        var before = tab.SelectedStartChoice;
+        tab.SelectedStartChoice = tab.StartChoices.First(c => c.Kind == StartChoiceKind.InstallOrkester);
+        Assert.Same(tab, asked);
+        Assert.False(tab.Orkester);
+        Assert.Equal("", tab.Command);
+        Assert.Equal(before, tab.SelectedStartChoice); // restored, never saved as the start command
+        tab.SelectedStartChoice = tab.StartChoices.First(c => c.Kind == StartChoiceKind.ReadMoreOrkester);
+        Assert.Equal("https://solwation.github.io/dirigenten-och-orkestern/", opened);
+        Assert.Equal(before, tab.SelectedStartChoice);
+        Assert.False(vm.Error.IsVisible);
+        vm.OpenLink = _ => false;
+        tab.SelectedStartChoice = tab.StartChoices.First(c => c.Kind == StartChoiceKind.ReadMoreOrkester);
+        Assert.True(vm.Error.IsVisible);
+    }
+
+    [Fact]
     public void OrkesterIsFirstAfterNoCommandThenTheGroups()
     {
         var previous = Loc.Language;
