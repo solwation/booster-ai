@@ -55,6 +55,7 @@ public class MissingLibraryTests
                 {
                     var expected = new List<string> { "--from-alias" };
                     if (mode == "once" && llm == "codex") expected.Add("exec");
+                    if (llm == "codex") expected.AddRange(["-c", "tui.auto_recap=false"]);
                     expected.AddRange(["--model", model]);
                     // The stub fails at once, so a resumed start falls back to a fresh one with the orchestra (#235).
                     if (mode == "resume") expected.Add(llm == "agy" ? "-i" : "/orkester");

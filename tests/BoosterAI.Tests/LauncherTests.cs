@@ -6,7 +6,7 @@ public class LauncherTests
 {
     [Fact]
     public void ClaudeWithModelAndOrkester() => Assert.Equal(
-        "cd ~/'proj' && CLAUDE_CODE_DISABLE_ADVISOR_TOOL=1 claude --model 'claude-opus-5-5' '/orkester' || true && exec bash",
+        "cd ~/'proj' && CLAUDE_CODE_ENABLE_AWAY_SUMMARY=0 CLAUDE_CODE_DISABLE_ADVISOR_TOOL=1 claude --model 'claude-opus-5-5' '/orkester' || true && exec bash",
         Launcher.TabScript(new TabConfig { Directory = "~/proj", Llm = "claude", Model = "claude-opus-5-5", Orkester = true }));
 
     [Fact]
@@ -94,9 +94,9 @@ public class LauncherTests
     {
         string Script(string advisor, string llm = "claude", bool once = false, string model = "claude-sonnet-5-5") => Launcher.TabScript(
             new TabConfig { Directory = "~/proj", Llm = llm, Model = model, Advisor = advisor, Orkester = once, NonInteractive = once });
-        Assert.Equal("cd ~/'proj' && CLAUDE_CODE_DISABLE_ADVISOR_TOOL=1 claude --model 'claude-sonnet-5-5' || true && exec bash", Script(Catalog.StandardModel));
-        Assert.Equal("cd ~/'proj' && claude --model 'claude-sonnet-5-5' --advisor 'fable' || true && exec bash", Script("fable"));
-        Assert.Equal("cd ~/'proj' && claude --model 'claude-sonnet-5-5' --advisor 'claude-fable-5-2' -p '/orkester' || true && exec bash", Script("claude-fable-5-2", once: true));
+        Assert.Equal("cd ~/'proj' && CLAUDE_CODE_ENABLE_AWAY_SUMMARY=0 CLAUDE_CODE_DISABLE_ADVISOR_TOOL=1 claude --model 'claude-sonnet-5-5' || true && exec bash", Script(Catalog.StandardModel));
+        Assert.Equal("cd ~/'proj' && CLAUDE_CODE_ENABLE_AWAY_SUMMARY=0 claude --model 'claude-sonnet-5-5' --advisor 'fable' || true && exec bash", Script("fable"));
+        Assert.Equal("cd ~/'proj' && CLAUDE_CODE_ENABLE_AWAY_SUMMARY=0 claude --model 'claude-sonnet-5-5' --advisor 'claude-fable-5-2' -p '/orkester' || true && exec bash", Script("claude-fable-5-2", once: true));
         Assert.DoesNotContain("--advisor", Script("fable", "codex"));
         Assert.DoesNotContain("--advisor", Script("bad;rm -rf"));
     }
@@ -129,7 +129,7 @@ public class LauncherTests
 
     [Fact]
     public void OneShotClaudeUsesPrint() => Assert.Equal(
-        "cd ~/'proj' && CLAUDE_CODE_DISABLE_ADVISOR_TOOL=1 claude --model 'x' -p '/orkester' || true && exec bash",
+        "cd ~/'proj' && CLAUDE_CODE_ENABLE_AWAY_SUMMARY=0 CLAUDE_CODE_DISABLE_ADVISOR_TOOL=1 claude --model 'x' -p '/orkester' || true && exec bash",
         Launcher.TabScript(Once("claude")));
 
     [Fact]
@@ -139,7 +139,7 @@ public class LauncherTests
 
     [Fact]
     public void OneShotCodexUsesExec() => Assert.Equal(
-        "cd ~/'proj' && codex exec --model 'x' $(test -d .agents/skills/orkester && echo '$orkester' || echo /orkester)' "
+        "cd ~/'proj' && codex exec -c tui.auto_recap=false --model 'x' $(test -d .agents/skills/orkester && echo '$orkester' || echo /orkester)' "
         + Launcher.ForegroundWatchNote + "' || true && exec bash",
         Launcher.TabScript(Once("codex")));
 
@@ -237,7 +237,7 @@ public class LauncherTests
     [Theory]
     [InlineData("claude", "bs_stream claude --model 'x' -p '/orkester' --output-format stream-json --verbose && ")]
     [InlineData("agy", "finished.)' --output-format stream-json && ")]
-    [InlineData("codex", "bs_run 'codex exec --model")]
+    [InlineData("codex", "bs_run 'codex exec -c tui.auto_recap=false --model")]
     public void OneShotWithTrackingShowsLiveProgress(string llm, string expected)
     {
         var script = Launcher.TabScript(Once(llm), null, new TabTrack("/s/lib.sh", "/s", "tab1"));
@@ -254,7 +254,7 @@ public class LauncherTests
 
     [Theory]
     [InlineData("claude", "claude --continue --model")]
-    [InlineData("codex", "codex resume --last --model")]
+    [InlineData("codex", "codex resume --last -c tui.auto_recap=false --model")]
     [InlineData("agy", "agy --continue --model")]
     public void ReopeningCanExplicitlyContinueWithoutAnInitialPrompt(string llm, string command)
     {
@@ -278,7 +278,7 @@ public class LauncherTests
 
     [Theory]
     [InlineData("claude", "--continue")]
-    [InlineData("codex", "resume\n--last")]
+    [InlineData("codex", "resume\n--last\n-c\ntui.auto_recap=false")]
     [InlineData("agy", "--continue")]
     public void ContinuationArgumentsSurviveBashQuoting(string llm, string expected)
     {
@@ -468,7 +468,7 @@ public class PathMappingTests
     public void WindowsTerminalTabCdsIntoTheWslForm()
     {
         var args = Launcher.WindowsTerminalArgs([new TabConfig { Directory = @"C:\Users\me\Documents\web shop", Llm = "claude" }], "Ubuntu");
-        Assert.StartsWith("cd '/mnt/c/Users/me/Documents/web shop' && CLAUDE_CODE_DISABLE_ADVISOR_TOOL=1 claude", args[^5]);
+        Assert.StartsWith("cd '/mnt/c/Users/me/Documents/web shop' && CLAUDE_CODE_ENABLE_AWAY_SUMMARY=0 CLAUDE_CODE_DISABLE_ADVISOR_TOOL=1 claude", args[^5]);
     }
 
     [Fact]

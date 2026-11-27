@@ -155,18 +155,28 @@ public static class Launcher
         string Build(bool compact)
         {
             var cli = CliCommand(tab, prompt, track, resume, compact);
-            return AdvisorEnvironment(tab) + (track is null ? cli : TrackedCommand(cli, tab, track));
+            return ClaudeEnvironment(tab) + (track is null ? cli : TrackedCommand(cli, tab, track));
         }
         var selected = Build(true);
         return tab.Llm == "claude" && tab.CompactTokens is { } n && AutoCompact.ValidValue("claude", n)
             ? AutoCompact.GuardClaude(selected, Build(false)) : selected;
     }
 
-    // Scope the documented opt-out to the CLI/runner, including shell aliases and streamed one-shot runs.
+    /// <summary>
+    /// The away-summary ("recap") opt-out every claude tab gets, whatever the model (#241): each recap is an extra model call
+    /// on returning to an idle session, and BoosterAI's tabs sit idle a lot. The variable wins over the user's
+    /// awaySummaryEnabled setting, which stays untouched.
+    /// </summary>
+    public const string RecapOptOut = "CLAUDE_CODE_ENABLE_AWAY_SUMMARY=0";
+
+    /// <summary>Codex's counterpart (#241): its TUI writes "automatic recaps" too; a per-run override, so ~/.codex/config.toml stays as it is.</summary>
+    public const string CodexRecapOptOut = "-c tui.auto_recap=false";
+
+    // Scope the documented opt-outs to the CLI/runner, including shell aliases and streamed one-shot runs.
     // Invalid cost-policy choices must not fall back to a saved advisor either. Never change user settings.
-    private static string AdvisorEnvironment(TabConfig tab) => tab.Llm == "claude"
-        && AdvisorPolicy.Evaluate(tab.Llm, tab.Model, tab.Advisor) != AdvisorPolicy.Verdict.Ok
-            ? "CLAUDE_CODE_DISABLE_ADVISOR_TOOL=1 " : "";
+    private static string ClaudeEnvironment(TabConfig tab) => tab.Llm != "claude" ? ""
+        : RecapOptOut + " " + (AdvisorPolicy.Evaluate(tab.Llm, tab.Model, tab.Advisor) != AdvisorPolicy.Verdict.Ok
+            ? "CLAUDE_CODE_DISABLE_ADVISOR_TOOL=1 " : "");
 
     private static string CliCommand(TabConfig tab, string? prompt, TabTrack? track, bool resume, bool compact = true)
     {
@@ -175,6 +185,7 @@ public static class Launcher
         if (tab.Llm == "interpreter") return InterpreterCli.Command(tab, prompt);
         var args = new List<string>();
         if (compact && AutoCompact.Arguments(tab.Llm, tab.CompactTokens) is { Length: > 0 } compactArgs) args.Add(compactArgs);
+        if (tab.Llm == "codex") args.Add(CodexRecapOptOut);
         if (resume && tab.Llm is "claude" or "agy") args.Add("--continue");
         if (resume && tab.Llm == "aider") args.Add("--restore-chat-history");
         if (tab.Model != Catalog.StandardModel) args.Add("--model " + Quote(tab.Model));
@@ -265,7 +276,7 @@ public static class Launcher
             "aider" => "bs_run " + Quote("aider --restore-chat-history" + model + " -m " + Quote(SaveAndClosePrompt)),
             _ => throw new ArgumentException("A save turn requires an AI CLI."),
         };
-        return $"{Cd(InWsl(tab))} && bs_cli && bs_ev close-save token={Quote(token)} && {AdvisorEnvironment(tab)}{command} && bs_done 0 || bs_done $?";
+        return $"{Cd(InWsl(tab))} && bs_cli && bs_ev close-save token={Quote(token)} && {ClaudeEnvironment(tab)}{command} && bs_done 0 || bs_done $?";
     }
 
     internal static string StopTrackedForegroundScript(int pid, long startTime) => $$"""

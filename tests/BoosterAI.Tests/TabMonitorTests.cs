@@ -172,7 +172,7 @@ public class TrackedScriptTests
     public void LogsAroundTheCliAndKeepsTheShellAsAChild()
     {
         var script = Launcher.TabScript(new TabConfig { Directory = "~/proj", Llm = "claude", Model = "claude-opus-5-5", Orkester = true }, null, Track);
-        Assert.Contains("(bs_cli 2>/dev/null || true) && CLAUDE_CODE_DISABLE_ADVISOR_TOOL=1 bs_run ", script);
+        Assert.Contains("(bs_cli 2>/dev/null || true) && CLAUDE_CODE_ENABLE_AWAY_SUMMARY=0 CLAUDE_CODE_DISABLE_ADVISOR_TOOL=1 bs_run ", script);
         Assert.Contains("claude --model", script);
         Assert.Contains("/orkester", script);
         Assert.Contains("(bs_done 0 2>/dev/null || true) || (bs_done $? 2>/dev/null || true)", script);
@@ -417,14 +417,14 @@ public class InPlaceRestartTests
     public void ModelChangeOnClaudeContinuesTheConversation()
     {
         var script = Launcher.RestartScript(Tab("claude", "y"), Track, resume: true);
-        Assert.Contains("\nCLAUDE_CODE_DISABLE_ADVISOR_TOOL=1 bs_run 'claude --continue --model", script);
+        Assert.Contains("\nCLAUDE_CODE_ENABLE_AWAY_SUMMARY=0 CLAUDE_CODE_DISABLE_ADVISOR_TOOL=1 bs_run 'claude --continue --model", script);
         Assert.Contains("--settings", script);
         Assert.Contains("(bs_done 0 2>/dev/null || true) || (bs_done $? 2>/dev/null || true)", script);
     }
 
     [Fact]
     public void ModelChangeOnCodexResumesTheLastSession() => Assert.Contains(
-        "\nbs_run 'codex resume --last --model", Launcher.RestartScript(Tab("codex", "y"), Track, resume: true));
+        "\nbs_run 'codex resume --last -c tui.auto_recap=false --model", Launcher.RestartScript(Tab("codex", "y"), Track, resume: true));
 
     [Fact]
     public void LlmChangeStartsFreshWithTheOrchestra() => Assert.Contains(
@@ -1233,7 +1233,7 @@ public class ExitedRestartTests
             Assert.False(File.Exists(Path.Combine(session.Directory, track.Id + ".next")));
             var args = File.ReadAllLines(Path.Combine(session.Directory, "cli-args"));
             Assert.Equal(3, args.Length);
-            Assert.Equal(resume ? "resume --last" : "", args[1]);
+            Assert.Equal(resume ? "resume --last -c tui.auto_recap=false" : "-c tui.auto_recap=false", args[1]);
             Assert.Equal(3, File.ReadAllLines(Path.Combine(session.Directory, track.Id + ".log")).Count(l => l.Contains(" cli-start")));
             Launcher.RunTabControl(Launcher.CloseTabScript(original.Pid!.Value, original.StartTime!.Value, exitCleanly: true), "Ubuntu");
             Assert.True(process.WaitForExit(30000));

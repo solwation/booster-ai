@@ -18,8 +18,8 @@ public class ResumeFallbackTests
     [InlineData("claude", true, "claude --continue", "bs_run 'claude --model")]
     [InlineData("claude", false, "claude --continue", "bs_run 'claude --model")]
     [InlineData("agy", true, "agy --continue", "bs_run 'agy --model")]
-    [InlineData("codex", true, "codex resume --last", "bs_run 'codex --model")]
-    [InlineData("codex", false, "codex resume --last", "bs_run 'codex --model")]
+    [InlineData("codex", true, "codex resume --last", "bs_run 'codex -c tui.auto_recap=false --model")]
+    [InlineData("codex", false, "codex resume --last", "bs_run 'codex -c tui.auto_recap=false --model")]
     [InlineData("aider", true, "aider --restore-chat-history", "bs_run 'aider --model")]
     public void ResumedStartIsFollowedByOneFreshStart(string llm, bool orkester, string resumed, string fresh)
     {
