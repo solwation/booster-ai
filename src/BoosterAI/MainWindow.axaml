@@ -200,6 +200,11 @@
                   <ContextMenu Closed="OnRowMenuClosed">
                     <MenuItem Header="{local:T subtab.create}" Click="OnAddSubTab" />
                     <MenuItem Header="{local:T row.menu.rename}" Click="OnRenameRow" InputGesture="F2" />
+                    <!-- With a start command (#260): Run once (checkable) and its arguments, formerly an extra line under the row. -->
+                    <MenuItem Header="{local:T command.once}" ToggleType="CheckBox" IsChecked="{Binding RunOnce, Mode=TwoWay}" IsVisible="{Binding HasStartCommand}"
+                              ToolTip.Tip="{local:T command.once.tip}" AutomationProperties.Name="{local:T command.once}" />
+                    <MenuItem Header="{Binding ArgumentsMenu}" Click="OnEditArguments" IsVisible="{Binding HasStartCommand}"
+                              ToolTip.Tip="{Binding ArgumentsTip}" AutomationProperties.Name="{Binding ArgumentsTip}" />
                     <Separator />
                     <MenuItem Header="{local:T row.menu.up}" Click="OnRowMoveUp" IsEnabled="{Binding CanMoveUp}" />
                     <MenuItem Header="{local:T row.menu.down}" Click="OnRowMoveDown" IsEnabled="{Binding CanMoveDown}" />
@@ -382,7 +387,7 @@
 
                   <!-- The start command (#255): no command, /orkester at the top, then the commands found for the agent and folder,
                        grouped by source. Where the list would only offer the orchestra's install, the install link stays (#152). -->
-                  <Panel Grid.Column="7" VerticalAlignment="Center" Opacity="{Binding RowOpacity}">
+                  <Grid Grid.Column="7" VerticalAlignment="Center" Opacity="{Binding RowOpacity}" ColumnDefinitions="*,Auto">
                     <ComboBox Classes="field words start-command" ItemsSource="{Binding StartChoices}" SelectedItem="{Binding SelectedStartChoice}"
                               IsVisible="{Binding ShowStartCommands}" Margin="0,0,12,0"
                               ToolTip.Tip="{Binding StartCommandTip}" AutomationProperties.Name="{local:T col.orkester}">
@@ -406,28 +411,22 @@
                         </DataTemplate>
                       </ComboBox.ItemTemplate>
                     </ComboBox>
-                    <Button Classes="link" IsVisible="{Binding ShowInstallLink}" Click="OnInstallOrkester"
+                    <!-- Run once or arguments set (#260): a small marker beside the list; the tooltip has the details. -->
+                    <TextBlock Grid.Column="1" Classes="caption muted command-badge" Text="{Binding CommandBadge}" IsVisible="{Binding HasCommandBadge}"
+                               VerticalAlignment="Center" Margin="-6,0,12,0" Focusable="True" ToolTip.Tip="{Binding StartCommandTip}"
+                               AutomationProperties.Name="{Binding StartCommandTip}" />
+                    <Button Grid.ColumnSpan="2" Classes="link" IsVisible="{Binding ShowInstallLink}" Click="OnInstallOrkester"
                             AutomationProperties.Name="{local:T install.name}"
                             ToolTip.Tip="{local:T install.tip}">
                       <TextBlock Text="{local:T install.link}" />
                     </Button>
-                  </Panel>
+                  </Grid>
 
                   <!-- More options (#196): the row menu (Create subtab first) for mouse, keyboard and screen readers. -->
                   <Button Grid.Column="8" Classes="icon" Click="OnRowMore" HorizontalAlignment="Right" VerticalAlignment="Center"
                           ToolTip.Tip="{local:T row.more.tip}" AutomationProperties.Name="{Binding MoreName}">
                     <Path Data="{StaticResource MoreIcon}" StrokeThickness="2.5" />
                   </Button>
-                </Grid>
-                <!-- With a start command (#255): Run once for any command and its optional arguments, under the list. -->
-                <Grid Classes="project-columns" Loaded="OnProjectGridLoaded" ColumnDefinitions="4,20,46,*,160,200,195,168,32"
-                      IsVisible="{Binding HasStartCommand}" Opacity="{Binding RowOpacity}" Margin="0,4,0,0">
-                  <CheckBox Grid.Column="6" Classes="command-once" IsChecked="{Binding RunOnce}" HorizontalAlignment="Right" Margin="0,0,12,0"
-                            ToolTip.Tip="{local:T command.once.tip}">
-                    <TextBlock Classes="caption" Text="{local:T command.once}" />
-                  </CheckBox>
-                  <TextBox Grid.Column="7" Classes="inline path command-args" Text="{Binding CommandArgs}" Watermark="{local:T command.args}" Margin="0,0,12,0"
-                           ToolTip.Tip="{local:T command.args.tip}" AutomationProperties.Name="{local:T command.args}" />
                 </Grid>
                 <!-- The agent's latest status from the tab status channel (#249): one line under the row, cut with "…"; the
                      tooltip has the whole text and when it was reported. Only while the CLI runs and the setting is on. -->

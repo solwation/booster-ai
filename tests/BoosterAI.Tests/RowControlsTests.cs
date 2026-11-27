@@ -291,6 +291,66 @@ public sealed class RowControlsTests : IDisposable
         Assert.True(gripFocusable);
     }
 
+    /// <summary>#260: a tab with a start command stays one row; Run once (checkable) and Arguments… are in its row menu, and the row
+    /// carries a marker while it runs once or has arguments. Without a command none of it shows.</summary>
+    [Fact]
+    public void StartCommandOptionsLiveInTheRowMenuAndTheRowShowsAMarker()
+    {
+        var r = UiSession.Run(() =>
+        {
+            Loc.Use("sv");
+            var vm = new MainViewModel(new AppConfig { Tabs = [
+                new TabConfig { Name = "Atlas", Directory = "/srv/atlas", Enabled = true, Llm = "claude", Command = "/deploy" },
+                new TabConfig { Name = "Boreal", Directory = "/srv/boreal", Enabled = true, Llm = "claude" }] });
+            var window = new MainWindow(vm);
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            try
+            {
+                var atlas = vm.Tabs[0];
+                var extraLine = window.GetVisualDescendants().OfType<Control>().Count(c => c.Classes.Contains("command-once") || c.Classes.Contains("command-args"));
+                (string?, bool, string?)[] Items(TabViewModel tab)
+                {
+                    var menu = Row(window, tab).ContextMenu!;
+                    menu.Open(Row(window, tab));
+                    Dispatcher.UIThread.RunJobs();
+                    var list = menu.Items.OfType<MenuItem>().Where(i => i.IsVisible && (i.Header as string)?.StartsWith("Kör en gång") == true || i.IsVisible && (i.Header as string)?.StartsWith("Argument") == true)
+                        .Select(i => (i.Header as string, i.IsChecked, ToolTip.GetTip(i) as string)).ToArray();
+                    menu.Close();
+                    return list;
+                }
+                var plain = Items(atlas);
+                var none = Items(vm.Tabs[1]);
+                var badge = () => Row(window, atlas).GetVisualDescendants().OfType<TextBlock>().SingleOrDefault(t => t.Classes.Contains("command-badge"));
+                var before = badge()?.IsEffectivelyVisible ?? false;
+                // Tick Run once through the menu item, then set arguments.
+                var menu = Row(window, atlas).ContextMenu!;
+                menu.Open(Row(window, atlas));
+                Dispatcher.UIThread.RunJobs();
+                var once = menu.Items.OfType<MenuItem>().Single(i => i.IsVisible && i.Header as string == "Kör en gång");
+                once.IsChecked = true; // the checkmark's two-way binding is what the click toggles
+                Dispatcher.UIThread.RunJobs();
+                menu.Close();
+                atlas.CommandArgs = "staging";
+                Dispatcher.UIThread.RunJobs();
+                return (extraLine, plain, none, before, atlas.RunOnce, badge()?.IsEffectivelyVisible, badge()?.Text, atlas.ArgumentsMenu,
+                    AutomationProperties.GetName(badge()!));
+            }
+            finally { window.Close(); }
+        });
+        Assert.Equal(0, r.extraLine);
+        Assert.Equal(["Kör en gång", "Argument …"], r.plain.Select(i => i.Item1));
+        Assert.All(r.plain, i => Assert.False(i.Item2));
+        Assert.Contains("Kör kommandot som en uppgift", r.plain[0].Item3);
+        Assert.Empty(r.none);
+        Assert.False(r.before);
+        Assert.True(r.RunOnce);
+        Assert.True(r.Item6);
+        Assert.Equal("1× arg", r.Item7);
+        Assert.Equal("Argument: staging …", r.ArgumentsMenu);
+        Assert.Contains("staging", r.Item9);
+    }
+
     private static Button? StartButton(Window window, TabViewModel tab) =>
         Row(window, tab).GetVisualDescendants().OfType<Button>().SingleOrDefault(b => b.IsEffectivelyVisible
             && b.Content is Avalonia.Controls.Shapes.Path p && ReferenceEquals(p.Data, window.FindResource("StartIcon")));

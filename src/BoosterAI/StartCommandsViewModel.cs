@@ -39,7 +39,7 @@ public sealed partial class TabViewModel
         {
             // Not trimmed while typing (a space before the next word must stay); ToConfig and the launch use the one-line form.
             var v = (value ?? "").Replace('\r', ' ').Replace('\n', ' ').Replace('\t', ' ');
-            if (Set(ref _commandArgs, v)) Raise(nameof(StartCommandTip));
+            if (Set(ref _commandArgs, v)) RaiseCommandMarkers();
         }
     }
 
@@ -60,6 +60,45 @@ public sealed partial class TabViewModel
     {
         get => _nonInteractive && HasStartCommand;
         set => NonInteractive = value;
+    }
+
+    /// <summary>The row menu's Arguments entry (#260): the current one-line value is part of the label.</summary>
+    public string ArgumentsMenu
+    {
+        get
+        {
+            var args = StartCommands.OneLine(_commandArgs);
+            if (args.Length == 0) return Loc.Get("command.menu.args");
+            return Loc.Format("command.menu.args.value", args.Length > 24 ? args[..23] + "…" : args);
+        }
+    }
+
+    public string ArgumentsTip
+    {
+        get
+        {
+            var args = StartCommands.OneLine(_commandArgs);
+            return Loc.Get("command.args.tip") + (args.Length > 0 ? "\n" + Loc.Format("command.args.current", args) : "");
+        }
+    }
+
+    /// <summary>A small marker on the row (#260): "1×" when it runs once, "arg" when it has arguments.</summary>
+    public string CommandBadge
+    {
+        get
+        {
+            var parts = new List<string>();
+            if (RunOnce) parts.Add(Loc.Get("command.badge.once"));
+            if (HasStartCommand && StartCommands.OneLine(_commandArgs).Length > 0) parts.Add(Loc.Get("command.badge.args"));
+            return string.Join(" ", parts);
+        }
+    }
+
+    public bool HasCommandBadge => CommandBadge.Length > 0;
+
+    private void RaiseCommandMarkers()
+    {
+        foreach (var n in new[] { nameof(StartCommandTip), nameof(ArgumentsMenu), nameof(ArgumentsTip), nameof(CommandBadge), nameof(HasCommandBadge) }) Raise(n);
     }
 
     /// <summary>The closed box's tooltip: what the tab starts with, its arguments and Run once.</summary>
@@ -142,7 +181,8 @@ public sealed partial class TabViewModel
     internal void StartCommandChanged()
     {
         foreach (var n in new[] { nameof(Orkester), nameof(Command), nameof(NonInteractive), nameof(RunOnce), nameof(HasStartCommand),
-                     nameof(ShowStartCommands), nameof(ShowInstallLink), nameof(StartCommandTip) }) Raise(n);
+                     nameof(ShowStartCommands), nameof(ShowInstallLink), nameof(StartCommandTip),
+                     nameof(ArgumentsMenu), nameof(ArgumentsTip), nameof(CommandBadge), nameof(HasCommandBadge) }) Raise(n);
         // Replacing the box's items while it commits a selection re-enters it (see Llm); refresh them afterwards.
         Dispatcher.UIThread.Post(() => { Raise(nameof(StartChoices)); Raise(nameof(SelectedStartChoice)); });
         RaiseRestart();
@@ -155,7 +195,7 @@ public sealed partial class TabViewModel
         Raise(nameof(Commands));
         Raise(nameof(StartChoices));
         Raise(nameof(SelectedStartChoice));
-        foreach (var n in new[] { nameof(ShowStartCommands), nameof(ShowInstallLink), nameof(StartCommandTip) }) Raise(n);
+        foreach (var n in new[] { nameof(ShowStartCommands), nameof(ShowInstallLink), nameof(StartCommandTip), nameof(CommandBadge), nameof(HasCommandBadge) }) Raise(n);
         _owner.OrchestraColumnChanged();
     }
 }

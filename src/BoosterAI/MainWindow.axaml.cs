@@ -199,6 +199,14 @@ public partial class MainWindow : Window
         if ((sender as Control)?.DataContext is TabViewModel tab) BeginRename(tab);
     }
 
+    /// <summary>The row menu's Arguments… (#260): a small dialog; Save stores the trimmed line, Cancel keeps the old value.</summary>
+    private async void OnEditArguments(object? sender, RoutedEventArgs e)
+    {
+        if ((sender as Control)?.DataContext is not TabViewModel tab) return;
+        var command = tab.Orkester ? StartCommands.Orkester : tab.Command;
+        if (await new CommandArgsWindow(command, tab.CommandArgs).ShowDialog<string?>(this) is { } args) tab.CommandArgs = args;
+    }
+
     internal bool BeginRename(TabViewModel tab)
     {
         if (_vm.IsClosingAll) return false;

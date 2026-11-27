@@ -62,6 +62,22 @@ public sealed class MainListTests : IDisposable
     }
 
     [Fact]
+    public void ArgumentsAndRunOnceMarkersFollowTheSavedValues()
+    {
+        // #260: saved values are kept as they are; the row's marker and the menu entry show them.
+        Loc.Use("en");
+        var tab = new MainViewModel(new AppConfig { Tabs = [new() { Name = "A", Command = "/review", CommandArgs = "#42", NonInteractive = true }] }).Tabs[0];
+        Assert.Equal(("1× args", "Arguments: #42…"), (tab.CommandBadge, tab.ArgumentsMenu));
+        Assert.Equal(("#42", true), (tab.ToConfig(false).CommandArgs, tab.ToConfig(false).NonInteractive));
+        tab.CommandArgs = "";
+        tab.RunOnce = false;
+        Assert.Equal(("", "Arguments…", false), (tab.CommandBadge, tab.ArgumentsMenu, tab.HasCommandBadge));
+        tab.SelectedStartChoice = tab.StartChoices[0];
+        tab.CommandArgs = "x";
+        Assert.False(tab.HasCommandBadge); // no command: nothing to mark
+    }
+
+    [Fact]
     public void HeadersAndTheInstallEntryDoNotChangeTheChoice()
     {
         var vm = new MainViewModel(new AppConfig { Tabs = [new() { Name = "A", Command = "/review" }] });

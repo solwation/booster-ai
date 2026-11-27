@@ -1,0 +1,19 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="using:BoosterAI"
+        x:Class="BoosterAI.CommandArgsWindow"
+        Title="{local:T command.args}"
+        Icon="avares://BoosterAI/Assets/boosterai.ico"
+        Width="460" SizeToContent="Height" CanResize="False"
+        WindowStartupLocation="CenterOwner">
+  <StackPanel Margin="28,24,28,22" Spacing="12">
+    <TextBlock x:Name="Heading" Classes="title" TextWrapping="Wrap" />
+    <TextBox x:Name="ArgsBox" Classes="inline path command-args" Watermark="{local:T command.args}"
+             AutomationProperties.Name="{local:T command.args}" />
+    <TextBlock Classes="muted caption" Text="{local:T command.args.help}" TextWrapping="Wrap" />
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,6,0,0">
+      <Button Content="{local:T cancel}" Click="OnCancel" IsCancel="True" Padding="18,8" />
+      <Button Content="{local:T command.args.save}" Click="OnSave" IsDefault="True" Padding="18,8" />
+    </StackPanel>
+  </StackPanel>
+</Window>
