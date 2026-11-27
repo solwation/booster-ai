@@ -77,6 +77,7 @@ public sealed partial class TabViewModel : Observable
     private string _advisor = AdvisorPolicy.Disabled;
     private string _account = "";
     private bool _enabled, _orkester, _nonInteractive;
+    private string _command = "", _commandArgs = "";
     private bool? _hasOrkester;
 
     /// <param name="index">The colour index when the config has none (ColorIndex -1 and no palette colour).</param>
@@ -92,6 +93,8 @@ public sealed partial class TabViewModel : Observable
         _advisor = AdvisorPolicy.Normalize(c.Advisor);
         _advisorPinned = _advisor != AdvisorPolicy.Disabled;
         _orkester = c.Orkester;
+        _command = StartCommands.OneLine(c.Command);
+        _commandArgs = StartCommands.OneLine(c.CommandArgs);
         _nonInteractive = c.NonInteractive;
         _account = c.Account ?? "";
         _modelMemory = c.ModelMemory is null ? [] : new Dictionary<string, string>(c.ModelMemory);
@@ -128,37 +131,16 @@ public sealed partial class TabViewModel : Observable
 
     /// <summary>A ticked row that is not running is the only kind Start opens; this is the one the accent fill marks.</summary>
     public bool WillStart => Enabled && !IsAlive;
+    /// <summary>Start with /orkester (#152); in the start command list (#255) its own entry at the top.</summary>
     public bool Orkester
     {
         get => _orkester;
-        set { if (Set(ref _orkester, value)) { Raise(nameof(CanNonInteractive)); Raise(nameof(OnceChecked)); Raise(nameof(OrchestraMode)); RaiseRestart(); } }
+        set { if (Set(ref _orkester, value)) StartCommandChanged(); }
     }
 
-    public bool NonInteractive { get => _nonInteractive; set { if (Set(ref _nonInteractive, value)) { Raise(nameof(OnceChecked)); Raise(nameof(OrchestraMode)); } } }
+    /// <summary>Run the start command once (#255: any command); kept while no command is chosen, shown only with one.</summary>
+    public bool NonInteractive { get => _nonInteractive; set { if (Set(ref _nonInteractive, value)) StartCommandChanged(); } }
 
-    /// <summary>The row's orchestra choices (#152), in <see cref="OrchestraMode"/> order: Off · Orchestra · Orchestra, once.</summary>
-    public static IReadOnlyList<string> OrchestraModes => [Loc.Get("orkester.mode.off"), Loc.Get("orkester.mode.on"), Loc.Get("orkester.mode.once")];
-
-    /// <summary>
-    /// One control for the two saved settings (#152): 0 = Orkester off, 1 = on, 2 = on with NonInteractive.
-    /// Off keeps a stored NonInteractive (ignored while off, as before); choosing 1 or 2 sets it explicitly.
-    /// </summary>
-    public int OrchestraMode
-    {
-        get => !_orkester ? 0 : _nonInteractive ? 2 : 1;
-        set
-        {
-            if (value is < 0 or > 2 || value == OrchestraMode) return;
-            if (value > 0) NonInteractive = value == 2;
-            Orkester = value > 0;
-        }
-    }
-
-    /// <summary>What the toggle shows: a stored choice looks off while it cannot apply (orchestra off).</summary>
-    public bool OnceChecked { get => _nonInteractive && _orkester; set => NonInteractive = value; }
-
-    /// <summary>One-shot mode applies to the orchestra command only, so it needs the orchestra on.</summary>
-    public bool CanNonInteractive => _orkester && CanOrkester;
     /// <summary>Per-project <c>--advisor</c> for claude (#170); a subtab uses its project's.</summary>
     public string Advisor
     {
@@ -276,6 +258,8 @@ public sealed partial class TabViewModel : Observable
             // Only a missing account's own entry depends on the choice; refresh the list after the selection commits.
             AccountQuotaChoiceChanged();
             ChoiceChanged();
+            // Claude's and Codex's user commands live in the account's directory (#255).
+            _owner.CheckCommands(this);
         }
     }
 
@@ -353,10 +337,12 @@ public sealed partial class TabViewModel : Observable
         {
             if (IsSubTab || !Set(ref _directory, value)) return;
             _owner.CheckOrkester(this);
+            _owner.CheckCommands(this);
             foreach (var child in _owner.Tabs.Where(t => t.Parent == this))
             {
                 child.Raise(nameof(Directory));
                 _owner.CheckOrkester(child);
+                _owner.CheckCommands(child);
             }
         }
     }
@@ -385,7 +371,7 @@ public sealed partial class TabViewModel : Observable
             if (!Set(ref _hasOrkester, value)) return;
             Raise(nameof(CanOrkester));
             Raise(nameof(CanInstallOrkester));
-            Raise(nameof(CanNonInteractive));
+            StartCommandChanged();
             RaiseRestart();
             _owner.OrchestraColumnChanged();
         }
@@ -464,8 +450,9 @@ public sealed partial class TabViewModel : Observable
             _owner.AdvisorSwitchChanged();
             AdvisorInputsChanged();
             Raise(nameof(CanOrkester));
-            Raise(nameof(CanNonInteractive));
             Raise(nameof(CanInstallOrkester));
+            _owner.CheckCommands(this);
+            StartCommandChanged();
             _owner.OrchestraColumnChanged();
             _owner.SetupRowsChanged();
             // Another CLI's model id rarely fits; fall back to its default. An account belongs to one agent (#186).
@@ -546,7 +533,7 @@ public sealed partial class TabViewModel : Observable
     /// The CLI is working on a turn; a one-shot run is busy until it exits, except while it watches (a turn
     /// ended, the CLI lives on and has written nothing since).
     /// </summary>
-    public Activity Activity => LaunchedAs is { NonInteractive: true, Orkester: true } && IsRunning && _activity != Activity.Watching
+    public Activity Activity => StartCommands.RunsOnce(LaunchedAs) && IsRunning && _activity != Activity.Watching
         ? Activity.Busy : _activity;
 
     /// <summary>The LLM or model differs from what the running tab was started with.</summary>
@@ -577,7 +564,7 @@ public sealed partial class TabViewModel : Observable
         : IsChanged ? Loc.Format(RestartResumes ? "restart.changed.resume.tip"
             : _owner.SharesConversationDirectory(this, Llm) ? "subtab.restart.fresh.tip" : "restart.changed.tip", Llm, ModelLabel)
         : CanReloadOrchestra ? Loc.Get("restart.orkester.tip")
-        : Loc.Get(LaunchedAs is { NonInteractive: true, Orkester: true } ? "restart.once.tip"
+        : Loc.Get(StartCommands.RunsOnce(LaunchedAs) ? "restart.once.tip"
             : LaunchedAs is { Llm: Catalog.ShellOnly } ? "restart.shell.tip" : "restart.tip");
 
     private string ModelLabel => string.IsNullOrWhiteSpace(Model) || Model == Catalog.StandardModel ? Loc.Get("restart.standardModel") : Model;
@@ -868,7 +855,10 @@ public sealed partial class TabViewModel : Observable
         Id = Id, Expanded = Expanded, Name = Name.Trim(), Color = Color, ColorIndex = _colorIndex, Directory = Directory.Trim(), Enabled = Enabled,
         Llm = Llm, Model = string.IsNullOrWhiteSpace(Model) ? Catalog.StandardModel : Model, Advisor = NormalAdvisor(Advisor),
         Orkester = forLaunch ? Orkester && CanOrkester : Orkester,
-        NonInteractive = NonInteractive,
+        Command = Orkester ? "" : _command,
+        CommandArgs = _commandArgs,
+        // Run once without a command means nothing; it is not saved, so a later command never starts as Run once by surprise.
+        NonInteractive = NonInteractive && (Orkester || _command.Length > 0),
         Account = Accounts.Supports(Llm) ? _account : "",
         ModelMemory = _modelMemory.Count == 0 ? null : new Dictionary<string, string>(_modelMemory),
         AccountDirectory = forLaunch ? AccountDirectory : null,
@@ -1218,7 +1208,8 @@ public sealed partial class MainViewModel : Observable
     }
 
     /// <summary>
-    /// The orchestra column (and its header) shows only while a visible row can use or install the orchestra (#152);
+    /// The start command column (and its header) shows only while a visible row can use or install the orchestra (#152)
+    /// or has a command to choose (#255);
     /// otherwise its width is 0 and the status column gets the room.
     /// </summary>
     public bool ShowOrchestraColumn => _showOrchestraColumn;
@@ -1226,7 +1217,7 @@ public sealed partial class MainViewModel : Observable
 
     internal void OrchestraColumnChanged()
     {
-        var show = _visibleTabs.Any(t => t.CanOrkester || t.CanInstallOrkester);
+        var show = _visibleTabs.Any(t => t.CanOrkester || t.CanInstallOrkester || t.ShowStartCommands);
         if (show == _showOrchestraColumn) return;
         _showOrchestraColumn = show;
         Raise(nameof(ShowOrchestraColumn));

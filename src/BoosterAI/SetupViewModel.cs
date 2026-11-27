@@ -359,6 +359,7 @@ public sealed partial class MainViewModel
         _ = RefreshAccountLimitsAsync(force: true);
         SetupRowsChanged();
         CheckSetup();
+        EnableCommandDiscovery();
     }
 
     internal void SetupRowsChanged() => Setup.RowsChanged(Tabs.Select(t => t.Llm));

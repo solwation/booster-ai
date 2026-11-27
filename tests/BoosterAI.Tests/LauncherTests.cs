@@ -517,29 +517,29 @@ public class RunOnceToggleTests
     }
 
     [Fact]
-    public void EnabledOnlyWithOrchestraAvailableAndOn()
+    public void RunOnceAppliesWithAnAvailableCommand()
     {
-        Assert.True(Tab(true, true, true).CanNonInteractive);
-        Assert.False(Tab(false, true, true).CanNonInteractive);
-        Assert.False(Tab(true, true, false).CanNonInteractive);
-        Assert.False(Tab(true, true, null).CanNonInteractive);
+        Assert.True(Tab(true, true, true).RunOnce);
+        Assert.False(Tab(false, true, true).RunOnce);
+        Assert.False(Tab(true, true, false).RunOnce);
+        Assert.False(Tab(true, true, null).RunOnce);
+        var t = Tab(false, false, true);
+        t.Command = "/review";
+        t.RunOnce = true;
+        Assert.True(t.RunOnce);
+        Assert.True(t.ToConfig(forLaunch: true).NonInteractive);
     }
 
     [Fact]
-    public void StoredChoiceLooksOffWhileItCannotApply()
+    public void ListShowsWhereTheOrchestraOrACommandIs()
     {
-        Assert.True(Tab(true, true, true).OnceChecked);
-        Assert.False(Tab(false, true, true).OnceChecked);
-        var t = Tab(false, true, true);
-        t.Orkester = true;
-        Assert.True(t.OnceChecked);
-    }
-
-    [Fact]
-    public void OnlyShownWhereTheOrchestraToggleIs()
-    {
-        Assert.True(Tab(false, false, true).CanOrkester);
-        Assert.False(Tab(false, false, false).CanOrkester);
+        Assert.True(Tab(false, false, true).ShowStartCommands);
+        Assert.False(Tab(false, false, false).ShowStartCommands);
+        Assert.True(Tab(false, false, false).ShowInstallLink);
+        var t = Tab(false, false, false);
+        t.Command = "/review";
+        Assert.True(t.ShowStartCommands);
+        Assert.False(t.ShowInstallLink);
     }
 
     [Fact]

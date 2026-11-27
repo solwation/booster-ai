@@ -20,46 +20,102 @@ public sealed class MainListTests : IDisposable
     public void Dispose() => Directory.Delete(_root, recursive: true);
 
     [Theory]
-    [InlineData(false, false, 0)]
-    [InlineData(false, true, 0)]
-    [InlineData(true, false, 1)]
-    [InlineData(true, true, 2)]
-    public void OrchestraModeReadsTheSavedSettings(bool orkester, bool nonInteractive, int mode)
+    [InlineData(false, false, StartChoiceKind.None, false)]
+    [InlineData(false, true, StartChoiceKind.None, false)]
+    [InlineData(true, false, StartChoiceKind.Orkester, false)]
+    [InlineData(true, true, StartChoiceKind.Orkester, true)]
+    public void StartCommandReadsTheOldOrchestraSettings(bool orkester, bool nonInteractive, StartChoiceKind kind, bool once)
     {
+        // #255: the old Off/On/Run once (#152) is the list's no command, /orkester and Run once.
         var vm = new MainViewModel(new AppConfig { Tabs = [new() { Name = "A", Orkester = orkester, NonInteractive = nonInteractive }] });
         var tab = vm.Tabs[0];
-        Assert.Equal(mode, tab.OrchestraMode);
-        // Saving without touching the choice keeps both settings exactly as they were.
+        tab.HasOrkester = true;
+        Assert.Equal(kind, tab.SelectedStartChoice!.Kind);
+        Assert.Equal(once, tab.RunOnce);
         var saved = tab.ToConfig(forLaunch: false);
-        Assert.Equal((orkester, nonInteractive), (saved.Orkester, saved.NonInteractive));
-    }
-
-    [Theory]
-    [InlineData(1, true, false)]
-    [InlineData(2, true, true)]
-    [InlineData(0, false, true)]
-    public void OrchestraModeWritesTheSameSettingsTheTwoTogglesDid(int mode, bool orkester, bool nonInteractive)
-    {
-        // Start from "Orchestra, once" so Off shows that a stored Run once survives (ignored while off, as before).
-        var vm = new MainViewModel(new AppConfig { Tabs = [new() { Name = "A", Orkester = true, NonInteractive = true }] });
-        var tab = vm.Tabs[0];
-        tab.OrchestraMode = mode;
-        var saved = tab.ToConfig(forLaunch: false);
-        Assert.Equal((orkester, nonInteractive), (saved.Orkester, saved.NonInteractive));
-        Assert.Equal(mode, tab.OrchestraMode);
-        Assert.Equal(mode == 2, tab.OnceChecked);
-        // The round trip through the saved file gives the same choice back.
-        var reloaded = new MainViewModel(new AppConfig { Tabs = [saved] });
-        Assert.Equal(mode, reloaded.Tabs[0].OrchestraMode);
+        Assert.Equal((orkester, once, ""), (saved.Orkester, saved.NonInteractive, saved.Command));
     }
 
     [Fact]
-    public void OrchestraModesAreOffOrchestraAndOnce()
+    public void ChoosingEntriesWritesTheSettingsAndSurvivesTheRoundTrip()
+    {
+        var vm = new MainViewModel(new AppConfig { Tabs = [new() { Name = "A", Orkester = true, NonInteractive = true }] });
+        var tab = vm.Tabs[0];
+        tab.HasOrkester = true;
+        tab.SelectedStartChoice = new(StartChoiceKind.Command, "/deploy", "/deploy");
+        tab.CommandArgs = "staging  ";
+        var saved = tab.ToConfig(forLaunch: false);
+        // Run once now belongs to any command: it stays with the new one.
+        Assert.Equal((false, "/deploy", "staging", true), (saved.Orkester, saved.Command, saved.CommandArgs.Trim(), saved.NonInteractive));
+        var reloaded = new MainViewModel(new AppConfig { Tabs = [saved] }).Tabs[0];
+        Assert.Equal(StartChoiceKind.Missing, reloaded.SelectedStartChoice!.Kind); // kept visible until a discovery finds it
+        Assert.Equal("/deploy", reloaded.SelectedStartChoice.Command);
+        Assert.True(reloaded.RunOnce);
+
+        tab.SelectedStartChoice = tab.StartChoices.First(c => c.Kind == StartChoiceKind.Orkester);
+        Assert.Equal((true, ""), (tab.ToConfig(false).Orkester, tab.ToConfig(false).Command));
+        tab.SelectedStartChoice = tab.StartChoices[0];
+        saved = tab.ToConfig(false);
+        // Without a command Run once means nothing and is not saved.
+        Assert.Equal((false, "", false), (saved.Orkester, saved.Command, saved.NonInteractive));
+        Assert.False(tab.HasStartCommand);
+    }
+
+    [Fact]
+    public void HeadersAndTheInstallEntryDoNotChangeTheChoice()
+    {
+        var vm = new MainViewModel(new AppConfig { Tabs = [new() { Name = "A", Command = "/review" }] });
+        var tab = vm.Tabs[0];
+        TabViewModel? asked = null;
+        vm.InstallOrkesterRequested += t => asked = t;
+        tab.HasOrkester = false;
+        tab.SelectedStartChoice = new(StartChoiceKind.Header, "", "Projekt");
+        Assert.Equal("/review", tab.Command);
+        tab.SelectedStartChoice = tab.StartChoices.First(c => c.Kind == StartChoiceKind.InstallOrkester);
+        Assert.Same(tab, asked);
+        Assert.Equal("/review", tab.Command);
+        Assert.False(tab.Orkester);
+    }
+
+    [Fact]
+    public void OrkesterIsFirstAfterNoCommandThenTheGroups()
     {
         var previous = Loc.Language;
         Loc.Use("sv");
-        try { Assert.Equal(["Av", "Orkester", "Orkester, en gång"], TabViewModel.OrchestraModes); }
+        try
+        {
+            var vm = new MainViewModel(new AppConfig { Tabs = [new() { Name = "A", Llm = "claude", Directory = "~/proj" }] });
+            var tab = vm.Tabs[0];
+            tab.HasOrkester = true;
+            vm.ShowSampleCommands();
+            var labels = tab.StartChoices.Select(c => c.Label).ToList();
+            Assert.Equal(["Inget kommando", "/orkester", "Projekt", "/deploy-preview", "/docs:check-links", "/review", "Användare", "/standup", "Plugin", "/frontend-kit:component"], labels);
+            Assert.All(tab.StartChoices.Where(c => c.IsHeader), c => Assert.False(c.IsSelectable));
+            Assert.True(tab.ShowStartCommands);
+        }
         finally { Loc.Use(previous); }
+    }
+
+    [Fact]
+    public async Task DiscoveryRunsBatchedAndFillsTheRowsOfTheSameFolder()
+    {
+        var vm = new MainViewModel(new AppConfig { Tabs = [new() { Name = "A", Llm = "claude", Directory = "~/proj" }, new() { Name = "B", Llm = "aider", Directory = "~/proj" }] });
+        await vm.InitTask;
+        var calls = new List<IReadOnlyList<StartCommandRequest>>();
+        vm.DiscoverCommandsAsync = (_, requests) =>
+        {
+            calls.Add(requests);
+            return Task.FromResult<IReadOnlyList<IReadOnlyList<StartCommand>?>>(requests.Select(_ => (IReadOnlyList<StartCommand>?)[new StartCommand("/ship", StartCommandSource.Project)]).ToArray());
+        };
+        vm.EnableCommandDiscovery();
+        await vm.FlushCommandsAsync();
+        // aider has no command files: only the claude row is asked for, once.
+        Assert.Single(calls);
+        Assert.Equal([new StartCommandRequest("claude", "~/proj", null)], calls[0]);
+        Assert.Equal("/ship", Assert.Single(vm.Tabs[0].Commands).Name);
+        Assert.Empty(vm.Tabs[1].Commands);
+        Assert.True(vm.Tabs[0].ShowStartCommands);
+        Assert.False(vm.Tabs[1].ShowStartCommands);
     }
 
     [Fact]

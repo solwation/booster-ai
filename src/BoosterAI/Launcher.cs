@@ -80,9 +80,9 @@ public static class Launcher
             ? "{ type bs_logo >/dev/null 2>&1 || . " + Quote(track.Dir + "/" + TabLogo.ScriptFile) + " 2>/dev/null || true\n} && " + hook
             : "";
 
-    /// <summary>Run once: the orchestra command without a prompt, not continued, runs once and exits (see CliCommand).</summary>
+    /// <summary>Run once: the start command (#255: any, not only the orchestra's) without a prompt, not continued, runs once and exits (see CliCommand).</summary>
     internal static bool IsOneShot(TabConfig tab, string? prompt, bool resume) =>
-        tab.NonInteractive && tab.Orkester && prompt is null && !resume;
+        tab.NonInteractive && StartCommands.Has(tab) && prompt is null && !resume;
 
     /// <summary>
     /// The step that updates the tab's AI CLI before it starts (tab-lib.sh's bs_update, #60), or "" when the setting is off
@@ -103,12 +103,12 @@ public static class Launcher
     /// <summary>A model change on claude, codex or aider restarts with the same conversation; anything else starts fresh.</summary>
     /// <remarks>Conversations live in the account's directory, so another account always starts fresh (#186).</remarks>
     public static bool CanResume(TabConfig from, TabConfig to) =>
-        from.Llm == to.Llm && to.Llm is "claude" or "codex" or "aider" && !(to.NonInteractive && to.Orkester)
+        from.Llm == to.Llm && to.Llm is "claude" or "codex" or "aider" && !(to.NonInteractive && StartCommands.Has(to))
         && from.AccountDirectory == to.AccountDirectory;
 
-    /// <summary>Explicit continuation is interactive; Run once always starts a new orchestra pass.</summary>
+    /// <summary>Explicit continuation is interactive; Run once always starts a new run of its command.</summary>
     public static bool CanContinue(TabConfig tab) =>
-        tab.Llm is "claude" or "codex" or "agy" or "aider" && !(tab.NonInteractive && tab.Orkester);
+        tab.Llm is "claude" or "codex" or "agy" or "aider" && !(tab.NonInteractive && StartCommands.Has(tab));
 
     /// <summary>The settings file whose hooks log busy/idle for an interactive claude tab (written by TabSession.NewTrack).</summary>
     public static string HooksFile(TabTrack track) => $"{track.Dir}/{track.Id}.claude.json";
@@ -215,9 +215,9 @@ public static class Launcher
         if (tab.Model != Catalog.StandardModel) args.Add("--model " + Quote(tab.Model));
         if (AdvisorPolicy.Evaluate(tab.Llm, tab.Model, tab.Advisor) == AdvisorPolicy.Verdict.Ok)
             args.Add("--advisor " + Quote(tab.Advisor));
-        // One-shot mode applies to the orchestra command only; a given prompt (the install) stays interactive.
+        // One-shot mode applies to the start command only; a given prompt (the install) stays interactive.
         var once = IsOneShot(tab, prompt, resume);
-        // A resumed conversation gets no first prompt: it already ran /orkester or the install.
+        // A resumed conversation gets no first prompt: it already ran its start command or the install.
         if (resume) { }
         else if (prompt is not null)
         {
@@ -225,18 +225,24 @@ public static class Launcher
             else if (tab.Llm == "aider") args.Add("-m " + Quote(prompt));
             else args.Add(Quote(prompt));
         }
-        else if (tab.Orkester)
+        else if (StartCommands.Text(tab) is { } start)
+        {
+            // The start command (#255) with its arguments. Only the orchestra's Run once gets the foreground note (#49): it is the
+            // one that keeps watching; any other command ends with its turn.
+            var note = tab.Orkester && once ? " " + ForegroundWatchNote : "";
+            var after = StartCommands.Arguments(tab) is { Length: > 0 } extra ? " " + extra + note : note;
             args.Add(tab.Llm switch
             {
-                "agy" => once ? "-p " + Quote("/orkester " + ForegroundWatchNote) : "-i " + Quote("/orkester"),
+                "agy" => once ? "-p " + Quote(start + note) : "-i " + Quote(start),
                 // Codex invokes repository skills as $name; repositories without one get the slash text.
                 // The substitution yields one word without whitespace, so it is safe unquoted (no raw '"', see Quote).
-                "codex" when once => CodexOrkester + Quote(" " + ForegroundWatchNote),
-                "codex" => CodexOrkester,
-                "aider" => "-m " + Quote(once ? "/orkester " + ForegroundWatchNote : "/orkester"),
-                _ when once => "-p " + Quote("/orkester"),
-                _ => Quote("/orkester"),
+                "codex" when tab.Orkester => CodexOrkester + (after.Length > 0 ? Quote(after) : ""),
+                "codex" => Quote(start),
+                "aider" => "-m " + Quote(start + note),
+                _ when once => "-p " + Quote(start),
+                _ => Quote(start),
             });
+        }
         // An interactive claude reports busy/idle through hooks; a one-shot run is busy until it exits.
         if (track is not null && tab.Llm == "claude" && !once) args.Add("--settings " + Quote(HooksFile(track)));
         // An interactive agy records quota usage through its statusLine (#206).
@@ -259,9 +265,9 @@ public static class Launcher
         var command = tab.Model == Catalog.StandardModel ? "openhands"
             : "LLM_MODEL=" + Quote(tab.Model) + " openhands --override-with-envs";
         // Restart starts fresh: choosing --resume --last could resume another project's work.
-        var task = prompt ?? (tab.Orkester ? "/orkester" : null);
-        if (tab.NonInteractive && tab.Orkester && prompt is null)
-            command += " --headless --task " + Quote("/orkester " + ForegroundWatchNote);
+        var task = prompt ?? StartCommands.Text(tab);
+        if (IsOneShot(tab, prompt, false))
+            command += " --headless --task " + Quote(task + (tab.Orkester ? " " + ForegroundWatchNote : ""));
         else if (task is not null)
             command += " --task " + Quote(task);
         return command;
@@ -677,7 +683,7 @@ fi
     private static TabConfig InWsl(TabConfig t) => new()
     {
         Name = t.Name, Color = t.Color, ColorIndex = t.ColorIndex, Enabled = t.Enabled,
-        CompactTokens = t.CompactTokens, Account = t.Account, AccountDirectory = t.AccountDirectory, Id = t.Id, Llm = t.Llm, Model = t.Model, Advisor = t.Advisor, Orkester = t.Orkester, NonInteractive = t.NonInteractive, Directory = PathMapping.ToWslPath(t.Directory), Script = t.Script,
+        CompactTokens = t.CompactTokens, Account = t.Account, AccountDirectory = t.AccountDirectory, Id = t.Id, Llm = t.Llm, Model = t.Model, Advisor = t.Advisor, Orkester = t.Orkester, Command = t.Command, CommandArgs = t.CommandArgs, NonInteractive = t.NonInteractive, Directory = PathMapping.ToWslPath(t.Directory), Script = t.Script,
     };
 
     private static void LaunchWindowsTerminal(IReadOnlyList<TabConfig> tabs, string distro, string? prompt,
@@ -885,5 +891,6 @@ fi
     /// parts: Windows Terminal wraps a new-tab argument in "…" without escaping embedded double quotes, and wsl.exe then
     /// drops them and splits the rest on whitespace (#124), so nothing sent through wt.exe may contain a raw '"'.
     /// </summary>
-    internal static string Quote(string s) => "'" + s.Replace("'", "'\\''").Replace("\"", "'$'\\x22''") + "'";
+    // ';' is encoded like '"': Windows Terminal splits its command line on it, also inside quotes (a start command's arguments, #255).
+    internal static string Quote(string s) => "'" + s.Replace("'", "'\\''").Replace("\"", "'$'\\x22''").Replace(";", "'$'\\x3b''") + "'";
 }

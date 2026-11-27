@@ -98,6 +98,8 @@ public partial class MainWindow : Window
         DataContext = vm;
         InitializeComponent();
         Closed += (_, _) => StopStatusPeek();
+        vm.InstallOrkesterRequested += ConfirmInstallOrkester;
+        Closed += (_, _) => vm.InstallOrkesterRequested -= ConfirmInstallOrkester;
         ActualThemeVariantChanged += (_, _) => _vm.RaiseThemeBrushes();
         PropertyChanged += OnStatusWindowVisibilityChanged;
         Resized += (_, _) => ApplyAllProjectColumns();
@@ -118,7 +120,7 @@ public partial class MainWindow : Window
             if (e.Property == WindowStateProperty && WindowState == WindowState.Minimized
                 && TrayPolicy.HideOnMinimize(_vm.MinimizeToTray, TrayAvailable())) Hide();
         };
-        Activated += (_, _) => { _vm.Update.WindowActive(true); _vm.SetupWindowActive(); _vm.RefreshOrkester(); _vm.ArmLimitAnimations(); _ = _vm.RefreshAccountLimitsAsync(); };
+        Activated += (_, _) => { _vm.Update.WindowActive(true); _vm.SetupWindowActive(); _vm.RefreshOrkester(); _vm.RefreshCommands(); _vm.ArmLimitAnimations(); _ = _vm.RefreshAccountLimitsAsync(); };
         // Pick up an orchestra installed or removed outside the app (#189); idle while hidden or minimized.
         var orchestraTimer = new Avalonia.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(45) };
         orchestraTimer.Tick += (_, _) => { if (IsVisible && WindowState != WindowState.Minimized) _vm.RefreshOrkester(); };
@@ -167,9 +169,14 @@ public partial class MainWindow : Window
 
     private async void OnFindProjects(object? sender, RoutedEventArgs e) => await ImportProjectsWindow.FindProjects(this, _vm);
 
-    private async void OnInstallOrkester(object? sender, RoutedEventArgs e)
+    private void OnInstallOrkester(object? sender, RoutedEventArgs e)
     {
-        if ((sender as Control)?.DataContext is not TabViewModel tab) return;
+        if ((sender as Control)?.DataContext is TabViewModel tab) ConfirmInstallOrkester(tab);
+    }
+
+    /// <summary>The install link and the start command list's install entry (#255) ask the same question.</summary>
+    private async void ConfirmInstallOrkester(TabViewModel tab)
+    {
         if (await new ConfirmInstallWindow(tab).ShowDialog<bool>(this)) _vm.InstallOrkester(tab);
     }
 

@@ -462,6 +462,17 @@
     <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
   </Style>
 
+  <!-- The start command list (#255): commands in the mono font, their description only in the open list, group headers small. -->
+  <Style Selector="TextBlock.command-code">
+    <Setter Property="FontFamily" Value="{StaticResource MonoFont}" />
+  </Style>
+  <Style Selector="Panel.command-entry"><Setter Property="IsVisible" Value="False" /></Style>
+  <Style Selector="ComboBoxItem Panel.command-entry"><Setter Property="IsVisible" Value="True" /></Style>
+  <Style Selector="TextBlock.command-header">
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Margin" Value="0,4,0,0" />
+  </Style>
+
   <!-- The agent's CLI is missing where the tabs run (#152): a warning triangle after its name. -->
   <Style Selector="Path.missing">
     <Setter Property="Width" Value="13" />

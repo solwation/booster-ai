@@ -10,9 +10,9 @@ internal static class InterpreterCli
 
     public static string Command(TabConfig tab, string? prompt)
     {
-        var once = tab.NonInteractive && tab.Orkester && prompt is null;
+        var once = Launcher.IsOneShot(tab, prompt, false);
         var verb = once ? " exec" : "";
-        var firstPrompt = prompt ?? (tab.Orkester ? "/orkester" + (once ? " " + Launcher.ForegroundWatchNote : "") : null);
+        var firstPrompt = prompt ?? (StartCommands.Text(tab) is { } start ? start + (once && tab.Orkester ? " " + Launcher.ForegroundWatchNote : "") : null);
         var compact = AutoCompact.Arguments("interpreter", tab.CompactTokens);
         var command = "interpreter" + verb + (compact.Length > 0 ? " " + compact : "") + Model(tab.Model, current: true)
             + (firstPrompt is null ? "" : " " + Launcher.Quote(firstPrompt));

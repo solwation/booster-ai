@@ -24,8 +24,16 @@ public sealed class TabConfig
     public string Model { get; set; } = Catalog.StandardModel;
     /// <summary>Claude advisor for this project; Off (the default) also suppresses Claude's saved advisor for the process.</summary>
     public string Advisor { get; set; } = AdvisorPolicy.Disabled;
+    /// <summary>Start with <c>/orkester</c> (#152); the start command list's orchestra entry (#255). Wins over <see cref="Command"/>.</summary>
     public bool Orkester { get; set; }
-    /// <summary>Run the orchestra command once non-interactively, then leave a shell. Ignored while Orkester is off.</summary>
+    /// <summary>
+    /// The command the tab starts with when <see cref="Orkester"/> is off (#255), exactly as typed ("/deploy", "$release-notes");
+    /// empty for no command.
+    /// </summary>
+    public string Command { get; set; } = "";
+    /// <summary>Optional arguments after the start command (the orchestra's or <see cref="Command"/>), one line.</summary>
+    public string CommandArgs { get; set; } = "";
+    /// <summary>Run the start command once non-interactively, then leave a shell (#255: any command). Ignored without one.</summary>
     public bool NonInteractive { get; set; }
     /// <summary>A one-off tab's own bash command instead of a CLI (the setup installs, #74); never saved.</summary>
     [JsonIgnore]
@@ -160,7 +168,12 @@ public static class ConfigStore
         return Defaults();
     }
 
-    /// <summary>Deserializes a config file and migrates old settings: no "AfterLaunch" but <c>"CloseAfterLaunch": true</c> means close.</summary>
+    /// <summary>
+    /// Deserializes a config file and migrates old settings: no "AfterLaunch" but <c>"CloseAfterLaunch": true</c> means close.
+    /// The orchestra's Off/On/Run once (#152) keeps its meaning in the start command list (#255): On is the /orkester entry
+    /// and Run once stays with it; a Run once stored while the orchestra was off (ignored then) is cleared, so choosing a
+    /// command later does not silently run it once.
+    /// </summary>
     public static AppConfig? Parse(string json)
     {
         var cfg = JsonSerializer.Deserialize(json, ConfigJsonContext.Default.AppConfig);
@@ -175,6 +188,12 @@ public static class ConfigStore
             cfg.AutoCompactMode = cfg.AutoCompactSettings.Any(s => AutoCompact.Resolve(s) is not null)
                 ? AutoCompactPolicy.Manual : AutoCompactPolicy.Off;
         cfg.AutoCompactMode = AutoCompactPolicy.Normalize(cfg.AutoCompactMode);
+        foreach (var tab in TabGroups.All(cfg.Tabs))
+        {
+            tab.Command = StartCommands.OneLine(tab.Command);
+            tab.CommandArgs = StartCommands.OneLine(tab.CommandArgs);
+            if (!StartCommands.Has(tab)) tab.NonInteractive = false;
+        }
         return cfg;
     }
 
@@ -275,6 +294,9 @@ public static class ConfigMerge
 /// <summary>Projects on disk, individual tabs at launch. Child directories always come from their project.</summary>
 public static class TabGroups
 {
+    /// <summary>Every saved tab, projects and their subtabs, without touching their directories (unlike <see cref="Flatten"/>).</summary>
+    public static IEnumerable<TabConfig> All(IEnumerable<TabConfig> projects) => projects.SelectMany(p => new[] { p }.Concat(p.SubTabs));
+
     public static IEnumerable<TabConfig> Flatten(IEnumerable<TabConfig> projects)
     {
         foreach (var project in projects)

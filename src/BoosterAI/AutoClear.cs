@@ -42,7 +42,7 @@ public static class AutoClear
         bool closing, TabLog? log, DateTime? lastOutputUtc, long? requestedFor, DateTime nowUtc, DateTime? cpuActiveUtc = null)
     {
         if (!enabled || closing || pendingRestart || launchedAs is null || !Supports(launchedAs.Llm)) return null;
-        if (launchedAs is { NonInteractive: true, Orkester: true }) return null;
+        if (StartCommands.RunsOnce(launchedAs)) return null;
         if (state != TabState.Running || activity != Activity.Idle) return null;
         if (log is not { InputReady: true, CliExit: null, Exited: false, Activity: Activity.Idle, IdleAt: { } idleAt }) return null;
         if (requestedFor == idleAt || log.InputAt >= idleAt) return null;
