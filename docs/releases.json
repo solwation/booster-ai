@@ -1,6 +1,33 @@
 {
   "releases": [
     {
+      "version": "0.56.1",
+      "date": "2026-11-27",
+      "previous": "0.56.0",
+      "summary": {
+        "sv": "Namnbyte på en flik syns nu i terminalen, och testerna rör aldrig dina inställningar.",
+        "en": "Renaming a tab now shows in the terminal, and the tests never touch your settings."
+      },
+      "features": [
+        {
+          "issue": 281,
+          "title": {
+            "sv": "Namnbyte syns i terminalfliken",
+            "en": "Renames show in the terminal tab"
+          },
+          "howto": {
+            "sv": "Byt namn på en flik med F2 eller via radens meny. Den öppna fliken i Windows Terminal får det nya namnet inom ett par sekunder och behåller det.",
+            "en": "Rename a tab with F2 or the row menu. The open Windows Terminal tab takes the new name within a couple of seconds and keeps it."
+          },
+          "docs": "DETAILS.md#keeping-project-tab-titles"
+        }
+      ],
+      "changes": [
+        "Keep the test run out of the real BoosterAI config folder (#282)",
+        "Let a rename reach the open terminal tab: no title suppression, shell reads tabN.title (#281)"
+      ]
+    },
+    {
       "version": "0.56.0",
       "date": "2026-11-27",
       "previous": "0.55.0",
