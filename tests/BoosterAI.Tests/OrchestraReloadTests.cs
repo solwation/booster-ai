@@ -189,20 +189,45 @@ public class OrchestraReloadPtyTests
             var shellPid = expected.Pid!.Value;
             var shellStart = expected.StartTime!.Value;
             File.SetLastWriteTimeUtc(Path.Combine(session.Directory, track.Id + ".timing"), DateTime.UtcNow.AddSeconds(-3));
-            if (mode == "output") File.SetLastWriteTimeUtc(Path.Combine(session.Directory, track.Id + ".timing"), DateTime.UtcNow);
+            // Output "now" is dated a minute ahead: the tab compares the record's age with its wall clock, which this WSL steps
+            // by up to ±13 s every few seconds under load (#190, #278); a step forward must not make fresh output look old.
+            if (mode == "output") File.SetLastWriteTimeUtc(Path.Combine(session.Directory, track.Id + ".timing"), DateTime.UtcNow.AddMinutes(1));
             if (mode == "busy") File.AppendAllText(logPath, $"{idle + 1} busy\n");
             if (mode == "generation") File.AppendAllText(logPath, $"{idle + 1} input-ready protocol=2\n");
+            var since = idle - 1;
             if (mode == "draft")
             {
                 process.StandardInput.Write("draft");
                 process.StandardInput.Flush();
-                Assert.True(SpinWait.SpinUntil(() => session.ReadLog(track.Id)!.InputTypedAt > idle - 1, 30000));
+                // The draft's keys are the tab's only ones; the request starts before them on the tab's own clock (the key
+                // times come from it), not on this process's wall clock, which a WSL clock step can put seconds apart (#278).
+                Assert.True(SpinWait.SpinUntil(() => session.ReadLog(track.Id)!.InputTypedAt is not null, 30000));
+                since = Math.Min(since, session.ReadLog(track.Id)!.InputTypedAt!.Value - 1);
+            }
+            int Count(Func<string, bool> line) => File.ReadAllLines(logPath).Count(line);
+            static bool Invalid(string l) => l.Contains(" input-skipped reason=invalid", StringComparison.Ordinal);
+            // The tab drops a request it reads more than 10 s after it was written (its wall clock against ours): after such a
+            // clock step (#278) the same request is written again, a few times at most; any other answer is the test's.
+            void Request(string command, string kind, Func<string, bool> answer)
+            {
+                for (var attempt = 1; ; attempt++)
+                {
+                    var invalid = Count(Invalid);
+                    Assert.True(session.TryRequestInput(track.Id, since, command, expected, kind));
+                    Assert.True(SpinWait.SpinUntil(() =>
+                    {
+                        // Output keeps arriving until the tab has answered, so a late check under load still sees a busy terminal.
+                        if (mode == "output") File.SetLastWriteTimeUtc(Path.Combine(session.Directory, track.Id + ".timing"), DateTime.UtcNow.AddMinutes(1));
+                        return Count(answer) > 0 || Count(Invalid) > invalid;
+                    }, 30000), File.ReadAllText(logPath));
+                    if (Count(answer) > 0 || attempt == 3) return;
+                }
             }
             if (mode == "valid")
             {
                 var timing = Path.Combine(session.Directory, track.Id + ".timing");
                 var before = OutputBytes(timing);
-                Assert.True(session.TryRequestInput(track.Id, idle - 1, AutoClear.Command, expected, "clear"));
+                Request(AutoClear.Command, "clear", l => l.EndsWith(" input-sent kind=clear idle=" + expected.IdleAt, StringComparison.Ordinal));
                 Assert.True(SpinWait.SpinUntil(() => Lines() == "/clear\n", 30000));
                 Assert.True(SpinWait.SpinUntil(() => session.ReadLog(track.Id)!.InputKind == "clear", 30000));
                 // Reload requires two quiet seconds after the clear redraw. Wait until the terminal's output record holds the
@@ -212,21 +237,16 @@ public class OrchestraReloadPtyTests
                 Assert.True(SpinWait.SpinUntil(() => OutputBytes(timing) >= before + "/clear\r\n".Length, 30000));
                 File.SetLastWriteTimeUtc(timing, DateTime.UtcNow.AddMinutes(-1));
             }
-            Assert.True(session.TryRequestInput(track.Id, idle - 1, OrchestraReload.Command, expected, "orkester"));
-            Assert.True(SpinWait.SpinUntil(() =>
-            {
-                // Output keeps arriving until the tab has answered, so a late check under load still sees a busy terminal.
-                if (mode == "output") File.SetLastWriteTimeUtc(Path.Combine(session.Directory, track.Id + ".timing"), DateTime.UtcNow);
-                return File.ReadAllText(logPath).Contains(mode == "valid" ? "input-sent kind=orkester" : "input-skipped");
-            }, 30000),
-                File.ReadAllText(logPath));
+            Request(OrchestraReload.Command, "orkester",
+                l => mode == "valid" ? l.Contains(" input-sent kind=orkester", StringComparison.Ordinal) : l.Contains(" input-skipped", StringComparison.Ordinal) && !Invalid(l));
+            Assert.True(File.ReadAllText(logPath).Contains(mode == "valid" ? "input-sent kind=orkester" : "input-skipped"), File.ReadAllText(logPath));
             if (mode == "valid")
             {
                 Assert.True(SpinWait.SpinUntil(() => Lines() == "/clear\n/orkester\n", 30000));
                 Assert.Null(AutoClear.ClearedAt(session.ReadLog(track.Id)));
                 // Another UI instance or auto-clear cannot send a second command for the same idle period.
-                Assert.True(session.TryRequestInput(track.Id, idle - 1, OrchestraReload.Command, expected, "orkester"));
-                Assert.True(SpinWait.SpinUntil(() => File.ReadAllText(logPath).Contains("input-skipped reason=stale"), 30000));
+                Request(OrchestraReload.Command, "orkester", l => l.Contains(" input-skipped reason=stale", StringComparison.Ordinal));
+                Assert.Contains("input-skipped reason=stale", File.ReadAllText(logPath));
                 Assert.Equal("/clear\n/orkester\n", Lines());
             }
             else Assert.Equal("", Lines());

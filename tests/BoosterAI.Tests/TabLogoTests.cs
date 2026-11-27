@@ -168,7 +168,7 @@ public class TabLogoTests
     {
         if (!CanRunScript) return;
         const int lines = 30;
-        var (output, ms) = await InTerminal(columns, lines, env);
+        var output = await InTerminal(columns, lines, env);
         var art = TabLogo.Cells(columns >= TabLogo.FullColumns ? TabLogo.Full() : TabLogo.Wordmark());
         // On the alternate screen with the cursor hidden; left again, cleared and the cursor shown last (#244).
         Assert.StartsWith("\e[?1049h\e[?25l\e[2J", output);
@@ -180,12 +180,52 @@ public class TabLogoTests
         Assert.Contains($"\e[{top};{left}H", output);
         Assert.Contains($"\e[{top + art.Length - 1};{left}H", output);
         Assert.DoesNotContain("\n", output.Replace("ok", ""));
-        // The fade ends near the dark background, unless the 1.5 s deadline cut it short on a loaded machine.
-        if (ms < 1450) Assert.Contains(colour.Contains(";2;") ? "\e[38;2;12;12;12m" : "\e[38;5;16m", output);
-        // Bounded, not a speed test: the splash stops 1.5 s after bs_logo starts, but a slow CI runner draws each frame
-        // slowly; a splash that ignored its deadlines would run for several seconds.
-        Assert.InRange(ms, 900, 4000);
         Assert.Contains("█", output);
+        // How long it takes is checked on an injected clock below: on a loaded WSL the wall clock both stalls (a frame
+        // drawn seconds late) and steps back and forth by up to seconds (#190, #278), so a wall-clock range here failed
+        // both ways (572 ms and 14 168 ms against 900–4000 ms) without any change in the splash.
+    }
+
+    /// <summary>
+    /// The splash's schedule (#244) on an injected clock (#278): bash's EPOCHREALTIME, which bs_logo's deadlines read, is
+    /// replaced by a fake one, and sleep by a function that advances it by its argument plus <paramref name="frameMs"/>, the
+    /// time a slow machine spends drawing each frame. Each step must start before its deadline (sweep 0.8 s, hold 1.1 s,
+    /// fade 1.5 s after bs_logo starts), a fast machine shows it all, and a slow one cuts it short but still restores the screen.
+    /// </summary>
+    [Theory]
+    [InlineData(0)]
+    [InlineData(100)]
+    [InlineData(1000)]
+    public async Task SplashKeepsItsDeadlinesHoweverSlowTheFramesAre(int frameMs)
+    {
+        if (!CanRunScript) return;
+        var (output, steps) = await OnFakeClock(100, 30, "COLORTERM=truecolor", frameMs * 1000L);
+        Assert.StartsWith("\e[?1049h\e[?25l\e[2J", output);
+        Assert.EndsWith("\e[0m\e[2J\e[?1049l\e[?25hok", output);
+        var deadlines = new Dictionary<string, long> { ["0.035"] = 800_000, ["0.3"] = 1_100_000, ["0.04"] = 1_500_000 };
+        Assert.All(steps, s => Assert.True(s.At < deadlines[s.Sleep], $"{s.Sleep} s step at {s.At} µs"));
+        int Count(string sleep) => steps.Count(s => s.Sleep == sleep);
+        // The sweep's frames over the full art's width plus its gradient band (a twelfth of it per frame).
+        var w = TabLogo.Cells(TabLogo.Full())[0].Length;
+        var sweep = (w + w / 4) / ((w + w / 4) / 12 + 1) + 1;
+        var dark = output.Contains("\e[38;2;12;12;12m");
+        switch (frameMs)
+        {
+            case 0: // Everything, ending near the dark background, well within 1.5 s.
+                Assert.Equal([sweep, 1, 5], new[] { Count("0.035"), Count("0.3"), Count("0.04") });
+                Assert.True(dark);
+                Assert.InRange(steps.Sum(s => s.Ms), 900, 1100);
+                break;
+            case 100: // Fewer sweep frames, and the fade stops at its deadline before the dark end.
+                Assert.InRange(Count("0.035"), 2, sweep - 1);
+                Assert.InRange(Count("0.04"), 1, 4);
+                Assert.False(dark);
+                break;
+            default: // One sweep frame, the whole art once and the hold; no time left for the fade.
+                Assert.Equal([1, 1, 0], new[] { Count("0.035"), Count("0.3"), Count("0.04") });
+                Assert.False(dark);
+                break;
+        }
     }
 
     [Theory]
@@ -194,7 +234,7 @@ public class TabLogoTests
     public async Task PlainTerminalsGetItStillAndCentred(string env)
     {
         if (!CanRunScript) return;
-        var (output, _) = await InTerminal(100, 30, env);
+        var output = await InTerminal(100, 30, env);
         Assert.DoesNotContain("\e[38", output);
         Assert.DoesNotContain("\e[?25l", output);
         var rows = output.Split('\n').Where(l => l.Contains('▀') || l.Contains('▄') || l.Contains('█')).ToArray();
@@ -211,7 +251,7 @@ public class TabLogoTests
     public async Task NarrowTerminalsGetOneLineOrNothing(int columns, string env, bool line)
     {
         if (!CanRunScript) return;
-        var (output, _) = await InTerminal(columns, 30, env);
+        var output = await InTerminal(columns, 30, env);
         Assert.DoesNotContain("█", output);
         if (!line) { Assert.Equal("ok", output.Trim()); return; }
         if (env.StartsWith("NO_COLOR")) Assert.Contains(new string(' ', (columns - 9) / 2) + "BoosterAI", output);
@@ -300,20 +340,42 @@ public class TabLogoTests
         finally { Directory.Delete(root, true); }
     }
 
-    /// <summary>Runs bs_logo on a pseudo-terminal of <paramref name="columns"/> × <paramref name="lines"/>; returns its output and duration.</summary>
-    private static async Task<(string Output, long Ms)> InTerminal(int columns, int lines, string env)
+    /// <summary>Runs bs_logo on a pseudo-terminal of <paramref name="columns"/> × <paramref name="lines"/>; returns its output.</summary>
+    private static async Task<string> InTerminal(int columns, int lines, string env) =>
+        (await Splash(columns, lines, env, "")).Output;
+
+    /// <summary>
+    /// Runs bs_logo like <see cref="InTerminal"/> on a fake clock that only its sleeps advance, each by its argument plus
+    /// <paramref name="frameUs"/>; returns the output and each sleep with the fake time it started at (µs after bs_logo started).
+    /// </summary>
+    private static async Task<(string Output, (string Sleep, long At, double Ms)[] Steps)> OnFakeClock(int columns, int lines, string env, long frameUs)
+    {
+        // bash drops EPOCHREALTIME's special meaning once it is unset; bs_logo then reads this plain variable, also in its subshell.
+        var clock = "unset EPOCHREALTIME\nbs_t0=1000000000000000 bs_now=1000000000000000 EPOCHREALTIME=1000000000.000000\n"
+            + "sleep() {\n  local i=${1%%.*} f=${1#*.} u\n  [ \"$f\" = \"$1\" ] && f=\n  f=${f}000000\n"
+            + "  printf '%s %s\\n' \"$1\" $((bs_now - bs_t0)) >> steps\n"
+            + $"  bs_now=$((bs_now + 10#${{i:-0}} * 1000000 + 10#${{f:0:6}} + {frameUs}))\n"
+            + "  printf -v u %06d $((bs_now % 1000000))\n  EPOCHREALTIME=$((bs_now / 1000000)).$u\n}\n";
+        var (output, steps) = await Splash(columns, lines, env, clock);
+        return (output, steps.Split('\n', StringSplitOptions.RemoveEmptyEntries).Select(l => l.Split(' '))
+            .Select(f => (f[0], long.Parse(f[1]), double.Parse(f[0], System.Globalization.CultureInfo.InvariantCulture) * 1000)).ToArray());
+    }
+
+    private static async Task<(string Output, string Steps)> Splash(int columns, int lines, string env, string clock)
     {
         var root = Directory.CreateTempSubdirectory("booster-logo").FullName;
         try
         {
             File.WriteAllText(Path.Combine(root, "logo.sh"), TabLogo.Script);
+            File.WriteAllText(Path.Combine(root, "clock.sh"), clock);
+            File.WriteAllText(Path.Combine(root, "steps"), "");
             var psi = new ProcessStartInfo("script") { RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true, WorkingDirectory = root };
             psi.ArgumentList.Add("-qec");
-            psi.ArgumentList.Add($"bash --noprofile --norc -c '. ./logo.sh && stty cols {columns} rows {lines} && t=$(date +%s%3N) && bs_logo && echo $(($(date +%s%3N) - t)) > ms && printf ok'");
+            psi.ArgumentList.Add($"bash --noprofile --norc -c '. ./logo.sh && stty cols {columns} rows {lines} && . ./clock.sh && bs_logo && printf ok'");
             psi.ArgumentList.Add("/dev/null");
             Environment(psi, root, env);
             var output = await Run(psi, root);
-            return (output.Replace("\r\n", "\n"), long.Parse(File.ReadAllText(Path.Combine(root, "ms"))));
+            return (output.Replace("\r\n", "\n"), File.ReadAllText(Path.Combine(root, "steps")));
         }
         finally { Directory.Delete(root, true); }
     }

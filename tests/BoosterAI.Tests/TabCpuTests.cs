@@ -192,6 +192,10 @@ public class TabCpuTests(Xunit.Abstractions.ITestOutputHelper output)
         Assert.NotNull(Due(Activity.Idle, idleTime.AddMinutes(-3), idleTime.AddMinutes(5)));
     }
 
+    /// <summary>The machine's idle and I/O wait time (the first line of /proc/stat), in hundredths of a second.</summary>
+    private static long IdleTicks() =>
+        File.ReadLines("/proc/stat").First().Split(' ', StringSplitOptions.RemoveEmptyEntries).Skip(4).Take(2).Sum(long.Parse);
+
     /// <summary>
     /// A real tab (tab-lib.sh under a PTY, as in the restart tests) whose CLI first waits quietly, then runs a busy child
     /// (yes), then a quiet one (sleep): only the busy phase counts as working, named after yes, and the tab returns to idle.
@@ -221,12 +225,18 @@ public class TabCpuTests(Xunit.Abstractions.ITestOutputHelper output)
             var cpu = new CpuActivity();
             var samples = new List<CpuSample?>();
             var previous = ProcSnapshot.Read("/proc");
+            var idleBefore = IdleTicks();
+            var idleCores = 0.0;
             // Opening the fifo blocks until the fake CLI reads it; never wait forever for a CLI that died.
             void Next() => Assert.True(Task.Run(() => File.AppendAllText(go, "\n")).Wait(15000), "the fake CLI stopped reading");
             bool Step()
             {
                 Thread.Sleep(1000);
                 var current = ProcSnapshot.Read("/proc")!;
+                var idle = IdleTicks();
+                // Cores the machine left idle meanwhile (/proc/stat and the uptime both count hundredths of a second).
+                idleCores = previous is null ? 0 : (double)(idle - idleBefore) / (current.Uptime - previous.Uptime);
+                idleBefore = idle;
                 var sample = TabCpu.Measure(previous, current, log.Pid!.Value, log.StartTime);
                 previous = current;
                 samples.Add(sample);
@@ -238,7 +248,11 @@ public class TabCpuTests(Xunit.Abstractions.ITestOutputHelper output)
             Next();
             Assert.True(SpinWait.SpinUntil(Step, 45000), "busy: " + string.Join(", ", samples.Select(s => s?.Share)));
             Assert.Equal("yes", cpu.Busy!.Busiest);
-            Assert.True(cpu.Busy.Share > 0.5);
+            // yes alone is the tab's load, counted in cores: at most one, and on a machine with a core to spare about one.
+            // On a loaded machine (the full suite next to another one, #278) it only gets its share of the cores, so the
+            // lower bound applies only when the machine had a core idle during that reading.
+            Assert.InRange(cpu.Busy.BusiestShare, cpu.Busy.Share * 0.8, 1.1);
+            Assert.True(cpu.Busy.Share > 0.5 || idleCores < 1, $"{cpu.Busy.Share:P1} with {idleCores:F1} cores idle");
             Next();
             Assert.True(SpinWait.SpinUntil(() => !Step(), 45000), "quiet again: " + string.Join(", ", samples.Select(s => s?.Share)));
             for (var i = 0; i < 3; i++) Assert.False(Step());

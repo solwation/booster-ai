@@ -328,21 +328,23 @@ public class AutoClearPtyTests
         {
             Assert.True(SpinWait.SpinUntil(() => session.ReadLog(track.Id) is { InputReady: true }, 30000));
             session.RequestInput(track.Id, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - 1000, AutoClear.Command);
-            Assert.True(SpinWait.SpinUntil(() => Lines() == "/clear\n", 10000), Lines());
-            Assert.True(SpinWait.SpinUntil(() => session.ReadLog(track.Id) is { InputSent: true }, 10000));
+            Assert.True(SpinWait.SpinUntil(() => Lines() == "/clear\n", 30000), Lines());
+            Assert.True(SpinWait.SpinUntil(() => session.ReadLog(track.Id) is { InputSent: true }, 30000));
 
             process.StandardInput.Write("typed by the user\n");
             process.StandardInput.Flush();
-            Assert.True(SpinWait.SpinUntil(() => Lines().EndsWith("typed by the user\n", StringComparison.Ordinal), 10000), Lines());
+            Assert.True(SpinWait.SpinUntil(() => Lines().EndsWith("typed by the user\n", StringComparison.Ordinal), 30000), Lines());
 
             // A key after the request's start: skipped, so a draft is never sent along.
             session.RequestInput(track.Id, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - 60_000, AutoClear.Command);
-            Assert.True(SpinWait.SpinUntil(() => File.ReadAllText(Path.Combine(session.Directory, track.Id + ".log")).Contains("input-skipped reason=typed"), 10000));
+            Assert.True(SpinWait.SpinUntil(() => File.ReadAllText(Path.Combine(session.Directory, track.Id + ".log")).Contains("input-skipped reason=typed"), 30000));
             Assert.False(File.Exists(Path.Combine(session.Directory, track.Id + ".input")));
-            session.RequestInput(track.Id, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + 1000, "again\r");
-            Assert.True(SpinWait.SpinUntil(() => Lines().Contains("30 101\n"), 10000), Lines());
+            // A request after the last key: its start is a minute ahead, as the tab's wall clock (the key times) and ours can be
+            // seconds apart on this WSL, whose clock steps by up to ±13 s every few seconds under load (#278).
+            session.RequestInput(track.Id, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + 60_000, "again\r");
+            Assert.True(SpinWait.SpinUntil(() => Lines().Contains("30 101\n"), 30000), Lines());
             Assert.Equal("/clear\ntyped by the user\nagain\n30 101\n", Lines());
-            Assert.True(SpinWait.SpinUntil(() => session.ReadLog(track.Id) is { CliExit: 0, InputReady: false }, 10000));
+            Assert.True(SpinWait.SpinUntil(() => session.ReadLog(track.Id) is { CliExit: 0, InputReady: false }, 30000));
 
             process.StandardInput.Write("exit\n");
             process.StandardInput.Flush();
@@ -538,7 +540,6 @@ public class AutoClearPtyTests
         using var process = System.Diagnostics.Process.Start(psi)!;
         var log = Path.Combine(session.Directory, track.Id + ".log");
         long[] Typed() => File.ReadAllLines(log).Where(l => l.EndsWith(" input-typed", StringComparison.Ordinal)).Select(l => long.Parse(l.Split(' ')[0])).ToArray();
-        long Now() => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         void Send(string s) { process.StandardInput.Write(s); process.StandardInput.Flush(); }
         try
         {
@@ -547,21 +548,26 @@ public class AutoClearPtyTests
             Thread.Sleep(1500);
             Assert.Empty(Typed());
 
-            // The Escape key on its own: an unfinished sequence that never completes, so it is a key.
-            var since = Now();
+            // The Escape key on its own: an unfinished sequence that never completes, so it is a key, logged half a second later
+            // with its own time, and a request that starts before it is skipped. The request's start is taken from that log
+            // line (the tab's clock), not from ours: this WSL's wall clock steps by up to ±13 s every few seconds under load (#278).
             Send(E);
-            Thread.Sleep(100);
-            session.RequestInput(track.Id, since, AutoClear.Command);
-            Assert.True(SpinWait.SpinUntil(() => File.ReadAllText(log).Contains("input-skipped reason=typed"), 30000));
             Assert.True(SpinWait.SpinUntil(() => Typed().Length == 1, 20000));
+            session.RequestInput(track.Id, Typed()[0] - 1, AutoClear.Command);
+            Assert.True(SpinWait.SpinUntil(() => File.ReadAllText(log).Contains("input-skipped reason=typed"), 30000));
             Thread.Sleep(1200);
 
-            long first = Now(), last = 0;
-            foreach (var k in keys) { last = Now(); Send(k); Thread.Sleep(30); }
-            Assert.True(SpinWait.SpinUntil(() => Typed().Length > 1 && Typed()[^1] >= last, 20000), string.Join(" ", Typed()));
+            // The fake CLI's record of the last key is written when the tab forwards it, the moment the tab times that key.
+            var got = Path.Combine(session.Directory, "got");
+            long Received() => File.Exists(got) && new FileInfo(got).Length == sent.Length
+                ? new DateTimeOffset(File.GetLastWriteTimeUtc(got)).ToUnixTimeMilliseconds() : long.MaxValue;
+            var burst = System.Diagnostics.Stopwatch.StartNew();
+            foreach (var k in keys) { Send(k); Thread.Sleep(30); }
+            var span = burst.ElapsedMilliseconds;
+            Assert.True(SpinWait.SpinUntil(() => Typed().Length > 1 && Typed()[^1] >= Received() - 250, 20000), string.Join(" ", Typed()));
             Thread.Sleep(1500);
-            // Ten separate keys in about a third of a second: the first at once, the rest in one line a second later.
-            Assert.InRange(Typed().Length - 1, 1, 2 + (last - first) / 1000);
+            // Ten separate keys in about a third of a second (timed on a monotonic clock): the first at once, the rest in one line a second later.
+            Assert.InRange(Typed().Length - 1, 1, 2 + span / 1000);
 
             Assert.True(SpinWait.SpinUntil(() => session.ReadLog(track.Id) is { CliExit: 0 }, 30000));
             Assert.Equal(sent, File.ReadAllText(Path.Combine(session.Directory, "got")));
