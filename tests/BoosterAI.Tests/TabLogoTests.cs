@@ -180,8 +180,8 @@ public class TabLogoTests
         Assert.Contains($"\e[{top};{left}H", output);
         Assert.Contains($"\e[{top + art.Length - 1};{left}H", output);
         Assert.DoesNotContain("\n", output.Replace("ok", ""));
-        // The fade ends near the dark background.
-        Assert.Contains(colour.Contains(";2;") ? "\e[38;2;12;12;12m" : "\e[38;5;16m", output);
+        // The fade ends near the dark background, unless the 1.5 s deadline cut it short on a loaded machine.
+        if (ms < 1450) Assert.Contains(colour.Contains(";2;") ? "\e[38;2;12;12;12m" : "\e[38;5;16m", output);
         // Bounded, not a speed test: the splash stops 1.5 s after bs_logo starts, but a slow CI runner draws each frame
         // slowly; a splash that ignored its deadlines would run for several seconds.
         Assert.InRange(ms, 900, 4000);
