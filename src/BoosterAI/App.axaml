@@ -182,8 +182,6 @@
          dots, round caps on near-zero segments) and change directory. -->
     <StreamGeometry x:Key="MoreIcon">M3.5,8 L3.5,8.01 M8,8 L8,8.01 M12.5,8 L12.5,8.01</StreamGeometry>
     <StreamGeometry x:Key="GripIcon">M6,3.5 L6,3.51 M10,3.5 L10,3.51 M6,8 L6,8.01 M10,8 L10,8.01 M6,12.5 L6,12.51 M10,12.5 L10,12.51</StreamGeometry>
-    <!-- Show the tab in the terminal (#213): a window with a title bar and an arrow out of it. -->
-    <StreamGeometry x:Key="ShowTerminalIcon">M2.5,4 L2.5,13 L13.5,13 L13.5,4 Z M2.5,6.5 L13.5,6.5 M5,9 L7,10.5 L5,12</StreamGeometry>
     <StreamGeometry x:Key="StartIcon">M5,3 L12.5,8 L5,13 Z</StreamGeometry>
     <StreamGeometry x:Key="RestartIcon">M13.5,8 A5.5,5.5 0 1 1 11.9,4.1 M12.5,1.5 L12.5,4.5 L9.5,4.5</StreamGeometry>
     <StreamGeometry x:Key="DownloadIcon">M8,1.5 L8,10 M4.5,6.5 L8,10 L11.5,6.5 M2,13.5 L14,13.5</StreamGeometry>

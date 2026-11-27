@@ -221,13 +221,72 @@ public partial class MainWindow : Window
     }
 
     /// <summary>Alt+Up/Down moves the row holding the focus one step and saves the order (#156). A ComboBox keeps its own
-    /// Alt+Down (open the list): it handles the key first, so a handled event is left alone.</summary>
+    /// Alt+Down (open the list): it handles the key first, so a handled event is left alone. Enter on a live row (its grip
+    /// or status line has the focus) shows its terminal tab (#253); buttons and lists handle their own Enter first, and a
+    /// subtab's name box keeps Enter as before.</summary>
     private void OnRowKeyDown(object? sender, KeyEventArgs e)
     {
-        if (e.Handled || e.KeyModifiers != KeyModifiers.Alt || e.Key is not (Key.Up or Key.Down)) return;
-        if ((sender as Control)?.DataContext is not TabViewModel tab) return;
+        if (e.Handled || (sender as Control)?.DataContext is not TabViewModel tab) return;
+        if (e.Key == Key.Enter && e.KeyModifiers == KeyModifiers.None && e.Source is not TextBox && tab.CanShowTerminal)
+        {
+            e.Handled = true;
+            ShowTerminal(tab);
+            return;
+        }
+        if (e.KeyModifiers != KeyModifiers.Alt || e.Key is not (Key.Up or Key.Down)) return;
         e.Handled = true;
         MoveRow(tab, e.Key == Key.Up ? -1 : 1);
+    }
+
+    /// <summary>A left press on a free part of a live row (#253): the click completes on release, unless the pointer moved.</summary>
+    private (Border Row, Point At)? _rowPress;
+    /// <summary>How far the pointer may move between press and release and still count as a click, not a drag.</summary>
+    private const double RowClickSlop = 4;
+
+    private void OnRowPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        _rowPress = null;
+        if (sender is Border { DataContext: TabViewModel { CanShowTerminal: true } } row && e.GetCurrentPoint(row).Properties.IsLeftButtonPressed
+            && IsFreeRowArea(row, e.Source as Visual))
+            _rowPress = (row, e.GetPosition(row));
+    }
+
+    private void OnRowPointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (_rowPress is not { } press || !ReferenceEquals(sender, press.Row)) return;
+        _rowPress = null;
+        var moved = e.GetPosition(press.Row) - press.At;
+        if (e.InitialPressMouseButton != MouseButton.Left || Math.Abs(moved.X) > RowClickSlop || Math.Abs(moved.Y) > RowClickSlop
+            || !IsFreeRowArea(press.Row, e.Source as Visual) || press.Row.DataContext is not TabViewModel { CanShowTerminal: true } tab) return;
+        e.Handled = true;
+        ShowTerminal(tab);
+    }
+
+    /// <summary>
+    /// Whether <paramref name="source"/> is a free part of <paramref name="row"/> (#253): the row's background, name or other
+    /// plain text. Its controls keep their own clicks: buttons (status, Start, ↻, Continue, folder, ×, the question badge, ⋯),
+    /// the tick, the lists, the subtab's name box, the grip, the usage meters and the agent's status line. Anything in a popup
+    /// (a list's dropdown, the status or question panel) is outside the row's visual tree.
+    /// </summary>
+    internal static bool IsFreeRowArea(Border row, Visual? source)
+    {
+        if (source is null || !(ReferenceEquals(source, row) || row.IsVisualAncestorOf(source))) return false;
+        for (var v = source; v is not null && !ReferenceEquals(v, row); v = v.GetVisualParent())
+            if (v is Button or ToggleButton or ComboBox or TextBox or MenuItem
+                || v is StyledElement el && (el.Classes.Contains("grip") || el.Classes.Contains("limit-meter") || el.Classes.Contains("agent-status")))
+                return false;
+        return true;
+    }
+
+    /// <summary>Raised before a row's terminal tab is shown (#253), so tests can see which clicks and keys reach it.</summary>
+    internal event Action<TabViewModel>? TerminalShown;
+
+    /// <summary>The row click, Enter and the row menu all use the same path as the old terminal icon (#213).</summary>
+    private void ShowTerminal(TabViewModel tab)
+    {
+        if (_vm.IsClosingAll) return;
+        TerminalShown?.Invoke(tab);
+        _vm.ShowTerminal(tab);
     }
 
     private void OnRowMoveUp(object? sender, RoutedEventArgs e)
@@ -418,7 +477,7 @@ public partial class MainWindow : Window
 
     private void OnShowTerminal(object? sender, RoutedEventArgs e)
     {
-        if (!_vm.IsClosingAll && (sender as Control)?.DataContext is TabViewModel tab) _vm.ShowTerminal(tab);
+        if ((sender as Control)?.DataContext is TabViewModel { CanShowTerminal: true } tab) ShowTerminal(tab);
     }
 
     private async void OnRestart(object? sender, RoutedEventArgs e)

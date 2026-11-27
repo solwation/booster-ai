@@ -82,11 +82,11 @@ public sealed class TerminalFocusTests : IDisposable
     public void TextsExistInBothLanguages()
     {
         var vm = new MainViewModel(new AppConfig { Tabs = [new() { Name = "Atlas" }] });
-        Assert.Equal("Visa fliken i terminalen", vm.Tabs[0].ShowTerminalTip);
-        Assert.Equal("Visa Atlas i terminalen", vm.Tabs[0].ShowTerminalName);
+        Assert.Null(vm.Tabs[0].ShowTerminalHelp); // never started: no terminal tab to show
+        vm.Tabs[0].SetState(TabState.Running, null);
+        Assert.Equal("Enter visar Atlas i terminalen", vm.Tabs[0].ShowTerminalHelp);
         Loc.Use("en");
-        Assert.Equal("Show the tab in the terminal", vm.Tabs[0].ShowTerminalTip);
-        Assert.Equal("Show Atlas in the terminal", vm.Tabs[0].ShowTerminalName);
+        Assert.Equal("Enter shows Atlas in the terminal", vm.Tabs[0].ShowTerminalHelp);
     }
 
     [Fact]

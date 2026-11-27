@@ -191,9 +191,11 @@
               <Border Classes="segment-tint" Background="{Binding GroupColorBrush}" IsVisible="{Binding InGroup}" />
               <Border Classes="segment-outline" BorderBrush="{Binding GroupColorBrush}" IsVisible="{Binding InGroup}" />
               <!-- Keyboard (#156): Alt+Up/Down moves the focused row (KeyDown), and the row menu offers the row's actions,
-                   also from the row's ⋯ button (#196). -->
-              <Border Classes="row" DragDrop.AllowDrop="True" DragDrop.DragOver="OnTabDragOver"
-                      DragDrop.DragLeave="OnTabDragLeave" DragDrop.Drop="OnTabDrop" KeyDown="OnRowKeyDown">
+                   also from the row's ⋯ button (#196). A click on a free part of a live row, or Enter on it, shows its
+                   terminal tab (#253); the row's controls keep their own clicks. -->
+              <Border Classes="row" Classes.show-terminal="{Binding CanShowTerminal}" DragDrop.AllowDrop="True" DragDrop.DragOver="OnTabDragOver"
+                      DragDrop.DragLeave="OnTabDragLeave" DragDrop.Drop="OnTabDrop" KeyDown="OnRowKeyDown"
+                      PointerPressed="OnRowPointerPressed" PointerReleased="OnRowPointerReleased">
                 <Border.ContextMenu>
                   <ContextMenu Closed="OnRowMenuClosed">
                     <MenuItem Header="{local:T subtab.create}" Click="OnAddSubTab" />
@@ -201,6 +203,7 @@
                     <MenuItem Header="{local:T row.menu.up}" Click="OnRowMoveUp" IsEnabled="{Binding CanMoveUp}" />
                     <MenuItem Header="{local:T row.menu.down}" Click="OnRowMoveDown" IsEnabled="{Binding CanMoveDown}" />
                     <Separator />
+                    <MenuItem Header="{local:T row.menu.show}" Click="OnShowTerminal" IsEnabled="{Binding CanShowTerminal}" IsVisible="{x:Static local:TabViewModel.ShowTerminalOffered}" />
                     <MenuItem Header="{local:T row.menu.start}" Click="OnStartTab" IsEnabled="{Binding CanStart}" />
                     <MenuItem Header="{local:T row.menu.restart}" Click="OnRestart" IsEnabled="{Binding CanRestart}" />
                     <MenuItem Header="{local:T row.menu.continue}" Click="OnContinue" IsEnabled="{Binding CanContinueClosed}" />
@@ -215,7 +218,8 @@
                   <!-- A project's colour stripe; in a group the segment draws it instead, joined across the rows (#196). -->
                   <Border Grid.Column="0" Background="{Binding ColorBrush}" CornerRadius="{StaticResource RadiusSmall}" IsVisible="{Binding !InGroup}" />
                   <Border Grid.Column="1" Classes="grip" PointerPressed="OnTabDragStart"
-                          ToolTip.Tip="{local:T tab.reorder.tip}" AutomationProperties.Name="{Binding ReorderName}">
+                          ToolTip.Tip="{local:T tab.reorder.tip}" AutomationProperties.Name="{Binding ReorderName}"
+                          AutomationProperties.HelpText="{Binding ShowTerminalHelp}">
                     <Path Data="{StaticResource GripIcon}" />
                   </Border>
 
@@ -278,11 +282,6 @@
                       <Button Classes="icon" Click="OnStartTab" IsVisible="{Binding CanStart}" Margin="0,-6,0,-6"
                               ToolTip.Tip="{local:T tab.start.tip}" AutomationProperties.Name="{Binding StartName}">
                         <Path Data="{StaticResource StartIcon}" />
-                      </Button>
-                      <!-- Show the tab in the terminal (#213): a separate icon, so the status keeps opening its popup. -->
-                      <Button Classes="icon" Click="OnShowTerminal" IsVisible="{Binding CanShowTerminal}" Margin="2,-6,0,-6" Width="26" Padding="3" Cursor="Hand"
-                              ToolTip.Tip="{Binding ShowTerminalTip}" AutomationProperties.Name="{Binding ShowTerminalName}">
-                        <Path Data="{StaticResource ShowTerminalIcon}" />
                       </Button>
                       <Button Classes="icon" Click="OnRestart" IsVisible="{Binding ShowReload}" Margin="4,-6,0,-6"
                               ToolTip.Tip="{Binding RestartTip}" AutomationProperties.Name="{Binding ReloadName}">

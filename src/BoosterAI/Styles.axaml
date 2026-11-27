@@ -405,6 +405,13 @@
   <Style Selector="Border.row:pointerover">
     <Setter Property="Background" Value="{DynamicResource RowHoverBrush}" />
   </Style>
+  <!-- A live row shows its terminal tab on a click (#253): the hand says so; the status line keeps the arrow (no click). -->
+  <Style Selector="Border.row.show-terminal">
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+  <Style Selector="Border.row.show-terminal Grid.agent-status">
+    <Setter Property="Cursor" Value="Arrow" />
+  </Style>
   <Style Selector="Border.row.drop-before">
     <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColor}" />
     <Setter Property="BorderThickness" Value="0,2,0,0" />

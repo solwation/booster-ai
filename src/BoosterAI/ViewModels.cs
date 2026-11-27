@@ -112,7 +112,7 @@ public sealed partial class TabViewModel : Observable
             Raise(nameof(OpenTip));
             Raise(nameof(ContinueName));
             Raise(nameof(StartName));
-            Raise(nameof(ShowTerminalName));
+            Raise(nameof(ShowTerminalHelp));
             Raise(nameof(ReorderName));
             Raise(nameof(MoreName));
             Raise(nameof(RemoveSubTabName));
@@ -502,8 +502,10 @@ public sealed partial class TabViewModel : Observable
     /// <summary>The tab has a terminal tab to switch to (#213): its shell lives, even when the CLI in it has ended.</summary>
     public bool CanShowTerminal => TerminalFocus.Supported && CanShowTerminalState;
     internal bool CanShowTerminalState => _state is TabState.Starting or TabState.Running or TabState.CliExited or TabState.CliMissing;
-    public string ShowTerminalName => Loc.Format("tab.show.name", Name);
-    public string ShowTerminalTip => Loc.Get("tab.show.tip");
+    /// <summary>Whether this platform offers the row menu's Show in terminal at all (#253); live rows enable it.</summary>
+    public static bool ShowTerminalOffered => TerminalFocus.Supported;
+    /// <summary>The grip's help text while the row shows its terminal tab on a click or Enter (#253), for screen readers.</summary>
+    public string? ShowTerminalHelp => CanShowTerminal ? Loc.Format("tab.show.help", Name) : null;
     /// <summary>The wt.exe command that switches to this tab's terminal tab, or null when it cannot be built.</summary>
     internal TerminalFocus.Command? ShowTerminalCommand => _owner.FocusCommand(this);
     /// <summary>Started or running: Start leaves it alone rather than opening a duplicate.</summary>
@@ -819,7 +821,7 @@ public sealed partial class TabViewModel : Observable
         _watchingSince = watchingSince;
         _clearedAt = clearedAt;
         if (state != TabState.Running) PendingRestart = false;
-        foreach (var n in new[] { nameof(HasStatus), nameof(IsRunning), nameof(CanShowTerminal), nameof(IsAlive), nameof(OpenTip), nameof(WillStart), nameof(Activity), nameof(StatusText), nameof(StatusTip), nameof(StatusBrush),
+        foreach (var n in new[] { nameof(HasStatus), nameof(IsRunning), nameof(CanShowTerminal), nameof(ShowTerminalHelp), nameof(IsAlive), nameof(OpenTip), nameof(WillStart), nameof(Activity), nameof(StatusText), nameof(StatusTip), nameof(StatusBrush),
             nameof(IsExitError), nameof(PeekLimitMissing), nameof(HasPeekLimitMissing) }) Raise(n);
         RaiseRemoveSubTab();
         RaiseRestart();
