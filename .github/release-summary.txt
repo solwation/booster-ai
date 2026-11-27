@@ -1,3 +1,3 @@
-version: 0.53.1
-sv: Den animerade logotypen visas nu också när man startar om flikar som öppnades före uppgraderingen.
-en: The animated logo now also shows when restarting tabs that were opened before the upgrade.
+version: 0.54.0
+sv: BoosterAI-logotypen visas nu som en centrerad splash i varje flik och tonar ut innan AI-CLI:t startar.
+en: The BoosterAI logo is now a centred splash in every tab that fades out before the AI CLI starts.
