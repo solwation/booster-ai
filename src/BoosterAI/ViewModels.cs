@@ -572,6 +572,7 @@ public sealed partial class TabViewModel : Observable
         {
             if (!Set(ref _track, value)) return;
             TitleWritten = null;
+            WindowClosed = false;
             // A new track is a new events file (#249): the old tab's status and questions are gone with it.
             SetChannel(TabChannelState.Empty);
             SaveNotice = null;
@@ -580,6 +581,11 @@ public sealed partial class TabViewModel : Observable
         }
     }
     internal string? TrackId => Track?.Id;
+    /// <summary>
+    /// The terminal window this tab was in has been closed (#283), while its shell may still look alive for a while: the
+    /// status poll shows it as closed so Start counts it. A new track (the next launch) clears it.
+    /// </summary>
+    internal bool WindowClosed { get; set; }
     /// <summary>The name last written to the track's title file (#281); the status poll rewrites it after a rename.</summary>
     internal string? TitleWritten { get; set; }
     internal DateTime LaunchedAt { get; set; }
@@ -2004,6 +2010,8 @@ public sealed partial class MainViewModel : Observable
     }
     private DispatcherTimer? _poll;
     private bool _polling;
+    /// <summary>Notices a closed session window (#283); tests replace its lookups.</summary>
+    internal TerminalWindows TerminalWindows { get; } = new();
     /// <summary>The previous poll's /proc scan, the baseline for each tab's CPU share (#215); null: none yet.</summary>
     private ProcSnapshot? _procs;
 
@@ -2131,13 +2139,16 @@ public sealed partial class MainViewModel : Observable
         {
             foreach (var (session, id, name) in renamed) session.WriteTitle(id, name);
             var live = TabSession.Liveness(distro);
+            // A session window closed as a whole (#283): its tabs count as closed, however alive their shells still look.
+            var closedWindows = TerminalWindows.Closed(watched.Select(w => w.Session.WindowName)).ToHashSet(StringComparer.Ordinal);
             var results = watched.Select(w =>
             {
                 var log = w.Session.ReadLog(w.Id);
                 var denied = log?.Denied?.SelectMany(AgyPermissions.Programs).Distinct().ToList();
                 var now = DateTime.UtcNow;
                 var state = TabStatus.Evaluate(log, now - w.LaunchedAt, live);
-                return (w.Row, w.Id, State: state, log?.CliExit, Denied: denied,
+                var windowClosed = closedWindows.Contains(w.Session.WindowName);
+                return (w.Row, w.Id, State: state, WindowClosed: windowClosed, log?.CliExit, Denied: denied,
                     log?.Pid, Activity: w.Session.ReadActivity(w.Id, log, now), log?.WatchingSince, Log: log, LastOutput: w.Session.LastOutput(w.Id));
             }).ToList();
             TabTitles.Restore(results.Zip(watched)
@@ -2161,10 +2172,13 @@ public sealed partial class MainViewModel : Observable
             var (results, settings, procs, cpu, channels) = t.Result;
             _procs = procs;
             var anyActivityChanged = false;
-            foreach (var ((row, id, state, rc, denied, pid, hookActivity, watchingSince, log, lastOutput), sample) in results.Zip(cpu))
+            foreach (var ((row, id, polled, windowClosed, rc, denied, pid, hookActivity, watchingSince, log, lastOutput), sample) in results.Zip(cpu))
             {
                 // Ignore a result for a tab that has been restarted meanwhile.
                 if (row.TrackId != id) continue;
+                if (windowClosed) row.WindowClosed = true;
+                var state = row.WindowClosed && polled is TabState.Starting or TabState.Running or TabState.CliExited or TabState.CliMissing
+                    ? TabState.Closed : polled;
                 var activity = TabCpu.Combine(hookActivity, row.Cpu.Update(sample, DateTime.UtcNow));
                 var previousActivity = row.Activity;
                 row.ShellPid = pid;
@@ -2180,7 +2194,7 @@ public sealed partial class MainViewModel : Observable
                     PlaySound(SoundEffect.Finished);
                 }
             }
-            foreach (var ((row, id, _, _, _, _, _, _, _, _), channel) in results.Zip(channels))
+            foreach (var ((row, id, _, _, _, _, _, _, _, _, _), channel) in results.Zip(channels))
                 if (row.TrackId == id) UpdateChannel(row, channel);
             if (anyActivityChanged) _ = RefreshAccountLimitsAsync();
             // A tab that closed can be started again: the Start button counts it.
