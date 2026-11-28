@@ -1,6 +1,38 @@
 {
   "releases": [
     {
+      "version": "0.57.0",
+      "date": "2026-11-28",
+      "previous": "0.56.3",
+      "summary": {
+        "sv": "Statuspopupen för en Codex-flik visar hur många resets kontot har kvar, och var en reset används när kvoten är slut.",
+        "en": "A Codex tab's status popup shows how many resets its account has left, and where to use one when the quota runs out."
+      },
+      "features": [
+        {
+          "issue": 285,
+          "title": {
+            "sv": "Codex-resets i flikens statuspopup",
+            "en": "Codex resets in the tab's status popup"
+          },
+          "howto": {
+            "sv": "Hovra över statusen för en Codex-flik. Under kvoten står hur många resets kontot har kvar. När kvoten är slut påminner popupen om att en reset kan användas från Konton.",
+            "en": "Hover a Codex tab's status. Below the quota it says how many resets the account has left. When the quota is used up, the popup reminds you that a reset can be used from Accounts."
+          },
+          "docs": "DETAILS.md#accounts-per-agent",
+          "image": {
+            "sv": "verification/285/exhausted-sv-light.png",
+            "en": "verification/285/exhausted-en-light.png"
+          }
+        }
+      ],
+      "changes": [
+        "Verification screenshots for #285",
+        "Keep LimitIndicatorOf's doc comment on its method",
+        "Show a Codex tab's reset count in its status popup (#285)"
+      ]
+    },
+    {
       "version": "0.56.3",
       "date": "2026-11-28",
       "previous": "0.56.2",

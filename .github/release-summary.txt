@@ -1,3 +1,12 @@
-version: 0.56.3
-sv: Ett väntande modellbyte startar inte längre om en flik som arbetar bara för att agenten tidigare sade att den var klar.
-en: A waiting model switch no longer restarts a working tab just because its agent said it was done earlier.
+version: 0.57.0
+sv: Statuspopupen för en Codex-flik visar hur många resets kontot har kvar, och var en reset används när kvoten är slut.
+en: A Codex tab's status popup shows how many resets its account has left, and where to use one when the quota runs out.
+
+feature: 285
+title.sv: Codex-resets i flikens statuspopup
+title.en: Codex resets in the tab's status popup
+howto.sv: Hovra över statusen för en Codex-flik. Under kvoten står hur många resets kontot har kvar. När kvoten är slut påminner popupen om att en reset kan användas från Konton.
+howto.en: Hover a Codex tab's status. Below the quota it says how many resets the account has left. When the quota is used up, the popup reminds you that a reset can be used from Accounts.
+image.sv: verification/285/exhausted-sv-light.png
+image.en: verification/285/exhausted-en-light.png
+docs: DETAILS.md#accounts-per-agent
