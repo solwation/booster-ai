@@ -3,7 +3,8 @@
              xmlns:local="using:BoosterAI"
              x:Class="BoosterAI.StatusPeekView" x:DataType="local:TabViewModel">
   <Border Classes="peek-surface">
-  <ScrollViewer x:Name="OutputScroll" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" Focusable="True">
+  <ScrollViewer x:Name="OutputScroll" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" Focusable="True"
+                FocusAdorner="{x:Null}">
     <StackPanel Spacing="8" Width="430">
       <StackPanel Orientation="Horizontal" Spacing="7">
         <local:StatusDotView />

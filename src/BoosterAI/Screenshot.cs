@@ -8,12 +8,12 @@ using Avalonia.Threading;
 namespace BoosterAI;
 
 /// <summary>
-/// <c>--screenshot file.png [--window main|local-model|local-models|close|settings|install|import|restart|remove-project|close-tab|alias|wsl-shutdown|limit-reset|switch|switch-unknown|auto-switch|memory-reclaim|agent-yolo|wsl|unsaved|setup|releases|uninstall] [--theme light|dark] [--config file.json] [--fake-update [manual:]0.3.0] [--fake-status [error:]text] [--fake-denied] [--fake-changed] [--fake-restartable N] [--fake-peek [N]] [--fake-setup [cli|wsl|alias]] [--fake-long-status] [--check-clipping] [--fake-agent-list [N]] [--fake-command-list [N]] [--fake-new-subtab] [--fake-row-menu [N]] [--fake-rename [N]] [--fake-memory-reclaim gradual|dropcache|disabled|other|old|unknown] [--fake-limits] [--fake-limit-change [seconds]] [--fake-quota] [--fake-dots] [--fake-channel status|question|answered|stale] [--fake-save-notice] [--fake-credits [reset]]</c>:
+/// <c>--screenshot file.png [--window main|local-model|local-models|close|settings|install|import|restart|remove-project|close-tab|alias|wsl-shutdown|limit-reset|switch|switch-unknown|auto-switch|memory-reclaim|agent-yolo|wsl|unsaved|setup|releases|uninstall] [--theme light|dark] [--config file.json] [--fake-update [manual:]0.3.0] [--fake-status [error:]text] [--fake-denied] [--fake-changed] [--fake-restartable N] [--fake-peek [N]] [--fake-peek-pinned] [--fake-setup [cli|wsl|alias]] [--fake-long-status] [--check-clipping] [--fake-agent-list [N]] [--fake-command-list [N]] [--fake-new-subtab] [--fake-row-menu [N]] [--fake-rename [N]] [--fake-memory-reclaim gradual|dropcache|disabled|other|old|unknown] [--fake-limits] [--fake-limit-change [seconds]] [--fake-quota] [--fake-dots] [--fake-channel status|question|answered|stale] [--fake-save-notice] [--fake-credits [reset]]</c>:
 /// renders a window with Avalonia's headless Skia platform. Nothing is shown on the desktop and no
 /// focus changes. The window frame (title bar) is not drawn; only the client area.
 /// </summary>
 internal sealed record ScreenshotOptions(string File, string Window, string? FakeUpdate, string? FakeStatus, bool FakeDenied, bool FakeChanged,
-    int? FakePeek = null, int FakeRestartable = 0, string? FakeSetup = null, string? Tab = null, bool FakeOptimization = false, int? FakeMemoryCap = null,
+    int? FakePeek = null, bool FakePeekPinned = false, int FakeRestartable = 0, string? FakeSetup = null, string? Tab = null, bool FakeOptimization = false, int? FakeMemoryCap = null,
     string? Section = null, string? FakeMemoryState = null, int? Width = null, int? Height = null, bool FakeOrchestraIdle = false, int? FakeMemorySaved = null,
     bool FakeLongStatus = false, bool CheckClipping = false, string? FakeMemoryReclaim = null, int? FakeAgentList = null, int? FakeCommandList = null,
     bool FakeNewSubTab = false, int? FakeRowMenu = null, bool FakeLimits = false, bool FakeQuota = false, bool FakeDots = false, bool FakeLimitChange = false,
@@ -30,7 +30,7 @@ internal static class Screenshot
         if (Value(args, "--config") is { } cfg) ConfigStore.UseFile(cfg);
         Active = true;
         return new ScreenshotOptions(file, Value(args, "--window") ?? "main", Value(args, "--fake-update"), Value(args, "--fake-status"), args.Contains("--fake-denied"),
-            args.Contains("--fake-changed") || Value(args, "--window") == "restart", FakePeekIndex(args),
+            args.Contains("--fake-changed") || Value(args, "--window") == "restart", FakePeekIndex(args), args.Contains("--fake-peek-pinned"),
             int.TryParse(Value(args, "--fake-restartable"), out var r) ? r : 0,
             args.Contains("--fake-setup") ? (Value(args, "--fake-setup") is "wsl" or "alias" ? Value(args, "--fake-setup") : "cli") : null,
             Value(args, "--tab"), args.Contains("--fake-optimization"),
@@ -54,7 +54,7 @@ internal static class Screenshot
 
     /// <summary>--fake-peek [N]: the status popup of the Nth running or failed sample tab (0: the first).</summary>
     private static int? FakePeekIndex(string[] args) =>
-        !args.Contains("--fake-peek") ? null : int.TryParse(Value(args, "--fake-peek"), out var n) ? n : 0;
+        !args.Contains("--fake-peek") && !args.Contains("--fake-peek-pinned") ? null : int.TryParse(Value(args, args.Contains("--fake-peek") ? "--fake-peek" : "--fake-peek-pinned"), out var n) ? n : 0;
 
     private static string? Value(string[] args, string name)
     {
@@ -351,7 +351,8 @@ internal static class Screenshot
         var frame = window.CaptureRenderedFrame() ?? throw new InvalidOperationException("No frame was rendered");
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(o.File))!);
         // --fake-peek [N]: a tab's status popup open over the window.
-        if (o.FakePeek is { } n && vm.ShowSamplePeek(n) is { } tab) WithStatusPopup(window, frame, tab).Save(o.File);
+        if (o.FakePeek is { } n && vm.ShowSamplePeek(n) is { } tab)
+            (o.FakePeekPinned && window is MainWindow pinnedOwner ? WithPinnedStatusPopup(pinnedOwner, frame, tab) : WithStatusPopup(window, frame, tab)).Save(o.File);
         else if (questionRow is not null && window is MainWindow main) WithQuestionPanel(main, frame, questionRow).Save(o.File);
         // --fake-agent-list [N]: the Nth row's Agent box open, with its agent and account entries (#194).
         else if (o.FakeAgentList is { } row) WithAgentList(window, frame, row).Save(o.File);
@@ -492,6 +493,28 @@ internal static class Screenshot
     /// Opens <paramref name="tab"/>'s status popup and draws it onto the window frame below the status, as a
     /// hover would show it (a headless popup is its own surface, not part of the window's frame).
     /// </summary>
+    /// <summary>--fake-peek-pinned: the popup a click on the status opens (a focused Flyout), rendered with its popup root so focus marks show (#290).</summary>
+    private static Bitmap WithPinnedStatusPopup(MainWindow window, Bitmap frame, TabViewModel tab)
+    {
+        var target = window.GetVisualDescendants().OfType<StatusPeekButton>().First(b => b.DataContext == tab);
+        window.OpenStatusPeekForScreenshot(target, tab);
+        for (var i = 0; i < 5; i++)
+        {
+            Thread.Sleep(30);
+            Dispatcher.UIThread.RunJobs();
+            AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+        }
+        var view = window.GetVisualDescendants().OfType<StatusPeekView>().FirstOrDefault()
+            ?? (window.GetVisualRoot() as Visual)?.GetVisualDescendants().OfType<StatusPeekView>().FirstOrDefault()
+            ?? throw new InvalidOperationException("The pinned status popup did not open");
+        var root = (Visual?)view.GetVisualRoot() ?? throw new InvalidOperationException("The pinned status popup has no root");
+        var size = ((Control)root).Bounds.Size;
+        var popupFrame = new RenderTargetBitmap(new PixelSize((int)Math.Ceiling(size.Width), (int)Math.Ceiling(size.Height)), frame.Dpi);
+        popupFrame.Render(root);
+        Console.Error.WriteLine($"pinned popup root {root.GetType().Name} {size}, focused: {TopLevel.GetTopLevel(view)?.FocusManager?.GetFocusedElement()?.GetType().Name}");
+        return popupFrame;
+    }
+
     private static Bitmap WithStatusPopup(Window window, Bitmap frame, TabViewModel tab)
     {
         var target = window.GetVisualDescendants().OfType<Control>()

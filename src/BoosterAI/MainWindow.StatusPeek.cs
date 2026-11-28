@@ -45,6 +45,8 @@ public partial class MainWindow
         }, Avalonia.Threading.DispatcherPriority.Loaded);
     }
 
+    internal void OpenStatusPeekForScreenshot(StatusPeekButton target, TabViewModel tab) => ShowStatusPeek(target, tab);
+
     private void ShowStatusPeek(StatusPeekButton target, TabViewModel tab)
     {
         CloseStatusPeek(restoreFocus: false);
