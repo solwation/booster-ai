@@ -231,6 +231,7 @@ public sealed class AgentAccountsViewModel : Observable
             if (keep) _resets[key] = result;
         }
         foreach (var row in Rows) row.RefreshLimits();
+        _owner.ResetsChanged(Cli);
     }
 
     /// <summary>
@@ -273,6 +274,7 @@ public sealed class AgentAccountsViewModel : Observable
             if (ok) _resetsReadAt.Remove(key);
         }
         foreach (var r in Rows) r.RefreshLimits();
+        _owner.ResetsChanged(Cli);
         _owner.ResetRedeemed(Cli, outcome, text, () => _ = RedeemAsync(account, key, name, attempt));
         if (ok) await Task.WhenAll(RefreshResetsAsync(force: true), RefreshLimitsAsync());
         return outcome;
@@ -626,6 +628,15 @@ public sealed partial class MainViewModel
     /// The plan-limit indicator of an account or single-account agent in the Agent boxes (#200, #206), from the same reading
     /// the Accounts page shows (one per account/agent, never per row); null for agents without limits and while unknown.
     /// </summary>
+    /// <summary>Codex's reset count of an account (#285) from the Accounts page's reading; null for other agents and while unknown.</summary>
+    internal ResetCredits? ResetsOf(string cli, string key) => cli == "codex" ? AccountsEditor(cli)?.ResetsOf(key) : null;
+
+    /// <summary>A reset reading or redemption changed the counts: the tabs' status popups follow.</summary>
+    internal void ResetsChanged(string cli)
+    {
+        if (cli == "codex") Dispatcher.UIThread.Post(() => { foreach (var tab in Tabs.ToList()) tab.RaiseLlms(); });
+    }
+
     internal LimitIndicator? LimitIndicatorOf(string cli, string key, bool includeFable = false) =>
         Accounts.Supports(cli) && AccountsEditor(cli) is { } editor ? LimitIndicator.For(SelectedLimits(editor, cli, key, includeFable), LimitsClock(), includeFable)
         : AccountLimitsProbe.Supports(cli) ? LimitIndicator.For(AgentLimitsOf(cli), LimitsClock())

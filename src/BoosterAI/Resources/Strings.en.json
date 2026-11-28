@@ -709,6 +709,7 @@
   "setup.environment.windows": "WSL information refreshes automatically when BoosterAI starts and when the main window is activated. The information above refers to the last checked distribution. See AI agents for program installation, versions and manual refresh.",
   "setup.environment.linux": "Project tabs run directly in the local Linux environment; WSL is not used. Installed AI programs are checked automatically at startup and when the main window is activated. See AI agents for versions, installation and manual refresh.",
   "setup.environment.agents": "View AI agent installation and settings",
+  "peek.reset.hint": "The quota is used up. A reset can be used from Accounts.",
   "peek.action": "Show status for {0}: {1}",
   "agents.alias.override.none": "After confirmation this agent starts without an alias or shell function. Original definition lines are preserved.",
   "agents.alias.override.invalid": "The saved permission preset could not be updated because its block was modified. No changes were saved.",

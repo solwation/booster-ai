@@ -13,7 +13,7 @@
       <!-- Plan limits of the tab's account (#200, #210): a small table, one row per window, so remaining and used read unambiguously:
            label, a meter of the remaining share, "62 % kvar", muted "38 % använt" and the reset time. From 80 % used the row's meter
            and percentage take the warning colour and a warning icon (not colour only). -->
-      <Border Classes="peek-limits" IsVisible="{Binding HasPeekLimit}" AutomationProperties.Name="{Binding PeekLimitName}">
+      <Border Classes="peek-limits" IsVisible="{Binding HasPeekBlock}" AutomationProperties.Name="{Binding PeekLimitName}">
         <StackPanel Spacing="6" Grid.IsSharedSizeScope="True">
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Classes="caption limit-title" Text="{local:T account.limit.title}" />
@@ -47,6 +47,9 @@
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>
+          <!-- Codex's earned resets of the account (#285), from the Accounts page's reading. -->
+          <TextBlock Classes="caption" Text="{Binding PeekResetsText}" IsVisible="{Binding HasPeekResets}" />
+          <TextBlock Classes="muted caption" Text="{Binding PeekResetHint}" IsVisible="{Binding HasPeekResetHint}" TextWrapping="Wrap" />
         </StackPanel>
       </Border>
       <!-- No plan limits for a live agy tab: why, instead of nothing (#212). -->

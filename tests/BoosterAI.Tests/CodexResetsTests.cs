@@ -221,6 +221,64 @@ time.sleep(600)
     }
 
     [Fact]
+    public async Task TheStatusPopupShowsTheTabsResetsFromTheAccountsReading()
+    {
+        var previous = Loc.Language;
+        Loc.Use("sv");
+        try
+        {
+            var now = DateTimeOffset.Now;
+            var vm = new MainViewModel(new AppConfig
+            {
+                Accounts = [new() { Id = "codex-work", Agent = "codex", Name = "Work", Directory = "~/.codex-work" }],
+                Tabs =
+                [
+                    new() { Name = "Atlas", Directory = "/srv/atlas", Llm = "codex" },
+                    new() { Name = "Harbor", Directory = "/srv/harbor", Llm = "codex", Account = "codex-work" },
+                    new() { Name = "Cirrus", Directory = "/srv/cirrus", Llm = "claude" },
+                ],
+            });
+            var counts = new Dictionary<string, ResetCredits?> { [""] = new(2, false), ["~/.codex-work"] = null };
+            vm.LimitsClock = () => now;
+            vm.AccountLimitsEnabled = vm.CodexResetsEnabled = true;
+            vm.ReadAccountLimits = (_, _, _) => Task.FromResult(new AccountLimits(new LimitWindow(100, now.AddHours(2), 300), null, null, now));
+            vm.ReadCodexResets = (_, dir) => Task.FromResult(counts[dir ?? ""]);
+            var (atlas, harbor, cirrus) = (vm.Tabs[0], vm.Tabs[1], vm.Tabs[2]);
+            var changed = new List<string?>();
+            atlas.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+            Assert.False(atlas.HasPeekResets);
+
+            await vm.AccountsEditor("codex")!.RefreshLimitsAsync();
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal("2 resets kvar", atlas.PeekResetsText); // known: the default account
+            Assert.Contains(nameof(TabViewModel.PeekResetsText), changed);
+            Assert.True(atlas.HasPeekBlock);
+            Assert.Contains("2 resets kvar", atlas.PeekLimitName);
+            Assert.Contains("2 resets kvar", atlas.StatusActionName);
+            Assert.Equal(Loc.Get("peek.reset.hint"), atlas.PeekResetHint); // the 5 h window is used up and a reset is left
+            Assert.True(atlas.HasPeekLimit);
+
+            Assert.Equal("", harbor.PeekResetsText); // unknown: nothing, never "0"
+            Assert.DoesNotContain("reset", harbor.StatusActionName);
+            Assert.Equal("", cirrus.PeekResetsText); // other agents are unaffected
+            Assert.False(cirrus.HasPeekResets);
+
+            counts[""] = new ResetCredits(1, true);
+            counts["~/.codex-work"] = new ResetCredits(0, false);
+            await vm.AccountsEditor("codex")!.RefreshResetsAsync(force: true);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal("1 reset kvar", atlas.PeekResetsText);
+            Assert.Equal(Loc.Get("peek.reset.hint"), atlas.PeekResetHint); // exhausted with a reset left: it can be used from Konton
+            Assert.Equal("0 resets kvar", harbor.PeekResetsText); // explicitly zero
+            Assert.Equal("", harbor.PeekResetHint);
+            Assert.Equal("", cirrus.PeekResetsText);
+            Loc.Use("en");
+            Assert.Equal("1 reset left", atlas.PeekResetsText);
+        }
+        finally { Loc.Use(previous); }
+    }
+
+    [Fact]
     public async Task UsingAResetAsksFirstAndNoChangesNothing()
     {
         var previous = Loc.Language;
