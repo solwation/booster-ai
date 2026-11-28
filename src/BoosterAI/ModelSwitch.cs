@@ -145,11 +145,14 @@ public static class ModelSwitch
     }
 
     /// <summary>
-    /// Idle when the CLI's activity is idle or the agent's own status says idle, done or blocked; Working when either says it works;
-    /// otherwise Unknown (no hooks, no output timing and no status, as for some Codex tabs).
+    /// Idle when the CLI's activity is idle, the agent's own status says blocked (it waits for an answer, even inside a tool call), or
+    /// it says idle or done while the CLI is not working; Working when the CLI works or the status says working; otherwise Unknown
+    /// (no hooks, no output timing and no status, as for some Codex tabs). A done or idle status is the latest since the CLI started
+    /// and never ages, so it cannot outweigh a CLI that works on a new turn (#284).
     /// </summary>
     public static SwitchActivity ActivityOf(Activity activity, AgentStatus? status) =>
-        activity == Activity.Idle || status?.State is AgentState.Idle or AgentState.Done or AgentState.Blocked ? SwitchActivity.Idle
+        activity == Activity.Idle || status?.State == AgentState.Blocked
+            || activity != Activity.Working && status?.State is AgentState.Idle or AgentState.Done ? SwitchActivity.Idle
         : activity is Activity.Working or Activity.Busy || status?.State == AgentState.Working ? SwitchActivity.Working
         : SwitchActivity.Unknown;
 }

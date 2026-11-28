@@ -153,6 +153,10 @@ public sealed class ModelSwitchTests : IDisposable
         Assert.Equal(SwitchActivity.Working, ModelSwitch.ActivityOf(Activity.Working, null));
         Assert.Equal(SwitchActivity.Working, ModelSwitch.ActivityOf(Activity.Unknown, new AgentStatus(AgentState.Working, "", 1)));
         Assert.Equal(SwitchActivity.Unknown, ModelSwitch.ActivityOf(Activity.Unknown, null));
+        // A done or idle status from an earlier turn never outweighs a CLI that works now (#284); a blocked agent waits for an answer.
+        Assert.Equal(SwitchActivity.Working, ModelSwitch.ActivityOf(Activity.Working, new AgentStatus(AgentState.Done, "klart", 1)));
+        Assert.Equal(SwitchActivity.Working, ModelSwitch.ActivityOf(Activity.Working, new AgentStatus(AgentState.Idle, "", 1)));
+        Assert.Equal(SwitchActivity.Idle, ModelSwitch.ActivityOf(Activity.Working, new AgentStatus(AgentState.Blocked, "väntar", 1)));
     }
 
     [Fact]
@@ -276,6 +280,10 @@ public sealed class ModelSwitchTests : IDisposable
         File.AppendAllText(Path.Combine(session.Directory, TabChannel.EventsFile(atlas.TrackId!)),
             $"{{\"v\":1,\"at\":{Now.ToUnixTimeMilliseconds()},\"kind\":\"status\",\"state\":\"done\",\"text\":\"Pushed.\"}}\n");
         vm.UpdateChannel(atlas, session.ReadChannel(atlas.TrackId!));
+        // The CLI still works on a turn after the done status (#284): the switch keeps waiting.
+        vm.RestartWhenIdle(atlas, TabState.Running, Activity.Working);
+        Assert.Null(Next(session, atlas));
+        Assert.True(atlas.PendingRestart);
         vm.RestartWhenIdle(atlas, TabState.Running, Activity.Busy);
         Assert.Contains("Continue where the previous agent left off.", Next(session, atlas));
         Assert.False(atlas.PendingRestart);
