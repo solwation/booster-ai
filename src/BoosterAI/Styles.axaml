@@ -232,13 +232,33 @@
     <Setter Property="FontSize" Value="13" />
   </Style>
 
-  <!-- #222: a working tab's halo grows and fades every 1.6 s; quiet enough to sit beside text, off when the system has animations off. -->
+  <!-- #222, #286: a working tab's halo grows and fades; how hard the tab works sets the pace and strength, calm and faint for
+       little CPU, fast and strong for a build. Keep the values equal to DotPulse.Low/Medium/High; off when the system has
+       animations off (the still halo then shows the level). -->
   <Style Selector="Ellipse.status-pulse">
     <Setter Property="IsHitTestVisible" Value="False" />
+  </Style>
+  <Style Selector="Ellipse.status-pulse.low">
+    <Style.Animations>
+      <Animation Duration="0:0:2.6" IterationCount="INFINITE" Easing="CubicEaseOut">
+        <KeyFrame Cue="0%"><Setter Property="ScaleTransform.ScaleX" Value="1" /><Setter Property="ScaleTransform.ScaleY" Value="1" /><Setter Property="Opacity" Value="0.35" /></KeyFrame>
+        <KeyFrame Cue="100%"><Setter Property="ScaleTransform.ScaleX" Value="1.25" /><Setter Property="ScaleTransform.ScaleY" Value="1.25" /><Setter Property="Opacity" Value="0" /></KeyFrame>
+      </Animation>
+    </Style.Animations>
+  </Style>
+  <Style Selector="Ellipse.status-pulse.medium">
     <Style.Animations>
       <Animation Duration="0:0:1.6" IterationCount="INFINITE" Easing="CubicEaseOut">
         <KeyFrame Cue="0%"><Setter Property="ScaleTransform.ScaleX" Value="1" /><Setter Property="ScaleTransform.ScaleY" Value="1" /><Setter Property="Opacity" Value="0.55" /></KeyFrame>
         <KeyFrame Cue="100%"><Setter Property="ScaleTransform.ScaleX" Value="1.45" /><Setter Property="ScaleTransform.ScaleY" Value="1.45" /><Setter Property="Opacity" Value="0" /></KeyFrame>
+      </Animation>
+    </Style.Animations>
+  </Style>
+  <Style Selector="Ellipse.status-pulse.high">
+    <Style.Animations>
+      <Animation Duration="0:0:0.8" IterationCount="INFINITE" Easing="CubicEaseOut">
+        <KeyFrame Cue="0%"><Setter Property="ScaleTransform.ScaleX" Value="1" /><Setter Property="ScaleTransform.ScaleY" Value="1" /><Setter Property="Opacity" Value="0.85" /></KeyFrame>
+        <KeyFrame Cue="100%"><Setter Property="ScaleTransform.ScaleX" Value="1.75" /><Setter Property="ScaleTransform.ScaleY" Value="1.75" /><Setter Property="Opacity" Value="0" /></KeyFrame>
       </Animation>
     </Style.Animations>
   </Style>

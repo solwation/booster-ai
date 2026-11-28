@@ -161,7 +161,7 @@ internal static class Screenshot
     {
         var range = ReleaseRange.All;
         var latest = section is not null && section.StartsWith("latest", StringComparison.Ordinal);
-        if (latest) section = section.Length > 7 && section[6] == ':' ? section[7..] : null;
+        if (latest) section = section!.Length > 7 && section[6] == ':' ? section[7..] : null;
         if (section is { Length: > 0 } and not "all")
         {
             var parts = section.Split("..");
@@ -319,7 +319,7 @@ internal static class Screenshot
         if (o.FakeCommandList is not null) vm.ShowSampleCommands();
         // --fake-long-status: the longest fixed status texts, with the orchestra column shown (#152).
         if (o.FakeLongStatus) vm.ShowSampleLongStatus();
-        // --fake-dots: one row per status dot shape (#222): working, busy, waiting, watching, starting, failed, closed.
+        // --fake-dots: one row per status dot shape (#222): working at low/medium/high CPU (#286), busy, waiting, watching, starting, failed, closed.
         if (o.FakeDots) vm.ShowSampleDots();
         // --fake-new-subtab: the first group's last subtab never opened, as if created while the others run (#198).
         var newSubTab = o.FakeNewSubTab ? vm.ShowSampleNewSubTab() : null;

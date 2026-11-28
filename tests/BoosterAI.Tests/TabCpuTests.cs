@@ -274,4 +274,54 @@ public class TabCpuTests(Xunit.Abstractions.ITestOutputHelper output)
             Directory.Delete(root, true);
         }
     }
+
+    [Theory]
+    // Entering a level takes its up threshold; staying in it only its lower down threshold (#286).
+    [InlineData(0.0, CpuLevel.Low, CpuLevel.Low)]
+    [InlineData(0.39, CpuLevel.Low, CpuLevel.Low)]
+    [InlineData(0.40, CpuLevel.Low, CpuLevel.Medium)]
+    [InlineData(0.30, CpuLevel.Medium, CpuLevel.Medium)]
+    [InlineData(0.24, CpuLevel.Medium, CpuLevel.Low)]
+    [InlineData(1.49, CpuLevel.Medium, CpuLevel.Medium)]
+    [InlineData(1.50, CpuLevel.Low, CpuLevel.High)]
+    [InlineData(1.20, CpuLevel.High, CpuLevel.High)]
+    [InlineData(1.09, CpuLevel.High, CpuLevel.Medium)]
+    [InlineData(0.10, CpuLevel.High, CpuLevel.Low)]
+    public void LevelOfUsesHysteresis(double share, CpuLevel current, CpuLevel expected) =>
+        Assert.Equal(expected, TabCpu.LevelOf(share, current));
+
+    [Fact]
+    public void TheLevelFollowsTheSmoothedShareWithoutFlickering()
+    {
+        var cpu = new CpuActivity();
+        var t = DateTime.UtcNow;
+        Assert.Null(cpu.Level);
+        // An agent's turn: a little CPU stays Low.
+        for (var i = 0; i < 5; i++) cpu.Update(Reading(0.15), t);
+        Assert.Equal(CpuLevel.Low, cpu.Level);
+        // One spike of three cores moves the smoothed share, but not to High.
+        cpu.Update(Reading(3.0), t);
+        Assert.NotEqual(CpuLevel.High, cpu.Level);
+        cpu.Update(Reading(0.15), t);
+        // A parallel build: High within a few readings (about 6 s).
+        var levels = Enumerable.Range(0, 4).Select(_ => { cpu.Update(Reading(2.5), t); return cpu.Level; }).ToList();
+        Assert.Equal(CpuLevel.High, levels[^1]);
+        Assert.InRange(cpu.Smoothed!.Value, 1.5, 2.5);
+        // Readings that jump around the boundary between Medium and High keep the level instead of switching at each one.
+        var seen = new List<CpuLevel?>();
+        for (var i = 0; i < 10; i++) { cpu.Update(Reading(i % 2 == 0 ? 0.9 : 1.9), t); seen.Add(cpu.Level); }
+        Assert.Single(seen.Skip(2).Distinct());
+        // One core busy (a single-threaded test run): Medium.
+        for (var i = 0; i < 8; i++) cpu.Update(Reading(1.0), t);
+        Assert.Equal(CpuLevel.Medium, cpu.Level);
+        // Quiet again: Low; no reading: no level, and the next start counts from zero.
+        for (var i = 0; i < 8; i++) cpu.Update(Reading(0.02), t);
+        Assert.Equal(CpuLevel.Low, cpu.Level);
+        cpu.Update(null, t);
+        Assert.Null(cpu.Level);
+        Assert.Null(cpu.Smoothed);
+        cpu.Update(Reading(2.5), t);
+        Assert.Equal(CpuLevel.Medium, cpu.Level);
+        Assert.Equal(1.0, cpu.Smoothed!.Value, 3);
+    }
 }

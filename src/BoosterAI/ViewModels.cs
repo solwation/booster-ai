@@ -836,7 +836,8 @@ public sealed partial class TabViewModel : Observable
     private void RaiseStatusIndicator()
     {
         foreach (var n in new[] { nameof(StatusIndicatorText), nameof(HasStatusIndicatorText), nameof(IsStatusError), nameof(StatusIndicatorWarn), nameof(StatusActionName),
-            nameof(StatusDiffText), nameof(StatusDiffOpacity), nameof(HasStatusDiff), nameof(SessionMeterValue), nameof(WeekMeterValue), nameof(StatusDot), nameof(StatusDotFilled), nameof(StatusDotRing), nameof(StatusDotDiamond), nameof(StatusPulse), nameof(StatusHalo) }) Raise(n);
+            nameof(StatusDiffText), nameof(StatusDiffOpacity), nameof(HasStatusDiff), nameof(SessionMeterValue), nameof(WeekMeterValue), nameof(StatusDot), nameof(StatusDotFilled), nameof(StatusDotRing), nameof(StatusDotDiamond), nameof(StatusPulse), nameof(StatusHalo),
+            nameof(StatusLevel), nameof(StatusLevelLow), nameof(StatusLevelMedium), nameof(StatusLevelHigh), nameof(StatusDotPulse), nameof(PeekLevel), nameof(HasPeekLevel) }) Raise(n);
     }
 
     /// <summary>
@@ -857,6 +858,32 @@ public sealed partial class TabViewModel : Observable
     /// <summary>The working halo pulses, or stays still when the system turned animations off (<see cref="Motion"/>).</summary>
     public bool StatusPulse => StatusDot == StatusDotKind.Working && PulseAnimates;
     public bool StatusHalo => StatusDot == StatusDotKind.Working && !PulseAnimates;
+    private CpuLevel? _cpuLevel;
+    /// <summary>How hard a working tab works (#286): its CPU level, Medium (#222's pulse) while no CPU reading is there.</summary>
+    public CpuLevel StatusLevel => _cpuLevel ?? CpuLevel.Medium;
+    public bool StatusLevelLow => StatusLevel == CpuLevel.Low;
+    public bool StatusLevelMedium => StatusLevel == CpuLevel.Medium;
+    public bool StatusLevelHigh => StatusLevel == CpuLevel.High;
+    /// <summary>The working halo's pace and strength at <see cref="StatusLevel"/>.</summary>
+    public DotPulse StatusDotPulse => DotPulse.For(StatusLevel);
+    /// <summary>The status popup's line on how hard a working tab works (#286): "Belastning: hög (180 % av en kärna)"; empty otherwise.</summary>
+    public string PeekLevel => StatusDot == StatusDotKind.Working && _cpuLevel is { } level
+        ? Loc.Format("tabstate.level", Loc.Get("tabstate.level." + level.ToString().ToLowerInvariant()), Math.Round((_cpuShare ?? 0) * 100))
+        : "";
+    public bool HasPeekLevel => PeekLevel.Length > 0;
+    private double? _cpuShare;
+
+    /// <summary>Takes the poll's smoothed CPU level and share (#286, CpuActivity); null while there is no reading.</summary>
+    internal void SetCpuLevel(CpuLevel? level, double? share)
+    {
+        var levelChanged = _cpuLevel != level;
+        var shareChanged = _cpuShare is { } a && share is { } b ? Math.Round(a * 100) != Math.Round(b * 100) : _cpuShare != share;
+        _cpuLevel = level;
+        _cpuShare = share;
+        if (levelChanged) RaiseStatusIndicator();
+        else if (shareChanged) { Raise(nameof(PeekLevel)); Raise(nameof(HasPeekLevel)); }
+    }
+
     /// <summary>A still screenshot shows the halo it would otherwise catch at an arbitrary point of the pulse.</summary>
     private static bool PulseAnimates => Motion.Animate && !Screenshot.Active;
 
@@ -1745,12 +1772,17 @@ public sealed partial class MainViewModel : Observable
         }
     }
 
-    /// <summary>For --screenshot --fake-dots (#222): one AI row per status dot shape, in a fixed order.</summary>
+    /// <summary>
+    /// For --screenshot --fake-dots (#222, #286): one AI row per status dot shape, in a fixed order: working at a low, medium
+    /// and high CPU level, an agent's turn without a CPU reading (the default level), then waiting, watching, starting, failed, closed.
+    /// </summary>
     public void ShowSampleDots()
     {
         Action<TabViewModel>[] samples =
         [
-            t => t.SetState(TabState.Running, null, activity: Activity.Working),
+            t => { t.SetCpuLevel(CpuLevel.Low, 0.15); t.SetState(TabState.Running, null, activity: Activity.Working); },
+            t => { t.SetCpuLevel(CpuLevel.Medium, 0.9); t.SetState(TabState.Running, null, activity: Activity.Working); },
+            t => { t.SetCpuLevel(CpuLevel.High, 2.8); t.SetState(TabState.Running, null, activity: Activity.Working); },
             t => t.SetState(TabState.Running, null, activity: Activity.Busy),
             t => t.SetState(TabState.Running, null, activity: Activity.Idle),
             t => t.SetState(TabState.Running, null, activity: Activity.Watching, watchingSince: DateTimeOffset.UtcNow.AddMinutes(-4).ToUnixTimeMilliseconds()),
@@ -2189,6 +2221,7 @@ public sealed partial class MainViewModel : Observable
                 var state = row.WindowClosed && polled is TabState.Starting or TabState.Running or TabState.CliExited or TabState.CliMissing
                     ? TabState.Closed : polled;
                 var activity = TabCpu.Combine(hookActivity, row.Cpu.Update(sample, DateTime.UtcNow));
+                row.SetCpuLevel(row.Cpu.Level, row.Cpu.Smoothed);
                 var previousActivity = row.Activity;
                 row.ShellPid = pid;
                 RestartWhenIdle(row, state, activity);

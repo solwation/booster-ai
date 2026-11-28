@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Controls;
 
 namespace BoosterAI;
@@ -6,4 +7,25 @@ namespace BoosterAI;
 public partial class StatusDotView : UserControl
 {
     public StatusDotView() => InitializeComponent();
+}
+
+/// <summary>
+/// How a working tab's halo looks at a CPU level (#286). Animated, the halo grows from the 9 px dot to
+/// <see cref="PeakScale"/> and fades from <see cref="PeakOpacity"/> once every <see cref="Seconds"/> (Styles.axaml,
+/// Ellipse.status-pulse.low/medium/high, keeps these values); with animations off it stays as a still halo of
+/// <see cref="HaloSize"/> px at <see cref="HaloOpacity"/>, so the level still shows.
+/// </summary>
+public sealed record DotPulse(double Seconds, double PeakOpacity, double PeakScale, double HaloSize, double HaloOpacity)
+{
+    /// <summary>Calm and faint; the pace of an agent's turn waiting on its model.</summary>
+    public static readonly DotPulse Low = new(2.6, 0.35, 1.25, 11, 0.22);
+    /// <summary>#222's pulse, also the default for a working tab without a CPU reading.</summary>
+    public static readonly DotPulse Medium = new(1.6, 0.55, 1.45, 13, 0.35);
+    /// <summary>Fast and strong: a build or test run on several cores.</summary>
+    public static readonly DotPulse High = new(0.8, 0.85, 1.75, 16, 0.55);
+
+    public static DotPulse For(CpuLevel level) => level switch { CpuLevel.Low => Low, CpuLevel.High => High, _ => Medium };
+
+    /// <summary>Centres the still halo on the dot's 11 × 13 px cell; a larger halo overflows it evenly.</summary>
+    public Thickness HaloMargin => new(-(HaloSize - 11) / 2, -(HaloSize - 13) / 2);
 }

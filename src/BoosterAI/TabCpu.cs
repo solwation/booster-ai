@@ -111,6 +111,12 @@ public sealed class ProcSnapshot
     }
 }
 
+/// <summary>
+/// How hard a working tab's processes work (#286), from the smoothed CPU share: Low (an agent's turn, a light helper),
+/// Medium (about one busy core) and High (a parallel build or test run on several cores).
+/// </summary>
+public enum CpuLevel { Low, Medium, High }
+
 /// <summary>A tab's CPU use between two scans, as a share of one core (0.5 = half a core), and its busiest process.</summary>
 public sealed record CpuSample(double Share, string? Busiest, double BusiestShare);
 
@@ -155,6 +161,24 @@ public static class TabCpu
         return new CpuSample(total / (double)elapsed, busiest, busiest is null ? 0 : best / (double)elapsed);
     }
 
+    /// <summary>Weight of a new reading in the smoothed share (#286): a spike moves it less than half way, two readings most of the way.</summary>
+    public const double Smoothing = 0.4;
+
+    /// <summary>The smoothed share (of one core) from which a tab works at Medium, and below which Medium drops back to Low.</summary>
+    public const double MediumUp = 0.40, MediumDown = 0.25;
+
+    /// <summary>The smoothed share from which a tab works at High (more than one core), and below which High drops back.</summary>
+    public const double HighUp = 1.50, HighDown = 1.10;
+
+    /// <summary>
+    /// The level for a smoothed share, given the current one (#286): a level is entered at its up threshold and kept down to its
+    /// lower down threshold, so a share near a boundary does not switch the dot at every reading.
+    /// </summary>
+    public static CpuLevel LevelOf(double share, CpuLevel current) =>
+        share >= HighUp || current == CpuLevel.High && share >= HighDown ? CpuLevel.High
+        : share >= MediumUp || current >= CpuLevel.Medium && share >= MediumDown ? CpuLevel.Medium
+        : CpuLevel.Low;
+
     /// <summary>A tab its hooks or output call idle (or unknown) but whose processes work is Working; other states stay.</summary>
     public static Activity Combine(Activity activity, bool cpuActive) =>
         cpuActive && activity is Activity.Idle or Activity.Unknown ? Activity.Working : activity;
@@ -171,6 +195,10 @@ public sealed class CpuActivity
     public bool Active { get; private set; }
     /// <summary>The last reading above the threshold, for the tooltip's process name.</summary>
     public CpuSample? Busy { get; private set; }
+    /// <summary>The smoothed CPU share of one core (#286); null without readings (not running, no scan).</summary>
+    public double? Smoothed { get; private set; }
+    /// <summary>How hard the tab's processes work (#286), from <see cref="Smoothed"/> with hysteresis; null without readings.</summary>
+    public CpuLevel? Level { get; private set; }
     /// <summary>The last poll at which the tab was active (UTC); auto-clear counts its idle time from it.</summary>
     public DateTime? ActiveAt { get; private set; }
 
@@ -181,6 +209,8 @@ public sealed class CpuActivity
         {
             _above = _below = 0;
             Active = false;
+            Smoothed = null;
+            Level = null;
         }
         else if (sample.Share > TabCpu.Threshold)
         {
@@ -192,6 +222,13 @@ public sealed class CpuActivity
         {
             _above = 0;
             if (++_below >= TabCpu.Readings) Active = false;
+        }
+        if (sample is not null)
+        {
+            // The first reading starts from zero, so one spike right after the start does not jump to High either.
+            var before = Smoothed ?? 0;
+            Smoothed = before + TabCpu.Smoothing * (sample.Share - before);
+            Level = TabCpu.LevelOf(Smoothed.Value, Level ?? CpuLevel.Low);
         }
         if (Active) ActiveAt = nowUtc;
         return Active;

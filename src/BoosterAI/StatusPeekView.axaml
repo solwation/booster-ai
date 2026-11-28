@@ -10,6 +10,8 @@
         <TextBlock Classes="peek-header" Text="{Binding PeekHeader}" TextTrimming="CharacterEllipsis" />
       </StackPanel>
       <TextBlock Classes="muted caption" Text="{Binding PeekDetail}" IsVisible="{Binding HasPeekDetail}" TextWrapping="Wrap" />
+      <!-- How hard a working tab's processes work (#286), the level its pulsing dot shows. -->
+      <TextBlock Classes="muted caption" Text="{Binding PeekLevel}" IsVisible="{Binding HasPeekLevel}" />
       <!-- Plan limits of the tab's account (#200, #210): a small table, one row per window, so remaining and used read unambiguously:
            label, a meter of the remaining share, "62 % kvar", muted "38 % använt" and the reset time. From 80 % used the row's meter
            and percentage take the warning colour and a warning icon (not colour only). -->
