@@ -233,4 +233,98 @@ public sealed class QuotaSaveNoticeTests : IDisposable
         Assert.Equal(("quota-b", 9L), (state.NoticeRead, state.NoticeReadAt));
         Assert.Null(TabChannel.Parse(text, 10).NoticeRead);
     }
+
+    // #291: a tab that BoosterAI finds running after its own restart or update keeps the flags its CLI was started with.
+    private static long? Live(int pid) => pid == 10 ? 100 : null;
+
+    private readonly List<int> _stopped = [];
+
+    /// <summary>
+    /// An earlier BoosterAI started codex tab Gamma (with the status channel <paramref name="channel"/>; null: a session from before
+    /// #291 without tabN.flags), and its agent <paramref name="reported"/> through the channel or not; this one re-attaches to it.
+    /// </summary>
+    private (MainViewModel Vm, TabViewModel Row, TabSession First) Reattached(bool? channel, bool reported, bool channelSetting = true)
+    {
+        var gamma = new TabConfig { Id = "gamma", Name = "Gamma", Llm = "codex" };
+        var first = new TabSession(Path.Combine(_root, "sessions"), DateTime.Now);
+        var track = first.NewTrack(statusChannel: channel ?? true)!;
+        first.SaveTab(track.Id, gamma);
+        File.WriteAllText(Path.Combine(first.Directory, track.Id + ".log"), "1 start pid=10 starttime=100\n2 cli-start\n");
+        if (channel is null) File.Delete(Path.Combine(first.Directory, TabSession.FlagsFile(track.Id)));
+        if (reported)
+            File.WriteAllText(Path.Combine(first.Directory, TabChannel.EventsFile(track.Id)),
+                JsonSerializer.Serialize(new { v = 1, at = Now.ToUnixTimeMilliseconds(), kind = "status", state = "working", text = "Running the tests" }) + "\n");
+        var vm = new MainViewModel(new AppConfig { QuotaWarn = false, TabStatusChannel = channelSetting, Tabs = [gamma] })
+        {
+            LimitsClock = () => Now,
+            SaveNoticeClock = () => Now,
+            QuotaNotify = (_, _) => { },
+            StopTabForeground = (pid, _) => { lock (_stopped) _stopped.Add(pid); }, // never the real pid 10
+        };
+        vm.ShowNotification = (title, body, _) => _notified.Add((title, body));
+        var row = Assert.Single(vm.RestoreTabs(TabSession.FindRunning(Path.Combine(_root, "sessions"), Live)));
+        Assert.True(row.IsRunning);
+        return (vm, row, first);
+    }
+
+    private static QuotaWarning CodexLow => new("codex", null, Loc.Format("account.limit.hours", "5"), 0.8, Now.AddMinutes(70));
+
+    [Fact]
+    public void AReattachedTabStartedWithTheChannelOnGetsTheNotice()
+    {
+        var (vm, row, first) = Reattached(channel: true, reported: false);
+        Assert.True(row.Track!.StatusChannel);
+        Assert.Equal(QuotaSaveNotices.Route.Channel, QuotaSaveNotices.RouteFor(row.LaunchedAs!, row.Track));
+        Assert.Equal([row], vm.SendSaveNotice("codex", "", CodexLow, Now));
+        Assert.True(File.Exists(Path.Combine(first.Directory, TabChannel.NoticeFile(row.TrackId!))));
+        Assert.Contains(" sent ", File.ReadAllText(Path.Combine(first.Directory, QuotaSaveNotices.LogFile)));
+    }
+
+    [Fact]
+    public void AReattachedTabStartedWithTheChannelOffStaysSkipped()
+    {
+        // Its record wins over the setting and over an events file.
+        var (vm, row, first) = Reattached(channel: false, reported: true);
+        Assert.False(row.Track!.StatusChannel);
+        Assert.Empty(vm.SendSaveNotice("codex", "", CodexLow, Now));
+        Assert.False(File.Exists(Path.Combine(first.Directory, TabChannel.NoticeFile(row.TrackId!))));
+        Assert.Contains("reason=the status channel was off", File.ReadAllText(Path.Combine(first.Directory, QuotaSaveNotices.LogFile)));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void ASessionWithoutStoredFlagsInfersTheChannelFromItsEvents(bool reported)
+    {
+        var (vm, row, first) = Reattached(channel: null, reported);
+        Assert.Equal(reported, row.Track!.StatusChannel);
+        Assert.Equal(reported ? 1 : 0, vm.SendSaveNotice("codex", "", CodexLow, Now).Count);
+        Assert.Equal(reported, File.Exists(Path.Combine(first.Directory, TabChannel.NoticeFile(row.TrackId!))));
+        // The other flags keep their defaults; they only matter at the next start or restart, which takes them from the settings.
+        Assert.Equal(new TabTrack(row.Track.Lib, row.Track.Dir, row.Track.Id, StatusChannel: reported), row.Track);
+    }
+
+    [Fact]
+    public void AnInPlaceRestartRecordsTheFlagsItStartsWith()
+    {
+        var (vm, row, first) = Reattached(channel: false, reported: false, channelSetting: true);
+        row.Model = "gpt-6.1-terra";
+        vm.RestartChanged(row);
+        Assert.Contains(TabChannel.EventsVariable, File.ReadAllText(Path.Combine(first.Directory, row.TrackId! + ".next")));
+        Assert.True(row.Track!.StatusChannel);
+        Assert.True(TabSession.Open(first.Directory).Track(row.TrackId!).StatusChannel); // the next BoosterAI sees it too
+        Assert.Equal([row], vm.SendSaveNotice("codex", "", CodexLow, Now));
+    }
+
+    [Fact]
+    public void FlagsRoundTrip()
+    {
+        var track = new TabTrack("/s/tab-lib.sh", "/s", "tab4", UpdateClis: true, AutoClear: true, Logo: false, StatusChannel: true);
+        Assert.Equal("update-clis=1 auto-clear=1 logo=0 status-channel=1\n", TabSession.FormatFlags(track));
+        var plain = new TabTrack("/s/tab-lib.sh", "/s", "tab4");
+        Assert.Equal(track, TabSession.ParseFlags(TabSession.FormatFlags(track), plain));
+        Assert.Equal(plain with { StatusChannel = true }, TabSession.ParseFlags("status-channel=1", plain));
+        Assert.Null(TabSession.ParseFlags("", plain));
+        Assert.Null(TabSession.ParseFlags("garbage logo=yes", plain));
+    }
 }

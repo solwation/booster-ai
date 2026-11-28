@@ -581,6 +581,15 @@ public sealed partial class TabViewModel : Observable
         }
     }
     internal string? TrackId => Track?.Id;
+
+    /// <summary>
+    /// An in-place restart of the same track (bs_next) started the CLI with <paramref name="flags"/> (#291): the track keeps its
+    /// files, so its status, questions and save notice stay, but what depends on the flags (the save notice's route) follows them.
+    /// </summary>
+    internal void Restarted(TabTrack flags)
+    {
+        if (_track is { } current && current.Id == flags.Id && current != flags) _track = flags;
+    }
     /// <summary>
     /// The terminal window this tab was in has been closed (#283), while its shell may still look alive for a while: the
     /// status poll shows it as closed so Start counts it. A new track (the next launch) clears it.
@@ -1857,7 +1866,10 @@ public sealed partial class MainViewModel : Observable
             // A switch to another agent or account (#279) starts fresh with the continuation prompt instead of keeping the conversation.
             var prompt = tab.SwitchPrompt;
             var resume = prompt is null && tab.RestartResumes;
-            tab.Session!.QueueNext(tab.Track!.Id, Launcher.RestartScript(next, tab.Track with { UpdateClis = _cfg.AutoUpdateClis, AutoClear = _cfg.AutoClearIdle, Logo = _cfg.ShowTabLogo, StatusChannel = _cfg.TabStatusChannel }, resume, prompt));
+            var restarted = RestartTrack(tab.Track!);
+            tab.Session!.QueueNext(restarted.Id, Launcher.RestartScript(next, restarted, resume, prompt));
+            tab.Session.SaveFlags(restarted);
+            tab.Restarted(restarted);
             var pid = tab.ShellPid!.Value;
             var distro = _cfg.WslDistro;
             var stop = StopTabForeground;
@@ -1948,6 +1960,10 @@ public sealed partial class MainViewModel : Observable
         ShowLaunchOutcome(error, cfg.Tabs, () => StartTab(tab));
     }
 
+    /// <summary>An in-place restart starts the CLI with the current settings, like a new start (#291: recorded with SaveFlags).</summary>
+    private TabTrack RestartTrack(TabTrack track) =>
+        track with { UpdateClis = _cfg.AutoUpdateClis, AutoClear = _cfg.AutoClearIdle, Logo = _cfg.ShowTabLogo, StatusChannel = _cfg.TabStatusChannel };
+
     internal static bool CanRestartExited(TabLog? log, Func<int, long?>? live) =>
         log is { CanRestartExited: true, CliExit: not null } && live is not null && TabSession.IsAlive(log, live);
 
@@ -1971,7 +1987,10 @@ public sealed partial class MainViewModel : Observable
         {
             if (error == "")
             {
-                session.QueueNext(track.Id, Launcher.RestartScript(launched, track with { UpdateClis = _cfg.AutoUpdateClis, AutoClear = _cfg.AutoClearIdle, Logo = _cfg.ShowTabLogo, StatusChannel = _cfg.TabStatusChannel }, resume));
+                var restarted = RestartTrack(track);
+                session.QueueNext(track.Id, Launcher.RestartScript(launched, restarted, resume));
+                session.SaveFlags(restarted);
+                tab.Restarted(restarted);
                 tab.LaunchedAs = launched;
                 session.SaveTab(track.Id, launched);
                 tab.RaiseRestartTip();

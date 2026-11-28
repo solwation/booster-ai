@@ -854,11 +854,65 @@ for line in sys.stdin:
         }
     }
 
-    /// <summary>The paths the tab's shell uses for <paramref name="id"/>.</summary>
+    /// <summary>
+    /// The paths the tab's shell uses for <paramref name="id"/>, with the flags its running CLI was started with (#291): read from
+    /// <see cref="FlagsFile"/>, which <see cref="NewTrack"/> and every in-place restart write. A tab from a session before #291 has
+    /// no such file; its status channel then counts as on when its agent has reported through it (tabN.events exists), and the
+    /// other flags keep their defaults (no CLI update, no auto-clear pty, logo), which matter only for the next start or restart,
+    /// and those take them from the settings again.
+    /// </summary>
     public TabTrack Track(string id)
     {
         var dir = OperatingSystem.IsWindows() ? PathMapping.ToWslPath(Directory) : Directory;
-        return new TabTrack(dir + "/tab-lib.sh", dir, id);
+        var track = new TabTrack(dir + "/tab-lib.sh", dir, id);
+        string? text;
+        try { text = File.ReadAllText(Path.Combine(Directory, FlagsFile(id))); }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { text = null; }
+        return text is not null && ParseFlags(text, track) is { } stored ? stored
+            : track with { StatusChannel = File.Exists(Path.Combine(Directory, TabChannel.EventsFile(id))) };
+    }
+
+    /// <summary>The file with the flags tab <paramref name="id"/>'s CLI was last started with (#291), see <see cref="SaveFlags"/>.</summary>
+    public static string FlagsFile(string id) => id + ".flags";
+
+    /// <summary>
+    /// Records the flags of <paramref name="track"/> as those its tab's CLI starts with now (#291), so a later BoosterAI that
+    /// re-attaches to the running tab (<see cref="Track"/>) knows them, e.g. whether the status channel is on. One line,
+    /// <c>update-clis=0 auto-clear=0 logo=1 status-channel=1</c>; a failed write leaves the inference of <see cref="Track"/>.
+    /// </summary>
+    public void SaveFlags(TabTrack track)
+    {
+        var path = Path.Combine(Directory, FlagsFile(track.Id));
+        var temporary = path + "." + Guid.NewGuid().ToString("N");
+        try
+        {
+            File.WriteAllText(temporary, FormatFlags(track));
+            File.Move(temporary, path, overwrite: true);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { /* re-attach infers the flags */ }
+        finally { try { File.Delete(temporary); } catch (Exception e) when (e is IOException or UnauthorizedAccessException) { } }
+    }
+
+    internal static string FormatFlags(TabTrack track)
+    {
+        static string Bit(bool on) => on ? "1" : "0";
+        return $"update-clis={Bit(track.UpdateClis)} auto-clear={Bit(track.AutoClear)} logo={Bit(track.Logo)} status-channel={Bit(track.StatusChannel)}\n";
+    }
+
+    /// <summary><paramref name="track"/> with the flags in <paramref name="text"/>; null when it holds none of them (corrupt or empty).</summary>
+    internal static TabTrack? ParseFlags(string text, TabTrack track)
+    {
+        var values = new Dictionary<string, bool>(StringComparer.Ordinal);
+        foreach (var part in text.Split([' ', '\n', '\r', '\t'], StringSplitOptions.RemoveEmptyEntries))
+            if (part.Split('=', 2) is [var key, var value] && value is "0" or "1") values[key] = value == "1";
+        if (values.Count == 0) return null;
+        return track with
+        {
+            UpdateClis = values.GetValueOrDefault("update-clis", track.UpdateClis),
+            AutoClear = values.GetValueOrDefault("auto-clear", track.AutoClear),
+            Logo = values.GetValueOrDefault("logo", track.Logo),
+            StatusChannel = values.GetValueOrDefault("status-channel", track.StatusChannel),
+        };
     }
 
     /// <summary>
@@ -962,6 +1016,7 @@ for line in sys.stdin:
         if (dir.IndexOfAny([';', '\n', '\r']) >= 0) return null;
         var track = new TabTrack(dir + "/tab-lib.sh", dir, "tab" + Interlocked.Increment(ref _next), updateClis, autoClear, logo, statusChannel);
         WriteSettings(track.Id, dir, onlyMissing: false);
+        SaveFlags(track);
         return track;
     }
 
