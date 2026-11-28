@@ -280,6 +280,10 @@
   <Style Selector="TextBlock.status-indicator.warn">
     <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
   </Style>
+  <!-- #293: a used-up window on an account with credits: the agent works on, so a calmer colour than the warning. -->
+  <Style Selector="TextBlock.status-indicator.credits">
+    <Setter Property="Foreground" Value="{DynamicResource InfoBrush}" />
+  </Style>
   <Style Selector="TextBlock.status-indicator.danger">
     <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
     <Setter Property="FontWeight" Value="SemiBold" />
@@ -548,6 +552,8 @@
     <Setter Property="Background" Value="{DynamicResource BorderBrush}" />
   </Style>
   <Style Selector="ProgressBar.limit-meter.warn"><Setter Property="Foreground" Value="{DynamicResource WarningBrush}" /></Style>
+  <!-- #293: a used-up window while the agent works on credits: full, in the calmer credits colour. -->
+  <Style Selector="ProgressBar.limit-meter.credits"><Setter Property="Foreground" Value="{DynamicResource InfoBrush}" /></Style>
   <!-- #219: a window without a known level is an empty, muted track. -->
   <Style Selector="ProgressBar.limit-meter.unknown"><Setter Property="Opacity" Value="0.45" /></Style>
   <!-- #231: a window the agent does not have is not drawn; it keeps its place so the other meter stays where it is. -->
@@ -567,6 +573,9 @@
   <Style Selector="TextBlock.limit-title"><Setter Property="FontWeight" Value="SemiBold" /></Style>
   <Style Selector="TextBlock.limit-left"><Setter Property="FontWeight" Value="SemiBold" /></Style>
   <Style Selector="TextBlock.limit-left.warn"><Setter Property="Foreground" Value="{DynamicResource WarningBrush}" /></Style>
+  <Style Selector="TextBlock.limit-left.credits"><Setter Property="Foreground" Value="{DynamicResource InfoBrush}" /></Style>
+  <Style Selector="TextBlock.credits-note"><Setter Property="Foreground" Value="{DynamicResource InfoBrush}" /></Style>
+  <Style Selector="Ellipse.credits-mark"><Setter Property="Fill" Value="{DynamicResource InfoBrush}" /></Style>
   <Style Selector="Border.account-pill > TextBlock">
     <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
     <Setter Property="Foreground" Value="{DynamicResource MutedBrush}" />

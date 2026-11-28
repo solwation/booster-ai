@@ -55,6 +55,11 @@ public partial class MainWindow
             CloseStatusPeek(restoreFocus: true);
             OnRestart(target, new RoutedEventArgs());
         };
+        content.UseResetRequested += () =>
+        {
+            CloseStatusPeek(restoreFocus: true);
+            _ = UseResetFromPeekAsync(tab);
+        };
         var flyout = new Flyout { Content = content, Placement = PlacementMode.Bottom };
         flyout.FlyoutPresenterClasses.Add("status-output");
         _statusPeek = flyout;
@@ -66,6 +71,7 @@ public partial class MainWindow
                 // Swallowed so it never reaches the status button again; the popup's own ↻ still answers it.
                 key.Handled = true;
                 if (key.Source is Button { Name: "RestartButton" }) content.RequestRestart();
+                else if (key.Source is Button { Name: "UseResetButton" }) content.RequestUseReset();
                 return;
             }
             if (key.Key != Key.Escape) return;
@@ -84,6 +90,13 @@ public partial class MainWindow
             _statusPeekTarget = null;
         };
         flyout.ShowAt(target);
+    }
+
+    /// <summary>"Använd reset" from the status popup (#293): the Accounts page's question, then exactly one redemption on yes.</summary>
+    private async Task UseResetFromPeekAsync(TabViewModel tab)
+    {
+        try { await tab.UseResetAsync((name, n) => ConfirmSetupWindow.UseReset(name, n).ShowDialog<bool>(this)); }
+        catch (Exception ex) when (ex is not OutOfMemoryException) { /* the status line and the banner already say what failed */ }
     }
 
     private void OnStatusPeekKeyDown(object? sender, KeyEventArgs e)

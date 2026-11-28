@@ -259,6 +259,7 @@ public sealed class AgentAccountsViewModel : Observable
             _resetMessages.Remove(key);
         }
         foreach (var r in Rows) r.RefreshLimits();
+        _owner.ResetsChanged(Cli); // the status popup's "Använd reset" (#293) hides while the redemption runs
         ResetOutcome outcome;
         try { outcome = await _owner.ConsumeCodexResetAsync(account?.Directory, attempt); }
         catch (Exception e) when (e is not OutOfMemoryException) { outcome = ResetOutcome.Failed; }
@@ -342,6 +343,15 @@ public sealed class AgentAccountsViewModel : Observable
         lock (_statusLock) _limits[Rows[0].Key] = limits;
         foreach (var row in Rows) row.RefreshLimits();
         _owner.AccountLimitsChanged(Cli);
+    }
+
+    /// <summary>Screenshots (--fake-credits, #293): an invented reset count for the first account.</summary>
+    internal void SetSampleResets(ResetCredits? resets)
+    {
+        if (Rows.Count == 0) return;
+        lock (_statusLock) _resets[Rows[0].Key] = resets;
+        foreach (var row in Rows) row.RefreshLimits();
+        _owner.ResetsChanged(Cli);
     }
 
     /// <summary>Screenshots: invented statuses, in row order (logged in, logged out, unknown, then again); never runs an agent.</summary>

@@ -36,11 +36,11 @@
                     <ColumnDefinition Width="*" />
                   </Grid.ColumnDefinitions>
                   <TextBlock Grid.Column="0" Classes="caption" Text="{Binding Label}" VerticalAlignment="Center" Margin="0,0,12,0" />
-                  <ProgressBar Grid.Column="1" Classes="limit-meter peek" Classes.warn="{Binding Warn}" IsVisible="{Binding Known}"
+                  <ProgressBar Grid.Column="1" Classes="limit-meter peek" Classes.warn="{Binding Warn}" Classes.credits="{Binding Credits}" IsVisible="{Binding Known}"
                                Value="{Binding Remaining}" Minimum="0" Maximum="100" VerticalAlignment="Center" IsHitTestVisible="False" />
                   <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" Margin="10,0,0,0">
                     <Path Classes="missing" Width="11" Height="11" Data="{StaticResource WarningIcon}" IsVisible="{Binding Warn}" VerticalAlignment="Center" />
-                    <TextBlock Classes="caption limit-left" Classes.warn="{Binding Warn}" Classes.muted="{Binding !Known}" Text="{Binding RemainingText}" />
+                    <TextBlock Classes="caption limit-left" Classes.warn="{Binding Warn}" Classes.credits="{Binding Credits}" Classes.muted="{Binding !Known}" Text="{Binding RemainingText}" />
                   </StackPanel>
                   <TextBlock Grid.Column="3" Classes="muted caption" Text="{Binding UsedText}" VerticalAlignment="Center" Margin="12,0,0,0" />
                   <TextBlock Grid.Column="4" Classes="muted caption" Text="{Binding ResetText}" VerticalAlignment="Center" Margin="12,0,0,0"
@@ -49,9 +49,18 @@
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>
+          <!-- #293: a used-up window on an account with credits: the agent works on credits, in the calmer credits colour. -->
+          <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding HasPeekCredits}">
+            <Ellipse Classes="credits-mark" Width="7" Height="7" VerticalAlignment="Center" />
+            <TextBlock Classes="caption credits-note" Text="{Binding PeekCreditsText}" TextWrapping="Wrap" />
+          </StackPanel>
           <!-- Codex's earned resets of the account (#285), from the Accounts page's reading. -->
           <TextBlock Classes="caption" Text="{Binding PeekResetsText}" IsVisible="{Binding HasPeekResets}" />
           <TextBlock Classes="muted caption" Text="{Binding PeekResetHint}" IsVisible="{Binding HasPeekResetHint}" TextWrapping="Wrap" />
+          <!-- #293: on credits with a free reset left, the clickable popup offers it; the same question and redemption as Konton. -->
+          <Button x:Name="UseResetButton" Classes="primary" HorizontalAlignment="Left" Padding="12,6" IsVisible="False"
+                  Content="{local:T account.reset.use}" Click="OnUseReset" ToolTip.Tip="{local:T account.reset.use.tip}"
+                  AutomationProperties.Name="{Binding PeekUseResetName}" />
         </StackPanel>
       </Border>
       <!-- No plan limits for a live agy tab: why, instead of nothing (#212). -->

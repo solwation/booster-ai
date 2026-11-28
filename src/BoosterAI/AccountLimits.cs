@@ -7,7 +7,11 @@ namespace BoosterAI;
 public sealed record LimitWindow(double UsedPercent, DateTimeOffset? ResetsAt, int? Minutes = null);
 
 /// <summary>Codex's credits beside the plan windows (#199), as its last turn reported them.</summary>
-public sealed record LimitCredits(bool HasCredits, bool Unlimited, string? Balance);
+public sealed record LimitCredits(bool HasCredits, bool Unlimited, string? Balance)
+{
+    /// <summary>The account can go on past a used-up window (#293): it has credits, or unlimited ones.</summary>
+    public bool Available => HasCredits || Unlimited;
+}
 
 /// <summary>
 /// What BoosterAI last read about an account's plan limits (#199). A window that is null is unknown: never read, missing, invalid or
@@ -50,6 +54,12 @@ public sealed record AccountLimits(LimitWindow? Session, LimitWindow? Week, Limi
         SessionReset = SessionReset || Session is { } rs && rs.ResetsAt <= now,
         WeekReset = WeekReset || Week is { } rw && rw.ResetsAt <= now,
     };
+
+    /// <summary>
+    /// A known window is used up (100 % or more) while the account has credits (#293): Codex then keeps working on credits, so the
+    /// level is not "stopped". Read it on limits already passed through <see cref="AsOf"/>.
+    /// </summary>
+    public bool UsingCredits => Credits?.Available == true && (Session?.UsedPercent >= 100 || Week?.UsedPercent >= 100);
 
     /// <summary>Nothing known any more, but at least one window was read and has reset since (#214).</summary>
     public bool IsReset => Session is null && Week is null && (SessionReset || WeekReset);
@@ -98,18 +108,33 @@ public sealed record LimitIndicator(string Caption, bool Warn, string Tip, strin
 
     /// <summary>Value equality including <see cref="Rows"/>: agent choices compare their indicator to keep the selected entry (#202, #210).</summary>
     public bool Equals(LimitIndicator? other) => other is not null && Caption == other.Caption && Warn == other.Warn && Tip == other.Tip
-        && Name == other.Name && Age == other.Age && Stale == other.Stale && Percent.Equals(other.Percent) && Rows.SequenceEqual(other.Rows);
+        && Name == other.Name && Age == other.Age && Stale == other.Stale && Percent.Equals(other.Percent) && Rows.SequenceEqual(other.Rows)
+        && UsingCredits == other.UsingCredits && CreditsText == other.CreditsText;
 
     public override int GetHashCode() => HashCode.Combine(Caption, Warn, Tip, Name, Age, Percent, Rows.Count);
 
     /// <summary>Remaining share of the tightest known window (0–100 %), for the status column (#207).</summary>
     public double RemainingPercent => Math.Clamp(Math.Round(100 - Percent, 1), 0, 100);
 
-    /// <summary>Localized remaining text for the status column (#207): "38 % kvar" (sv) or "38% left" (en).</summary>
-    public string RemainingCaption => Loc.Format("account.limit.remaining", LimitPercent.Text(RemainingPercent));
+    /// <summary>
+    /// Localized remaining text for the status column (#207): "38 % kvar" (sv) or "38% left" (en); on credits (#293)
+    /// "0 % kvar · använder krediter".
+    /// </summary>
+    public string RemainingCaption => UsingCredits
+        ? Loc.Format("account.limit.remaining.credits", LimitPercent.Text(RemainingPercent))
+        : Loc.Format("account.limit.remaining", LimitPercent.Text(RemainingPercent));
 
-    /// <summary>The compact status column's remaining share (#209): "38 %" (sv) or "38%" (en).</summary>
-    public string RemainingShort => Loc.Format("account.limit.chip", LimitPercent.Text(RemainingPercent));
+    /// <summary>The compact status column's remaining share (#209): "38 %" (sv) or "38%" (en); "Krediter" / "Credits" on credits (#293).</summary>
+    public string RemainingShort => UsingCredits ? Loc.Get("account.limit.credits.short") : Loc.Format("account.limit.chip", LimitPercent.Text(RemainingPercent));
+
+    /// <summary>
+    /// A used-up window while the account has credits (#293): the agent works on credits. <see cref="Warn"/> is then off, so the
+    /// meters, status column and dot take the calmer credits style instead of the warning.
+    /// </summary>
+    public bool UsingCredits { get; init; }
+
+    /// <summary>On credits (#293): "Använder krediter · Krediter: okänt antal" (the balance only when the agent reported one); else empty.</summary>
+    public string CreditsText { get; init; } = "";
 
     /// <summary>The rows worth showing: a window the agent does not have (#287) is omitted.</summary>
     public IEnumerable<LimitRow> Visible => Rows.Where(r => !r.Absent);
@@ -121,7 +146,10 @@ public sealed record LimitIndicator(string Caption, bool Warn, string Tip, strin
         var known = new[] { limits.Session, limits.Week, fable }.OfType<LimitWindow>().ToList();
         if (known.Count == 0) return null;
         var percent = LimitPercent.Used(known.Max(w => w.UsedPercent));
-        var warn = percent >= WarnAt;
+        // #293: a used-up window on an account with credits is not a stop; Codex keeps working on credits.
+        var credits = limits.UsingCredits;
+        var creditsText = credits ? Loc.Format("account.limit.credits.using.line", LimitText.Credits(limits.Credits)) : "";
+        var warn = percent >= WarnAt && !credits;
         var number = LimitPercent.Text(percent);
         var session = Loc.Format("account.limit.hours", Loc.Number((limits.Session?.Minutes ?? 300) / 60.0, "0.#"));
         // A window the agent does not have (#287) is left out of the tooltip, not written as "no limit".
@@ -129,19 +157,23 @@ public sealed record LimitIndicator(string Caption, bool Warn, string Tip, strin
         if (!limits.SessionAbsent) lines.Add(session + ": " + LimitText.Used(limits.Session, now, limits.SessionReset));
         if (!limits.WeekAbsent) lines.Add(Loc.Get("account.limit.week") + ": " + LimitText.Used(limits.Week, now, limits.WeekReset));
         if (includeFable) lines.Add(Loc.Get("account.limit.fable") + ": " + LimitText.Used(fable, now));
+        if (credits) lines.Add(creditsText);
         if (limits.At is { } at) lines.Add(LimitText.Age(at, now));
         var name = Loc.Format("account.limit.chip.name", number)
-            + (percent >= 100 ? ", " + Loc.Get("account.limit.full") : warn ? ", " + Loc.Get("account.limit.near") : "");
+            + (credits ? ", " + creditsText : percent >= 100 ? ", " + Loc.Get("account.limit.full") : warn ? ", " + Loc.Get("account.limit.near") : "");
+        var covered = limits.Credits?.Available == true;
         var rows = new List<LimitRow>
         {
-            LimitRow.For(session, limits.Session, now, limits.SessionReset, limits.SessionAbsent),
-            LimitRow.For(Loc.Get("account.limit.week"), limits.Week, now, limits.WeekReset, limits.WeekAbsent),
+            LimitRow.For(session, limits.Session, now, limits.SessionReset, limits.SessionAbsent, covered),
+            LimitRow.For(Loc.Get("account.limit.week"), limits.Week, now, limits.WeekReset, limits.WeekAbsent, covered),
         };
         if (includeFable) rows.Insert(1, LimitRow.For(Loc.Get("account.limit.fable"), fable, now));
         var age = limits.At is { } when ? LimitText.Age(when, now) : "";
         var stale = limits.At is { } old && now - old >= StaleAfter ? HumanTime.Since(old, now) : "";
         if (stale.Length > 0) name += ", " + age;
-        return new LimitIndicator(Loc.Format("account.limit.chip", number), warn, string.Join("\n", lines), name, rows, age, Math.Clamp(percent, 0, 100)) { Stale = stale };
+        var caption = Loc.Format(credits ? "account.limit.chip.credits" : "account.limit.chip", number);
+        return new LimitIndicator(caption, warn, string.Join("\n", lines), name, rows, age, Math.Clamp(percent, 0, 100))
+            { Stale = stale, UsingCredits = credits, CreditsText = creditsText };
     }
 
     /// <summary>A reading at least this old shows its time beside the level in the Agent list (#214): "62 % · i går 18:10".</summary>
@@ -170,10 +202,10 @@ public sealed record LimitIndicator(string Caption, bool Warn, string Tip, strin
 /// One of the two thin meters under an agent's name (#219), "5 h" on top and "Vecka" below: filled to the window's use
 /// (<paramref name="Percent"/>, 0 while <paramref name="Known"/> is false, which shows an empty, muted track). <paramref name="Warn"/> from 80 %.
 /// </summary>
-public sealed record LimitMeter(string Label, bool Known, double Percent, bool Warn, bool Absent = false)
+public sealed record LimitMeter(string Label, bool Known, double Percent, bool Warn, bool Absent = false, bool Credits = false)
 {
     public static readonly LimitMeter Empty = new("", false, 0, false);
-    public static LimitMeter From(LimitRow row) => new(row.Label, row.Known, row.Known ? row.Used : 0, row.Warn, row.Absent);
+    public static LimitMeter From(LimitRow row) => new(row.Label, row.Known, row.Known ? row.Used : 0, row.Warn, row.Absent, row.Credits);
 }
 
 /// <summary>The Agent list's text for a limit-capable entry without a known level (#214): "Okänd" or "Troligen återställd", and why.</summary>
@@ -186,13 +218,14 @@ public sealed record LimitNote(string Caption, string Tip, bool Reset)
 /// One window in the status popup's limit table (#210): "5 h", a meter of the remaining share, "62 % kvar", "38 % använt" and
 /// "återställs om 2 h (15:00)". An unknown window has only its label and "Okänd", or "Troligen återställd" once it has reset (#214). <see cref="Warn"/> from <see cref="LimitIndicator.WarnAt"/> % used.
 /// </summary>
-public sealed record LimitRow(string Label, bool Known, double Remaining, string RemainingText, string UsedText, string ResetText, bool Warn, string Name, double Used = 0, bool Absent = false)
+public sealed record LimitRow(string Label, bool Known, double Remaining, string RemainingText, string UsedText, string ResetText, bool Warn, string Name, double Used = 0, bool Absent = false, bool Credits = false)
 {
     /// <summary>
     /// <paramref name="absent"/> marks a window the agent does not have (#231, #287): the row is then not "Okänd", has no text and is
-    /// not shown in the popup (<see cref="LimitIndicator.Visible"/>); it only keeps the meters' positions.
+    /// not shown in the popup (<see cref="LimitIndicator.Visible"/>); it only keeps the meters' positions. <paramref name="credits"/>:
+    /// the account has credits (#293), so a used-up window is <see cref="Credits"/> (the agent works on credits) instead of a warning.
     /// </summary>
-    public static LimitRow For(string label, LimitWindow? window, DateTimeOffset now, bool reset = false, bool absent = false)
+    public static LimitRow For(string label, LimitWindow? window, DateTimeOffset now, bool reset = false, bool absent = false, bool credits = false)
     {
         if (window is null && absent) return new(label, false, 0, "", "", "", false, "", 0, true);
         if (window is null)
@@ -202,14 +235,16 @@ public sealed record LimitRow(string Label, bool Known, double Remaining, string
         }
         var used = LimitPercent.Used(window.UsedPercent);
         var remaining = LimitPercent.Remaining(window.UsedPercent);
-        var warn = used >= LimitIndicator.WarnAt;
+        var onCredits = credits && used >= 100;
+        var warn = used >= LimitIndicator.WarnAt && !onCredits;
         var remainingText = Loc.Format("account.limit.remaining", LimitPercent.Text(remaining));
         var usedText = Loc.Format("account.limit.usedShort", LimitPercent.Text(used));
         var resetText = window.ResetsAt is { } at ? Loc.Format("account.limit.resets", LimitText.Resets(at, now)) : "";
         var name = resetText.Length > 0 ? Loc.Format("account.limit.row.name", label, remainingText, usedText, resetText)
             : $"{label}: {remainingText}, {usedText}";
         if (warn) name += ", " + Loc.Get("account.limit.near");
-        return new(label, true, remaining, remainingText, usedText, resetText, warn, name, Math.Clamp(used, 0, 100));
+        if (onCredits) name += ", " + Loc.Get("account.limit.credits.using");
+        return new(label, true, remaining, remainingText, usedText, resetText, warn, name, Math.Clamp(used, 0, 100), false, onCredits);
     }
 }
 
@@ -226,7 +261,8 @@ public static class LimitText
         null => "",
         { Unlimited: true } => Loc.Format("account.limit.credits", Loc.Get("account.limit.credits.unlimited")),
         { HasCredits: true, Balance: { } balance } => Loc.Format("account.limit.credits", balance),
-        { HasCredits: true } => Loc.Format("account.limit.credits", Loc.Get("account.limit.unknown")),
+        // #293: an unknown balance is said as such, never guessed.
+        { HasCredits: true } => Loc.Format("account.limit.credits", Loc.Get("account.limit.credits.unknown")),
         _ => Loc.Format("account.limit.credits", Loc.Get("account.limit.credits.none")),
     };
 

@@ -23,6 +23,9 @@ public partial class StatusPeekView : UserControl
 
     internal event Action? RestartRequested;
 
+    /// <summary>"Använd reset" (#293) in the clickable popup; the window asks and redeems through the tab's account row.</summary>
+    internal event Action? UseResetRequested;
+
     private TabViewModel? _watched;
 
     private void Watch()
@@ -35,7 +38,7 @@ public partial class StatusPeekView : UserControl
 
     private void OnTabChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is nameof(TabViewModel.IsExitError) or nameof(TabViewModel.ShowReload)) UpdateRestart();
+        if (e.PropertyName is nameof(TabViewModel.IsExitError) or nameof(TabViewModel.ShowReload) or nameof(TabViewModel.CanPeekUseReset)) UpdateRestart();
     }
 
     protected override void OnDetachedFromVisualTree(Avalonia.VisualTreeAttachmentEventArgs e)
@@ -51,8 +54,18 @@ public partial class StatusPeekView : UserControl
         Watch();
     }
 
-    private void UpdateRestart() =>
+    private void UpdateRestart()
+    {
         RestartButton.IsVisible = _showsActions && _watched is { IsExitError: true, ShowReload: true };
+        UseResetButton.IsVisible = _showsActions && _watched is { CanPeekUseReset: true };
+    }
+
+    private void OnUseReset(object? sender, RoutedEventArgs e) => RequestUseReset();
+
+    internal void RequestUseReset()
+    {
+        if (UseResetButton.IsVisible) UseResetRequested?.Invoke();
+    }
 
     private void OnRestart(object? sender, RoutedEventArgs e) => RequestRestart();
 

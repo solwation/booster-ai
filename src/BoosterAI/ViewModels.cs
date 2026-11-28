@@ -504,6 +504,7 @@ public sealed partial class TabViewModel : Observable
         Raise(nameof(AgentChoices));
         Raise(nameof(SelectedAgentChoice));
         foreach (var n in new[] { nameof(HasPeekLimit), nameof(PeekLimitWarn), nameof(PeekLimitRows), nameof(PeekLimitAge), nameof(HasPeekLimitAge), nameof(PeekLimitName), nameof(PeekResetsText), nameof(HasPeekResets), nameof(PeekResetHint), nameof(HasPeekResetHint), nameof(HasPeekBlock), nameof(StatusActionName), nameof(StatusDisplay), nameof(PeekLimitMissing), nameof(HasPeekLimitMissing) }) Raise(n);
+        RaiseCreditsPeek();
         RaiseStatusIndicator();
     }
     public IReadOnlyList<string> Models => Catalog.ModelsFor(_llm);
@@ -766,9 +767,12 @@ public sealed partial class TabViewModel : Observable
     /// <summary>The Codex account's earned resets (#285) from the Accounts page's reading: "2 resets kvar"; empty while unknown and for other agents.</summary>
     public string PeekResetsText => _llm == "codex" && _owner.ResetsOf(_llm, QuotaAccountKey ?? "\0") is { } r ? Loc.FormatCount("account.resets", r.Available) : "";
     public bool HasPeekResets => PeekResetsText.Length > 0;
-    /// <summary>With the quota used up and a reset left: where it can be used (the use itself still asks for confirmation there).</summary>
+    /// <summary>
+    /// With the quota used up and a reset left: where it can be used (the use itself still asks for confirmation there). On credits
+    /// (#293) it says the reset saves credits, beside the popup's own "Använd reset" (<see cref="CanPeekUseReset"/>).
+    /// </summary>
     public string PeekResetHint => HasPeekResets && _owner.ResetsOf(_llm, QuotaAccountKey ?? "\0") is { Available: > 0 } r
-        && (r.Exhausted || PeekLimit?.Rows.Any(x => x.Known && x.Remaining <= 0) == true) ? Loc.Get("peek.reset.hint") : "";
+        && (r.Exhausted || PeekLimit?.Rows.Any(x => x.Known && x.Remaining <= 0) == true) ? Loc.Get(PeekUsingCredits ? "peek.reset.credits" : "peek.reset.hint") : "";
     public bool HasPeekResetHint => PeekResetHint.Length > 0;
     /// <summary>The popup's limit block shows with limits, resets or both.</summary>
     public bool HasPeekBlock => HasPeekLimit || HasPeekResets;
@@ -812,7 +816,7 @@ public sealed partial class TabViewModel : Observable
     {
         var key = LimitAnimKey("t");
         var now = _owner.LimitsClock();
-        if (!_owner.LimitAnim.IsCounting(key, now)) return limit.RemainingShort;
+        if (limit.UsingCredits || !_owner.LimitAnim.IsCounting(key, now)) return limit.RemainingShort;
         return Loc.Format("account.limit.chip", LimitPercent.Text(Math.Round(_owner.LimitAnim.Value(key, limit.RemainingPercent, now))));
     }
 
@@ -847,6 +851,7 @@ public sealed partial class TabViewModel : Observable
         foreach (var n in new[] { nameof(StatusIndicatorText), nameof(HasStatusIndicatorText), nameof(IsStatusError), nameof(StatusIndicatorWarn), nameof(StatusActionName),
             nameof(StatusDiffText), nameof(StatusDiffOpacity), nameof(HasStatusDiff), nameof(SessionMeterValue), nameof(WeekMeterValue), nameof(StatusDot), nameof(StatusDotFilled), nameof(StatusDotRing), nameof(StatusDotDiamond), nameof(StatusPulse), nameof(StatusHalo),
             nameof(StatusLevel), nameof(StatusLevelLow), nameof(StatusLevelMedium), nameof(StatusLevelHigh), nameof(StatusDotPulse), nameof(PeekLevel), nameof(HasPeekLevel) }) Raise(n);
+        Raise(nameof(StatusIndicatorCredits));
     }
 
     /// <summary>
@@ -2783,6 +2788,8 @@ public sealed record AgentChoice(string Llm, string AccountId, string AccountNam
     public string LimitNoteName => Note?.Name ?? "";
     public bool LimitWarn => Limit?.Warn == true;
     public bool LimitCalm => Limit is { Warn: false };
+    /// <summary>A used-up window on an account with credits (#293): the calmer credits style instead of the warning.</summary>
+    public bool LimitCredits => Limit?.UsingCredits == true;
     public string LimitCaption => Limit?.Caption ?? "";
     /// <summary>The closed box's meter (#202): how full it is (the higher of the two windows), 0 and hidden while unknown.</summary>
     public double LimitPercent => Limit?.Percent ?? 0;
@@ -2799,6 +2806,9 @@ public sealed record AgentChoice(string Llm, string AccountId, string AccountNam
     public double WeekMeterPercent => WeekMeter.Percent;
     public bool SessionMeterWarn => SessionMeter.Warn;
     public bool WeekMeterWarn => WeekMeter.Warn;
+    /// <summary>The window is used up and the agent works on credits (#293): the meter takes the credits colour, not the warning.</summary>
+    public bool SessionMeterCredits => SessionMeter.Credits;
+    public bool WeekMeterCredits => WeekMeter.Credits;
     public bool SessionMeterUnknown => !SessionMeter.Known && !SessionMeter.Absent;
     public bool WeekMeterUnknown => !WeekMeter.Known && !WeekMeter.Absent;
     /// <summary>A window the agent does not have (#231, Codex with only a weekly window): its track is not drawn, and it is not "unknown".</summary>

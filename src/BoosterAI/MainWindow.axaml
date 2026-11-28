@@ -280,7 +280,7 @@
                       </ToolTip.Tip>
                       <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
                         <local:StatusDotView />
-                        <TextBlock Classes="caption status-indicator" Classes.warn="{Binding StatusIndicatorWarn}" Classes.danger="{Binding IsStatusError}"
+                        <TextBlock Classes="caption status-indicator" Classes.warn="{Binding StatusIndicatorWarn}" Classes.credits="{Binding StatusIndicatorCredits}" Classes.danger="{Binding IsStatusError}"
                                    Text="{Binding StatusIndicatorText}" IsVisible="{Binding HasStatusIndicatorText}"
                                    VerticalAlignment="Center" Margin="4,0,0,0" TextTrimming="CharacterEllipsis" />
                         <TextBlock Classes="caption muted" Text="{Binding StatusDiffText}" Opacity="{Binding StatusDiffOpacity}" IsVisible="{Binding HasStatusDiff}"
@@ -353,9 +353,9 @@
                             <Panel Grid.Row="1" Grid.ColumnSpan="3" Classes="limit-entry"><StackPanel Spacing="1" Width="64" HorizontalAlignment="Left" Margin="22,2,0,1"
                                         IsVisible="{Binding HasMeters}" Background="Transparent"
                                         ToolTip.Tip="{Binding MeterTip}" AutomationProperties.Name="{Binding MeterName}">
-                              <ProgressBar Classes="limit-meter" Classes.warn="{Binding SessionMeterWarn}" Classes.unknown="{Binding SessionMeterUnknown}" Classes.absent="{Binding SessionMeterAbsent}"
+                              <ProgressBar Classes="limit-meter" Classes.warn="{Binding SessionMeterWarn}" Classes.credits="{Binding SessionMeterCredits}" Classes.unknown="{Binding SessionMeterUnknown}" Classes.absent="{Binding SessionMeterAbsent}"
                                            Value="{Binding SessionMeterPercent}" Minimum="0" Maximum="100" Height="3" MinHeight="3" MinWidth="0" />
-                              <ProgressBar Classes="limit-meter" Classes.warn="{Binding WeekMeterWarn}" Classes.unknown="{Binding WeekMeterUnknown}" Classes.absent="{Binding WeekMeterAbsent}"
+                              <ProgressBar Classes="limit-meter" Classes.warn="{Binding WeekMeterWarn}" Classes.credits="{Binding WeekMeterCredits}" Classes.unknown="{Binding WeekMeterUnknown}" Classes.absent="{Binding WeekMeterAbsent}"
                                            Value="{Binding WeekMeterPercent}" Minimum="0" Maximum="100" Height="3" MinHeight="3" MinWidth="0" />
                             </StackPanel></Panel>
                           </Grid>
@@ -370,11 +370,11 @@
                            IsVisible="{Binding SelectedAgentChoice.HasMeters, FallbackValue=False}"
                            AutomationProperties.Name="{Binding SelectedAgentChoice.MeterName}" PointerPressed="OnLimitMeterPressed">
                       <StackPanel Spacing="1" VerticalAlignment="Center" IsHitTestVisible="False">
-                        <ProgressBar Classes="limit-meter" Classes.warn="{Binding SelectedAgentChoice.SessionMeterWarn, FallbackValue=False}"
+                        <ProgressBar Classes="limit-meter" Classes.warn="{Binding SelectedAgentChoice.SessionMeterWarn, FallbackValue=False}" Classes.credits="{Binding SelectedAgentChoice.SessionMeterCredits, FallbackValue=False}"
                                      Classes.unknown="{Binding SelectedAgentChoice.SessionMeterUnknown, FallbackValue=False}" Classes.absent="{Binding SelectedAgentChoice.SessionMeterAbsent, FallbackValue=False}"
                                      Value="{Binding SessionMeterValue}" Minimum="0" Maximum="100"
                                      Height="3" MinHeight="3" MinWidth="0" />
-                        <ProgressBar Classes="limit-meter" Classes.warn="{Binding SelectedAgentChoice.WeekMeterWarn, FallbackValue=False}"
+                        <ProgressBar Classes="limit-meter" Classes.warn="{Binding SelectedAgentChoice.WeekMeterWarn, FallbackValue=False}" Classes.credits="{Binding SelectedAgentChoice.WeekMeterCredits, FallbackValue=False}"
                                      Classes.unknown="{Binding SelectedAgentChoice.WeekMeterUnknown, FallbackValue=False}" Classes.absent="{Binding SelectedAgentChoice.WeekMeterAbsent, FallbackValue=False}"
                                      Value="{Binding WeekMeterValue}" Minimum="0" Maximum="100"
                                      Height="3" MinHeight="3" MinWidth="0" />

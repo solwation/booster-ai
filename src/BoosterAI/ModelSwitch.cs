@@ -104,10 +104,14 @@ public static class ModelSwitch
     public static string? ModelFor(string cli, ModelTier tier) =>
         Catalog.ModelsFor(cli).FirstOrDefault(m => m != Catalog.StandardModel && Tier(cli, m) == tier);
 
-    /// <summary>The exhausted window that warrants a switch: 100 % used and resetting more than <see cref="MinWait"/> from now; the later one.</summary>
+    /// <summary>
+    /// The exhausted window that warrants a switch: 100 % used and resetting more than <see cref="MinWait"/> from now; the later one.
+    /// None on an account with credits (#293): the agent keeps working on them, so nothing is offered or switched.
+    /// </summary>
     public static (DateTimeOffset ResetsAt, bool Week)? Exhausted(AccountLimits limits, DateTimeOffset now)
     {
         limits = limits.AsOf(now);
+        if (limits.Credits?.Available == true) return null;
         (DateTimeOffset, bool)? found = null;
         foreach (var (window, week) in new[] { (limits.Session, false), (limits.Week, true) })
             if (window is { UsedPercent: >= 100, ResetsAt: { } at } && at - now > MinWait && (found is null || at > found.Value.Item1))

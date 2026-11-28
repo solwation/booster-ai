@@ -33,14 +33,17 @@ public static class QuotaSaveNotices
 
     /// <summary>
     /// The note to the agent, in English like the other prompts: short, neutral, a suggestion. <paramref name="week"/>: the weekly
-    /// window, else the 5-hour one.
+    /// window, else the 5-hour one. <paramref name="credits"/>: the account has credits (#293), so work goes on with them instead
+    /// of stopping; the note says so rather than warning of a stop. A window already used up on credits gets no note at all
+    /// (<see cref="QuotaWarnings"/> skips it).
     /// </summary>
-    public static string Message(string llm, bool week, double remainingPercent, DateTimeOffset resetsAt, DateTimeOffset now)
+    public static string Message(string llm, bool week, double remainingPercent, DateTimeOffset resetsAt, DateTimeOffset now, bool credits = false)
     {
         var left = remainingPercent.ToString("0.#", CultureInfo.InvariantCulture);
         var window = week ? "weekly" : "5-hour";
         return $"The {llm} account of this tab has about {left}% of its {window} quota left (it resets in {Span(resetsAt - now)}). "
-            + "Work stops when it runs out. You may want to save your state now: commit and push what is complete and write down "
+            + (credits ? "When it runs out, work continues on the account's credits. " : "Work stops when it runs out. ")
+            + "You may want to save your state now: commit and push what is complete and write down "
             + "the next steps. Whether and how is up to you.";
     }
 
@@ -117,7 +120,7 @@ public sealed partial class MainViewModel
     internal IReadOnlyList<TabViewModel> SendSaveNotice(string cli, string key, QuotaWarning warning, DateTimeOffset now)
     {
         var week = warning.Window == Loc.Get("account.limit.week");
-        var text = QuotaSaveNotices.Message(cli, week, warning.RemainingPercent, warning.ResetsAt, now);
+        var text = QuotaSaveNotices.Message(cli, week, warning.RemainingPercent, warning.ResetsAt, now, warning.Credits);
         var at = SaveNoticeClock().ToUnixTimeMilliseconds();
         var noticeId = "quota-" + (week ? "week" : "session") + "-" + at.ToString(CultureInfo.InvariantCulture);
         var sent = new List<TabViewModel>();

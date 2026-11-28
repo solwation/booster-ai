@@ -2,8 +2,11 @@ using System.Collections.ObjectModel;
 
 namespace BoosterAI;
 
-/// <summary>One low-quota warning (#211): which agent/account/window is nearly used up, how much is left and when it resets.</summary>
-public sealed record QuotaWarning(string Agent, string? Account, string Window, double RemainingPercent, DateTimeOffset ResetsAt)
+/// <summary>
+/// One low-quota warning (#211): which agent/account/window is nearly used up, how much is left and when it resets.
+/// <paramref name="Credits"/>: the account has credits (#293), so the agent goes on with them once the window is used up.
+/// </summary>
+public sealed record QuotaWarning(string Agent, string? Account, string Window, double RemainingPercent, DateTimeOffset ResetsAt, bool Credits = false)
 {
     /// <summary>Identity of the notice: a newer warning for the same agent, account and window replaces the older one.</summary>
     public string Key => Agent + "\0" + Account + "\0" + Window;
@@ -12,8 +15,9 @@ public sealed record QuotaWarning(string Agent, string? Account, string Window, 
     public string Text(DateTimeOffset now)
     {
         var who = Account is { Length: > 0 } ? Loc.Format("quota.warn.who", Agent, Account) : Agent;
-        return Loc.Format("quota.warn.text", who, Window, Loc.Format("account.limit.remaining", LimitPercent.Text(RemainingPercent)),
+        var text = Loc.Format("quota.warn.text", who, Window, Loc.Format("account.limit.remaining", LimitPercent.Text(RemainingPercent)),
             LimitText.Resets(ResetsAt, now));
+        return Credits ? Loc.Format("quota.warn.credits", text) : text;
     }
 }
 
@@ -36,7 +40,8 @@ public sealed record QuotaChanges(IReadOnlyList<QuotaWarning> Warnings, IReadOnl
 /// window instance: the same reset time never warns again while it stays below the threshold. It re-arms when the quota is at or above
 /// the threshold again or when the window has reset (a different reset time). An unknown or expired window changes nothing.
 /// A window that has warned and then shows a reading at or above the threshold has recovered (#239), reported once; a clock-only reset
-/// (an expired window) never counts until a reading confirms it.
+/// (an expired window) never counts until a reading confirms it. A used-up window on an account with credits (#293) never warns:
+/// the agent keeps working on credits, so "the quota is out" would be a false alarm; it changes nothing until the window resets.
 /// </summary>
 public sealed class QuotaWarnings(bool atThreshold = false)
 {
@@ -73,14 +78,17 @@ public sealed class QuotaWarnings(bool atThreshold = false)
         var result = new List<QuotaWarning>();
         var back = new List<QuotaRecovery>();
         var session = Loc.Format("account.limit.hours", Loc.Number((limits.Session?.Minutes ?? 300) / 60.0, "0.#"));
-        Check(agent, accountKey, account, session, limits.Session, threshold, result, back);
-        Check(agent, accountKey, account, Loc.Get("account.limit.week"), limits.Week, threshold, result, back);
+        var credits = limits.Credits?.Available == true;
+        Check(agent, accountKey, account, session, limits.Session, threshold, credits, result, back);
+        Check(agent, accountKey, account, Loc.Get("account.limit.week"), limits.Week, threshold, credits, result, back);
         return new QuotaChanges(result, back);
     }
 
-    private void Check(string agent, string accountKey, string? account, string label, LimitWindow? window, int threshold, List<QuotaWarning> result, List<QuotaRecovery> back)
+    private void Check(string agent, string accountKey, string? account, string label, LimitWindow? window, int threshold, bool credits,
+        List<QuotaWarning> result, List<QuotaRecovery> back)
     {
         if (window?.ResetsAt is not { } resetsAt) return;
+        if (credits && window.UsedPercent >= 100) return; // #293: on credits, not stopped
         var key = agent + "\0" + accountKey + "\0" + (label == Loc.Get("account.limit.week") ? "week" : "session");
         var remaining = LimitPercent.Remaining(window.UsedPercent);
         lock (_lock)
@@ -93,7 +101,7 @@ public sealed class QuotaWarnings(bool atThreshold = false)
             if (_warned.TryGetValue(key, out var seen) && (resetsAt - seen).Duration() < SameWindow) return;
             _warned[key] = resetsAt;
         }
-        result.Add(new QuotaWarning(agent, account, label, remaining, resetsAt));
+        result.Add(new QuotaWarning(agent, account, label, remaining, resetsAt, credits));
     }
 }
 

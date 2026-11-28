@@ -8,7 +8,7 @@ using Avalonia.Threading;
 namespace BoosterAI;
 
 /// <summary>
-/// <c>--screenshot file.png [--window main|local-model|local-models|close|settings|install|import|restart|remove-project|close-tab|alias|wsl-shutdown|limit-reset|switch|switch-unknown|auto-switch|memory-reclaim|agent-yolo|wsl|unsaved|setup|releases|uninstall] [--theme light|dark] [--config file.json] [--fake-update [manual:]0.3.0] [--fake-status [error:]text] [--fake-denied] [--fake-changed] [--fake-restartable N] [--fake-peek [N]] [--fake-setup [cli|wsl|alias]] [--fake-long-status] [--check-clipping] [--fake-agent-list [N]] [--fake-command-list [N]] [--fake-new-subtab] [--fake-row-menu [N]] [--fake-rename [N]] [--fake-memory-reclaim gradual|dropcache|disabled|other|old|unknown] [--fake-limits] [--fake-limit-change [seconds]] [--fake-quota] [--fake-dots] [--fake-channel status|question|answered|stale] [--fake-save-notice]</c>:
+/// <c>--screenshot file.png [--window main|local-model|local-models|close|settings|install|import|restart|remove-project|close-tab|alias|wsl-shutdown|limit-reset|switch|switch-unknown|auto-switch|memory-reclaim|agent-yolo|wsl|unsaved|setup|releases|uninstall] [--theme light|dark] [--config file.json] [--fake-update [manual:]0.3.0] [--fake-status [error:]text] [--fake-denied] [--fake-changed] [--fake-restartable N] [--fake-peek [N]] [--fake-setup [cli|wsl|alias]] [--fake-long-status] [--check-clipping] [--fake-agent-list [N]] [--fake-command-list [N]] [--fake-new-subtab] [--fake-row-menu [N]] [--fake-rename [N]] [--fake-memory-reclaim gradual|dropcache|disabled|other|old|unknown] [--fake-limits] [--fake-limit-change [seconds]] [--fake-quota] [--fake-dots] [--fake-channel status|question|answered|stale] [--fake-save-notice] [--fake-credits [reset]]</c>:
 /// renders a window with Avalonia's headless Skia platform. Nothing is shown on the desktop and no
 /// focus changes. The window frame (title bar) is not drawn; only the client area.
 /// </summary>
@@ -17,7 +17,7 @@ internal sealed record ScreenshotOptions(string File, string Window, string? Fak
     string? Section = null, string? FakeMemoryState = null, int? Width = null, int? Height = null, bool FakeOrchestraIdle = false, int? FakeMemorySaved = null,
     bool FakeLongStatus = false, bool CheckClipping = false, string? FakeMemoryReclaim = null, int? FakeAgentList = null, int? FakeCommandList = null,
     bool FakeNewSubTab = false, int? FakeRowMenu = null, bool FakeLimits = false, bool FakeQuota = false, bool FakeDots = false, bool FakeLimitChange = false,
-    string? FakeChannel = null, int? FakeRename = null, bool FakeSaveNotice = false);
+    string? FakeChannel = null, int? FakeRename = null, bool FakeSaveNotice = false, string? FakeCredits = null);
 
 internal static class Screenshot
 {
@@ -48,7 +48,8 @@ internal static class Screenshot
             !args.Contains("--fake-channel") ? args.Contains("--fake-save-notice") ? "status" : null
                 : Value(args, "--fake-channel") is "question" or "answered" or "stale" ? Value(args, "--fake-channel") : "status",
             !args.Contains("--fake-rename") ? null : int.TryParse(Value(args, "--fake-rename"), out var rename) ? rename : 0,
-            args.Contains("--fake-save-notice"));
+            args.Contains("--fake-save-notice"),
+            !args.Contains("--fake-credits") ? null : Value(args, "--fake-credits") == "reset" ? "reset" : "");
     }
 
     /// <summary>--fake-peek [N]: the status popup of the Nth running or failed sample tab (0: the first).</summary>
@@ -230,6 +231,9 @@ internal static class Screenshot
         if (o.FakeLimitChange) vm.ShowSampleLimitChange(double.TryParse(Value(Environment.GetCommandLineArgs(), "--fake-limit-change"), System.Globalization.CultureInfo.InvariantCulture, out var secs) ? secs : 1.2);
         // --fake-quota: two invented low-quota warnings (#211) through the real threshold check.
         if (o.FakeQuota) vm.ShowSampleQuota();
+        // --fake-credits [reset] (#293, implies --fake-limits): codex's default account has used up its week and works on credits of
+        // unknown amount; with reset it also has one free reset left, which the status popup offers.
+        if (o.FakeCredits is { } credits) { if (!o.FakeLimits) vm.ShowSampleLimitsForAll(); vm.ShowSampleCredits(credits == "reset"); }
         // --fake-update 0.3.0 shows the update prompt as an installed copy would see it, manual:0.3.0 as a copy
         // that cannot update itself (no network, screenshots only).
         if (o.FakeUpdate is { } fake) vm.Update.ShowFake(fake);
@@ -494,7 +498,8 @@ internal static class Screenshot
             .First(c => c.DataContext == tab && ToolTip.GetTip(c) is ToolTip);
         var tip = (ToolTip)ToolTip.GetTip(target)!;
         // An exit with an error is shown as the click opens it, with ↻ as the primary action (#153).
-        if (tab.IsExitError && tip.Content is StatusPeekView view) view.ShowsActions = true;
+        // So is a tab on credits with a reset left (#293), with its "Använd reset".
+        if ((tab.IsExitError || tab.CanPeekUseReset) && tip.Content is StatusPeekView view) view.ShowsActions = true;
         ToolTip.SetIsOpen(target, true);
         for (var i = 0; i < 3; i++)
         {
