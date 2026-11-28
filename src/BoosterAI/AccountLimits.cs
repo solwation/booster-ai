@@ -111,6 +111,9 @@ public sealed record LimitIndicator(string Caption, bool Warn, string Tip, strin
     /// <summary>The compact status column's remaining share (#209): "38 %" (sv) or "38%" (en).</summary>
     public string RemainingShort => Loc.Format("account.limit.chip", LimitPercent.Text(RemainingPercent));
 
+    /// <summary>The rows worth showing: a window the agent does not have (#287) is omitted.</summary>
+    public IEnumerable<LimitRow> Visible => Rows.Where(r => !r.Absent);
+
     public static LimitIndicator? For(AccountLimits limits, DateTimeOffset now, bool includeFable = false)
     {
         limits = limits.AsOf(now);
@@ -121,20 +124,18 @@ public sealed record LimitIndicator(string Caption, bool Warn, string Tip, strin
         var warn = percent >= WarnAt;
         var number = LimitPercent.Text(percent);
         var session = Loc.Format("account.limit.hours", Loc.Number((limits.Session?.Minutes ?? 300) / 60.0, "0.#"));
-        var lines = new List<string>
-        {
-            Loc.Get("account.limit.title"),
-            session + ": " + LimitText.Used(limits.Session, now, limits.SessionReset, LimitText.Absent(limits.SessionAbsent, "account.limit.absent.session", session)),
-            Loc.Get("account.limit.week") + ": " + LimitText.Used(limits.Week, now, limits.WeekReset, LimitText.Absent(limits.WeekAbsent, "account.limit.absent.week", "")),
-        };
+        // A window the agent does not have (#287) is left out of the tooltip, not written as "no limit".
+        var lines = new List<string> { Loc.Get("account.limit.title") };
+        if (!limits.SessionAbsent) lines.Add(session + ": " + LimitText.Used(limits.Session, now, limits.SessionReset));
+        if (!limits.WeekAbsent) lines.Add(Loc.Get("account.limit.week") + ": " + LimitText.Used(limits.Week, now, limits.WeekReset));
         if (includeFable) lines.Add(Loc.Get("account.limit.fable") + ": " + LimitText.Used(fable, now));
         if (limits.At is { } at) lines.Add(LimitText.Age(at, now));
         var name = Loc.Format("account.limit.chip.name", number)
             + (percent >= 100 ? ", " + Loc.Get("account.limit.full") : warn ? ", " + Loc.Get("account.limit.near") : "");
         var rows = new List<LimitRow>
         {
-            LimitRow.For(session, limits.Session, now, limits.SessionReset, LimitText.Absent(limits.SessionAbsent, "account.limit.absent.session", session)),
-            LimitRow.For(Loc.Get("account.limit.week"), limits.Week, now, limits.WeekReset, LimitText.Absent(limits.WeekAbsent, "account.limit.absent.week", "")),
+            LimitRow.For(session, limits.Session, now, limits.SessionReset, limits.SessionAbsent),
+            LimitRow.For(Loc.Get("account.limit.week"), limits.Week, now, limits.WeekReset, limits.WeekAbsent),
         };
         if (includeFable) rows.Insert(1, LimitRow.For(Loc.Get("account.limit.fable"), fable, now));
         var age = limits.At is { } when ? LimitText.Age(when, now) : "";
@@ -187,10 +188,13 @@ public sealed record LimitNote(string Caption, string Tip, bool Reset)
 /// </summary>
 public sealed record LimitRow(string Label, bool Known, double Remaining, string RemainingText, string UsedText, string ResetText, bool Warn, string Name, double Used = 0, bool Absent = false)
 {
-    /// <summary><paramref name="absent"/> is the text for a window the agent does not have (#231, "ingen 5 h-gräns"); the row is then not "Okänd" and its meter is not drawn.</summary>
-    public static LimitRow For(string label, LimitWindow? window, DateTimeOffset now, bool reset = false, string? absent = null)
+    /// <summary>
+    /// <paramref name="absent"/> marks a window the agent does not have (#231, #287): the row is then not "Okänd", has no text and is
+    /// not shown in the popup (<see cref="LimitIndicator.Visible"/>); it only keeps the meters' positions.
+    /// </summary>
+    public static LimitRow For(string label, LimitWindow? window, DateTimeOffset now, bool reset = false, bool absent = false)
     {
-        if (window is null && absent is not null) return new(label, false, 0, absent, "", "", false, label + ": " + absent, 0, true);
+        if (window is null && absent) return new(label, false, 0, "", "", "", false, "", 0, true);
         if (window is null)
         {
             var unknown = Loc.Get(reset ? "account.limit.reset" : "account.limit.unknown");
@@ -212,10 +216,7 @@ public sealed record LimitRow(string Label, bool Known, double Remaining, string
 /// <summary>The texts of the Accounts page's limit lines (#199): "37 % använt · återställs om 4 h 20 min (14:20)", "Okänd", credits and times.</summary>
 public static class LimitText
 {
-    /// <summary>The text of a window that is not there (#231): <paramref name="absent"/> says the agent does not have it ("ingen 5 h-gräns"), else "Okänd".</summary>
-    public static string? Absent(bool absent, string key, string label) => absent ? Loc.Format(key, label) : null;
-
-    public static string Used(LimitWindow? window, DateTimeOffset now, bool reset = false, string? absent = null) => window is null ? absent ?? Loc.Get(reset ? "account.limit.reset" : "account.limit.unknown")
+    public static string Used(LimitWindow? window, DateTimeOffset now, bool reset = false) => window is null ? Loc.Get(reset ? "account.limit.reset" : "account.limit.unknown")
         : window.ResetsAt is { } at ? Loc.Format("account.limit.used", LimitPercent.UsedText(window.UsedPercent), Resets(at, now))
         : Loc.Format("account.limit.usedShort", LimitPercent.UsedText(window.UsedPercent));
 

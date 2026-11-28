@@ -1314,25 +1314,25 @@ public class AccountLimitsTests
     }
 
     [Fact]
-    public void AbsentWindowIsNotUnknownInRowsMetersTipAndStatusColumn()
+    public void AbsentWindowIsOmittedFromPopupTipAndNamesButUnknownStaysOkand()
     {
         var previous = Loc.Language;
         try
         {
             var now = DateTimeOffset.Now;
             var limits = new AccountLimits(null, Win(40, now, 10080), null, now) { SessionAbsent = true };
-            foreach (var (lang, absent, week, remaining, chip) in new[] { ("sv", "ingen 5 h-gräns", "Vecka", "60 % kvar", "60 %"), ("en", "no 5 h limit", "Week", "60% left", "60%") })
+            foreach (var (lang, week, remaining, chip) in new[] { ("sv", "Vecka", "60 % kvar", "60 %"), ("en", "Week", "60% left", "60%") })
             {
                 Loc.Use(lang);
                 var indicator = LimitIndicator.For(limits, now)!;
-                Assert.Equal(absent, indicator.Rows[0].RemainingText);
+                // No row, no tooltip line and no accessible name for the missing 5 h window; the meter slot only stays absent.
+                var shown = Assert.Single(indicator.Visible);
+                Assert.Equal(week, shown.Label);
+                Assert.Equal(remaining, shown.RemainingText);
                 Assert.True(indicator.Rows[0].Absent);
-                Assert.Equal("5 h: " + absent, indicator.Rows[0].Name);
-                Assert.Contains("5 h: " + absent, indicator.Tip);
-                Assert.DoesNotContain(Loc.Get("account.limit.unknown"), indicator.Tip + indicator.Rows[0].Name);
-                Assert.Equal(remaining, indicator.Rows[1].RemainingText);
-                Assert.Equal(week, indicator.Rows[1].Label);
-                // The compact status column and "kvar" use the window that exists.
+                Assert.Equal("", indicator.Rows[0].RemainingText);
+                Assert.DoesNotContain("5 h", indicator.Tip);
+                Assert.DoesNotContain(Loc.Get("account.limit.unknown"), indicator.Tip);
                 Assert.Equal(chip, indicator.RemainingShort);
                 Assert.Equal(remaining, indicator.RemainingCaption);
                 var choice = new AgentChoice("codex", "", "", false, null, indicator);
@@ -1340,14 +1340,21 @@ public class AccountLimitsTests
                 Assert.False(choice.SessionMeterUnknown);
                 Assert.False(choice.WeekMeterAbsent || choice.WeekMeterUnknown);
                 Assert.Equal(40, choice.WeekMeterPercent);
-                Assert.Contains(absent, choice.MeterName);
-                Assert.Equal(absent, LimitText.Used(limits.Session, now, false, LimitText.Absent(limits.SessionAbsent, "account.limit.absent.session", "5 h")));
+                Assert.Equal(shown.Name, choice.MeterName);
+                Assert.DoesNotContain("ingen", indicator.Tip + choice.MeterName + shown.Name);
+                Assert.DoesNotContain("no 5", indicator.Tip + choice.MeterName + shown.Name);
             }
-            // A window that is merely unread stays "Okänd".
+            // A window that is merely unread stays "Okänd" and keeps its row.
             Loc.Use("sv");
-            Assert.Equal("Okänd", LimitIndicator.For(new(null, Win(40, now, 10080), null, now), now)!.Rows[0].RemainingText);
-            // Only a 5 h window: no weekly limit.
-            Assert.Equal("ingen veckogräns", LimitIndicator.For(new(Win(40, now, 300), null, null, now) { WeekAbsent = true }, now)!.Rows[1].RemainingText);
+            var unread = LimitIndicator.For(new(null, Win(40, now, 10080), null, now), now)!;
+            Assert.Equal(2, unread.Visible.Count());
+            Assert.Equal("Okänd", unread.Rows[0].RemainingText);
+            Assert.Contains("5 h: Okänd", unread.Tip);
+            // Only a 5 h window: the week row is omitted the same way.
+            var session = LimitIndicator.For(new(Win(40, now, 300), null, null, now) { WeekAbsent = true }, now)!;
+            Assert.Equal("5 h", Assert.Single(session.Visible).Label);
+            Assert.True(session.Rows[1].Absent);
+            Assert.DoesNotContain("Vecka", session.Tip);
         }
         finally { Loc.Use(previous); }
     }

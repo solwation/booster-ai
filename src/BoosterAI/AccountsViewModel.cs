@@ -65,11 +65,14 @@ public sealed class AccountRow : Observable
     public string WeekLabel => Loc.Get("account.limit.week");
     public bool HasSession => Limits.Session is not null;
     public bool HasWeek => Limits.Week is not null;
+    /// <summary>A window the agent does not have (#287) gets no row on the Accounts page; an unread one still says "Okänd".</summary>
+    public bool ShowSession => !Limits.SessionAbsent;
+    public bool ShowWeek => !Limits.WeekAbsent;
     /// <summary>The bar's value; a use above 100 % (Codex allows it) fills the bar.</summary>
     public double SessionPercent => Math.Clamp(Limits.Session?.UsedPercent ?? 0, 0, 100);
     public double WeekPercent => Math.Clamp(Limits.Week?.UsedPercent ?? 0, 0, 100);
-    public string SessionText => LimitText.Used(Limits.Session, _owner.Now, Limits.SessionReset, LimitText.Absent(Limits.SessionAbsent, "account.limit.absent.session", SessionLabel));
-    public string WeekText => LimitText.Used(Limits.Week, _owner.Now, Limits.WeekReset, LimitText.Absent(Limits.WeekAbsent, "account.limit.absent.week", ""));
+    public string SessionText => LimitText.Used(Limits.Session, _owner.Now, Limits.SessionReset);
+    public string WeekText => LimitText.Used(Limits.Week, _owner.Now, Limits.WeekReset);
     public string CreditsText => LimitText.Credits(Limits.Credits);
     public bool HasCredits => CreditsText.Length > 0;
     /// <summary>"avläst för 8 min sedan": when the agent reported the values; "Ingen avläsning än" before any.</summary>
@@ -93,7 +96,7 @@ public sealed class AccountRow : Observable
 
     internal void RefreshLimits()
     {
-        foreach (var name in new[] { nameof(Limits), nameof(SessionLabel), nameof(HasSession), nameof(HasWeek), nameof(SessionPercent), nameof(WeekPercent),
+        foreach (var name in new[] { nameof(Limits), nameof(SessionLabel), nameof(HasSession), nameof(HasWeek), nameof(ShowSession), nameof(ShowWeek), nameof(SessionPercent), nameof(WeekPercent),
             nameof(SessionText), nameof(WeekText), nameof(CreditsText), nameof(HasCredits), nameof(LimitsAge),
             nameof(Resets), nameof(ResetsText), nameof(HasResets), nameof(QuotaExhausted), nameof(CanUseReset),
             nameof(ResetMessage), nameof(HasResetMessage), nameof(ResetFailed) }) Raise(name);

@@ -738,14 +738,14 @@
                                       <!-- Plan limits (#199): a bar only for a known window; Okänd otherwise, never a guessed 0 %. -->
                                       <Grid Grid.Row="3" Grid.ColumnSpan="3" Margin="0,8,0,0" ColumnDefinitions="Auto,120,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto"
                                             Background="Transparent" ToolTip.Tip="{Binding LimitsTip}">
-                                        <TextBlock Text="{Binding SessionLabel}" Classes="muted caption" Margin="0,0,10,0" VerticalAlignment="Center" />
+                                        <TextBlock Text="{Binding SessionLabel}" Classes="muted caption" Margin="0,0,10,0" VerticalAlignment="Center" IsVisible="{Binding ShowSession}" />
                                         <ProgressBar Grid.Column="1" Value="{Binding SessionPercent}" Minimum="0" Maximum="100" Height="4" MinHeight="4" MinWidth="0"
                                                      VerticalAlignment="Center" IsVisible="{Binding HasSession}" AutomationProperties.Name="{Binding SessionLabel}" />
-                                        <TextBlock Grid.Column="2" Text="{Binding SessionText}" Classes="caption" Margin="10,0,0,0" TextWrapping="Wrap" VerticalAlignment="Center" />
-                                        <TextBlock Grid.Row="1" Text="{Binding WeekLabel}" Classes="muted caption" Margin="0,4,10,0" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="2" Text="{Binding SessionText}" IsVisible="{Binding ShowSession}" Classes="caption" Margin="10,0,0,0" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Row="1" Text="{Binding WeekLabel}" IsVisible="{Binding ShowWeek}" Classes="muted caption" Margin="0,4,10,0" VerticalAlignment="Center" />
                                         <ProgressBar Grid.Row="1" Grid.Column="1" Value="{Binding WeekPercent}" Minimum="0" Maximum="100" Height="4" MinHeight="4" MinWidth="0"
                                                      Margin="0,4,0,0" VerticalAlignment="Center" IsVisible="{Binding HasWeek}" AutomationProperties.Name="{Binding WeekLabel}" />
-                                        <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding WeekText}" Classes="caption" Margin="10,4,0,0" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding WeekText}" IsVisible="{Binding ShowWeek}" Classes="caption" Margin="10,4,0,0" TextWrapping="Wrap" VerticalAlignment="Center" />
                                         <WrapPanel Grid.Row="2" Grid.ColumnSpan="3" Margin="0,4,0,0">
                                           <TextBlock Text="{Binding CreditsText}" Classes="caption" Margin="0,0,12,0" IsVisible="{Binding HasCredits}" />
                                           <!-- Codex's earned resets (#274): the count when known, and "Använd reset" while the quota is used up. -->

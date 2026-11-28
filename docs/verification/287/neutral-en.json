@@ -1,0 +1,14 @@
+{
+ "Language": "en",
+ "Theme": "light",
+ "ProjectSearchRoot": "/home/me/Projects",
+ "Accounts": [
+  {"Id":"a1","Agent":"codex","Name":"Privat","Directory":"/home/me/.codex-a1"},
+  {"Id":"a2","Agent":"codex","Name":"Work","Directory":"/home/me/.codex-a2"},
+  {"Id":"a3","Agent":"codex","Name":"Team","Directory":"/home/me/.codex-a3"}
+ ],
+ "Tabs": [
+  {"Name": "Boreal", "Directory": "/srv/boreal", "Llm": "codex", "Account": "a2"},
+  {"Name": "Atlas", "Directory": "/srv/atlas", "Llm": "claude"}
+ ]
+}

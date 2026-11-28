@@ -751,7 +751,7 @@ public sealed partial class TabViewModel : Observable
     public bool HasPeekLimit => PeekLimit is not null;
     public bool PeekLimitWarn => PeekLimit?.Warn == true;
     /// <summary>The popup's limit table (#210): one row per window with remaining/used share and reset time.</summary>
-    public IReadOnlyList<LimitRow> PeekLimitRows => PeekLimit?.Rows ?? [];
+    public IReadOnlyList<LimitRow> PeekLimitRows => PeekLimit?.Visible.ToList() ?? [];
     public string PeekLimitAge => PeekLimit?.Age ?? "";
     public bool HasPeekLimitAge => PeekLimitAge.Length > 0;
     /// <summary>The Codex account's earned resets (#285) from the Accounts page's reading: "2 resets kvar"; empty while unknown and for other agents.</summary>
@@ -2755,7 +2755,7 @@ public sealed record AgentChoice(string Llm, string AccountId, string AccountNam
     /// <summary>The meters' tooltip: both windows with use and reset time, or why the level is unknown.</summary>
     public string? MeterTip => Limit?.Tip ?? Note?.Tip;
     /// <summary>What a screen reader reads for the meters: both windows by name with remaining, used and reset time.</summary>
-    public string MeterName => Limit is { } l ? string.Join("; ", l.Rows.Select(r => r.Name)) : Note?.Name ?? "";
+    public string MeterName => Limit is { } l ? string.Join("; ", l.Visible.Select(r => r.Name)) : Note?.Name ?? "";
     /// <summary>What a screen reader reads: "claude, konto Work", or only the agent.</summary>
     public string Name => ShowAccount ? Loc.Format("agent.account.name", Loc.Display("llm", Llm), AccountName) : Loc.Display("llm", Llm);
     public override string ToString() => Name;
