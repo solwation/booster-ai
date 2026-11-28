@@ -1,3 +1,3 @@
-version: 0.56.2
-sv: Stänger du hela terminalfönstret räknar Starta nu alla dess flikar, inte bara de som stängdes först.
-en: Closing the whole terminal window now makes Start count all its tabs, not only those closed first.
+version: 0.56.3
+sv: Ett väntande modellbyte startar inte längre om en flik som arbetar bara för att agenten tidigare sade att den var klar.
+en: A waiting model switch no longer restarts a working tab just because its agent said it was done earlier.

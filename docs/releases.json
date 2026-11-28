@@ -1,6 +1,19 @@
 {
   "releases": [
     {
+      "version": "0.56.3",
+      "date": "2026-11-28",
+      "previous": "0.56.2",
+      "summary": {
+        "sv": "Ett väntande modellbyte startar inte längre om en flik som arbetar bara för att agenten tidigare sade att den var klar.",
+        "en": "A waiting model switch no longer restarts a working tab just because its agent said it was done earlier."
+      },
+      "features": [],
+      "changes": [
+        "Let a working CLI outweigh an earlier done or idle status when a model switch checks for idle (#284)"
+      ]
+    },
+    {
       "version": "0.56.2",
       "date": "2026-11-28",
       "previous": "0.56.1",
