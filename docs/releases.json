@@ -1,6 +1,19 @@
 {
   "releases": [
     {
+      "version": "0.56.2",
+      "date": "2026-11-28",
+      "previous": "0.56.1",
+      "summary": {
+        "sv": "Stänger du hela terminalfönstret räknar Starta nu alla dess flikar, inte bara de som stängdes först.",
+        "en": "Closing the whole terminal window now makes Start count all its tabs, not only those closed first."
+      },
+      "features": [],
+      "changes": [
+        "Count the tabs of a closed terminal window for Start, even while their shells still look alive (#283)"
+      ]
+    },
+    {
       "version": "0.56.1",
       "date": "2026-11-27",
       "previous": "0.56.0",
